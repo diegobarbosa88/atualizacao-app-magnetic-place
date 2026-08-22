@@ -11,6 +11,7 @@ import CelEditTd from './faturas/CelEditTd';
 import { authFetch } from '../../utils/authFetch';
 import { gerarRelatorioFaturasPDF } from './faturas/faturasExport';
 import SubTabBar from '../../components/common/SubTabBar';
+import ModalShell from '../../components/common/ModalShell';
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl;
 
 const MESES = [
@@ -56,31 +57,43 @@ function ModalDetalhe({ fatura, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-      <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
-        {/* Header */}
-        <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-slate-100">
-          <div className="flex-1 min-w-0">
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Detalhes da Fatura</p>
-            <p className="text-sm font-bold text-slate-700 truncate" title={fatura.filename}>{fatura.filename}</p>
-            <p className="text-[10px] text-slate-400 mt-0.5">
-              Importada em {fatura.importado_em ? new Date(fatura.importado_em).toLocaleString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}
-            </p>
-          </div>
-          <div className="flex items-center gap-2 ml-3">
+    <ModalShell
+      isOpen
+      onClose={onClose}
+      subtitle="Detalhes da Fatura"
+      title={fatura.filename}
+      meta={`Importada em ${fatura.importado_em ? new Date(fatura.importado_em).toLocaleString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}`}
+      size="lg"
+      footer={fatura.url ? (
+        <div className="px-6 py-4 flex gap-3">
+          <a
+            href={fatura.url}
+            download={fatura.filename}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-2xl text-sm font-black uppercase tracking-widest transition-all border-2 hover:bg-slate-50"
+            style={{ borderColor: '#869AAF', color: '#1B3A57' }}
+          >
+            <Download size={16} /> Baixar PDF Original
+          </a>
+          <a
+            href={fatura.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 px-4 py-3 bg-slate-100 text-slate-600 rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-slate-200 transition-all"
+          >
+            <ExternalLink size={16} /> Abrir
+          </a>
+        </div>
+      ) : null}
+    >
+        {/* Campos extraídos */}
+        <div className="px-6 py-4">
+          {/* Estado da fatura — vinha ao lado do X no cabeçalho feito à mão */}
+          <div className="mb-4">
             {fatura.status === 'PAGO'
               ? <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-50 text-emerald-700 text-[10px] font-black uppercase tracking-widest"><CheckCircle size={11} /> Pago</span>
               : <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-50 text-amber-600 text-[10px] font-black uppercase tracking-widest">Pendente</span>
             }
-            <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors">
-              <X size={16} />
-            </button>
           </div>
-        </div>
-
-        {/* Campos extraídos */}
-        <div className="flex-1 overflow-y-auto px-6 py-4">
           {todasChaves.length === 0 ? (
             <p className="text-sm text-slate-400 text-center py-8">Nenhum dado extraído para esta fatura.</p>
           ) : (
@@ -98,30 +111,7 @@ function ModalDetalhe({ fatura, onClose }) {
             </div>
           )}
         </div>
-
-        {/* Ações */}
-        {fatura.url && (
-          <div className="px-6 pb-6 pt-4 border-t border-slate-100 flex gap-3">
-            <a
-              href={fatura.url}
-              download={fatura.filename}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-2xl text-sm font-black uppercase tracking-widest transition-all border-2 hover:bg-slate-50"
-              style={{ borderColor: '#869AAF', color: '#1B3A57' }}
-            >
-              <Download size={16} /> Baixar PDF Original
-            </a>
-            <a
-              href={fatura.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 px-4 py-3 bg-slate-100 text-slate-600 rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-slate-200 transition-all"
-            >
-              <ExternalLink size={16} /> Abrir
-            </a>
-          </div>
-        )}
-      </div>
-    </div>
+    </ModalShell>
   );
 }
 
@@ -761,22 +751,14 @@ export default function FaturasAdmin() {
       <ModalDetalhe fatura={faturaDetalhe} onClose={() => setFaturaDetalhe(null)} />
 
       {ibanModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setIbanModal(null)}>
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">IBAN do Fornecedor</p>
-            <p className="text-sm font-bold text-slate-700 mb-4">{ibanModal.nome}</p>
-            <input
-              type="text"
-              placeholder="PT50..."
-              value={ibanInputVal}
-              onChange={e => setIbanInputVal(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && guardarIbanFornecedor()}
-              className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-300"
-              autoFocus
-            />
-            <p className="text-[10px] text-slate-400 mt-1">Aplicado a todas as faturas deste fornecedor (NIF: {ibanModal.nif})</p>
-            <div className="flex gap-2 mt-4">
+        <ModalShell
+          isOpen
+          onClose={() => setIbanModal(null)}
+          subtitle="IBAN do Fornecedor"
+          title={ibanModal.nome}
+          size="sm"
+          footer={
+            <div className="flex gap-2 p-6">
               <button
                 onClick={guardarIbanFornecedor}
                 className="flex-1 py-2 text-xs font-black rounded-xl uppercase tracking-widest hover:opacity-90"
@@ -791,8 +773,21 @@ export default function FaturasAdmin() {
                 Cancelar
               </button>
             </div>
+          }
+        >
+          <div className="p-6">
+            <input
+              type="text"
+              placeholder="PT50..."
+              value={ibanInputVal}
+              onChange={e => setIbanInputVal(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && guardarIbanFornecedor()}
+              className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-300"
+              autoFocus
+            />
+            <p className="text-[10px] text-slate-400 mt-1">Aplicado a todas as faturas deste fornecedor (NIF: {ibanModal.nif})</p>
           </div>
-        </div>
+        </ModalShell>
       )}
     </div>
   );

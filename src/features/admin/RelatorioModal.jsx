@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { X, Download } from 'lucide-react';
+import { Download } from 'lucide-react';
+import ModalShell from '../../components/common/ModalShell';
 
 const COLS_MATCHED = [
   { key: 'data',            label: 'Data Movimento' },
@@ -346,16 +347,23 @@ export default function RelatorioModal({ displayData, filename, dataRun, onClose
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 sm:p-8 space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-indigo-600">Configurar Relatório</h3>
-            {isMulti && <p className="text-xs text-slate-400 mt-0.5">{runs.length} importações · agrupado por mês</p>}
-          </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X size={18} /></button>
+    <ModalShell
+      isOpen
+      onClose={onClose}
+      title="Configurar Relatório"
+      meta={isMulti ? `${runs.length} importações · agrupado por mês` : undefined}
+      size="2xl"
+      closeOnOverlay={false}
+      footer={
+        <div className="p-6 sm:p-8">
+          <button onClick={formato === 'csv' ? handleDownloadCsv : handleDownloadPdf}
+            className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all">
+            <Download size={14} /> Download {formato.toUpperCase()}
+          </button>
         </div>
-
+      }
+    >
+      <div className="p-6 sm:p-8 space-y-6">
         <div>
           <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2">Formato</p>
           <div className="flex gap-2">
@@ -404,12 +412,7 @@ export default function RelatorioModal({ displayData, filename, dataRun, onClose
           {secoes.orphan_bank   && <ColChecks cols={COLS_ORPHAN_BANK} state={colsOB} setter={setColsOB} label="Colunas — Órfãos Banco" />}
           {secoes.orphan_system && <ColChecks cols={COLS_ORPHAN_SYS}  state={colsOS} setter={setColsOS} label="Colunas — Órfãos Sistema" />}
         </div>
-
-        <button onClick={formato === 'csv' ? handleDownloadCsv : handleDownloadPdf}
-          className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all">
-          <Download size={14} /> Download {formato.toUpperCase()}
-        </button>
       </div>
-    </div>
+    </ModalShell>
   );
 }

@@ -11,6 +11,7 @@ import SalarioEmployeeCard from './salarios/SalarioEmployeeCard';
 import AssocTransacaoModal from './salarios/AssocTransacaoModal';
 import JustificarModal from './salarios/JustificarModal';
 import ImportarIBANsModal from './salarios/ImportarIBANsModal';
+import ModalShell from '../../components/common/ModalShell';
 import './reconciliacao/reconciliacao-mockup.css';
 
 export default function SalariosTab({ month }) {
@@ -837,21 +838,34 @@ export default function SalariosTab({ month }) {
           .reduce((acc, emp) => acc + Math.max(0, calcFinal(emp.employee_name)), 0);
 
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md mx-4 flex flex-col max-h-[90vh]">
-              <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 flex-shrink-0">
-                <div className="flex items-center gap-2">
-                  {sepaModo === 'instant'
-                    ? <Zap size={18} className="text-amber-500" />
-                    : <Landmark size={18} style={{ color: '#869AAF' }} />}
-                  <p className="text-sm font-black uppercase tracking-widest text-slate-700">
-                    {sepaModo === 'instant' ? 'Transferência Imediata' : 'SEPA XML'} — {mesAlvo ? fmtMes(mesAlvo) : ''}
-                  </p>
+          <ModalShell
+            isOpen
+            onClose={() => setSepaModal(false)}
+            busy={sepaCarregando}
+            title={sepaModo === 'instant' ? 'Transferência Imediata' : 'SEPA XML'}
+            meta={mesAlvo ? fmtMes(mesAlvo) : ''}
+            icon={sepaModo === 'instant' ? <Zap size={18} /> : <Landmark size={18} />}
+            size="md"
+            closeOnOverlay={false}
+            footer={
+              <div className="px-5 py-4 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Total selecionado</p>
+                  <p className="text-xl font-black" style={{ color: '#1B3A57' }}>{fmtEur(total)}</p>
                 </div>
-                <button onClick={() => setSepaModal(false)} className="text-slate-300 hover:text-slate-600 transition-colors"><X size={18} /></button>
+                <button
+                  onClick={confirmarSepa}
+                  disabled={sepaCarregando || sepaSelecao.size === 0}
+                  className={`flex items-center gap-2 px-4 py-2.5 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-2xl text-sm font-black uppercase tracking-widest transition-all ${sepaModo === 'instant' ? 'bg-amber-500 hover:bg-amber-600' : 'hover:opacity-90'}`}
+                  style={sepaModo === 'instant' ? {} : { backgroundColor: '#1B3A57' }}
+                >
+                  {sepaCarregando ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+                  Exportar {sepaSelecao.size > 0 ? `(${sepaSelecao.size})` : ''}
+                </button>
               </div>
-
-              <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between flex-shrink-0">
+            }
+          >
+              <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Seleccionar todos</span>
                 <input
                   type="checkbox"
@@ -861,7 +875,7 @@ export default function SalariosTab({ month }) {
                 />
               </div>
 
-              <div className="overflow-y-auto flex-1 divide-y divide-slate-100">
+              <div className="divide-y divide-slate-100">
                 {candidatos.map(emp => {
                   const worker = workers.find(w => norm(w.name) === norm(emp.employee_name));
                   const semIban = !worker?.iban;
@@ -961,24 +975,7 @@ export default function SalariosTab({ month }) {
                   );
                 })}
               </div>
-
-              <div className="px-5 py-4 border-t border-slate-100 flex items-center justify-between gap-3 flex-shrink-0">
-                <div>
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Total selecionado</p>
-                  <p className="text-xl font-black" style={{ color: '#1B3A57' }}>{fmtEur(total)}</p>
-                </div>
-                <button
-                  onClick={confirmarSepa}
-                  disabled={sepaCarregando || sepaSelecao.size === 0}
-                  className={`flex items-center gap-2 px-4 py-2.5 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-2xl text-sm font-black uppercase tracking-widest transition-all ${sepaModo === 'instant' ? 'bg-amber-500 hover:bg-amber-600' : 'hover:opacity-90'}`}
-                  style={sepaModo === 'instant' ? {} : { backgroundColor: '#1B3A57' }}
-                >
-                  {sepaCarregando ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
-                  Exportar {sepaSelecao.size > 0 ? `(${sepaSelecao.size})` : ''}
-                </button>
-              </div>
-            </div>
-          </div>
+          </ModalShell>
         );
       })()}
     {importarIBANsModal && (
@@ -991,17 +988,26 @@ export default function SalariosTab({ month }) {
     )}
 
     {descontosModal && (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg mx-4 flex flex-col max-h-[90vh]">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 flex-shrink-0">
-            <div className="flex items-center gap-2">
-              <Scissors size={18} style={{ color: '#869AAF' }} />
-              <p className="text-sm font-black uppercase tracking-widest text-slate-700">Descontos Salariais</p>
-            </div>
-            <button onClick={() => { setDescontosModal(false); setDescForm(null); }} className="text-slate-300 hover:text-slate-600 transition-colors"><X size={18} /></button>
+      <ModalShell
+        isOpen
+        onClose={() => { setDescontosModal(false); setDescForm(null); }}
+        busy={descSaving}
+        title="Descontos Salariais"
+        icon={<Scissors size={18} />}
+        size="lg"
+        closeOnOverlay={false}
+        footer={
+          <div className="px-5 py-4 flex justify-end">
+            <button
+              onClick={() => { setDescontosModal(false); setDescForm(null); }}
+              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl text-xs font-black uppercase tracking-widest transition-colors"
+            >
+              Fechar
+            </button>
           </div>
-
-          <div className="px-5 py-3 border-b border-slate-100 flex-shrink-0">
+        }
+      >
+          <div className="px-5 py-3 border-b border-slate-100">
             <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-1.5">Mês</label>
             <input
               type="month"
@@ -1011,7 +1017,7 @@ export default function SalariosTab({ month }) {
             />
           </div>
 
-          <div className="overflow-y-auto flex-1 divide-y divide-slate-100">
+          <div className="divide-y divide-slate-100">
             {(workers || []).filter(w => w.status === 'ativo').map(worker => {
               const descWorker = deducoes.filter(d => norm(d.worker_name) === norm(worker.name) && d.month === descMes);
               const formAberto = descForm?.workerId === worker.id;
@@ -1120,17 +1126,7 @@ export default function SalariosTab({ month }) {
               );
             })}
           </div>
-
-          <div className="px-5 py-4 border-t border-slate-100 flex-shrink-0 flex justify-end">
-            <button
-              onClick={() => { setDescontosModal(false); setDescForm(null); }}
-              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl text-xs font-black uppercase tracking-widest transition-colors"
-            >
-              Fechar
-            </button>
-          </div>
-        </div>
-      </div>
+      </ModalShell>
     )}
     </div>
   );

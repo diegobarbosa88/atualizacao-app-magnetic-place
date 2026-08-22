@@ -4,7 +4,8 @@ import ClientTimesheetReport from '../../components/common/ClientTimesheetReport
 import DateMultiPicker from '../../components/common/DateMultiPicker';
 import SectionHeaderShell from '../../components/common/SectionHeaderShell';
 import SubTabBar from '../../components/common/SubTabBar';
-import { FileText, History, Users, Building2, Activity, X, Zap, Calendar, CalendarRange, CalendarDays } from 'lucide-react';
+import { FileText, History, Users, Building2, Activity, Zap, Calendar, CalendarRange, CalendarDays } from 'lucide-react';
+import ModalShell from '../../components/common/ModalShell';
 import { toISODateLocal } from '../../utils/dateUtils';
 
 export default function AdminReports({ printingReport, setPrintingReport }) {
@@ -244,27 +245,26 @@ export default function AdminReports({ printingReport, setPrintingReport }) {
       </div>
 
       {/* Modal de Relatório */}
+      {/* size 5xl e não viewer: a folha de horas tem proporção A4 e a 92vw
+          esticava o conteúdo num monitor largo. As classes `print:` que estavam
+          no overlay e no cartão são redundantes — o @media print de
+          ClientTimesheetReport.css já neutraliza `.fixed.inset-0` (position
+          static, sem fundo, sem blur, sem padding, overflow visível) e
+          `.embedded-mode`, que se mantém como wrapper do relatório. */}
       {printingReport && (
-        <div
-          className="fixed inset-0 bg-slate-900/80 backdrop-blur-lg z-[200] flex items-start justify-center p-4 overflow-y-auto print:bg-transparent print:backdrop-blur-none print:p-0 print:static print:overflow-visible"
-          onClick={(e) => { if (e.target === e.currentTarget) setPrintingReport(null); }}
+        <ModalShell
+          isOpen
+          onClose={() => setPrintingReport(null)}
+          title="A Visualizar Relatório"
+          meta={printingReport.periodLabel || printingReport.month}
+          icon={<FileText size={20} />}
+          size="5xl"
+          layer="viewer"
         >
-          <div className="w-full max-w-2xl lg:max-w-5xl mx-4 sm:mx-auto my-8 bg-white rounded-[2rem] sm:rounded-[3rem] shadow-2xl border border-slate-100 animate-in fade-in zoom-in duration-300 embedded-mode print:my-0 print:max-w-full print:rounded-none print:shadow-none print:border-0 print:overflow-visible">
-            <div className="no-print sticky top-0 z-10 flex items-center justify-between p-4 sm:p-6 border-b border-slate-100 bg-white rounded-t-[2rem] sm:rounded-t-[3rem]">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-2xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: '#869AAF' }}><FileText size={20} /></div>
-                <div>
-                  <h3 className="font-black text-lg text-slate-800">A Visualizar Relatório</h3>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase">{printingReport.periodLabel || printingReport.month}</p>
-                </div>
-              </div>
-              <button onClick={() => setPrintingReport(null)} className="p-3 bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-500 rounded-2xl transition-all">
-                <X size={20} />
-              </button>
-            </div>
+          <div className="embedded-mode">
             <ClientTimesheetReport data={reportData} onBack={() => setPrintingReport(null)} isEmbedded={true} />
           </div>
-        </div>
+        </ModalShell>
       )}
 
       {/* Histórico Recente */}

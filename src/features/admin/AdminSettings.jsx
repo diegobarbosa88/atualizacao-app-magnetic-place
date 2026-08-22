@@ -10,10 +10,11 @@ import SectionHeaderShell from '../../components/common/SectionHeaderShell';
 import SubTabBar from '../../components/common/SubTabBar';
 import {
   Settings, Lock, Building2, Palette, Sparkles, CheckCircle,
-  ShieldCheck, ShieldOff, UserPlus, Wrench, X, Loader2, CalendarX, Plus, Trash2,
+  ShieldCheck, ShieldOff, UserPlus, Wrench, Loader2, CalendarX, Plus, Trash2,
   Globe, TestTube2, CheckCircle2, AlertTriangle, ChevronDown, ChevronUp,
   FileSpreadsheet, Upload,
 } from 'lucide-react';
+import ModalShell from '../../components/common/ModalShell';
 import { calculateDuration } from '../../utils/formatUtils';
 import { roundTimeToIntervalTimeUp, roundTimeToIntervalTimeDown } from '../../utils/timeUtils';
 
@@ -700,17 +701,34 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
       </div>
 
       {showRecalcModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-black text-slate-800 flex items-center gap-2">
-                <Wrench size={20} className="text-amber-600" />
-                Corrigir Hours Anteriores
-              </h3>
-              <button onClick={() => { setShowRecalcModal(false); setRecalcProgress({ current: 0, total: 0, done: false }); }} className="p-2 text-slate-400 hover:text-slate-600 rounded-xl">
-                <X size={20} />
-              </button>
+        <ModalShell
+          isOpen
+          onClose={() => { setShowRecalcModal(false); setRecalcProgress({ current: 0, total: 0, done: false }); }}
+          busy={recalcProgress.total > 0 && !recalcProgress.done}
+          title="Corrigir Hours Anteriores"
+          icon={<Wrench size={20} />}
+          size="md"
+          closeOnOverlay={false}
+          footer={
+            <div className="flex gap-2 p-6">
+              {!recalcProgress.done ? (
+                <>
+                  <button onClick={() => setShowRecalcModal(false)} className="flex-1 px-4 py-2.5 bg-slate-200 text-slate-700 rounded-xl text-xs font-black uppercase tracking-wider hover:bg-slate-300 transition-colors">
+                    Cancelar
+                  </button>
+                  <button onClick={handleRecalcHours} disabled={recalcProgress.total > 0} className="flex-1 px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+                    {recalcProgress.total > 0 ? <><Loader2 size={14} className="animate-spin" /> A processar...</> : 'Iniciar'}
+                  </button>
+                </>
+              ) : (
+                <button onClick={() => { setShowRecalcModal(false); setRecalcProgress({ current: 0, total: 0, done: false }); }} className="flex-1 px-4 py-2.5 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-colors" style={{ backgroundColor: '#1B3A57' }}>
+                  Fechar
+                </button>
+              )}
             </div>
+          }
+        >
+          <div className="p-6">
             <p className="text-sm text-slate-600 mb-4">
               Este processo vai recalcular as horas de todos os registos existentes usando o arredondamento configurado (entrada ↑, saída ↓) e guardar o valor correto.
             </p>
@@ -740,24 +758,8 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
                 <p className="text-xs text-emerald-600 mt-1">{recalcProgress.current} registos corrigidos.</p>
               </div>
             )}
-            <div className="flex gap-2">
-              {!recalcProgress.done ? (
-                <>
-                  <button onClick={() => setShowRecalcModal(false)} className="flex-1 px-4 py-2.5 bg-slate-200 text-slate-700 rounded-xl text-xs font-black uppercase tracking-wider hover:bg-slate-300 transition-colors">
-                    Cancelar
-                  </button>
-                  <button onClick={handleRecalcHours} disabled={recalcProgress.total > 0} className="flex-1 px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
-                    {recalcProgress.total > 0 ? <><Loader2 size={14} className="animate-spin" /> A processar...</> : 'Iniciar'}
-                  </button>
-                </>
-              ) : (
-                <button onClick={() => { setShowRecalcModal(false); setRecalcProgress({ current: 0, total: 0, done: false }); }} className="flex-1 px-4 py-2.5 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-colors" style={{ backgroundColor: '#1B3A57' }}>
-                  Fechar
-                </button>
-              )}
-            </div>
           </div>
-        </div>
+        </ModalShell>
       )}
 
       {showImportarContratos && (

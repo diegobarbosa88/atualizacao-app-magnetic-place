@@ -7,6 +7,7 @@ import {
   Download, Sparkles, Share2, X, Copy, Send, Loader2, Calculator,
   ChevronLeft, ChevronRight, CheckCircle, AlertTriangle,
 } from 'lucide-react';
+import ModalShell from '../../components/common/ModalShell';
 
 const MESES_PT = [
   'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
@@ -403,18 +404,33 @@ export default function ContabilidadeTab({ workers, supabase, systemSettings }) 
 
       {/* MODAL DE PARTILHA */}
       {showShareModal && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
-            <div className="flex items-center justify-between mb-5">
-              <div className="flex items-center gap-2">
-                <Share2 size={18} className="text-blue-600" />
-                <h3 className="font-black text-slate-800">Partilhar Folha</h3>
-              </div>
-              <button onClick={() => { setShowShareModal(false); setEmailSent(false); }} className="text-slate-400 hover:text-slate-600">
-                <X size={18} />
+        <ModalShell
+          isOpen
+          onClose={() => { setShowShareModal(false); setEmailSent(false); }}
+          busy={emailSending}
+          title="Partilhar Folha"
+          meta={`${nomeMes} ${selectedYear}`}
+          icon={<Share2 size={18} />}
+          size="md"
+          closeOnOverlay={false}
+          footer={
+            <div className="p-6">
+              <button
+                onClick={handleSendEmail}
+                disabled={emailSending || !shareEmail}
+                className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-black text-sm uppercase tracking-wider transition-colors ${
+                  emailSent
+                    ? 'bg-emerald-100 text-emerald-700'
+                    : 'bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50'
+                }`}
+              >
+                {emailSending ? <Loader2 size={16} className="animate-spin" /> : emailSent ? <CheckCircle size={16} /> : <Send size={16} />}
+                {emailSent ? 'E-mail Enviado!' : emailSending ? 'A Enviar…' : 'Enviar Notificação'}
               </button>
             </div>
-
+          }
+        >
+          <div className="p-6">
             <p className="text-sm text-slate-500 mb-4">
               Enviar notificação da folha de <strong>{nomeMes} {selectedYear}</strong> por e-mail ou copiar o link do portal.
             </p>
@@ -437,7 +453,7 @@ export default function ContabilidadeTab({ workers, supabase, systemSettings }) 
               </div>
             </div>
 
-            <div className="mb-5">
+            <div>
               <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1 block">E-mail da Contabilista</label>
               <input
                 type="email"
@@ -447,21 +463,8 @@ export default function ContabilidadeTab({ workers, supabase, systemSettings }) 
                 placeholder="contabilidade@empresa.pt"
               />
             </div>
-
-            <button
-              onClick={handleSendEmail}
-              disabled={emailSending || !shareEmail}
-              className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-black text-sm uppercase tracking-wider transition-colors ${
-                emailSent
-                  ? 'bg-emerald-100 text-emerald-700'
-                  : 'bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50'
-              }`}
-            >
-              {emailSending ? <Loader2 size={16} className="animate-spin" /> : emailSent ? <CheckCircle size={16} /> : <Send size={16} />}
-              {emailSent ? 'E-mail Enviado!' : emailSending ? 'A Enviar…' : 'Enviar Notificação'}
-            </button>
           </div>
-        </div>
+        </ModalShell>
       )}
     </div>
   );

@@ -4,6 +4,7 @@ import { useSchedule } from '../contexts/ScheduleContext';
 import {
   Timer, Edit2, Trash2, Coffee, Clock, Users, Search, Save, CalendarRange, ArrowRight, CheckCircle2
 } from 'lucide-react';
+import ModalShell from '../../../components/common/ModalShell';
 
 export default function ScheduleForm() {
   const { workers } = useApp();
@@ -333,13 +334,15 @@ export default function ScheduleForm() {
 
       {/* Modal de Histórico de Atribuição */}
       {showScheduleHistory.show && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[10000]" onClick={() => setShowScheduleHistory({ show: false, workerId: null, workerName: '', scheduleId: null, scheduleName: '', history: [] })}>
-          <div className="bg-white p-6 rounded-2xl max-w-md w-full mx-4 shadow-2xl" onClick={e => e.stopPropagation()}>
-            <div className="flex justify-between items-center mb-2">
-              <h3 className="text-lg font-black" style={{ color: '#1B3A57' }}>Histórico: {showScheduleHistory.scheduleName}</h3>
-              <button onClick={() => setShowScheduleHistory({ show: false, workerId: null, workerName: '', scheduleId: null, scheduleName: '', history: [] })} className="text-slate-400 hover:text-slate-600 text-2xl">&times;</button>
-            </div>
-            <p className="text-sm font-bold text-slate-500 mb-4">{showScheduleHistory.workerName}</p>
+        <ModalShell
+          isOpen
+          onClose={() => setShowScheduleHistory({ show: false, workerId: null, workerName: '', scheduleId: null, scheduleName: '', history: [] })}
+          title={`Histórico: ${showScheduleHistory.scheduleName}`}
+          meta={showScheduleHistory.workerName}
+          size="md"
+          layer="nested"
+        >
+          <div className="p-6">
             {showScheduleHistory.history.length === 0 ? (
               <p className="text-sm text-slate-400 text-center py-4">Sem períodos registados</p>
             ) : (
@@ -363,7 +366,7 @@ export default function ScheduleForm() {
               </div>
             )}
           </div>
-        </div>
+        </ModalShell>
       )}
     </div>
   );

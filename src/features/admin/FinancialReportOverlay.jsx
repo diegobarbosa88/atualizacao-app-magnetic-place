@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { X, Wallet, BrainCircuit, Sparkles, Users, Receipt } from 'lucide-react';
+import { Wallet, BrainCircuit, Sparkles, Users, Receipt } from 'lucide-react';
 import CompanyLogo from '../../components/common/CompanyLogo';
+import ModalShell from '../../components/common/ModalShell';
 import { useApp } from '../../context/AppContext';
 import { formatCurrency } from '../../utils/formatUtils';
 import { callGemini } from '../../utils/aiUtils';
@@ -54,20 +55,20 @@ const FinancialReportOverlay = ({ logs, workers, clients, expenses, finFilter, s
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-lg z-[200] flex items-center justify-center p-3 sm:p-4 font-sans text-slate-900">
-      <div className="bg-white w-full max-w-6xl h-[95vh] sm:h-[94vh] rounded-2xl sm:rounded-[3rem] flex flex-col shadow-2xl overflow-hidden border border-white/20">
-        {/* Header */}
-        <div className="p-4 sm:p-6 border-b border-slate-100 flex flex-col gap-4 bg-slate-50/80">
-          <div className="flex justify-between items-start">
-            <div className="flex items-center gap-3">
-              <CompanyLogo className="h-8 w-8 sm:h-10 sm:w-10" />
-              <div>
-                <h3 className="font-black text-lg sm:text-2xl tracking-tight">Relatório Financeiro</h3>
-                <p className="text-slate-400 text-[10px] sm:text-xs font-bold uppercase tracking-widest">Gestão de Rentabilidade</p>
-              </div>
-            </div>
-            <button onClick={() => setShowFinReport(false)} className="p-2 bg-slate-100 text-slate-400 hover:text-red-500 rounded-xl transition-all shadow-sm"><X size={18} /></button>
-          </div>
+    <ModalShell
+      isOpen
+      onClose={() => setShowFinReport(false)}
+      busy={isAnalyzing}
+      title="Relatório Financeiro"
+      subtitle="Gestão de Rentabilidade"
+      icon={<CompanyLogo className="h-7 w-7" />}
+      size="6xl"
+      layer="viewer"
+      closeOnOverlay={false}
+    >
+      <div className="font-sans text-slate-900">
+        {/* Filtro de período — vinha no cabeçalho feito à mão */}
+        <div className="p-4 sm:p-6 border-b border-slate-100 bg-slate-50/80">
           <div className="flex items-center gap-2 bg-white p-2 sm:p-3 rounded-2xl border border-slate-200 shadow-sm">
             <input type="date" className="bg-slate-50 border-none rounded-xl p-2 text-xs font-bold text-slate-600 outline-none flex-1" value={finFilter.start} onChange={e => setFinFilter({ ...finFilter, start: e.target.value })} />
             <span className="text-slate-300 text-xs">→</span>
@@ -89,7 +90,7 @@ const FinancialReportOverlay = ({ logs, workers, clients, expenses, finFilter, s
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-8 space-y-4 sm:space-y-8 bg-white text-slate-900">
+        <div className="p-4 sm:p-8 space-y-4 sm:space-y-8 bg-white text-slate-900">
           {activeTab === 'resumo' && (
             <>
               {/* All Cards in One Grid */}
@@ -204,7 +205,7 @@ const FinancialReportOverlay = ({ logs, workers, clients, expenses, finFilter, s
           )}
         </div>
       </div>
-    </div>
+    </ModalShell>
   );
 };
 

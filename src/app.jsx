@@ -19,6 +19,7 @@ import DocumentsAdmin from './features/admin/DocumentsAdmin';
 import NotificationsAdmin from './features/admin/NotificationsAdmin';
 import LoginView from './features/auth/LoginView';
 import CompanyLogo from './components/common/CompanyLogo';
+import ModalShell from './components/common/ModalShell';
 import EntryForm from './components/common/EntryForm';
 import ClientTimesheetReport from './components/common/ClientTimesheetReport';
 import WorkerDocuments from './components/common/WorkerDocuments';
@@ -557,13 +558,24 @@ const monthStr = `${portalMonth.getFullYear()}-${String(portalMonth.getMonth() +
           ? `${window.location.origin}${window.location.pathname}?token=${encodeURIComponent(clienteSelecionado.share_token)}&month=${monthStr}`
           : null;
         return (
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[200] flex items-end sm:items-center justify-center p-0 sm:p-4">
-            <div className="bg-white rounded-t-[2rem] sm:rounded-[2rem] shadow-2xl border border-indigo-100 w-full max-w-lg flex flex-col max-h-[92dvh] sm:max-h-[90vh] animate-in fade-in slide-in-from-bottom-4 sm:zoom-in duration-300">
-              <div className="flex justify-between items-center px-4 sm:px-6 py-4 border-b border-slate-100 shrink-0">
-                <h3 className="font-black text-sm sm:text-base text-slate-800 flex items-center gap-2"><Mail size={18} className="text-indigo-600 shrink-0" /> <span className="truncate">E-mail para {clienteSelecionado.name}</span></h3>
-                <button onClick={() => setModalEmailAberto(false)} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all shrink-0"><X size={18} /></button>
+          <ModalShell
+            isOpen
+            onClose={() => setModalEmailAberto(false)}
+            busy={isSendingEmail}
+            title={`E-mail para ${clienteSelecionado.name}`}
+            meta={portalMonth.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}
+            icon={<Mail size={18} />}
+            accent="brand"
+            size="lg"
+            closeOnOverlay={false}
+            footer={
+              <div className="px-4 sm:px-6 py-4 flex justify-end gap-2 bg-white">
+                <button onClick={() => setModalEmailAberto(false)} disabled={isSendingEmail} className="px-4 sm:px-6 py-2.5 rounded-xl font-bold text-xs uppercase text-slate-500 hover:bg-slate-100 transition-all border border-slate-200">Cancelar</button>
+                <button onClick={handleDisparoEmail} disabled={isSendingEmail} className="px-4 sm:px-6 py-2.5 rounded-xl font-black text-xs uppercase text-white bg-indigo-600 hover:bg-indigo-700 transition-all shadow-lg flex items-center gap-2 disabled:opacity-50">{isSendingEmail ? <><Loader2 size={16} className="animate-spin" /> A processar...</> : <><Send size={16} /> Confirmar e Disparar</>}</button>
               </div>
-              <div className="px-4 sm:px-6 py-4 bg-slate-50 space-y-3 overflow-y-auto flex-1 min-h-0">
+            }
+          >
+              <div className="px-4 sm:px-6 py-4 bg-slate-50 space-y-3">
                 <div className="bg-white rounded-xl p-3 border border-slate-200 shadow-sm space-y-2">
                   <div className="flex gap-2 text-sm"><span className="font-black text-slate-400 uppercase text-[10px] tracking-widest w-16 shrink-0">De:</span><span className="font-medium text-slate-700 text-xs truncate">nao-responder@magneticplace.pt</span></div>
                   <div className="flex gap-2 text-sm"><span className="font-black text-slate-400 uppercase text-[10px] tracking-widest w-16 shrink-0">Para:</span><span className="font-bold text-indigo-700 text-xs truncate">{clienteSelecionado.email || 'cliente@exemplo.pt'}</span></div>
@@ -579,25 +591,30 @@ const monthStr = `${portalMonth.getFullYear()}-${String(portalMonth.getMonth() +
                   <div className="pt-4 border-t border-slate-100 text-center"><p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Equipa Magnetic Place</p></div>
                 </div>
               </div>
-              <div className="px-4 sm:px-6 py-4 border-t border-slate-100 flex justify-end gap-2 bg-white shrink-0 rounded-b-[2rem]">
-                <button onClick={() => setModalEmailAberto(false)} disabled={isSendingEmail} className="px-4 sm:px-6 py-2.5 rounded-xl font-bold text-xs uppercase text-slate-500 hover:bg-slate-100 transition-all border border-slate-200">Cancelar</button>
-                <button onClick={handleDisparoEmail} disabled={isSendingEmail} className="px-4 sm:px-6 py-2.5 rounded-xl font-black text-xs uppercase text-white bg-indigo-600 hover:bg-indigo-700 transition-all shadow-lg flex items-center gap-2 disabled:opacity-50">{isSendingEmail ? <><Loader2 size={16} className="animate-spin" /> A processar...</> : <><Send size={16} /> Confirmar e Disparar</>}</button>
-              </div>
-            </div>
-          </div>
+          </ModalShell>
         );
       })()}
       {modalRejeitarAberto && rejeitarNotif && (() => {
         const targetClient = clients.find(c => String(c.id) === String(rejeitarNotif.target_client_id));
         const monthLabel = (rejeitarNotif.message.match(/Período: (.+)\n/)?.[1] || rejeitarNotif.payload?.month || '').trim();
         return (
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[200] flex items-end sm:items-center justify-center p-0 sm:p-4">
-            <div className="bg-white rounded-t-[2rem] sm:rounded-[2rem] shadow-2xl border border-rose-100 w-full max-w-lg flex flex-col max-h-[92dvh] sm:max-h-[90vh] animate-in fade-in slide-in-from-bottom-4 sm:zoom-in duration-300">
-              <div className="flex justify-between items-center px-4 sm:px-6 py-4 border-b border-rose-100 shrink-0">
-                <h3 className="font-black text-sm sm:text-base text-rose-600 flex items-center gap-2"><XCircle size={18} className="shrink-0" /> Rejeitar Correção</h3>
-                <button onClick={() => setModalRejeitarAberto(false)} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all shrink-0"><X size={18} /></button>
+          <ModalShell
+            isOpen
+            onClose={() => setModalRejeitarAberto(false)}
+            title="Rejeitar Correção"
+            meta={[targetClient?.name, monthLabel].filter(Boolean).join(' · ')}
+            icon={<XCircle size={18} />}
+            accent="danger"
+            size="lg"
+            closeOnOverlay={false}
+            footer={
+              <div className="px-4 sm:px-6 py-4 flex justify-end gap-2 bg-white">
+                <button onClick={() => setModalRejeitarAberto(false)} className="px-4 sm:px-6 py-2.5 rounded-xl font-bold text-xs uppercase text-slate-500 hover:bg-slate-100 transition-all border border-slate-200">Cancelar</button>
+                <button onClick={handleConfirmarRejeicao} disabled={rejeitarMotivo.trim().length < 10} className="px-4 sm:px-6 py-2.5 rounded-xl font-black text-xs uppercase text-white bg-rose-600 hover:bg-rose-700 transition-all shadow-lg flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"><XCircle size={16} /> Confirmar Rejeição</button>
               </div>
-              <div className="px-4 sm:px-6 py-4 bg-slate-50 space-y-3 overflow-y-auto flex-1 min-h-0">
+            }
+          >
+              <div className="px-4 sm:px-6 py-4 bg-slate-50 space-y-3">
                 <div className="bg-white rounded-xl p-3 border border-slate-200 shadow-sm space-y-2">
                   <div className="flex gap-2 text-sm"><span className="font-black text-slate-400 uppercase text-[10px] tracking-widest w-16 shrink-0">Para:</span><span className="font-bold text-rose-700 text-xs truncate">{targetClient?.name || 'Cliente'}</span></div>
                   <div className="flex gap-2 text-sm"><span className="font-black text-slate-400 uppercase text-[10px] tracking-widest w-16 shrink-0">E-mail:</span><span className="font-medium text-slate-700 text-xs truncate">{targetClient?.email || 'Não definido'}</span></div>
@@ -616,12 +633,7 @@ const monthStr = `${portalMonth.getFullYear()}-${String(portalMonth.getMonth() +
                   </div>
                 </div>
               </div>
-              <div className="px-4 sm:px-6 py-4 border-t border-slate-100 flex justify-end gap-2 bg-white shrink-0 rounded-b-[2rem]">
-                <button onClick={() => setModalRejeitarAberto(false)} className="px-4 sm:px-6 py-2.5 rounded-xl font-bold text-xs uppercase text-slate-500 hover:bg-slate-100 transition-all border border-slate-200">Cancelar</button>
-                <button onClick={handleConfirmarRejeicao} disabled={rejeitarMotivo.trim().length < 10} className="px-4 sm:px-6 py-2.5 rounded-xl font-black text-xs uppercase text-white bg-rose-600 hover:bg-rose-700 transition-all shadow-lg flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"><XCircle size={16} /> Confirmar Rejeição</button>
-              </div>
-            </div>
-          </div>
+          </ModalShell>
         );
       })()}
       {toastMessage && (

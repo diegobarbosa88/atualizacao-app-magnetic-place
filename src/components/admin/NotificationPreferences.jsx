@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { X, Bell, Mail, Check } from 'lucide-react';
+import { Bell, Mail, Check } from 'lucide-react';
+import ModalShell from '../common/ModalShell';
 
 const NOTIFICATION_TYPES = [
   { key: 'correction_applied', label: 'Correção Aplicada', desc: 'Quando uma correção é aplicada ao relatório' },
@@ -54,29 +55,40 @@ export default function NotificationPreferences({ isOpen, onClose, preferences, 
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-slate-100">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center">
-              <Bell size={20} />
-            </div>
-            <div>
-              <h2 className="font-black text-lg text-slate-800">Notificações ao Cliente</h2>
-              <p className="text-xs text-slate-400">Selecione quais notificações.enviar</p>
-            </div>
-          </div>
+    <ModalShell
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Notificações ao Cliente"
+      meta="Selecione quais notificações.enviar"
+      icon={<Bell size={20} />}
+      size="lg"
+      closeOnOverlay={false}
+      footer={
+        <div className="p-6 flex gap-3">
           <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-xl bg-slate-100 text-slate-400 hover:text-slate-600 hover:bg-slate-200 flex items-center justify-center transition-colors"
+            onClick={handleRestore}
+            className="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-xl font-black text-xs uppercase hover:bg-slate-200 transition-colors"
           >
-            <X size={16} />
+            Restaurar Defaults
+          </button>
+          <button
+            onClick={handleSave}
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-indigo-600 text-white rounded-xl font-black text-xs uppercase hover:bg-indigo-700 transition-colors"
+          >
+            {saved ? (
+              <>
+                <Check size={14} />
+                Guardado!
+              </>
+            ) : (
+              'Guardar Preferências'
+            )}
           </button>
         </div>
-
+      }
+    >
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+        <div className="p-6 space-y-4">
           {NOTIFICATION_TYPES.map(({ key, label, desc }) => (
             <div key={key} className="bg-slate-50 rounded-2xl p-4">
               <div className="flex items-start justify-between mb-3">
@@ -112,30 +124,6 @@ export default function NotificationPreferences({ isOpen, onClose, preferences, 
             </div>
           ))}
         </div>
-
-        {/* Footer */}
-        <div className="p-6 border-t border-slate-100 flex gap-3">
-          <button
-            onClick={handleRestore}
-            className="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-xl font-black text-xs uppercase hover:bg-slate-200 transition-colors"
-          >
-            Restaurar Defaults
-          </button>
-          <button
-            onClick={handleSave}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-indigo-600 text-white rounded-xl font-black text-xs uppercase hover:bg-indigo-700 transition-colors"
-          >
-            {saved ? (
-              <>
-                <Check size={14} />
-                Guardado!
-              </>
-            ) : (
-              'Guardar Preferências'
-            )}
-          </button>
-        </div>
-      </div>
-    </div>
+    </ModalShell>
   );
 }

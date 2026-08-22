@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Lock, Loader2, X } from 'lucide-react';
+import { Lock, Loader2 } from 'lucide-react';
+import ModalShell from '../../components/common/ModalShell';
 
 // Modal genérico para pedir a password de admin antes de uma ação sensível
 // que precisa de validação server-side (nunca envia a password para mais
@@ -16,23 +17,19 @@ export default function AdminPasswordModal({ open, title, onConfirm, onClose, lo
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+    <ModalShell
+      isOpen={open}
+      onClose={onClose}
+      busy={loading}
+      title={title || 'Confirmação de admin'}
+      icon={<Lock size={16} />}
+      size="sm"
+      layer="nested"
+    >
       <form
         onSubmit={handleSubmit}
-        onClick={e => e.stopPropagation()}
-        className="relative bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6"
+        className="p-6"
       >
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-amber-50 text-amber-600"><Lock size={16} /></div>
-            <h3 className="font-black text-sm text-slate-800 uppercase tracking-tight">{title || 'Confirmação de admin'}</h3>
-          </div>
-          <button type="button" onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors">
-            <X size={16} />
-          </button>
-        </div>
-
         <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-1.5">Password de Administrador</label>
         <input
           type="password"
@@ -63,6 +60,6 @@ export default function AdminPasswordModal({ open, title, onConfirm, onClose, lo
           </button>
         </div>
       </form>
-    </div>
+    </ModalShell>
   );
 }

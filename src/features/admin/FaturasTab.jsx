@@ -3,9 +3,10 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import {
   CheckCircle, AlertCircle, ChevronDown, ChevronUp,
-  X, Loader2, Download, FileText, MessageSquare, Undo2, CreditCard, Search,
+  Loader2, Download, FileText, MessageSquare, Undo2, CreditCard, Search,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import ModalShell from '../../components/common/ModalShell';
 
 function fmtEur(v) {
   return (parseFloat(v) || 0).toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
@@ -74,16 +75,33 @@ function PagarFaturaModal({ fatura, onClose, onPago }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 bg-violet-50 rounded-xl"><CreditCard size={14} className="text-violet-600" /></div>
-            <h3 className="text-sm font-black text-slate-800">Pagar via Tink</h3>
-          </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X size={16} /></button>
+    <ModalShell
+      isOpen
+      onClose={onClose}
+      busy={iniciando}
+      title="Pagar via Tink"
+      icon={<CreditCard size={18} />}
+      accent="brand"
+      size="md"
+      closeOnOverlay={false}
+      footer={
+        <div className="flex gap-2 p-6">
+          <button onClick={onClose}
+            className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">
+            Cancelar
+          </button>
+          <button
+            disabled={iniciando || !iban.trim()}
+            onClick={handlePagar}
+            className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest bg-violet-600 text-white hover:bg-violet-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+          >
+            {iniciando ? <Loader2 size={13} className="animate-spin" /> : <CreditCard size={13} />}
+            {iniciando ? 'A redirecionar...' : 'Pagar via Tink'}
+          </button>
         </div>
-
+      }
+    >
+      <div className="p-6 space-y-4">
         {/* Resumo da fatura */}
         <div className="bg-amber-50 rounded-2xl px-4 py-3 space-y-0.5">
           <p className="text-[10px] font-black uppercase tracking-widest text-amber-600">Fatura a pagar</p>
@@ -129,23 +147,8 @@ function PagarFaturaModal({ fatura, onClose, onPago }) {
         </div>
 
         {erro && <div className="bg-red-50 border border-red-100 rounded-xl px-4 py-3 text-xs text-red-600 font-semibold">{erro}</div>}
-
-        <div className="flex gap-2 pt-1">
-          <button onClick={onClose}
-            className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">
-            Cancelar
-          </button>
-          <button
-            disabled={iniciando || !iban.trim()}
-            onClick={handlePagar}
-            className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest bg-violet-600 text-white hover:bg-violet-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
-          >
-            {iniciando ? <Loader2 size={13} className="animate-spin" /> : <CreditCard size={13} />}
-            {iniciando ? 'A redirecionar...' : 'Pagar via Tink'}
-          </button>
-        </div>
       </div>
-    </div>
+    </ModalShell>
   );
 }
 
@@ -476,14 +479,32 @@ export default function FaturasTab() {
 
       {/* Modal: justificar fatura */}
       {justModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4">
-            <div className="flex items-start justify-between">
-              <h3 className="text-sm font-black text-slate-800">Justificar Fatura Pendente</h3>
-              <button onClick={() => { setJustModal(null); setJustText(''); }} className="text-slate-400 hover:text-slate-600">
-                <X size={16} />
+        <ModalShell
+          isOpen
+          onClose={() => { setJustModal(null); setJustText(''); }}
+          busy={justSaving}
+          title="Justificar Fatura Pendente"
+          size="md"
+          closeOnOverlay={false}
+          footer={
+            <div className="flex gap-2 p-6">
+              <button
+                onClick={() => { setJustModal(null); setJustText(''); }}
+                className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                disabled={!justText.trim() || justSaving}
+                onClick={handleSaveJustificacao}
+                className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest bg-violet-600 text-white hover:bg-violet-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+              >
+                {justSaving ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle size={13} />} Marcar Ok
               </button>
             </div>
+          }
+        >
+          <div className="p-6 space-y-4">
             <div className="bg-amber-50 rounded-2xl px-4 py-3">
               <p className="text-[10px] font-black uppercase tracking-widest text-amber-600 mb-1">Fatura pendente</p>
               <p className="text-sm font-bold text-slate-800">{justModal.fornecedor}</p>
@@ -503,23 +524,8 @@ export default function FaturasTab() {
                 className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-300 resize-none"
               />
             </div>
-            <div className="flex gap-2 pt-1">
-              <button
-                onClick={() => { setJustModal(null); setJustText(''); }}
-                className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                disabled={!justText.trim() || justSaving}
-                onClick={handleSaveJustificacao}
-                className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest bg-violet-600 text-white hover:bg-violet-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
-              >
-                {justSaving ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle size={13} />} Marcar Ok
-              </button>
-            </div>
           </div>
-        </div>
+        </ModalShell>
       )}
     </div>
   );

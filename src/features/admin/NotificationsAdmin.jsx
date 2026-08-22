@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Megaphone, Bell, BellRing, BellOff, Loader2, Plus, Trash2, X } from 'lucide-react';
+import { Megaphone, Bell, BellRing, BellOff, Loader2, Plus, Trash2 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { usePushSubscription } from '../../hooks/usePushSubscription';
 import Card from '../../components/common/Card';
+import ModalShell from '../../components/common/ModalShell';
 
 const SYSTEM_PATTERNS = [
   'Pedido de Correção',
@@ -268,16 +269,26 @@ const NotificationsAdmin = ({ workers, appNotifications, saveToDb, handleDelete,
 
       {/* Modal de Detalhes de Visualização */}
       {showViewDetails && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl p-8 animate-in zoom-in-95 duration-300">
-            <div className="flex justify-between items-center mb-6">
-              <div>
-                <h3 className="text-xl font-black text-slate-800 uppercase tracking-tighter">Detalhes do Aviso</h3>
-                <p className="text-[10px] font-black uppercase tracking-widest mt-1" style={{ color: '#869AAF' }}>Registo de Interação</p>
-              </div>
-              <button onClick={() => setShowViewDetails(null)} className="p-2 hover:bg-slate-100 rounded-full text-slate-400"><X size={20} /></button>
+        <ModalShell
+          isOpen
+          onClose={() => setShowViewDetails(null)}
+          subtitle="Registo de Interação"
+          title="Detalhes do Aviso"
+          size="md"
+          closeOnOverlay={false}
+          footer={
+            <div className="p-6">
+              <button
+                onClick={() => setShowViewDetails(null)}
+                className="w-full py-4 border rounded-2xl font-black text-xs uppercase tracking-widest transition-all hover:bg-slate-50"
+                style={{ borderColor: '#869AAF', color: '#869AAF' }}
+              >
+                Fechar
+              </button>
             </div>
-
+          }
+        >
+          <div className="p-8">
             <div className="flex items-end gap-1 border-b border-slate-100 mb-4">
               <button
                 onClick={() => setViewDetailsTab('viewed')}
@@ -317,16 +328,8 @@ const NotificationsAdmin = ({ workers, appNotifications, saveToDb, handleDelete,
                 </div>
               )}
             </div>
-
-            <button
-              onClick={() => setShowViewDetails(null)}
-              className="w-full mt-6 py-4 border rounded-2xl font-black text-xs uppercase tracking-widest transition-all hover:bg-slate-50"
-              style={{ borderColor: '#869AAF', color: '#869AAF' }}
-            >
-              Fechar
-            </button>
           </div>
-        </div>
+        </ModalShell>
       )}
     </Card>
   );

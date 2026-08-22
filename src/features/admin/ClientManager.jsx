@@ -352,13 +352,14 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
       </>)} {/* fim clientSubTab === 'list' */}
 
       {showClientHistory.show && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => { setShowClientHistory({ show: false, clientId: null, clientName: '' }); setEditingHistoryId(null); }}>
-          <div className="bg-white p-6 rounded-2xl max-w-md w-full mx-4 shadow-2xl" onClick={e => e.stopPropagation()}>
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-black" style={{ color: '#1B3A57' }}>Histórico de Valor Hora</h3>
-              <button onClick={() => { setShowClientHistory({ show: false, clientId: null, clientName: '' }); setEditingHistoryId(null); }} className="text-slate-400 hover:text-slate-600 text-2xl">&times;</button>
-            </div>
-            <p className="text-sm font-bold text-slate-500 mb-4">{showClientHistory.clientName}</p>
+        <ModalShell
+          isOpen
+          onClose={() => { setShowClientHistory({ show: false, clientId: null, clientName: '' }); setEditingHistoryId(null); }}
+          title="Histórico de Valor Hora"
+          meta={showClientHistory.clientName}
+          size="md"
+        >
+          <div className="p-6">
             {clientValorHoraHistory.length === 0 ? (
               <p className="text-sm text-slate-400 text-center py-4">Sem histórico disponível</p>
             ) : (
@@ -401,7 +402,7 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
               </div>
             )}
           </div>
-        </div>
+        </ModalShell>
       )}
     </div>
   );

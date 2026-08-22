@@ -3,10 +3,11 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import {
   CheckCircle, AlertCircle, ChevronDown, ChevronUp,
-  X, Loader2, Download, FileText, MessageSquare, Undo2,
+  Loader2, Download, FileText, MessageSquare, Undo2,
   ArrowLeftRight, Link,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import ModalShell from '../../components/common/ModalShell';
 
 const MESES = { '01': 'Jan', '02': 'Fev', '03': 'Mar', '04': 'Abr', '05': 'Mai', '06': 'Jun', '07': 'Jul', '08': 'Ago', '09': 'Set', '10': 'Out', '11': 'Nov', '12': 'Dez' };
 
@@ -466,14 +467,32 @@ export default function EntradasTab() {
 
       {/* Modal: Nota de Crédito */}
       {ncModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4">
-            <div className="flex items-start justify-between">
-              <h3 className="text-sm font-black text-slate-800">Ligar a Nota de Crédito</h3>
-              <button onClick={() => setNcModal(null)} className="text-slate-400 hover:text-slate-600">
-                <X size={16} />
+        <ModalShell
+          isOpen
+          onClose={() => setNcModal(null)}
+          busy={ncSaving}
+          title="Ligar a Nota de Crédito"
+          size="md"
+          closeOnOverlay={false}
+          footer={
+            <div className="flex gap-2 p-6">
+              <button
+                onClick={() => setNcModal(null)}
+                className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                disabled={!ncClientId || !ncPeriod || ncSaving}
+                onClick={handleSaveNotaCredito}
+                className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+              >
+                {ncSaving ? <Loader2 size={13} className="animate-spin" /> : <Link size={13} />} Ligar
               </button>
             </div>
+          }
+        >
+          <div className="p-6 space-y-4">
             <div className="bg-blue-50 rounded-2xl px-4 py-3">
               <p className="text-[10px] font-black uppercase tracking-widest text-blue-600 mb-1">Transacção</p>
               <p className="text-sm font-bold text-slate-800">{fmtEur(ncModal.valor)}</p>
@@ -520,35 +539,38 @@ export default function EntradasTab() {
                 />
               </div>
             </div>
-            <div className="flex gap-2 pt-1">
+          </div>
+        </ModalShell>
+      )}
+
+      {/* Modal: Justificação */}
+      {justModal && (
+        <ModalShell
+          isOpen
+          onClose={() => { setJustModal(null); setJustText(''); }}
+          busy={justSaving}
+          title="Justificar Entrada Sem Cliente"
+          size="md"
+          closeOnOverlay={false}
+          footer={
+            <div className="flex gap-2 p-6">
               <button
-                onClick={() => setNcModal(null)}
+                onClick={() => { setJustModal(null); setJustText(''); }}
                 className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
               >
                 Cancelar
               </button>
               <button
-                disabled={!ncClientId || !ncPeriod || ncSaving}
-                onClick={handleSaveNotaCredito}
-                className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+                disabled={!justText.trim() || justSaving}
+                onClick={handleSaveJustificacao}
+                className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest bg-violet-600 text-white hover:bg-violet-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
               >
-                {ncSaving ? <Loader2 size={13} className="animate-spin" /> : <Link size={13} />} Ligar
+                {justSaving ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle size={13} />} Marcar Ok
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal: Justificação */}
-      {justModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4">
-            <div className="flex items-start justify-between">
-              <h3 className="text-sm font-black text-slate-800">Justificar Entrada Sem Cliente</h3>
-              <button onClick={() => { setJustModal(null); setJustText(''); }} className="text-slate-400 hover:text-slate-600">
-                <X size={16} />
-              </button>
-            </div>
+          }
+        >
+          <div className="p-6 space-y-4">
             <div className="bg-amber-50 rounded-2xl px-4 py-3">
               <p className="text-[10px] font-black uppercase tracking-widest text-amber-600 mb-1">Transacção</p>
               <p className="text-sm font-bold text-slate-800">{fmtEur(justModal.valor)}</p>
@@ -567,23 +589,8 @@ export default function EntradasTab() {
                 className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-300 resize-none"
               />
             </div>
-            <div className="flex gap-2 pt-1">
-              <button
-                onClick={() => { setJustModal(null); setJustText(''); }}
-                className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                disabled={!justText.trim() || justSaving}
-                onClick={handleSaveJustificacao}
-                className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest bg-violet-600 text-white hover:bg-violet-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
-              >
-                {justSaving ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle size={13} />} Marcar Ok
-              </button>
-            </div>
           </div>
-        </div>
+        </ModalShell>
       )}
     </div>
   );
