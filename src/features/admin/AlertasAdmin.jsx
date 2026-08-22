@@ -236,7 +236,7 @@ export default function AlertasAdmin() {
         title="Ignorar alerta"
         subtitle={confirmIgnorar?.titulo}
         icon={<XCircle size={16} />}
-        accent="rose"
+        accent="danger"
         size="sm"
         footer={
           <div className="flex gap-2 p-4 border-t border-slate-100">

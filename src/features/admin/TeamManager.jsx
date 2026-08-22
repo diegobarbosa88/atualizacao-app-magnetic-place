@@ -255,7 +255,7 @@ const TeamManagerContent = ({ onLogin }) => {
         title={workerForm.id ? 'Editar Colaborador' : 'Novo Colaborador'}
         subtitle={workerForm.id ? [workerForm.name, workerForm.profissao].filter(Boolean).join(' · ') : undefined}
         icon={<Users size={16} />}
-        accent="navyGradient"
+        accent="brand"
         size="3xl"
       >
         <WorkerForm />
@@ -270,7 +270,7 @@ const TeamManagerContent = ({ onLogin }) => {
         title="Convidar novo colaborador"
         subtitle="Link único de preenchimento de dados"
         icon={<UserPlus size={16} />}
-        accent="slate"
+        accent="default"
         size="md"
       >
         <div className="p-5 space-y-4">

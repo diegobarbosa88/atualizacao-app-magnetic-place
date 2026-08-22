@@ -469,7 +469,7 @@ export default function ElearningAcoesTab({ refreshKey }) {
         title="Atribuir Trabalhadores"
         subtitle={atribuirAlvo?.tipo_formacao}
         icon={<UserPlus size={16} />}
-        accent="indigo"
+        accent="default"
         size="md"
         footer={
           <div className="p-4 border-t border-slate-100">

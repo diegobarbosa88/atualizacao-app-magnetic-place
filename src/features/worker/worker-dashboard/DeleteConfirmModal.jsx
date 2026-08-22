@@ -9,7 +9,7 @@ export default function DeleteConfirmModal({ deleteConfirm, setDeleteConfirm, de
       onClose={() => setDeleteConfirm(null)}
       title="Eliminar Registo"
       icon={<Trash2 size={16} />}
-      accent="rose"
+      accent="danger"
     >
       <div className="px-5 py-5">
         <p className="text-sm text-slate-600 mb-6">

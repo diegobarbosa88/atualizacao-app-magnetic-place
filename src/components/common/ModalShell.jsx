@@ -1,13 +1,42 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
 
+/**
+ * Camadas de sobreposição da app.
+ *
+ * Os modais feitos à mão espalharam-se por z-50, z-[60], z-[100], z-[150],
+ * z-[160], z-[200], z-[210], z-[9998], z-[9999] e z-[10000] — sem nenhuma
+ * regra, e por isso com casos de um modal a abrir por baixo de outro.
+ * Quem precisar de empilhar usa estes valores em vez de inventar mais um.
+ */
+export const Z = {
+  dropdown: 40,   // menus de contexto ancorados a um botão
+  modal: 100,     // modal normal
+  nested: 200,    // modal aberto a partir de outro modal
+  viewer: 300,    // pré-visualização de documento em ecrã quase inteiro
+  toast: 400,     // avisos transitórios, sempre por cima de tudo
+};
+
+/**
+ * Três variantes, não sete.
+ *
+ * Havia indigo, orange, rose, slate, navy, navyOrange e navyGradient — sendo
+ * que `orange` nunca chegou a ser usado e navy/navyOrange/navyGradient eram
+ * quase indistinguíveis. O que um modal precisa de dizer é só: sou neutro,
+ * sou a ação principal, ou vou destruir alguma coisa.
+ */
 const ACCENT = {
-  indigo: { header: 'bg-indigo-50 border-indigo-100', iconBg: 'bg-indigo-100', iconColor: 'text-indigo-600' },
-  orange: { header: 'bg-orange-50 border-orange-100', iconBg: 'bg-orange-100', iconColor: 'text-orange-600' },
-  rose:   { header: 'bg-rose-50 border-rose-100',     iconBg: 'bg-rose-100',   iconColor: 'text-rose-600'   },
-  slate:  { header: 'bg-slate-50 border-slate-100',   iconBg: 'bg-slate-100',  iconColor: 'text-slate-600'  },
-  navy:   { header: 'bg-slate-50 border-slate-100',   iconBg: 'bg-slate-100',  iconColor: 'text-[#1B3A57]'  },
-  navyOrange: { header: 'bg-white border-[#E2DED4]', iconBg: 'bg-[#122741]', iconColor: 'text-[#EB8D00]' },
+  default: { iconBg: 'bg-slate-100',           iconColor: 'text-slate-600'  },
+  brand:   { iconBg: 'bg-[#1B3A57]/[0.08]',    iconColor: 'text-[#1B3A57]'  },
+  danger:  { iconBg: 'bg-rose-50',             iconColor: 'text-rose-600'   },
+};
+
+// Nomes antigos → novos. Mantidos para nenhum call site partir durante a
+// migração dos 76 modais feitos à mão; podem sair quando ela terminar.
+const ACCENT_ALIAS = {
+  indigo: 'default', orange: 'default', slate: 'default',
+  rose: 'danger',
+  navy: 'brand', navyOrange: 'brand', navyGradient: 'brand',
 };
 
 const SIZE_MAP = {
@@ -21,75 +50,93 @@ const SIZE_MAP = {
   '5xl': 'sm:max-w-5xl',
   '6xl': 'sm:max-w-6xl',
   clientWide: 'sm:max-w-[1180px]',
+  // Para pré-visualizar documentos: ocupa quase o ecrã todo. Era isto que
+  // levava o DocxPreviewModal e os overlays de relatório a não usarem o shell.
+  viewer: 'sm:max-w-[92vw]',
 };
 
-export default function ModalShell({ isOpen, onClose, title, subtitle, icon, accent = 'indigo', size = 'lg', footer, children }) {
+export default function ModalShell({
+  isOpen,
+  onClose,
+  title,
+  subtitle,
+  icon,
+  accent = 'default',
+  size = 'lg',
+  layer = 'modal',
+  footer,
+  closeOnOverlay = true,
+  children,
+}) {
+  // Esc fecha. Vários modais à mão implementavam isto por conta própria e a
+  // maioria simplesmente não o fazia.
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const onKey = (e) => { if (e.key === 'Escape') onClose?.(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
+
   const sizeClass = SIZE_MAP[size] || SIZE_MAP.lg;
-  const isNavyGradient = accent === 'navyGradient';
+  const resolvedAccent = ACCENT_ALIAS[accent] || accent;
+  const a = ACCENT[resolvedAccent] || ACCENT.default;
+  const isBrand = resolvedAccent === 'brand';
+  const isViewer = size === 'viewer';
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex flex-col justify-end sm:items-center sm:justify-center p-0 sm:p-4">
+    <div
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex flex-col justify-end sm:items-center sm:justify-center p-0 sm:p-4"
+      style={{ zIndex: Z[layer] ?? Z.modal }}
+      onMouseDown={closeOnOverlay ? (e) => { if (e.target === e.currentTarget) onClose?.(); } : undefined}
+    >
       <div
-        className={`bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl w-full ${sizeClass} flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-300`}
-        style={{ maxHeight: 'min(92dvh, 92vh)' }}
+        className={`bg-white rounded-t-3xl sm:rounded-[2rem] shadow-2xl w-full ${sizeClass} flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-300`}
+        style={{ maxHeight: isViewer ? 'min(94dvh, 94vh)' : 'min(92dvh, 92vh)', height: isViewer ? '94vh' : undefined }}
       >
-        {isNavyGradient ? (
-          <div className="shrink-0">
-            {/* Cabeçalho claro, pela mesma razão da opção A nas secções: o
-                bloco navy fazia massa escura em cima de cada modal. Mantém as
-                proporções do mockup — sobrescrito por cima, título em Barlow
-                Condensed 700 — e guarda a marca no filete laranja em baixo. */}
-            <div className="flex items-center gap-3.5 px-6 py-4 bg-white">
-              <div className="w-11 h-11 rounded-[14px] bg-[#1B3A57]/[0.08] text-[#1B3A57] flex items-center justify-center shrink-0">
+        <div className="shrink-0">
+          <div className={`flex items-center gap-3.5 px-6 py-4 bg-white ${isBrand ? '' : 'border-b border-slate-100'}`}>
+            {/* Ícone opcional: os modais financeiros feitos à mão não têm
+                nenhum, e obrigá-los a inventar um era metade da razão para
+                não usarem o shell. */}
+            {icon && (
+              <div className={`w-11 h-11 rounded-[14px] ${a.iconBg} ${a.iconColor} flex items-center justify-center shrink-0`}>
                 {icon}
               </div>
-              <div className="flex-1 min-w-0">
-                {subtitle && (
-                  <p
-                    style={{ fontFamily: 'var(--mono)' }}
-                    className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400 truncate mb-0.5"
-                  >
-                    {subtitle}
-                  </p>
-                )}
-                <h2 className="text-2xl font-bold leading-[1.05] tracking-[0.01em] text-[#1B3A57] truncate">{title}</h2>
-              </div>
-              <button
-                onClick={onClose}
-                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all shrink-0"
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <div className="h-[3px]" style={{ background: 'linear-gradient(90deg, #EB8D00, #ffb444)' }} />
-          </div>
-        ) : (
-          (() => {
-            const a = ACCENT[accent] || ACCENT.indigo;
-            return (
-              <div className={`flex items-center gap-3 ${a.header} border-b px-4 py-3 shrink-0`}>
-                <div className={`w-8 h-8 rounded-xl ${a.iconBg} flex items-center justify-center shrink-0`}>
-                  <span className={a.iconColor}>{icon}</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h2 className="font-black text-slate-800 uppercase tracking-tight text-sm leading-none">{title}</h2>
-                  {subtitle && <p className="text-[10px] font-bold text-slate-400 mt-0.5">{subtitle}</p>}
-                </div>
-                <button
-                  onClick={onClose}
-                  className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all shrink-0"
+            )}
+            <div className="flex-1 min-w-0">
+              {subtitle && (
+                <p
+                  style={{ fontFamily: 'var(--mono)' }}
+                  className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400 truncate mb-0.5"
                 >
-                  <X size={18} />
-                </button>
-              </div>
-            );
-          })()
-        )}
+                  {subtitle}
+                </p>
+              )}
+              <h2 className="text-2xl font-bold leading-[1.05] tracking-[0.01em] text-[#1B3A57] truncate">{title}</h2>
+            </div>
+            <button
+              onClick={onClose}
+              aria-label="Fechar"
+              className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all shrink-0"
+            >
+              <X size={18} />
+            </button>
+          </div>
+          {/* O filete da marca só nos modais de ação principal (ficha de
+              cliente, colaborador, horário). Num "Eliminar registo?" seria
+              peso sem função. */}
+          {isBrand && <div className="h-[3px]" style={{ background: 'linear-gradient(90deg, #EB8D00, #ffb444)' }} />}
+        </div>
+
         <div className="flex-1 overflow-y-auto overscroll-contain min-h-0">
           {children}
         </div>
-        {footer && <div className="shrink-0">{footer}</div>}
+
+        {/* Fixo, nunca a rolar com o conteúdo — é a diferença mais visível
+            face aos modais à mão, que deixam os botões a fugir para baixo. */}
+        {footer && <div className="shrink-0 border-t border-slate-100">{footer}</div>}
       </div>
     </div>
   );

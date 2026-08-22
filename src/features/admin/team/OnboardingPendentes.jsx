@@ -239,7 +239,7 @@ export default function OnboardingPendentes() {
         title={selected?.nome || 'Pedido de Onboarding'}
         subtitle="Reveja os dados e complete os campos necessários antes de aprovar."
         icon={<Users size={16} />}
-        accent="navy"
+        accent="brand"
         size="lg"
         footer={
           <div className="flex items-center justify-between gap-3 w-full">

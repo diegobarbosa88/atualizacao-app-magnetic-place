@@ -45,7 +45,7 @@ function FornecedorManagerContent() {
         onClose={cancelar}
         title={editingId ? 'Editar Fornecedor' : 'Novo Fornecedor'}
         icon={<Truck size={16} />}
-        accent="slate"
+        accent="default"
         size="xl"
       >
         <FornecedorForm />

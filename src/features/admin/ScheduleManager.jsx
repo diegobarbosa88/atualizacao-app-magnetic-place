@@ -43,7 +43,7 @@ const ScheduleManagerContent = () => {
         onClose={() => setIsAddingInTab(false)}
         title={scheduleForm.id ? 'Editar Horário' : 'Novo Horário'}
         icon={<Timer size={16} />}
-        accent="navyGradient"
+        accent="brand"
         size="3xl"
       >
         <ScheduleForm />

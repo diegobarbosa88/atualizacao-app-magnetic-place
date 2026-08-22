@@ -53,7 +53,7 @@ export default function TimeEntryModal({
       title="Registar Ponto"
       subtitle={subtitle}
       icon={<Calendar size={16} />}
-      accent="navyOrange"
+      accent="brand"
     >
       <div onClick={e => e.stopPropagation()}>
         {/* Toolbar — non-limited workers only */}

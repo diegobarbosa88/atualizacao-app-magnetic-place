@@ -129,7 +129,7 @@ export default function AbsenceRequestModal({
       title="Registar Falta"
       subtitle={monthLabel}
       icon={<CalendarX size={16} />}
-      accent="navyOrange"
+      accent="brand"
       footer={footer}
     >
       <div className="px-4 py-4 space-y-4">

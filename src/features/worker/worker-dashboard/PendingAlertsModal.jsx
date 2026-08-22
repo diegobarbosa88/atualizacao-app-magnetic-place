@@ -24,7 +24,7 @@ export default function PendingAlertsModal({
       title="Avisos Pendentes"
       subtitle={subtitle}
       icon={<Bell size={16} />}
-      accent="navyOrange"
+      accent="brand"
     >
       <div className="px-4 py-4 space-y-3">
 
