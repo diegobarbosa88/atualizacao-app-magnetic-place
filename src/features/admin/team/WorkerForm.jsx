@@ -233,10 +233,7 @@ const WorkerForm = () => {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-
-        {/* ── COLUNA ESQUERDA (tabs Pessoal / Contrato & SS / Financeiro) ── */}
-        <div className="lg:col-span-2 space-y-5">
+      <div className="space-y-5">
 
           {/* Pessoal */}
           {activeTab === 'pessoal' && (
@@ -517,30 +514,23 @@ const WorkerForm = () => {
             </div>
           )}
 
-          {/* Afetação (só visível em ecrãs largos como coluna direita; em mobile fica aqui na aba) */}
+          {/* Afetação — aba própria, mesmo nível das outras três (Clientes + Horários lado a lado) */}
           {activeTab === 'afetacao' && (
-            <div className="lg:hidden">
-              <AfetacaoCards
-                clients={clients} schedules={schedules} workerForm={workerForm} setWorkerForm={setWorkerForm}
-                expandedClientPeriods={expandedClientPeriods} setExpandedClientPeriods={setExpandedClientPeriods}
-                expandedSchedulePeriods={expandedSchedulePeriods} setExpandedSchedulePeriods={setExpandedSchedulePeriods}
-                saveSuccessClientId={saveSuccessClientId} saveSuccessScheduleId={saveSuccessScheduleId}
-                handleSaveClientDates={handleSaveClientDates} handleSaveScheduleDates={handleSaveScheduleDates}
-              />
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5 mb-3">
+                <Building2 size={10} /> Afetação — Clientes &amp; Horários
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <AfetacaoCards
+                  clients={clients} schedules={schedules} workerForm={workerForm} setWorkerForm={setWorkerForm}
+                  expandedClientPeriods={expandedClientPeriods} setExpandedClientPeriods={setExpandedClientPeriods}
+                  expandedSchedulePeriods={expandedSchedulePeriods} setExpandedSchedulePeriods={setExpandedSchedulePeriods}
+                  saveSuccessClientId={saveSuccessClientId} saveSuccessScheduleId={saveSuccessScheduleId}
+                  handleSaveClientDates={handleSaveClientDates} handleSaveScheduleDates={handleSaveScheduleDates}
+                />
+              </div>
             </div>
           )}
-        </div>
-
-        {/* ── COLUNA DIREITA — Afetação sempre visível em ecrã largo ── */}
-        <div className="space-y-3 hidden lg:block">
-          <AfetacaoCards
-            clients={clients} schedules={schedules} workerForm={workerForm} setWorkerForm={setWorkerForm}
-            expandedClientPeriods={expandedClientPeriods} setExpandedClientPeriods={setExpandedClientPeriods}
-            expandedSchedulePeriods={expandedSchedulePeriods} setExpandedSchedulePeriods={setExpandedSchedulePeriods}
-            saveSuccessClientId={saveSuccessClientId} saveSuccessScheduleId={saveSuccessScheduleId}
-            handleSaveClientDates={handleSaveClientDates} handleSaveScheduleDates={handleSaveScheduleDates}
-          />
-        </div>
       </div>
 
       {/* Gravar — sempre visível, independente da aba */}
