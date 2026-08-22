@@ -80,12 +80,12 @@ export default function ClientForm() {
                 <Briefcase size={16} />
               </div>
               <div>
-                <h4 className="font-bold text-[#2b3540] text-xl leading-none" style={{ fontFamily: FONT_TITLE }}>Identificação</h4>
+                <h4 className="font-bold text-[#2b3540] text-[1.2rem] leading-none" style={{ fontFamily: FONT_TITLE }}>Identificação</h4>
                 <p className="text-[9.5px] font-bold uppercase tracking-widest text-[#5C7086] mt-0.5" style={{ fontFamily: FONT_MONO }}>Dados gerais do cliente</p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-y-[1rem] gap-x-[1.1rem]">
               <Field label="Empresa" icon={Building2} span2>
                 <input type="text" value={clientForm.name} onChange={e => setClientForm({ ...clientForm, name: e.target.value })} className={INPUT_CLS} placeholder="Nome da empresa" />
               </Field>
@@ -115,14 +115,14 @@ export default function ClientForm() {
 
               <div className="md:col-span-2">
                 <label
-                  className="flex items-center justify-between gap-4 rounded-2xl px-4 py-3 cursor-pointer select-none"
+                  className="flex items-center justify-between gap-4 rounded-[0.9rem] px-[0.95rem] py-[0.75rem] cursor-pointer select-none"
                   style={{ background: '#FEF6E8', border: '1px solid #F3DDA8' }}
                 >
                   <div className="flex items-center gap-2.5">
                     <AlertTriangle size={15} style={{ color: '#B47700' }} className="shrink-0" />
                     <div>
-                      <p className="text-[13px] font-bold" style={{ color: '#7A5000' }}>Modo limitado para workers</p>
-                      <p className="text-[11px] mt-0.5" style={{ color: '#9c7a2c' }}>Restringe o que os trabalhadores veem sobre este cliente na app</p>
+                      <p className="text-[0.78rem] font-bold" style={{ color: '#7A5000' }}>Modo limitado para workers</p>
+                      <p className="text-[0.68rem] mt-0.5" style={{ color: '#9c7a2c' }}>Restringe o que os trabalhadores veem sobre este cliente na app</p>
                     </div>
                   </div>
                   <input
@@ -152,7 +152,7 @@ export default function ClientForm() {
                 <Euro size={16} />
               </div>
               <div>
-                <h4 className="font-bold text-[#2b3540] text-xl leading-none" style={{ fontFamily: FONT_TITLE }}>Financeiro</h4>
+                <h4 className="font-bold text-[#2b3540] text-[1.2rem] leading-none" style={{ fontFamily: FONT_TITLE }}>Financeiro</h4>
                 <p className="text-[9.5px] font-bold uppercase tracking-widest text-[#5C7086] mt-0.5" style={{ fontFamily: FONT_MONO }}>Faturação por hora trabalhada</p>
               </div>
             </div>
@@ -162,7 +162,7 @@ export default function ClientForm() {
                 <div>
                   <p className="text-[9.5px] font-bold uppercase tracking-widest mb-1" style={{ fontFamily: FONT_MONO, color: '#9fb4c8' }}>Valor / hora atual</p>
                   <p className="font-bold leading-none text-white" style={{ fontFamily: FONT_TITLE, fontSize: '2.5rem' }}>
-                    {Number(currentClient.valorHora || 0).toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-lg font-semibold" style={{ color: '#b9c9d8' }}>€</span>
+                    {Number(currentClient.valorHora || 0).toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-[1.1rem] font-semibold" style={{ color: '#b9c9d8' }}>€</span>
                   </p>
                 </div>
                 <div className="text-right">
@@ -174,9 +174,9 @@ export default function ClientForm() {
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-y-[1rem] gap-x-[1.1rem]">
               <Field label="Novo valor / hora (€)" icon={Euro}>
-                <input type="number" step="0.01" value={clientForm.valorHora || ''} onChange={e => setClientForm({ ...clientForm, valorHora: e.target.value })} className={`${INPUT_CLS} text-lg font-bold`} placeholder="0.00" />
+                <input type="number" step="0.01" value={clientForm.valorHora || ''} onChange={e => setClientForm({ ...clientForm, valorHora: e.target.value })} className={INPUT_CLS} placeholder="0.00" />
               </Field>
               <Field label="Válido a partir de" icon={CalendarRange}>
                 <input type="date" value={clientForm.dataAlteracao || ''} onChange={e => setClientForm({ ...clientForm, dataAlteracao: e.target.value })} className={INPUT_CLS} />
@@ -185,7 +185,7 @@ export default function ClientForm() {
 
             <div className="flex items-start gap-2.5 rounded-[0.85rem] px-[0.8rem] py-[0.65rem] mt-[0.9rem]" style={{ background: '#EEF2F6' }}>
               <Info size={14} style={{ color: '#869AAF' }} className="shrink-0 mt-0.5" />
-              <p className="text-[11px] leading-relaxed font-medium" style={{ color: '#51606E' }}>
+              <p className="text-[0.72rem] leading-relaxed font-medium" style={{ color: '#51606E' }}>
                 Ao atualizar o valor/hora, todos os registos futuros e os pendentes do mês atual são atualizados automaticamente com o novo valor.
               </p>
             </div>
@@ -201,7 +201,7 @@ export default function ClientForm() {
               <div className="w-[34px] h-[34px] rounded-[11px] flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(134,154,175,0.16)', color: '#869AAF' }}>
                 <MapPin size={16} />
               </div>
-              <h4 className="font-bold uppercase tracking-wide text-[13px]" style={{ fontFamily: FONT_MONO, color: '#51606E' }}>Geolocalização</h4>
+              <h4 className="font-bold uppercase tracking-wide text-[0.95rem]" style={{ fontFamily: FONT_MONO, color: '#51606E' }}>Geolocalização</h4>
             </div>
 
             {/* Mapa esquemático — pré-visualização do raio, não é um mapa real */}
@@ -272,7 +272,7 @@ export default function ClientForm() {
               <div className="w-[34px] h-[34px] rounded-[11px] flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(134,154,175,0.16)', color: '#869AAF' }}>
                 <Clock size={16} />
               </div>
-              <h4 className="font-bold uppercase tracking-wide text-[13px]" style={{ fontFamily: FONT_MONO, color: '#51606E' }}>Horários</h4>
+              <h4 className="font-bold uppercase tracking-wide text-[0.95rem]" style={{ fontFamily: FONT_MONO, color: '#51606E' }}>Horários</h4>
               <span
                 className="ml-auto text-[9.5px] font-bold px-2 py-0.5 rounded-full text-white"
                 style={{ fontFamily: FONT_MONO, backgroundColor: '#1B3A57' }}

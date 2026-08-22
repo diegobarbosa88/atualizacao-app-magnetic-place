@@ -36,28 +36,28 @@ export default function ModalShell({ isOpen, onClose, title, subtitle, icon, acc
       >
         {isNavyGradient ? (
           <div className="shrink-0">
-            {/* Proporções do mockup aprovado: o subtítulo passa a sobrescrito
-                (eyebrow) por cima do título, e o título ganha corpo em Barlow
-                Condensed 700 em caixa normal — antes era text-sm/font-black/
-                uppercase, que competia com o próprio nome do registo. */}
-            <div
-              className="flex items-center gap-3.5 px-6 py-5"
-              style={{ background: 'linear-gradient(135deg, #1B3A57 0%, #12293e 100%)' }}
-            >
-              <div className="w-11 h-11 rounded-[14px] bg-white/10 flex items-center justify-center shrink-0 text-white">
+            {/* Cabeçalho claro, pela mesma razão da opção A nas secções: o
+                bloco navy fazia massa escura em cima de cada modal. Mantém as
+                proporções do mockup — sobrescrito por cima, título em Barlow
+                Condensed 700 — e guarda a marca no filete laranja em baixo. */}
+            <div className="flex items-center gap-3.5 px-6 py-4 bg-white">
+              <div className="w-11 h-11 rounded-[14px] bg-[#1B3A57]/[0.08] text-[#1B3A57] flex items-center justify-center shrink-0">
                 {icon}
               </div>
               <div className="flex-1 min-w-0">
                 {subtitle && (
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8ea6bc] truncate mb-0.5">
+                  <p
+                    style={{ fontFamily: 'var(--mono)' }}
+                    className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400 truncate mb-0.5"
+                  >
                     {subtitle}
                   </p>
                 )}
-                <h2 className="text-2xl font-bold leading-[1.05] tracking-[0.01em] text-white truncate">{title}</h2>
+                <h2 className="text-2xl font-bold leading-[1.05] tracking-[0.01em] text-[#1B3A57] truncate">{title}</h2>
               </div>
               <button
                 onClick={onClose}
-                className="p-2 text-[#cfe0ee] hover:bg-white/10 rounded-xl transition-all shrink-0"
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all shrink-0"
               >
                 <X size={18} />
               </button>
