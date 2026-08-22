@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { X, Download, Loader2 } from 'lucide-react';
+import { Download, Loader2 } from 'lucide-react';
 import { getAttrs, getNomeEntidade, getDocNum, formatValToc, tipoDocLabel, FIELD_LABELS_TOC } from '../utils/tocUtils';
+import ModalShell from '../../../../components/common/ModalShell';
 
 export default function ModalDocToc({ item, tipo, onClose }) {
   const [pdfUrl, setPdfUrl] = useState(null);
@@ -45,40 +46,15 @@ export default function ModalDocToc({ item, tipo, onClose }) {
   const docNum = getDocNum(item, attrs);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-      <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
-        <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-slate-100">
-          <div className="flex-1 min-w-0">
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">{tipoDocLabel(tipo)}</p>
-            <p className="text-sm font-bold text-slate-700">{docNum}</p>
-            {entidade && <p className="text-xs text-slate-500 mt-0.5">{entidade}</p>}
-          </div>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors ml-3">
-            <X size={16} />
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto px-6 py-4">
-          {campos.length === 0 ? (
-            <p className="text-sm text-slate-400 text-center py-8">Sem dados disponíveis.</p>
-          ) : (
-            <div className="space-y-3">
-              {campos.map(([k, v]) => (
-                <div key={k} className="flex gap-3">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 w-36 shrink-0 pt-0.5">
-                    {FIELD_LABELS_TOC[k] || k.replace(/_/g, ' ')}
-                  </span>
-                  <span className="text-sm text-slate-700 font-semibold flex-1 break-words">
-                    {formatValToc(k, v)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="px-6 pb-6 pt-4 border-t border-slate-100">
+    <ModalShell
+      isOpen
+      onClose={onClose}
+      subtitle={tipoDocLabel(tipo)}
+      title={docNum}
+      meta={entidade || undefined}
+      size="lg"
+      footer={
+        <div className="px-6 pb-6 pt-4">
           <button
             onClick={handleBaixarPdf}
             disabled={carregandoPdf}
@@ -89,7 +65,26 @@ export default function ModalDocToc({ item, tipo, onClose }) {
             {pdfUrl ? 'Abrir PDF' : 'Baixar PDF Original'}
           </button>
         </div>
+      }
+    >
+      <div className="px-6 py-4">
+        {campos.length === 0 ? (
+          <p className="text-sm text-slate-400 text-center py-8">Sem dados disponíveis.</p>
+        ) : (
+          <div className="space-y-3">
+            {campos.map(([k, v]) => (
+              <div key={k} className="flex gap-3">
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 w-36 shrink-0 pt-0.5">
+                  {FIELD_LABELS_TOC[k] || k.replace(/_/g, ' ')}
+                </span>
+                <span className="text-sm text-slate-700 font-semibold flex-1 break-words">
+                  {formatValToc(k, v)}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
-    </div>
+    </ModalShell>
   );
 }

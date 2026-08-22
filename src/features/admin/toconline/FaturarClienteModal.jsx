@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  X, Loader2, ChevronRight, ChevronDown, CheckCircle, AlertCircle,
+  Loader2, ChevronRight, ChevronDown, CheckCircle, AlertCircle,
   FileText, Plus, Trash2, Save, ShieldAlert,
 } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
+import ModalShell from '../../../components/common/ModalShell';
 import { authFetch } from '../../../utils/authFetch';
 import { calcularFaturacaoCliente } from '../../../lib/faturacao/tarifaHistorica.js';
 import { verificarEstimativaParaFatura, confirmarEEmitirFatura } from '../../../lib/ajudas/emitirFaturaComAjudas.js';
@@ -566,22 +567,17 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
   }, [supabase, clienteId, periodo, totalFatura, precisaResolucaoManual]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg p-6 space-y-5 max-h-[90vh] overflow-y-auto">
-
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-sm font-black uppercase tracking-widest text-slate-700">Faturar Cliente</h2>
-            <p className="text-[10px] text-slate-400 mt-0.5">
-              {passo === 1 ? 'Passo 1 — Configurar fatura' :
-               passo === 2 ? 'Passo 2 — Preview da fatura' : 'Concluído'}
-            </p>
-          </div>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all">
-            <X size={16} />
-          </button>
-        </div>
+    <ModalShell
+      isOpen
+      onClose={onClose}
+      title="Faturar Cliente"
+      meta={passo === 1 ? 'Passo 1 — Configurar fatura' :
+            passo === 2 ? 'Passo 2 — Preview da fatura' : 'Concluído'}
+      size="lg"
+      accent="brand"
+      closeOnOverlay={false}
+    >
+      <div className="p-6 space-y-5">
 
         {/* ─── RESOLUÇÃO MANUAL (Fase 2b, Ponto 2) ───
             Bloqueia todo o resto do modal enquanto o cliente vindo de fora
@@ -1246,6 +1242,6 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
         </>}
 
       </div>
-    </div>
+    </ModalShell>
   );
 }

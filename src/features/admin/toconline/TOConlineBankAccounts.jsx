@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Landmark, Plus, Loader2, RefreshCw, X, ChevronRight, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
+import { Landmark, Plus, Loader2, RefreshCw, ChevronRight, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 import { authFetch } from '../../../utils/authFetch';
 import { fmtMes } from '../movimentacoes/txUtils';
+import ModalShell from '../../../components/common/ModalShell';
 
 function fmtEur(val, currency = 'EUR') {
   return new Intl.NumberFormat('pt-PT', { style: 'currency', currency }).format(val ?? 0);
@@ -40,13 +41,15 @@ function NovaConta({ onClose, onSalva }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-          <h2 className="text-sm font-black uppercase tracking-widest text-slate-700">Nova Conta Bancária</h2>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"><X size={16} /></button>
-        </div>
-        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-3">
+    <ModalShell
+      isOpen
+      onClose={onClose}
+      title="Nova Conta Bancária"
+      size="md"
+      accent="brand"
+      closeOnOverlay={false}
+    >
+      <form onSubmit={handleSubmit} className="px-6 py-5 space-y-3">
           {[{ key: 'nome', label: 'Nome *', required: true }, { key: 'iban', label: 'IBAN' }, { key: 'banco', label: 'Banco' }].map(({ key, label, required }) => (
             <div key={key} className="space-y-1">
               <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</p>
@@ -75,9 +78,8 @@ function NovaConta({ onClose, onSalva }) {
               {salvando && <Loader2 size={13} className="animate-spin" />} Guardar
             </button>
           </div>
-        </form>
-      </div>
-    </div>
+      </form>
+    </ModalShell>
   );
 }
 
@@ -132,22 +134,16 @@ function PainelMovimentos({ conta, onClose }) {
   }, [movimentos, mesSelecionado]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/40 backdrop-blur-sm p-0 sm:p-4">
-      <div className="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl w-full sm:max-w-lg max-h-[85vh] flex flex-col overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)' }}><Landmark size={14} style={{ color: '#869AAF' }} /></div>
-            <div>
-              <p className="text-sm font-black text-slate-800">{a.name || '—'}</p>
-              {conta.saldo_atual != null && (
-                <p className="text-xs font-bold" style={{ color: '#1B3A57' }}>{fmtEur(conta.saldo_atual)}</p>
-              )}
-            </div>
-          </div>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"><X size={16} /></button>
-        </div>
-
+    <ModalShell
+      isOpen
+      onClose={onClose}
+      title={a.name || '—'}
+      meta={conta.saldo_atual != null ? fmtEur(conta.saldo_atual) : undefined}
+      icon={<Landmark size={20} />}
+      size="lg"
+      closeOnOverlay={false}
+    >
+      <>
         {/* Seletor de mês + contagem */}
         {!loading && !erro && movimentos.length > 0 && (
           <div className="flex items-center justify-between gap-2 px-5 py-3 border-b border-slate-100 shrink-0 flex-wrap">
@@ -177,7 +173,7 @@ function PainelMovimentos({ conta, onClose }) {
         )}
 
         {/* Lista de movimentos */}
-        <div className="overflow-y-auto flex-1">
+        <div>
           {loading ? (
             <div className="flex flex-col items-center gap-2 py-10">
               <Loader2 size={20} className="animate-spin text-slate-300" />
@@ -219,8 +215,8 @@ function PainelMovimentos({ conta, onClose }) {
             </div>
           )}
         </div>
-      </div>
-    </div>
+      </>
+    </ModalShell>
   );
 }
 

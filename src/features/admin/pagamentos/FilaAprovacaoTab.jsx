@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Loader2, RefreshCw, Download, Plus, X, ExternalLink, FileText, AlertTriangle, ListChecks } from 'lucide-react';
 import ImpostoPdfUploadModal from './ImpostoPdfUploadModal';
 import { authFetch } from '../../../utils/authFetch';
+import ModalShell from '../../../components/common/ModalShell';
 
 function fmt(val) {
   return new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(val ?? 0);
@@ -31,19 +32,15 @@ const TAB_LABELS = { pendente: 'Pendentes', exportado: 'Exportados', rejeitado: 
 function RejeitarModal({ item, onConfirm, onClose }) {
   const [motivo, setMotivo] = useState('');
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
-        <p className="text-sm font-black text-slate-800 mb-1">Rejeitar item</p>
-        <p className="text-xs text-slate-500 mb-4 truncate">{item.label} — {fmt(item.valor)}</p>
-        <textarea
-          placeholder="Motivo (opcional)"
-          value={motivo}
-          onChange={e => setMotivo(e.target.value)}
-          rows={3}
-          className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-red-300 mb-4"
-        />
-        <div className="flex gap-2">
+    <ModalShell
+      isOpen
+      onClose={onClose}
+      title="Rejeitar item"
+      meta={`${item.label} — ${fmt(item.valor)}`}
+      size="sm"
+      accent="danger"
+      footer={
+        <div className="flex gap-2 p-6">
           <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-xs font-black bg-slate-100 text-slate-600">Cancelar</button>
           <button
             onClick={() => onConfirm(motivo)}
@@ -52,8 +49,18 @@ function RejeitarModal({ item, onConfirm, onClose }) {
             Rejeitar
           </button>
         </div>
+      }
+    >
+      <div className="p-6">
+        <textarea
+          placeholder="Motivo (opcional)"
+          value={motivo}
+          onChange={e => setMotivo(e.target.value)}
+          rows={3}
+          className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-red-300"
+        />
       </div>
-    </div>
+    </ModalShell>
   );
 }
 
@@ -500,24 +507,14 @@ export default function FilaAprovacaoTab() {
       )}
 
       {ibanModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={() => setIbanModal(null)}>
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">IBAN do Fornecedor</p>
-            <p className="text-sm font-bold text-slate-700 mb-4">{ibanModal.nome}</p>
-            <input
-              type="text"
-              placeholder="PT50..."
-              value={ibanInputVal}
-              onChange={e => setIbanInputVal(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && guardarIbanInline()}
-              className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-300"
-              autoFocus
-            />
-            {ibanModal.nif && (
-              <p className="text-[10px] text-slate-400 mt-1">Aplicado a todas as faturas deste fornecedor (NIF: {ibanModal.nif})</p>
-            )}
-            <div className="flex gap-2 mt-4">
+        <ModalShell
+          isOpen
+          onClose={() => setIbanModal(null)}
+          subtitle="IBAN do Fornecedor"
+          title={ibanModal.nome}
+          size="sm"
+          footer={
+            <div className="flex gap-2 p-6">
               <button
                 onClick={guardarIbanInline}
                 className="flex-1 py-2 text-xs font-black bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 uppercase tracking-widest"
@@ -531,8 +528,23 @@ export default function FilaAprovacaoTab() {
                 Cancelar
               </button>
             </div>
+          }
+        >
+          <div className="p-6">
+            <input
+              type="text"
+              placeholder="PT50..."
+              value={ibanInputVal}
+              onChange={e => setIbanInputVal(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && guardarIbanInline()}
+              className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-300"
+              autoFocus
+            />
+            {ibanModal.nif && (
+              <p className="text-[10px] text-slate-400 mt-1">Aplicado a todas as faturas deste fornecedor (NIF: {ibanModal.nif})</p>
+            )}
           </div>
-        </div>
+        </ModalShell>
       )}
     </div>
   );

@@ -1,8 +1,9 @@
 import React, { useState, useRef } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
-import { X, Upload, Sparkles, Loader2, CheckCircle } from 'lucide-react';
+import { Upload, Sparkles, Loader2, CheckCircle } from 'lucide-react';
 import { authFetch } from '../../../utils/authFetch';
+import ModalShell from '../../../components/common/ModalShell';
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl;
 
 const TIPOS = ['IRC', 'IVA', 'IRS', 'SS', 'Outro'];
@@ -126,24 +127,31 @@ export default function ImpostoPdfUploadModal({ onClose, onSaved }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-      <div
-        className="relative bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[92vh] flex flex-col overflow-hidden"
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-slate-100">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Novo Imposto</p>
-            <p className="text-sm font-black text-slate-800">Importar Guia de Pagamento</p>
-          </div>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors">
-            <X size={16} />
+    <ModalShell
+      isOpen
+      onClose={onClose}
+      subtitle="Novo Imposto"
+      title="Importar Guia de Pagamento"
+      size="lg"
+      accent="brand"
+      footer={
+        <div className="px-6 pb-6 pt-4 flex gap-3">
+          <button onClick={onClose} className="flex-1 py-3 rounded-2xl text-xs font-black bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all">
+            Cancelar
+          </button>
+          <button
+            onClick={handleGuardar}
+            disabled={guardando}
+            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-xs font-black text-white disabled:opacity-60 transition-all shadow-sm hover:opacity-90"
+            style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}
+          >
+            {guardando ? <Loader2 size={14} className="animate-spin" /> : null}
+            {guardando ? 'A guardar...' : 'Adicionar à Fila'}
           </button>
         </div>
-
-        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+      }
+    >
+      <div className="px-6 py-5 space-y-4">
           {/* PDF drop zone */}
           <div
             onDrop={handleDrop}
@@ -260,23 +268,7 @@ export default function ImpostoPdfUploadModal({ onClose, onSaved }) {
           {erro && (
             <div className="px-4 py-3 rounded-xl text-[11px] font-bold bg-red-50 border border-red-200 text-red-700">{erro}</div>
           )}
-        </div>
-
-        <div className="px-6 pb-6 pt-4 border-t border-slate-100 flex gap-3">
-          <button onClick={onClose} className="flex-1 py-3 rounded-2xl text-xs font-black bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all">
-            Cancelar
-          </button>
-          <button
-            onClick={handleGuardar}
-            disabled={guardando}
-            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-xs font-black text-white disabled:opacity-60 transition-all shadow-sm hover:opacity-90"
-            style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}
-          >
-            {guardando ? <Loader2 size={14} className="animate-spin" /> : null}
-            {guardando ? 'A guardar...' : 'Adicionar à Fila'}
-          </button>
-        </div>
       </div>
-    </div>
+    </ModalShell>
   );
 }

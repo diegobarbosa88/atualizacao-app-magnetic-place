@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
-import { X, Loader2, ArrowRightLeft } from 'lucide-react';
+import { Loader2, ArrowRightLeft } from 'lucide-react';
 import { authFetch } from '../../../utils/authFetch';
+import ModalShell from '../../../components/common/ModalShell';
 
 function AutocompleteFornecedor({ value, onChange }) {
   const [q, setQ] = useState(value?.nome || '');
@@ -104,19 +105,16 @@ export default function NovoPagamentoModal({ onClose, onCriado }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)' }}><ArrowRightLeft size={14} style={{ color: '#869AAF' }} /></div>
-            <h2 className="text-sm font-black uppercase tracking-widest text-slate-700">Novo Pagamento</h2>
-          </div>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all">
-            <X size={16} />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-3">
+    <ModalShell
+      isOpen
+      onClose={onClose}
+      title="Novo Pagamento"
+      icon={<ArrowRightLeft size={20} />}
+      size="md"
+      accent="brand"
+      closeOnOverlay={false}
+    >
+      <form onSubmit={handleSubmit} className="px-6 py-5 space-y-3">
           <div className="space-y-1">
             <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Fornecedor *</p>
             <AutocompleteFornecedor value={{ nome: form.fornecedor_nome }} onChange={handleFornecedor} />
@@ -180,8 +178,7 @@ export default function NovoPagamentoModal({ onClose, onCriado }) {
               {criando ? 'A guardar...' : 'Guardar'}
             </button>
           </div>
-        </form>
-      </div>
-    </div>
+      </form>
+    </ModalShell>
   );
 }

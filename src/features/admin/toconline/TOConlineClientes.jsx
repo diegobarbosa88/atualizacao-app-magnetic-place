@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Search, Plus, Loader2, RefreshCw, User, X, Users } from 'lucide-react';
+import { Search, Plus, Loader2, RefreshCw, User, Users } from 'lucide-react';
 import { authFetch } from '../../../utils/authFetch';
+import ModalShell from '../../../components/common/ModalShell';
 
 function NovoClienteModal({ onClose, onSalvo }) {
   const [form, setForm] = useState({ nome: '', nif: '', email: '', morada: '', codigo_postal: '', localidade: '' });
@@ -31,16 +32,15 @@ function NovoClienteModal({ onClose, onSalvo }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-          <h2 className="text-sm font-black uppercase tracking-widest text-slate-700">Novo Cliente</h2>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all">
-            <X size={16} />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-3">
+    <ModalShell
+      isOpen
+      onClose={onClose}
+      title="Novo Cliente"
+      size="md"
+      accent="brand"
+      closeOnOverlay={false}
+    >
+      <form onSubmit={handleSubmit} className="px-6 py-5 space-y-3">
           {[
             { key: 'nome', label: 'Nome *', required: true },
             { key: 'nif', label: 'NIF' },
@@ -75,9 +75,8 @@ function NovoClienteModal({ onClose, onSalvo }) {
               Guardar
             </button>
           </div>
-        </form>
-      </div>
-    </div>
+      </form>
+    </ModalShell>
   );
 }
 
