@@ -144,6 +144,27 @@ function validarPrazoCessacao(dataFim) {
   return null;
 }
 
+// Limites RÍGIDOS impostos pela própria PSI para data-fim-vinculo (WSDL
+// cessarVinculoTrabalhador, secção 2.1.2.1.1.3) — violar qualquer um destes
+// não é um simples atraso administrativo (como validarPrazoCessacao acima),
+// é rejeitado sempre pela SS com "Falha de validações". Diferente de
+// validarPrazoAdmissao/validarPrazoCessacao, que são avisos informativos,
+// isto bloqueia o envio.
+function validarLimitesDataCessacao(dataFim) {
+  if (!dataFim) return 'Data de cessação';
+  const cessacao = new Date(dataFim.split('T')[0]);
+  const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+  if (cessacao > hoje) {
+    return `Data de cessação não pode ser futura (a SS exige data igual ou anterior à data atual)`;
+  }
+  const limiteAntigo = new Date(hoje);
+  limiteAntigo.setMonth(limiteAntigo.getMonth() - 60);
+  if (cessacao < limiteAntigo) {
+    return `Data de cessação não pode ser anterior a 60 meses da data atual`;
+  }
+  return null;
+}
+
 // ── Componente ───────────────────────────────────────────────────────────────
 
 export default function SSComunicacaoModal({ worker, tipo, ambiente, onClose, onSuccess }) {
@@ -195,13 +216,17 @@ export default function SSComunicacaoModal({ worker, tipo, ambiente, onClose, on
   const motivosDisponiveis = isTermoIncerto ? MOTIVOS_CONTRATO_INCERTO : MOTIVOS_CONTRATO_CERTO;
   const precisaSubstituido = MOTIVOS_EXIGEM_SUBSTITUIDO.has(form.motivoContrato);
 
+  const erroLimiteDataCessacao = !isAdmissao ? validarLimitesDataCessacao(form.dataCessacao) : null;
+
   const camposFaltando = isAdmissao ? [
     !form.dataNascimento  && 'Data de nascimento',
     !profissaoDefinida    && 'Profissão (definir no perfil do trabalhador)',
     !form.localTrabalho   && 'Código do local de trabalho',
     (precisaMotivoContrato && !form.motivoContrato) && 'Motivo do contrato',
     (precisaSubstituido && !form.nissTrabalhadorSubstituir) && 'NISS do trabalhador substituído',
-  ].filter(Boolean) : [];
+  ].filter(Boolean) : [
+    erroLimiteDataCessacao,
+  ].filter(Boolean);
 
   const podaEnviar = !bloqueado
     && confirmado
@@ -336,12 +361,12 @@ export default function SSComunicacaoModal({ worker, tipo, ambiente, onClose, on
             </div>
           )}
 
-          {/* ── Campos em falta (admissão) ── */}
-          {!bloqueado && isAdmissao && camposFaltando.length > 0 && (
+          {/* ── Campos em falta / valores inválidos (bloqueiam o envio) ── */}
+          {!bloqueado && camposFaltando.length > 0 && (
             <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-xl p-3">
               <AlertTriangle size={14} className="text-amber-600 shrink-0 mt-0.5" />
               <p className="text-xs text-amber-800 font-medium leading-relaxed">
-                Campos obrigatórios em falta: <strong>{camposFaltando.join(', ')}</strong>. Preencha abaixo antes de enviar.
+                {isAdmissao ? 'Campos obrigatórios em falta: ' : ''}<strong>{camposFaltando.join(', ')}</strong>{isAdmissao ? '. Preencha abaixo antes de enviar.' : ' — a Segurança Social rejeita este pedido.'}
               </p>
             </div>
           )}
