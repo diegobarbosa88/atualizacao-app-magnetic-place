@@ -7,6 +7,7 @@ import { applyCreationRequest, rejectCorrection, applyCorrection, markResolved }
 import { calculateDuration } from '../../../utils/formatUtils';
 import CorrectionDetail from './CorrectionDetail';
 import { STATUS_LABEL, TYPE_LABEL } from './correctionsUtils';
+import SubTabBar from '../../../components/common/SubTabBar';
 
 function getClientInitials(name) {
   if (!name) return '?';
@@ -477,16 +478,15 @@ const CorrectionsInbox = ({ initialCorrectionId, onCorrectionNavigated, forcedSo
 
       {/* Source selector — hidden when forcedSource is set */}
       {!forcedSource && (
-        <div className="flex items-center gap-1 mb-4 border-b border-slate-100">
-          <button onClick={() => setSourceFilter('workers')} className={`flex items-center gap-2 px-3 pb-2.5 pt-1 text-[11px] font-black uppercase tracking-wider transition-all border-b-2 -mb-px ${sourceFilter === 'workers' ? 'border-[#EB8D00] text-[#1B3A57]' : 'border-transparent text-slate-400 hover:text-[#1B3A57]'}`}>
-            <Users size={14} /> Workers
-            {workerOpenCount > 0 && <span className="bg-rose-500 text-white text-[8px] px-1.5 py-0.5 rounded-full ml-1">{workerOpenCount}</span>}
-          </button>
-          <button onClick={() => setSourceFilter('clients')} className={`flex items-center gap-2 px-3 pb-2.5 pt-1 text-[11px] font-black uppercase tracking-wider transition-all border-b-2 -mb-px ${sourceFilter === 'clients' ? 'border-[#EB8D00] text-[#1B3A57]' : 'border-transparent text-slate-400 hover:text-[#1B3A57]'}`}>
-            <Building2 size={14} /> Clientes
-            {clientOpenCount > 0 && <span className="bg-rose-500 text-white text-[8px] px-1.5 py-0.5 rounded-full ml-1">{clientOpenCount}</span>}
-          </button>
-        </div>
+        <SubTabBar
+          tabs={[
+            { id: 'workers', label: 'Workers', icon: Users, badge: workerOpenCount },
+            { id: 'clients', label: 'Clientes', icon: Building2, badge: clientOpenCount },
+          ]}
+          activeTab={sourceFilter}
+          onTabChange={setSourceFilter}
+          className="mb-4"
+        />
       )}
 
       {/* Status filter tabs */}

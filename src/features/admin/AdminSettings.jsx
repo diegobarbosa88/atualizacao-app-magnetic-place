@@ -7,6 +7,7 @@ import ContadorAcessoPanel from './ContadorAcessoPanel';
 import SSConsultasPanel from './team/SSConsultasPanel';
 import ImportarContratosSSDModal from './team/ImportarContratosSSDModal';
 import SectionHeaderShell from '../../components/common/SectionHeaderShell';
+import SubTabBar from '../../components/common/SubTabBar';
 import {
   Settings, Lock, Building2, Palette, Sparkles, CheckCircle,
   ShieldCheck, ShieldOff, UserPlus, Wrench, X, Loader2, CalendarX, Plus, Trash2,
@@ -216,20 +217,16 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
       />
 
       {/* Navegação por tabs */}
-      <div className="flex flex-wrap items-end gap-1 border-b border-slate-100 mb-2">
-        {[
+      <SubTabBar
+        tabs={[
           { id: 'geral', label: 'Geral' },
           { id: 'utilizadores', label: 'Utilizadores e Acesso' },
           { id: 'psi', label: 'Segurança Social PSI' },
           { id: 'integracoes', label: 'Integrações' },
-        ].map(({ id, label }) => (
-          <button
-            key={id}
-            onClick={() => setTab(id)}
-            className={`px-3 pb-2.5 pt-1 text-[11px] font-black uppercase tracking-wider transition-all border-b-2 -mb-px whitespace-nowrap ${activeTab === id ? 'border-[#EB8D00] text-[#1B3A57]' : 'border-transparent text-slate-400 hover:text-[#1B3A57]'}`}
-          >{label}</button>
-        ))}
-      </div>
+        ]}
+        activeTab={activeTab}
+        onTabChange={setTab}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
 

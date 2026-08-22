@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Search, FileText, CreditCard, TrendingUp, AlertCircle, CheckCircle, Info } from 'lucide-react';
 import { authFetch } from '../../../utils/authFetch';
+import SubTabBar from '../../../components/common/SubTabBar';
 
 const CURRENT_YEAR = new Date().getFullYear();
 
@@ -272,22 +273,7 @@ export default function SSConsultasPanel() {
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-1 border-b border-gray-200">
-        {abas.map(({ id, label, icon: Icon }) => (
-          <button
-            key={id}
-            onClick={() => setAba(id)}
-            className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 -mb-px transition-colors ${
-              aba === id
-                ? 'border-[#EB8D00] text-[#1B3A57]'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <Icon size={13} />
-            {label}
-          </button>
-        ))}
-      </div>
+      <SubTabBar tabs={abas} activeTab={aba} onTabChange={setAba} />
 
       <div className="pt-1">
         {aba === 'comprovativos'        && <ComprovativosSection />}

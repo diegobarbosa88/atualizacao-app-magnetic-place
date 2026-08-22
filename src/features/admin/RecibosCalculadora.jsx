@@ -6,6 +6,7 @@ import autoTable from 'jspdf-autotable';
 import { AlertTriangle, CheckCircle, ChevronDown, ChevronLeft, ChevronRight, Download, FileSpreadsheet, FileText, Pencil, Plus, RefreshCw, Save, Trash2, X } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import SectionHeaderShell from '../../components/common/SectionHeaderShell';
+import SubTabBar from '../../components/common/SubTabBar';
 import { getRateAtDate } from './cost-reports/useCostReportsData.js';
 import {
   IRS_TABELAS,
@@ -2399,20 +2400,14 @@ ${hdrRow}${bodyRows}${totRow}
             )}
           />
 
-          <div className="flex items-center gap-1 border-b border-slate-100">
-            <button
-              onClick={() => setSubTab('calculadora')}
-              className={`px-3 pb-2.5 pt-1 text-[11px] font-black uppercase tracking-wider transition-all border-b-2 -mb-px ${subTab === 'calculadora' ? 'border-[#EB8D00] text-[#1B3A57]' : 'border-transparent text-slate-400 hover:text-[#1B3A57]'}`}
-            >
-              Calculadora
-            </button>
-            <button
-              onClick={() => setSubTab('resumo')}
-              className="px-3 pb-2.5 pt-1 text-[11px] font-black uppercase tracking-wider transition-all border-b-2 -mb-px border-transparent text-slate-400 hover:text-[#1B3A57]"
-            >
-              Resumo Mensal
-            </button>
-          </div>
+          <SubTabBar
+            tabs={[
+              { id: 'calculadora', label: 'Calculadora' },
+              { id: 'resumo', label: 'Resumo Mensal' },
+            ]}
+            activeTab={subTab}
+            onTabChange={setSubTab}
+          />
         </>
       )}
 

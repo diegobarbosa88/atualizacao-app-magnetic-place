@@ -10,6 +10,7 @@ import FaturaConfigPanel from './faturas/FaturaConfigPanel';
 import CelEditTd from './faturas/CelEditTd';
 import { authFetch } from '../../utils/authFetch';
 import { gerarRelatorioFaturasPDF } from './faturas/faturasExport';
+import SubTabBar from '../../components/common/SubTabBar';
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl;
 
 const MESES = [
@@ -611,18 +612,15 @@ export default function FaturasAdmin() {
       </div>
 
       {faturas.length > 0 && (
-        <div className="flex items-center gap-1 border-b border-slate-100">
-          {[
-            { key: 'todas', label: 'Todas', count: faturas.length, countColor: '#94A3B8' },
-            { key: 'pendentes', label: 'Pendentes', count: faturas.filter(f => (f.status || 'PENDENTE') === 'PENDENTE').length, countColor: '#854F0B' },
-            { key: 'pagas', label: 'Reconciliadas', count: faturas.filter(f => f.status === 'PAGO').length, countColor: '#3B6D11' },
-          ].map(({ key, label, count, countColor }) => (
-            <button key={key} onClick={() => setFiltroStatus(key)}
-              className={`flex items-center gap-1.5 px-3 pb-2.5 pt-1 text-[11px] font-black uppercase tracking-wider transition-all border-b-2 -mb-px ${filtroStatus === key ? 'border-[#EB8D00] text-[#1B3A57]' : 'border-transparent text-slate-400 hover:text-[#1B3A57]'}`}>
-              {label} <span style={{ color: countColor }}>({count})</span>
-            </button>
-          ))}
-        </div>
+        <SubTabBar
+          tabs={[
+            { id: 'todas', label: 'Todas', badge: faturas.length, badgeColor: 'slate' },
+            { id: 'pendentes', label: 'Pendentes', badge: faturas.filter(f => (f.status || 'PENDENTE') === 'PENDENTE').length, badgeColor: 'amber' },
+            { id: 'pagas', label: 'Reconciliadas', badge: faturas.filter(f => f.status === 'PAGO').length, badgeColor: 'slate' },
+          ]}
+          activeTab={filtroStatus}
+          onTabChange={setFiltroStatus}
+        />
       )}
 
       {selecionados.size > 0 && (

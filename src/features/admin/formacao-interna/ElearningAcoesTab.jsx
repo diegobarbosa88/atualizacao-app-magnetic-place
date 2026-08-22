@@ -7,6 +7,7 @@ import { CATEGORIAS, CATEGORIAS_EXIGEM_VALIDADE, VALIDADE_PADRAO_MESES } from '.
 import { IlustracaoTile } from './formacaoIcons';
 import { ResumoCard, BarraProgresso } from './formacaoAdminUiKit';
 import ModalShell from '../../../components/common/ModalShell';
+import SubTabBar from '../../../components/common/SubTabBar';
 
 const ANO_ATUAL = new Date().getFullYear();
 const ANOS = Array.from({ length: 5 }, (_, i) => ANO_ATUAL - i);
@@ -340,21 +341,20 @@ export default function ElearningAcoesTab({ refreshKey }) {
                             </p>
                           )}
 
-                          <div className="flex items-center gap-1 mb-3 border-b border-slate-200 px-1">
-                            {SUB_TABS.map(tab => (
-                              <button
-                                key={tab.id}
-                                onClick={() => setExpandedTab(tab.id)}
-                                className={`px-3 py-2 text-[10px] font-black uppercase tracking-widest border-b-2 -mb-px transition-all ${
-                                  expandedTab === tab.id ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-400 hover:text-slate-600'
-                                }`}
-                              >
-                                {tab.label}
-                                {tab.id === 'participantes' && participantes.length > 0 && ` (${participantes.length})`}
-                                {tab.id === 'questionario' && Array.isArray(f.questionario) && f.questionario.length > 0 && ` (${f.questionario.length})`}
-                              </button>
-                            ))}
-                          </div>
+                          <SubTabBar
+                            tabs={SUB_TABS.map(tab => ({
+                              ...tab,
+                              badge: tab.id === 'participantes' && participantes.length > 0
+                                ? participantes.length
+                                : tab.id === 'questionario' && Array.isArray(f.questionario) && f.questionario.length > 0
+                                  ? f.questionario.length
+                                  : undefined,
+                              badgeColor: 'slate',
+                            }))}
+                            activeTab={expandedTab}
+                            onTabChange={setExpandedTab}
+                            className="mb-3"
+                          />
 
                           {expandedTab === 'participantes' && (
                             <div className="space-y-2 px-1">

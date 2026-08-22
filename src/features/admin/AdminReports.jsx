@@ -3,6 +3,7 @@ import { useApp } from '../../context/AppContext';
 import ClientTimesheetReport from '../../components/common/ClientTimesheetReport';
 import DateMultiPicker from '../../components/common/DateMultiPicker';
 import SectionHeaderShell from '../../components/common/SectionHeaderShell';
+import SubTabBar from '../../components/common/SubTabBar';
 import { FileText, History, Users, Building2, Activity, X, Zap, Calendar, CalendarRange, CalendarDays } from 'lucide-react';
 import { toISODateLocal } from '../../utils/dateUtils';
 
@@ -150,26 +151,15 @@ export default function AdminReports({ printingReport, setPrintingReport }) {
       {/* Filtros */}
       <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100 space-y-4 sm:space-y-6">
         {/* Toggle de modo de período */}
-        <div className="flex items-center gap-1 border-b border-slate-100">
-          <button
-            onClick={() => setFilterMode('month')}
-            className={`flex items-center gap-1.5 px-3 pb-2.5 pt-1 text-[11px] font-black uppercase tracking-wider transition-all border-b-2 -mb-px ${filterMode === 'month' ? 'border-[#EB8D00] text-[#1B3A57]' : 'border-transparent text-slate-400 hover:text-[#1B3A57]'}`}
-          >
-            <Calendar size={13} /> Mês
-          </button>
-          <button
-            onClick={() => setFilterMode('range')}
-            className={`flex items-center gap-1.5 px-3 pb-2.5 pt-1 text-[11px] font-black uppercase tracking-wider transition-all border-b-2 -mb-px ${filterMode === 'range' ? 'border-[#EB8D00] text-[#1B3A57]' : 'border-transparent text-slate-400 hover:text-[#1B3A57]'}`}
-          >
-            <CalendarRange size={13} /> Intervalo
-          </button>
-          <button
-            onClick={() => setFilterMode('dates')}
-            className={`flex items-center gap-1.5 px-3 pb-2.5 pt-1 text-[11px] font-black uppercase tracking-wider transition-all border-b-2 -mb-px ${filterMode === 'dates' ? 'border-[#EB8D00] text-[#1B3A57]' : 'border-transparent text-slate-400 hover:text-[#1B3A57]'}`}
-          >
-            <CalendarDays size={13} /> Dias
-          </button>
-        </div>
+        <SubTabBar
+          tabs={[
+            { id: 'month', label: 'Mês', icon: Calendar },
+            { id: 'range', label: 'Intervalo', icon: CalendarRange },
+            { id: 'dates', label: 'Dias', icon: CalendarDays },
+          ]}
+          activeTab={filterMode}
+          onTabChange={setFilterMode}
+        />
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
           <div className="space-y-2">
