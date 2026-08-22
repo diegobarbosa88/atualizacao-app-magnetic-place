@@ -27,7 +27,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const {
-      invite_id, nome, documento, documento_validade, nif, nis, morada, profissao,
+      invite_id, nome, documento, documento_validade, estado_civil, nif, nis, morada, profissao,
       assinatura_base64, texto_hash, texto_versao, user_agent, email,
     } = body;
 
@@ -95,6 +95,7 @@ Deno.serve(async (req: Request) => {
         nome:              nome.trim(),
         documentoId:       documento ?? "N/D",
         documentoValidade: documento_validade,
+        estadoCivil:       estado_civil,
         nif,
         nis,
         morada,

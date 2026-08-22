@@ -54,8 +54,16 @@ function validarNIS(nis) {
   return /^\d{11}$/.test(nis);
 }
 
+const ESTADO_CIVIL_OPTIONS = [
+  { value: 'solteiro',       label: 'Solteiro(a)' },
+  { value: 'casado',         label: 'Casado(a)' },
+  { value: 'uniao_de_facto', label: 'União de facto' },
+  { value: 'divorciado',     label: 'Divorciado(a)' },
+  { value: 'viuvo',          label: 'Viúvo(a)' },
+];
+
 const EMPTY_FORM = {
-  nome: '', profissao: '', profissao_cnp: '', data_nascimento: '', tel: '', email: '', dni: '', documento_validade: '', address: '',
+  nome: '', profissao: '', profissao_cnp: '', data_nascimento: '', tel: '', email: '', dni: '', documento_validade: '', estado_civil: '', address: '',
   tabela_irs: 'tabelaI', n_dependentes: 0,
   nis: '', nif: '', iban: '',
 };
@@ -316,6 +324,7 @@ export default function OnboardingForm({ token }) {
             nome:               form.nome,
             documento:          form.dni,
             documento_validade: form.documento_validade || undefined,
+            estado_civil:       ESTADO_CIVIL_OPTIONS.find(o => o.value === form.estado_civil)?.label,
             nif:                form.nif || undefined,
             nis:                form.nis || undefined,
             morada:             form.address || undefined,
@@ -497,13 +506,24 @@ export default function OnboardingForm({ token }) {
                   }}
                 />
               </InputField>
-              <InputField label="Data de Nascimento" icon={Calendar}>
-                <Inp
-                  type="date"
-                  value={form.data_nascimento}
-                  onChange={e => set('data_nascimento', e.target.value)}
-                />
-              </InputField>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <InputField label="Data de Nascimento" icon={Calendar}>
+                  <Inp
+                    type="date"
+                    value={form.data_nascimento}
+                    onChange={e => set('data_nascimento', e.target.value)}
+                  />
+                </InputField>
+                <InputField label="Estado civil" icon={User}>
+                  <div className="relative">
+                    <Sel value={form.estado_civil} onChange={e => set('estado_civil', e.target.value)}>
+                      <option value="">Selecionar…</option>
+                      {ESTADO_CIVIL_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </Sel>
+                    <ChevronRight size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 rotate-90 pointer-events-none" />
+                  </div>
+                </InputField>
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <InputField label="Telemóvel" icon={Phone} error={errors.tel}>
                   <Inp inputMode="tel" value={form.tel} onChange={e => set('tel', e.target.value)} placeholder="+351 9XX XXX XXX" />
@@ -579,6 +599,7 @@ export default function OnboardingForm({ token }) {
               <div className="space-y-4">
                 <ReviewBlock title="Dados Pessoais" accent="indigo">
                   <RRow label="Nome" value={form.nome} />
+                  <RRow label="Estado civil" value={ESTADO_CIVIL_OPTIONS.find(o => o.value === form.estado_civil)?.label} />
                   <RRow label="Profissão" value={form.profissao} />
                   <RRow label="Telemóvel" value={form.tel} />
                   <RRow label="Email" value={form.email} />
@@ -629,6 +650,7 @@ export default function OnboardingForm({ token }) {
                 nome={form.nome}
                 dados={{
                   nome: form.nome,
+                  estado_civil: ESTADO_CIVIL_OPTIONS.find(o => o.value === form.estado_civil)?.label,
                   documento: form.dni,
                   documento_validade: form.documento_validade,
                   nif: form.nif,

@@ -68,6 +68,7 @@ export function personalizarTexto(template, dados = {}) {
 
   const subs = [
     [/\[Nome completo do trabalhador\]/g, dados.nome],
+    [/\[estado civil\]/g, dados.estado_civil],
     [/titular do documento de identificação n\.º \[_____\]/g, dados.documento ? `titular do documento de identificação n.º ${dados.documento}` : null],
     [/válido até \[__\/__\/____\]/g, fmtData(dados.documento_validade) ? `válido até ${fmtData(dados.documento_validade)}` : null],
     [/contribuinte fiscal \(NIF\) n\.º \[_____\]/g, dados.nif ? `contribuinte fiscal (NIF) n.º ${dados.nif}` : null],

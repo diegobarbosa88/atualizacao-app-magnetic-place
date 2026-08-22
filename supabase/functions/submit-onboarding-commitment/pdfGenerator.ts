@@ -66,6 +66,7 @@ O Segundo Contraente declara ter lido, compreendido e aceite integralmente todas
 
 export interface DadosPersonalizacao {
   nome: string;
+  estadoCivil?: string;
   documentoId?: string;
   documentoValidade?: string; // ISO yyyy-mm-dd
   nif?: string;
@@ -95,6 +96,7 @@ function personalizarTexto(template: string, dados: DadosPersonalizacao): string
     ? Number(dados.vencimentoBase).toFixed(2) : null;
 
   let out = template.replace("[Nome completo do trabalhador]", dados.nome);
+  if (dados.estadoCivil) out = out.replace("[estado civil]", dados.estadoCivil);
   if (dados.documentoId) out = out.replace("titular do documento de identificação n.º [_____]", `titular do documento de identificação n.º ${dados.documentoId}`);
   if (validade) out = out.replace("válido até [__/__/____]", `válido até ${validade}`);
   if (dados.nif) out = out.replace("contribuinte fiscal (NIF) n.º [_____]", `contribuinte fiscal (NIF) n.º ${dados.nif}`);
