@@ -115,8 +115,14 @@ const PRESTACAO_MAP = {
   'hibrido':    'A',  // Teletrabalho parcial (alternado)
 };
 
-// Modalidades a termo que exigem fim-contrato e motivo-contrato
-const MODALIDADES_TERMO = new Set(['E','EA','EB','O','F','FA','FB','N','G','GA','GB','Q','H','HA','HB','P','I']);
+// Modalidades a termo CERTO — data de fim é conhecida e obrigatória.
+const MODALIDADES_TERMO_CERTO = new Set(['E','EA','EB','O','F','FA','FB','N','I']);
+
+// Modalidades a termo INCERTO — por definição não têm data de fim
+// conhecida (o contrato cessa com a verificação de um evento, não numa
+// data calendário); não enviar fim-contrato para estas, ou a PSI rejeita
+// com "DATA FIM CONTRATO COM FORMATO INVÁLIDO" ao receber string vazia.
+const MODALIDADES_TERMO_INCERTO = new Set(['G','GA','GB','Q','H','HA','HB','P']);
 
 // Modalidades tempo parcial que exigem percentagem-trabalho, horas-trabalho, dias-trabalho
 const MODALIDADES_PARCIAL = new Set(['B','D','BA','BB','R','F','FA','FB','N','H','HA','HB','P']);
@@ -200,9 +206,13 @@ export function buildAdmissaoRest(dados) {
     'local-trabalho':            parseInt(localTrabalho, 10) || 1,
   };
 
-  // fim-contrato obrigatório para contratos a termo (E/EA/EB/O/F/FA/FB/N/I e incertos G...P)
-  if (dataFimContrato || MODALIDADES_TERMO.has(modalidade)) {
-    body['fim-contrato'] = fmtDate(dataFimContrato || '');
+  // fim-contrato só é enviado quando há mesmo uma data conhecida — nos
+  // termos incertos (G/H/Q/P) fica de fora mesmo que a modalidade seja "a
+  // termo", precisamente porque a data de fim não é conhecida.
+  if (dataFimContrato) {
+    body['fim-contrato'] = fmtDate(dataFimContrato);
+  } else if (MODALIDADES_TERMO_CERTO.has(modalidade)) {
+    throw new Error(`Contrato modalidade "${modalidade}" é a termo certo e exige uma data de fim de contrato — nenhuma foi fornecida.`);
   }
 
   // campos tempo parcial

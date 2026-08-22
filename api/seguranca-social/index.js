@@ -226,23 +226,28 @@ export default async function handler(req, res) {
   let resultado, payloadStr;
 
   if (action === 'admissao') {
-    const jsonBody = buildAdmissaoRest({
-      nissEmpresa,
-      nisTrabalhador:    worker.nis,
-      dataNascimento:    dadosExtra.dataNascimento    || worker.data_nascimento,
-      tipoContrato:      dadosExtra.tipoContrato      || worker.tipo_contrato   || 'sem_termo',
-      regime:            dadosExtra.regime            || worker.regime           || 'tempo_inteiro',
-      modalidadeContrato: dadosExtra.modalidadeContrato,
-      modoTrabalho:      dadosExtra.modoTrabalho      || worker.modo_trabalho   || 'presencial',
-      prestacaoTrabalho: dadosExtra.prestacaoTrabalho,
-      dataInicioContrato: dadosExtra.dataInicio       || worker.dataInicio,
-      profissaoCnp:      dadosExtra.profissaoCnp      || worker.profissao_cnp,
-      remuneracaoBase:   dadosExtra.remuneracaoBase   || worker.vencimento_base || 0,
-      enquadramento:     dadosExtra.enquadramento     || worker.enquadramento   || 'REGE',
-      localTrabalho:     dadosExtra.localTrabalho     || worker.local_trabalho  || 1,
-      dataFimContrato:   worker.dataFim || undefined,
-      horasTrabalho:     dadosExtra.horasSemanais     || worker.horas_semanais  || undefined,
-    });
+    let jsonBody;
+    try {
+      jsonBody = buildAdmissaoRest({
+        nissEmpresa,
+        nisTrabalhador:    worker.nis,
+        dataNascimento:    dadosExtra.dataNascimento    || worker.data_nascimento,
+        tipoContrato:      dadosExtra.tipoContrato      || worker.tipo_contrato   || 'sem_termo',
+        regime:            dadosExtra.regime            || worker.regime           || 'tempo_inteiro',
+        modalidadeContrato: dadosExtra.modalidadeContrato,
+        modoTrabalho:      dadosExtra.modoTrabalho      || worker.modo_trabalho   || 'presencial',
+        prestacaoTrabalho: dadosExtra.prestacaoTrabalho,
+        dataInicioContrato: dadosExtra.dataInicio       || worker.dataInicio,
+        profissaoCnp:      dadosExtra.profissaoCnp      || worker.profissao_cnp,
+        remuneracaoBase:   dadosExtra.remuneracaoBase   || worker.vencimento_base || 0,
+        enquadramento:     dadosExtra.enquadramento     || worker.enquadramento   || 'REGE',
+        localTrabalho:     dadosExtra.localTrabalho     || worker.local_trabalho  || 1,
+        dataFimContrato:   worker.dataFim || undefined,
+        horasTrabalho:     dadosExtra.horasSemanais     || worker.horas_semanais  || undefined,
+      });
+    } catch (e) {
+      return res.status(400).json({ sucesso: false, erro: e.message });
+    }
 
     payloadStr = JSON.stringify(jsonBody);
 
