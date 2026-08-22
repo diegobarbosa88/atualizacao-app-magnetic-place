@@ -63,7 +63,10 @@ export default function ScheduleForm() {
     <div className="p-4 sm:p-6">
       {/* Os botões Cancelar/Salvar viviam aqui no topo; passaram para o rodapé
           fixo do ModalShell, em ScheduleManager.jsx. */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+      {/* Em modo "horários por dia" a configuração tem 7 cartões com quatro
+          campos de hora cada, e a atribuição é só uma lista — por isso passam
+          a metade/metade em vez de 1/3 e 2/3. */}
+      <div className={`grid grid-cols-1 ${scheduleForm.isAdvanced ? 'lg:grid-cols-2' : 'lg:grid-cols-3'} gap-4 sm:gap-6`}>
         {/* COLUNA 1: Configuração do Horário */}
         <div className="lg:col-span-1 space-y-6">
           <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 space-y-6">
@@ -161,9 +164,11 @@ export default function ScheduleForm() {
                 {[{ v: 1, l: 'Segunda-feira' }, { v: 2, l: 'Terça-feira' }, { v: 3, l: 'Quarta-feira' }, { v: 4, l: 'Quinta-feira' }, { v: 5, l: 'Sexta-feira' }, { v: 6, l: 'Sábado' }, { v: 0, l: 'Domingo' }].map(day => {
                   const config = scheduleForm.dailyConfigs?.[day.v] || { isActive: false, hasBreak: false, startTime: '', breakStart: '', breakEnd: '', endTime: '' };
                   return (
-                    <div key={day.v} className="p-4 rounded-2xl border border-slate-200 bg-slate-50" style={config.isActive ? { borderColor: 'rgba(27,58,87,0.2)', backgroundColor: 'rgba(27,58,87,0.03)' } : {}}>
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-3">
+                    // @container marca este cartão como referência das container
+                    // queries usadas na grelha de horas, mais abaixo.
+                    <div key={day.v} className="@container p-4 rounded-2xl border border-slate-200 bg-slate-50" style={config.isActive ? { borderColor: 'rgba(27,58,87,0.2)', backgroundColor: 'rgba(27,58,87,0.03)' } : {}}>
+                      <div className="flex items-center justify-between gap-2 mb-3">
+                        <div className="flex items-center gap-3 min-w-0">
                           <input type="checkbox" checked={config.isActive} onChange={e => {
                             setScheduleForm({
                               ...scheduleForm,
@@ -183,13 +188,18 @@ export default function ScheduleForm() {
                                 ...scheduleForm.dailyConfigs, [day.v]: { ...config, hasBreak: nextHasBreak, breakStart: nextHasBreak ? config.breakStart : '', breakEnd: nextHasBreak ? config.breakEnd : '' }
                               }
                             });
-                          }} className="text-[10px] font-bold text-orange-500 hover:text-orange-600">
+                          }} className="text-[10px] font-bold text-orange-500 hover:text-orange-600 whitespace-nowrap shrink-0">
                             {(config.hasBreak || !!config.breakStart) ? '× Remover Pausa' : '+ Adicionar Pausa'}
                           </button>
                         )}
                       </div>
                       {config.isActive && (
-                        <div className={`grid grid-cols-2 ${config.hasBreak || !!config.breakStart ? 'lg:grid-cols-4' : ''} gap-4 pl-7`}>
+                        // @md é container query (Tailwind v4), não breakpoint de
+                        // viewport: mede a largura DESTE cartão. Com lg: as quatro
+                        // colunas ativavam num monitor largo mesmo dentro da coluna
+                        // estreita, dando ~78px por campo — um <input type="time">
+                        // precisa de ~110px, por isso só se via o ícone do relógio.
+                        <div className={`grid grid-cols-2 ${config.hasBreak || !!config.breakStart ? '@md:grid-cols-4' : ''} gap-3 pl-7`}>
                           <div className="space-y-1"><label className="text-[9px] font-black text-slate-400 uppercase">Entrada</label><input type="time" value={config.startTime} onChange={e => setScheduleForm({ ...scheduleForm, dailyConfigs: { ...scheduleForm.dailyConfigs, [day.v]: { ...config, startTime: e.target.value } } })} className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs shadow-sm" /></div>
                           {(config.hasBreak || !!config.breakStart) && (
                             <>
@@ -208,8 +218,8 @@ export default function ScheduleForm() {
           </div>
         </div>
 
-        {/* COLUNAS 2 e 3: Atribuição de Trabalhadores */}
-        <div className="lg:col-span-2 space-y-6">
+        {/* Atribuição de Trabalhadores — ocupa o resto da grelha */}
+        <div className={`${scheduleForm.isAdvanced ? 'lg:col-span-1' : 'lg:col-span-2'} space-y-6`}>
           <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 space-y-6">
             <div className="flex items-center gap-3 mb-2">
               <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: '#869AAF' }}><Users size={18} /></div>
