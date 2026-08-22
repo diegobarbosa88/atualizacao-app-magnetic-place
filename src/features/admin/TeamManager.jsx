@@ -6,6 +6,7 @@ import { Users, LayoutGrid, List, CalendarX, ShieldCheck, AlertTriangle, Search,
 import WorkerForm from './team/WorkerForm';
 import WorkerList from './team/WorkerList';
 import ModalShell from '../../components/common/ModalShell';
+import SectionHeaderShell from '../../components/common/SectionHeaderShell';
 import ChangeRequestsPanel from './team/ChangeRequestsPanel';
 import AbsenceRequestsPanel from './team/AbsenceRequestsPanel';
 import WorkerValorHoraHistoryModal from './team/WorkerValorHoraHistoryModal';
@@ -152,53 +153,31 @@ const TeamManagerContent = ({ onLogin }) => {
     }
   };
 
+  const TEAM_TAB_LABELS = { workers: 'Colaboradores', absences: 'Faltas', validacao: 'Validação', correcoes: 'Correções', onboarding: 'Pendentes de onboarding' };
+
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {/* Sub-tab navigation */}
-      <div className="flex flex-wrap items-end gap-1 mb-5 border-b border-slate-100">
-        <button
-          onClick={() => setTeamSubTab('workers')}
-          className={`flex items-center gap-2 px-3 pb-2.5 pt-1 text-[11px] font-black uppercase tracking-wider transition-all border-b-2 -mb-px ${teamSubTab === 'workers' ? 'border-[#EB8D00] text-[#1B3A57]' : 'border-transparent text-slate-400 hover:text-[#1B3A57]'}`}
-        >
-          <Users size={14} /> Colaboradores
-          {pendingChangeRequests.length > 0 && (
-            <span className="bg-amber-400 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">{pendingChangeRequests.length}</span>
-          )}
-        </button>
-        <button
-          onClick={() => setTeamSubTab('absences')}
-          className={`flex items-center gap-2 px-3 pb-2.5 pt-1 text-[11px] font-black uppercase tracking-wider transition-all border-b-2 -mb-px ${teamSubTab === 'absences' ? 'border-[#EB8D00] text-[#1B3A57]' : 'border-transparent text-slate-400 hover:text-[#1B3A57]'}`}
-        >
-          <CalendarX size={14} /> Faltas
-          {pendingAbsences > 0 && (
-            <span className="bg-rose-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">{pendingAbsences}</span>
-          )}
-        </button>
-        <button
-          onClick={() => setTeamSubTab('validacao')}
-          className={`flex items-center gap-2 px-3 pb-2.5 pt-1 text-[11px] font-black uppercase tracking-wider transition-all border-b-2 -mb-px ${teamSubTab === 'validacao' ? 'border-[#EB8D00] text-[#1B3A57]' : 'border-transparent text-slate-400 hover:text-[#1B3A57]'}`}
-        >
-          <ShieldCheck size={14} /> Validação
-        </button>
-        <button
-          onClick={() => setTeamSubTab('correcoes')}
-          className={`flex items-center gap-2 px-3 pb-2.5 pt-1 text-[11px] font-black uppercase tracking-wider transition-all border-b-2 -mb-px ${teamSubTab === 'correcoes' ? 'border-[#EB8D00] text-[#1B3A57]' : 'border-transparent text-slate-400 hover:text-[#1B3A57]'}`}
-        >
-          <AlertTriangle size={14} /> Correções
-          {pendingWorkerCorrections > 0 && (
-            <span className="bg-rose-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">{pendingWorkerCorrections}</span>
-          )}
-        </button>
-        <button
-          onClick={() => setTeamSubTab('onboarding')}
-          className={`flex items-center gap-2 px-3 pb-2.5 pt-1 text-[11px] font-black uppercase tracking-wider transition-all border-b-2 -mb-px ${teamSubTab === 'onboarding' ? 'border-[#EB8D00] text-[#1B3A57]' : 'border-transparent text-slate-400 hover:text-[#1B3A57]'}`}
-        >
-          <Clock size={14} /> Pendentes
-          {pendingOnboardingCount > 0 && (
-            <span className="bg-rose-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">{pendingOnboardingCount}</span>
-          )}
-        </button>
-      </div>
+      <SectionHeaderShell
+        icon={<Users size={18} />}
+        title="Equipa"
+        subtitle="Colaboradores, faltas e validações"
+        breadcrumbLabel={TEAM_TAB_LABELS[teamSubTab]}
+        tabs={[
+          { id: 'workers',    label: 'Colaboradores', icon: Users,        badge: pendingChangeRequests.length || null, badgeColor: 'amber' },
+          { id: 'absences',   label: 'Faltas',        icon: CalendarX,    badge: pendingAbsences || null },
+          { id: 'validacao',  label: 'Validação',     icon: ShieldCheck },
+          { id: 'correcoes',  label: 'Correções',     icon: AlertTriangle, badge: pendingWorkerCorrections || null },
+          { id: 'onboarding', label: 'Pendentes',     icon: Clock,        badge: pendingOnboardingCount || null },
+        ]}
+        activeTab={teamSubTab}
+        onTabChange={setTeamSubTab}
+        stats={[
+          { label: 'Colaboradores', value: workers.length, colorText: '#1B3A57', dotColor: '#869AAF' },
+          { label: 'Ativos', value: workers.length - inactiveCount, colorText: '#0d7a4b', dotColor: '#1cb476' },
+          { label: 'Inativos', value: inactiveCount, colorText: '#516375', dotColor: '#94a3b8' },
+          { label: 'Onboarding pendente', value: pendingOnboardingCount, colorText: '#92660a', dotColor: '#e8a317' },
+        ]}
+      />
 
       {teamSubTab === 'absences' && (
         <AbsenceRequestsPanel
@@ -222,10 +201,6 @@ const TeamManagerContent = ({ onLogin }) => {
 
       {teamSubTab === 'workers' && (<>
       <div className="flex flex-wrap justify-between items-center gap-3 mb-5">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: '#869AAF' }}><Users size={20} /></div>
-          <h3 className="font-black text-base sm:text-xl text-slate-800 uppercase tracking-tight">Gestão de Colaboradores</h3>
-        </div>
         <div className="relative">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
           <input

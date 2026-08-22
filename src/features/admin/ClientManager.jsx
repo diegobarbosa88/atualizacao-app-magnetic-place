@@ -10,6 +10,7 @@ import ClientEnviosPanel from './client/ClientEnviosPanel';
 import CorrectionsInbox from './corrections/CorrectionsInbox';
 import ClientPortalAuditPanel from './client/ClientPortalAuditPanel';
 import ModalShell from '../../components/common/ModalShell';
+import SectionHeaderShell from '../../components/common/SectionHeaderShell';
 
 const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setPrintingReport, portalMonth, setPortalMonth }) => {
   const { clients, supabase, corrections } = useApp();
@@ -105,38 +106,36 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
     return clientsSort.direction === 'asc' ? res : -res;
   });
 
+  const CLIENT_TAB_LABELS = { list: 'Gestão comercial', envios: 'Envios de relatórios', correcoes: 'Inbox de correções', auditoria: 'Auditoria do portal' };
+  const clientesComValor = clients.filter(c => Number(c.valorHora) > 0);
+  const valorMedio = clientesComValor.length
+    ? clientesComValor.reduce((sum, c) => sum + Number(c.valorHora), 0) / clientesComValor.length
+    : 0;
+  const clientesLimitados = clients.filter(c => c.triggers_limited_mode).length;
+  const clientesSemMorada = clients.filter(c => !c.morada).length;
+
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {/* Sub-tab navigation */}
-      <div className="flex flex-wrap items-end gap-1 mb-5 border-b border-slate-100">
-        <button
-          onClick={() => setClientSubTab('list')}
-          className={`flex items-center gap-2 px-3 pb-2.5 pt-1 text-[11px] font-black uppercase tracking-wider transition-all border-b-2 -mb-px ${clientSubTab === 'list' ? 'border-[#EB8D00] text-[#1B3A57]' : 'border-transparent text-slate-400 hover:text-[#1B3A57]'}`}
-        >
-          <Building2 size={14} /> Clientes
-        </button>
-        <button
-          onClick={() => setClientSubTab('envios')}
-          className={`flex items-center gap-2 px-3 pb-2.5 pt-1 text-[11px] font-black uppercase tracking-wider transition-all border-b-2 -mb-px ${clientSubTab === 'envios' ? 'border-[#EB8D00] text-[#1B3A57]' : 'border-transparent text-slate-400 hover:text-[#1B3A57]'}`}
-        >
-          <Send size={14} /> Envios
-        </button>
-        <button
-          onClick={() => setClientSubTab('correcoes')}
-          className={`flex items-center gap-2 px-3 pb-2.5 pt-1 text-[11px] font-black uppercase tracking-wider transition-all border-b-2 -mb-px ${clientSubTab === 'correcoes' ? 'border-[#EB8D00] text-[#1B3A57]' : 'border-transparent text-slate-400 hover:text-[#1B3A57]'}`}
-        >
-          <AlertTriangle size={14} /> Correções
-          {pendingClientCorrections > 0 && (
-            <span className="bg-rose-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">{pendingClientCorrections}</span>
-          )}
-        </button>
-        <button
-          onClick={() => setClientSubTab('auditoria')}
-          className={`flex items-center gap-2 px-3 pb-2.5 pt-1 text-[11px] font-black uppercase tracking-wider transition-all border-b-2 -mb-px ${clientSubTab === 'auditoria' ? 'border-[#EB8D00] text-[#1B3A57]' : 'border-transparent text-slate-400 hover:text-[#1B3A57]'}`}
-        >
-          <Shield size={14} /> Auditoria Portal
-        </button>
-      </div>
+      <SectionHeaderShell
+        icon={<Building2 size={18} />}
+        title="Clientes"
+        subtitle="Gestão comercial, envios e auditoria"
+        breadcrumbLabel={CLIENT_TAB_LABELS[clientSubTab]}
+        tabs={[
+          { id: 'list',      label: 'Clientes',        icon: Building2 },
+          { id: 'envios',    label: 'Envios',          icon: Send },
+          { id: 'correcoes', label: 'Correções',       icon: AlertTriangle, badge: pendingClientCorrections || null },
+          { id: 'auditoria', label: 'Auditoria Portal', icon: Shield },
+        ]}
+        activeTab={clientSubTab}
+        onTabChange={setClientSubTab}
+        stats={[
+          { label: 'Clientes ativos', value: clients.length, colorText: '#1B3A57', dotColor: '#869AAF' },
+          { label: 'Valor/hora médio', value: `${valorMedio.toFixed(2)}€`, colorText: '#C97600', dotColor: '#EB8D00' },
+          { label: 'Modo limitado', value: clientesLimitados, colorText: '#B8791F', dotColor: '#D98A2B' },
+          { label: 'Sem morada', value: clientesSemMorada, colorText: '#B4432F', dotColor: '#B4432F' },
+        ]}
+      />
 
       {clientSubTab === 'envios' && (
         <ClientEnviosPanel
@@ -158,10 +157,6 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
 
       {clientSubTab === 'list' && (<>
       <div className="flex flex-wrap justify-between items-center gap-3 mb-5">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: '#869AAF' }}><Briefcase size={20} /></div>
-          <h3 className="font-black text-base sm:text-xl text-slate-800 uppercase tracking-tight">Gestão Comercial</h3>
-        </div>
         <div className="relative">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
           <input
