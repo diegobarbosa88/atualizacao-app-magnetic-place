@@ -4,6 +4,8 @@ import { authFetch } from '../../../utils/authFetch';
 import { impersonarTrabalhador } from '../../../utils/impersonateWorker';
 import { Search, Edit2, Trash2, CheckCircle, ShieldCheck, ShieldOff, MoreVertical, FolderOpen, SendHorizonal, AlertTriangle, Shield } from 'lucide-react';
 import SSComunicacaoModal from './SSComunicacaoModal';
+import Card from '../../../components/common/Card';
+import { FONT_TITLE, FONT_MONO } from '../../../styles/designTokens';
 
 function getInitials(name) {
   if (!name) return '?';
@@ -377,7 +379,10 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
       {sortedWorkers.map(w => {
         const workerApproval = approvals.find(a => a.workerId === w.id && a.month === currentMonthStr);
         return (
-          <div key={w.id} onClick={() => onEdit(w)} className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm hover:shadow-md hover:border-slate-200 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer">
+          // Mantém-se a grelha responsiva própria em vez do CardGrid de 230px:
+          // este cartão leva linha do tempo, badge de apólice e seis ações, e
+          // a 230px o conteúdo ficava espremido.
+          <Card key={w.id} variant="item" interactive onClick={() => onEdit(w)} className="!px-3 !py-3">
             <div className="flex justify-between items-start mb-2">
               <div className={`px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase border flex items-center gap-1 ${w.status === 'inativo' ? 'text-rose-600 border-rose-200 bg-rose-50' : 'text-emerald-600 border-emerald-200 bg-emerald-50'}`}>
                 {w.status !== 'inativo' && <CheckCircle size={8} />}
@@ -406,8 +411,8 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
             <div className="flex items-center gap-2 mb-2">
               <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-[10px] font-black" style={{ backgroundColor: '#1B3A57', color: '#EB8D00' }}>{getInitials(w.name)}</div>
               <div className="min-w-0">
-                <h4 className="font-black text-slate-800 text-xs truncate">{w.name}</h4>
-                <p className="text-[9px] text-slate-400 font-bold truncate">{w.profissao || 'Staff'}</p>
+                <h4 className="text-[0.95rem] font-bold leading-[1.15] text-[#28323c] truncate" style={{ fontFamily: FONT_TITLE }} title={w.name}>{w.name}</h4>
+                <p className="text-[9.5px] text-slate-400 font-semibold truncate" style={{ fontFamily: FONT_MONO }}>{w.profissao || 'Staff'}</p>
               </div>
             </div>
             <div className="mb-1.5 overflow-hidden"><MiniTimeline w={w} ssFlag={ssComunicacoesMap[w.nis]} /></div>
@@ -423,7 +428,7 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                 <div className="flex items-center gap-1 pt-1"><CheckCircle size={9} className="text-emerald-500" /><span className="text-emerald-600">Aprovado</span></div>
               )}
             </div>
-          </div>
+          </Card>
         );
       })}
     </div>

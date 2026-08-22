@@ -3,8 +3,10 @@ import { useSearchParams } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { useClient, ClientProvider } from './contexts/ClientContext';
 import {
-  Briefcase, LayoutGrid, List, Edit2, Trash2, MapPin, Euro, ShieldOff, Send, AlertTriangle, Shield, Search, MoreVertical, Check, X, Building2, Save
+  Briefcase, LayoutGrid, List, Edit2, Trash2, MapPin, Euro, ShieldOff, Send, AlertTriangle, Shield, Search, MoreVertical, Check, X, Building2, Save, Clock
 } from 'lucide-react';
+import Card, { CardGrid } from '../../components/common/Card';
+import { FONT_TITLE, FONT_MONO } from '../../styles/designTokens';
 import ClientForm from './client/ClientForm';
 import ClientEnviosPanel from './client/ClientEnviosPanel';
 import CorrectionsInbox from './corrections/CorrectionsInbox';
@@ -289,43 +291,63 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
           </table>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {sortedClients.map(c => (
-            <div key={c.id} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-slate-200 hover:-translate-y-0.5 transition-all duration-200">
-              {/* Header */}
-              <div className="flex justify-between items-start mb-3">
-                <div className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase border flex items-center gap-1" style={{ color: '#869AAF', borderColor: 'rgba(134,154,175,0.4)', backgroundColor: 'rgba(134,154,175,0.1)' }}>
-                  <Briefcase size={10} /> Cliente
+        <CardGrid>
+          {sortedClients.map(c => {
+            const nHorarios = (c.assignedSchedules || []).length;
+            return (
+              <Card key={c.id} variant="item" interactive>
+                <div className="flex items-start justify-between mb-[0.7rem]">
+                  <div className="w-[38px] h-[38px] rounded-[11px] flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: '#869AAF' }}>
+                    <Briefcase size={17} />
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => loadClientValorHoraHistory(c.id, c.name)} className="w-[26px] h-[26px] rounded-lg border border-[#E5E1D6] bg-white text-slate-400 hover:text-slate-600 flex items-center justify-center transition-all text-[11px]" title="Histórico de valor">📊</button>
+                    <button onClick={() => openEditClient(c)} className="w-[26px] h-[26px] rounded-lg border border-[#E5E1D6] bg-white text-slate-400 hover:text-[#1B3A57] flex items-center justify-center transition-all" title="Editar"><Edit2 size={12} /></button>
+                    {confirmDeleteClientId === c.id ? (
+                      <>
+                        <button onClick={() => { handleDeleteClient(c.id); setConfirmDeleteClientId(null); }} className="px-2 h-[26px] bg-rose-600 text-white text-[10px] font-black rounded-lg">Sim</button>
+                        <button onClick={() => setConfirmDeleteClientId(null)} className="px-2 h-[26px] bg-slate-100 text-slate-600 text-[10px] font-black rounded-lg">Não</button>
+                      </>
+                    ) : (
+                      <button onClick={() => setConfirmDeleteClientId(c.id)} className="w-[26px] h-[26px] rounded-lg border border-[#E5E1D6] bg-white text-slate-300 hover:text-rose-500 hover:border-rose-200 flex items-center justify-center transition-all" title="Apagar"><Trash2 size={12} /></button>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center gap-1">
-                  <button onClick={() => loadClientValorHoraHistory(c.id, c.name)} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-all border border-slate-100 text-xs" title="Histórico">📊</button>
-                  <button onClick={() => { openEditClient(c); }} className="p-1.5 rounded-lg hover:bg-slate-50 transition-all border" style={{ color: '#869AAF', borderColor: 'rgba(134,154,175,0.3)' }} title="Editar"><Edit2 size={12} /></button>
-                  {confirmDeleteClientId === c.id ? (
-                    <div className="flex items-center gap-1">
-                      <button onClick={() => { handleDeleteClient(c.id); setConfirmDeleteClientId(null); }} className="px-2 py-1 bg-red-600 text-white text-xs font-bold rounded-lg">Sim</button>
-                      <button onClick={() => setConfirmDeleteClientId(null)} className="px-2 py-1 bg-slate-200 text-slate-600 text-xs font-bold rounded-lg">Não</button>
-                    </div>
-                  ) : (
-                    <button onClick={() => setConfirmDeleteClientId(c.id)} className="p-1.5 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all border border-slate-100"><Trash2 size={12} /></button>
-                  )}
+
+                <p className="text-[1.05rem] font-bold leading-[1.15] text-[#28323c] truncate" style={{ fontFamily: FONT_TITLE }} title={c.name}>{c.name}</p>
+                <p className="text-[10px] font-semibold text-slate-400" style={{ fontFamily: FONT_MONO }}>
+                  {c.nif ? `NIF ${c.nif}` : 'Sem NIF'}
+                </p>
+
+                <div className="flex items-center gap-1.5 mt-[0.55rem] text-[11px] font-semibold text-[#5c6a76]">
+                  <MapPin size={12} className="shrink-0" style={{ color: '#869AAF' }} />
+                  <span className="truncate" title={c.morada || undefined}>{c.morada || 'Sem morada registada'}</span>
                 </div>
-              </div>
-              {/* Name */}
-              <h4 className="font-black text-slate-800 text-sm uppercase truncate mb-0.5">{c.name}</h4>
-              <p className="text-[10px] text-slate-400 font-bold truncate mb-3">{c.nif || 'Sem NIF'}</p>
-              {/* Info */}
-              <div className="text-[10px] text-slate-400 font-bold space-y-1 border-t border-slate-50 pt-2">
-                <div className="flex items-center gap-1.5"><MapPin size={10} /> {c.morada || 'Sem morada'}</div>
-                <div className="flex items-center gap-1.5"><Euro size={10} /> {c.valorHora ? `${c.valorHora}€/h` : 'N/A'}</div>
+
+                {/* No mockup este badge estava em position:absolute no canto
+                    superior direito e colidia com os botões de ação — aqui fica
+                    em linha, a seguir à morada. */}
                 {c.triggers_limited_mode && (
-                  <div className="flex items-center gap-1.5 text-amber-600 font-black mt-1">
-                    <ShieldOff size={10} /> Modo Limitado
+                  <div className="flex items-center gap-1 mt-1.5">
+                    <span className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[8.5px] font-bold" style={{ background: '#FBF0DE', color: '#B8791F' }}>
+                      <ShieldOff size={9} /> Modo limitado
+                    </span>
                   </div>
                 )}
-              </div>
-            </div>
-          ))}
-        </div>
+
+                <div className="flex items-center justify-between mt-[0.85rem] pt-[0.7rem] border-t border-[#F1EFE8]">
+                  <span className="text-[1.15rem] font-bold leading-none text-[#1B3A57]" style={{ fontFamily: FONT_TITLE }}>
+                    {c.valorHora ? Number(c.valorHora).toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
+                    <span className="text-[10px] font-semibold text-slate-400 ml-0.5">€/h</span>
+                  </span>
+                  <span className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[9.5px] font-bold text-[#5C7086]" style={{ fontFamily: FONT_MONO, background: '#F4F2EC' }}>
+                    <Clock size={10} /> {nHorarios} horário{nHorarios !== 1 ? 's' : ''}
+                  </span>
+                </div>
+              </Card>
+            );
+          })}
+        </CardGrid>
       )}
       </>)} {/* fim clientSubTab === 'list' */}
 

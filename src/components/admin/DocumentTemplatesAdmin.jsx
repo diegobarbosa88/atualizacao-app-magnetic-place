@@ -4,6 +4,8 @@ import { useApp } from '../../context/AppContext';
 import { downloadTemplateBytes } from '../../utils/docxTemplateService';
 import DocxPreviewModal from '../common/DocxPreviewModal';
 import TemplateEditorModal from './templates/TemplateEditorModal';
+import Card, { CardGrid } from '../common/Card';
+import { FONT_TITLE } from '../../styles/designTokens';
 import TemplateGenerateModal from './templates/TemplateGenerateModal';
 
 export default function DocumentTemplatesAdmin({
@@ -114,25 +116,25 @@ export default function DocumentTemplatesAdmin({
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <CardGrid>
             {templates.map(t => (
-              <div key={t.id} className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all duration-200">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-3" style={{ backgroundColor: '#f4f0fd', color: '#6743c2' }}>
-                  <FileText size={18} />
+              <Card key={t.id} variant="item" interactive>
+                <div className="w-[38px] h-[38px] rounded-[11px] flex items-center justify-center mb-[0.7rem]" style={{ backgroundColor: '#f4f0fd', color: '#6743c2' }}>
+                  <FileText size={17} />
                 </div>
-                <p className="text-sm font-black text-slate-800 truncate">{t.name}</p>
-                <p className="text-xs text-slate-400 mt-1 mb-3 line-clamp-2 min-h-[2rem]">
+                <p className="text-[1.05rem] font-bold leading-[1.15] text-[#28323c] truncate" style={{ fontFamily: FONT_TITLE }} title={t.name}>{t.name}</p>
+                <p className="text-[11px] font-semibold text-[#5c6a76] mt-1 mb-3 line-clamp-2 min-h-[2rem]">
                   {t.description || <span className="italic text-slate-300">Sem descrição</span>}
                 </p>
-                <div className="flex items-center gap-1.5 pt-3 border-t border-slate-50">
+                <div className="flex items-center gap-1.5 pt-[0.7rem] border-t border-[#F1EFE8]">
                   <button onClick={() => openTemplatePreview(t)} className="p-1.5 bg-white text-slate-500 rounded-lg border border-slate-200 hover:bg-slate-600 hover:text-white transition-all" title="Pré-visualizar"><Eye className="w-3.5 h-3.5" /></button>
                   <button onClick={() => openEditModal(t)} className="p-1.5 bg-white rounded-lg border border-slate-200 text-[#869AAF] hover:bg-[#869AAF] hover:text-white transition-all" title="Editar"><Edit3 className="w-3.5 h-3.5" /></button>
                   <button onClick={() => openGenerateModal(t)} className="p-1.5 bg-white rounded-lg border border-slate-200 text-[#869AAF] hover:bg-[#869AAF] hover:text-white transition-all" title="Gerar"><Send className="w-3.5 h-3.5" /></button>
                   <button onClick={() => onDeleteTemplate(t)} className="p-1.5 bg-white text-rose-500 rounded-lg border border-rose-100 hover:bg-rose-500 hover:text-white transition-all ml-auto" title="Apagar"><Trash2 className="w-3.5 h-3.5" /></button>
                 </div>
-              </div>
+              </Card>
             ))}
-          </div>
+          </CardGrid>
         )}
       </div>
 
