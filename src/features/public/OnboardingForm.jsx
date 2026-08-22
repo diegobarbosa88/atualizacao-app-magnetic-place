@@ -6,6 +6,7 @@ import {
   Building2, Shield, Lock, Calendar, PenLine,
 } from 'lucide-react';
 import { sendOnboardingNotifAdmin } from '../../utils/emailUtils';
+import { formatPersonName } from '../../utils/textUtils';
 import { notifyEvent, TARGET } from '../../utils/notifyEvent';
 import SelectProfissaoEmpresa from '../../components/SelectProfissaoEmpresa';
 import OnboardingCommitmentStep from './OnboardingCommitmentStep';
@@ -348,6 +349,10 @@ export default function OnboardingForm({ token }) {
       const submId = 'onb_sub_' + Date.now();
       const { error: insertErr } = await supabase.from('worker_onboarding_submissions').insert({
         id: submId, invite_id: invite.id, ...form,
+        // O trabalhador escreve o nome à mão e cada um usa uma convenção —
+        // normaliza aqui para o registo criado na aprovação já nascer coerente
+        // com o resto da equipa.
+        nome: formatPersonName(form.nome),
         n_dependentes: Number(form.n_dependentes) || 0,
         submitted_at: new Date().toISOString(), status: 'pending',
       });

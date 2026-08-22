@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { useApp } from '../../../context/AppContext';
+import { formatPersonName } from '../../../utils/textUtils';
 
 const TeamContext = createContext();
 
@@ -110,6 +111,11 @@ export const TeamProvider = ({ children }) => {
     const workerToSave = {
       ...restForm,
       id,
+      // Normaliza a caixa à entrada para os registos não voltarem a divergir
+      // ("ADRIEL DE JESUS DOS SANTOS" vs "jhonatan melo"). Só mexe em caixa e
+      // espaços — acentos em falta continuam a ser correção manual.
+      name: formatPersonName(workerForm.name),
+      profissao: workerForm.profissao ? formatPersonName(workerForm.profissao) : workerForm.profissao,
       status: workerForm.dataFim ? 'inativo' : 'ativo',
       limited_entry_mode: workerForm.limited_entry_mode || false
     };

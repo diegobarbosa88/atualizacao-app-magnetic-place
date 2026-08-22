@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { useApp } from '../../../context/AppContext';
+import { formatOrgName } from '../../../utils/textUtils';
 
 const ClientContext = createContext();
 
@@ -64,7 +65,15 @@ export const ClientProvider = ({ children }) => {
       }
     }
     const { dataAlteracao, triggers_limited_mode, timezone, ...restForm } = clientForm;
-    await saveToDb('clients', id, { ...restForm, id, triggers_limited_mode: triggers_limited_mode || false, timezone: timezone || 'Europe/Madrid' });
+    await saveToDb('clients', id, {
+      ...restForm,
+      id,
+      // Normaliza a caixa à entrada, preservando siglas e formas jurídicas
+      // ("A&G Steel Building S.L."). Ver formatOrgName em utils/textUtils.
+      name: formatOrgName(clientForm.name),
+      triggers_limited_mode: triggers_limited_mode || false,
+      timezone: timezone || 'Europe/Madrid',
+    });
     setIsAddingInTab(false);
     setClientForm(INITIAL_CLIENT_FORM);
   }, [clientForm, saveToDb, clients]);
