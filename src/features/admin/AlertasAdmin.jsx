@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { ShieldAlert, Loader2, Eye, ThumbsUp, CheckCircle2, XCircle, AlertOctagon, BadgeCheck } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import ModalShell from '../../components/common/ModalShell';
+import SectionHeaderShell from '../../components/common/SectionHeaderShell';
 
 const SEVERIDADE_CFG = {
   alta:  { label: 'Alta',  order: 0, bg: 'bg-rose-50',   text: 'text-rose-600',   dot: 'bg-rose-500' },
@@ -109,20 +110,16 @@ export default function AlertasAdmin() {
 
   return (
     <div className="bg-white rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-6 lg:p-8 shadow-sm border border-slate-100 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex items-center gap-3 mb-5 border-b border-slate-50 pb-4">
-        <div className="bg-rose-50 p-2 rounded-xl text-rose-600">
-          <ShieldAlert size={20} />
-        </div>
-        <div className="flex-1">
-          <h3 className="font-black text-base sm:text-xl text-slate-800 uppercase tracking-tight">Gestão de Alertas</h3>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Compliance, segurança e administração</p>
-        </div>
-        {pendentesCount > 0 && (
+      <SectionHeaderShell
+        icon={<ShieldAlert size={18} />}
+        title="Gestão de Alertas"
+        subtitle="Compliance, segurança e administração"
+        rightSlot={pendentesCount > 0 && (
           <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-red-500 text-white shrink-0">
             {pendentesCount} pendente{pendentesCount > 1 ? 's' : ''}
           </span>
         )}
-      </div>
+      />
 
       <div className="flex flex-wrap gap-2 mb-5">
         {STATUS_FILTERS.map(s => (

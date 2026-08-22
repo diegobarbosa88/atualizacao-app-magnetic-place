@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import emailjs from '@emailjs/browser';
 import { callGemini } from '../../utils/aiUtils';
 import { EMAILJS_SERVICE_ID, EMAILJS_PUBLIC_KEY, EMAILJS_TEMPLATE_ID_NOTIF } from '../../utils/emailUtils';
+import SectionHeaderShell from '../../components/common/SectionHeaderShell';
 import {
   Download, Sparkles, Share2, X, Copy, Send, Loader2, Calculator,
   ChevronLeft, ChevronRight, CheckCircle, AlertTriangle,
@@ -221,54 +222,51 @@ export default function ContabilidadeTab({ workers, supabase, systemSettings }) 
     <div className="flex flex-col gap-4 p-4 sm:p-6 min-h-full">
 
       {/* CABEÇALHO */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <div className="p-2 bg-emerald-100 text-emerald-700 rounded-xl">
-            <Calculator size={20} />
-          </div>
-          <div>
-            <h2 className="text-lg font-black text-slate-800 leading-tight">Contabilidade</h2>
-            <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Ordenado Bruto Mensal</p>
-          </div>
-        </div>
+      <SectionHeaderShell
+        icon={<Calculator size={18} />}
+        title="Contabilidade"
+        subtitle="Ordenado Bruto Mensal"
+        rightSlot={(
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Navegação mês */}
+            <div className="flex items-center gap-1 bg-white/10 rounded-xl p-1">
+              <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
+                <ChevronLeft size={16} className="text-white" />
+              </button>
+              <span className="px-3 py-1 text-sm font-black text-white capitalize min-w-[140px] text-center">
+                {nomeMes} {selectedYear}
+              </span>
+              <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
+                <ChevronRight size={16} className="text-white" />
+              </button>
+            </div>
 
-        {/* Navegação mês */}
-        <div className="flex items-center gap-1 bg-slate-100 rounded-xl p-1">
-          <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-white transition-colors">
-            <ChevronLeft size={16} className="text-slate-500" />
-          </button>
-          <span className="px-3 py-1 text-sm font-black text-slate-700 capitalize min-w-[140px] text-center">
-            {nomeMes} {selectedYear}
-          </span>
-          <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-white transition-colors">
-            <ChevronRight size={16} className="text-slate-500" />
-          </button>
-        </div>
-
-        {/* Ações */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <button
-            onClick={handleGeminiAudit}
-            disabled={isLoadingGemini}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider bg-violet-50 text-violet-700 border border-violet-200 hover:bg-violet-100 transition-colors disabled:opacity-50"
-          >
-            {isLoadingGemini ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-            Análise IA
-          </button>
-          <button
-            onClick={() => setShowShareModal(true)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-colors"
-          >
-            <Share2 size={14} /> Partilhar
-          </button>
-          <button
-            onClick={handleExportCSV}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider bg-emerald-600 text-white hover:bg-emerald-700 transition-colors shadow-sm"
-          >
-            <Download size={14} /> Exportar CSV
-          </button>
-        </div>
-      </div>
+            {/* Ações */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={handleGeminiAudit}
+                disabled={isLoadingGemini}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider bg-violet-50 text-violet-700 border border-violet-200 hover:bg-violet-100 transition-colors disabled:opacity-50"
+              >
+                {isLoadingGemini ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                Análise IA
+              </button>
+              <button
+                onClick={() => setShowShareModal(true)}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-colors"
+              >
+                <Share2 size={14} /> Partilhar
+              </button>
+              <button
+                onClick={handleExportCSV}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider bg-emerald-600 text-white hover:bg-emerald-700 transition-colors shadow-sm"
+              >
+                <Download size={14} /> Exportar CSV
+              </button>
+            </div>
+          </div>
+        )}
+      />
 
       {/* TABELA */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">

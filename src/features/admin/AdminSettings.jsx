@@ -6,6 +6,7 @@ import CompanySignatureSettings from '../../components/common/CompanySignatureSe
 import ContadorAcessoPanel from './ContadorAcessoPanel';
 import SSConsultasPanel from './team/SSConsultasPanel';
 import ImportarContratosSSDModal from './team/ImportarContratosSSDModal';
+import SectionHeaderShell from '../../components/common/SectionHeaderShell';
 import {
   Settings, Lock, Building2, Palette, Sparkles, CheckCircle,
   ShieldCheck, ShieldOff, UserPlus, Wrench, X, Loader2, CalendarX, Plus, Trash2,
@@ -209,9 +210,10 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0 mb-6 sm:mb-8">
-        <h2 className="text-xl sm:text-2xl lg:text-3xl font-black flex items-center gap-2"><Settings size={22} style={{ color: '#869AAF' }} /> Configurações do Sistema</h2>
-      </div>
+      <SectionHeaderShell
+        icon={<Settings size={18} />}
+        title="Configurações do Sistema"
+      />
 
       {/* Navegação por tabs */}
       <div className="flex flex-wrap items-end gap-1 border-b border-slate-100 mb-2">

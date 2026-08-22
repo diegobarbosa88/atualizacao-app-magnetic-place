@@ -6,6 +6,7 @@ import NovaAcaoForm from './NovaAcaoForm';
 import HorasPorTrabalhadorTab from './HorasPorTrabalhadorTab';
 import CertificacoesValidadeTab from './CertificacoesValidadeTab';
 import RegistoIndividualTab from './RegistoIndividualTab';
+import SectionHeaderShell from '../../../components/common/SectionHeaderShell';
 
 const TABS = [
   { id: 'lista', label: 'Ações Presenciais', icon: ListChecks },
@@ -27,15 +28,11 @@ export default function FormacaoInternaAdmin() {
 
   return (
     <div className="bg-white rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-6 lg:p-8 shadow-sm border border-slate-100 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex items-center gap-3 mb-5 border-b border-slate-50 pb-4">
-        <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600">
-          <GraduationCap size={20} />
-        </div>
-        <div className="flex-1">
-          <h3 className="font-black text-base sm:text-xl text-slate-800 uppercase tracking-tight">Formação Interna</h3>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Art. 131.º CT — formação dada diretamente pela empresa</p>
-        </div>
-      </div>
+      <SectionHeaderShell
+        icon={<GraduationCap size={18} />}
+        title="Formação Interna"
+        subtitle="Art. 131.º CT — formação dada diretamente pela empresa"
+      />
 
       <div className="flex flex-wrap gap-2 mb-5">
         {TABS.map(t => {

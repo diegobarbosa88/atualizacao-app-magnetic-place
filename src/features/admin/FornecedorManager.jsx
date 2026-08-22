@@ -4,6 +4,7 @@ import { FornecedorProvider, useFornecedor } from './contexts/FornecedorContext'
 import FornecedorForm from './fornecedores/FornecedorForm';
 import FornecedorList from './fornecedores/FornecedorList';
 import ModalShell from '../../components/common/ModalShell';
+import SectionHeaderShell from '../../components/common/SectionHeaderShell';
 
 function FornecedorManagerContent() {
   const { fornecedores, loading, isAdding, editingId, novoFornecedor, cancelar, carregar } = useFornecedor();
@@ -13,36 +14,30 @@ function FornecedorManagerContent() {
   return (
     <div className="p-4 sm:p-6 space-y-5 max-w-6xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: '#869AAF' }}>
-            <Truck size={20} />
+      <SectionHeaderShell
+        icon={<Truck size={18} />}
+        title="Fornecedores"
+        subtitle={loading ? 'A carregar...' : `${fornecedores.length} registado${fornecedores.length !== 1 ? 's' : ''} • ${ativos} ativo${ativos !== 1 ? 's' : ''}`}
+        rightSlot={(
+          <div className="flex items-center gap-2">
+            <button
+              onClick={carregar}
+              disabled={loading}
+              className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-xl transition-colors"
+              title="Actualizar"
+            >
+              <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
+            </button>
+            <button
+              onClick={novoFornecedor}
+              className="flex items-center gap-2 px-4 py-2.5 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-colors" style={{ backgroundColor: '#EB8D00' }}
+            >
+              <Plus size={14} />
+              Novo Fornecedor
+            </button>
           </div>
-          <div>
-            <h2 className="font-black text-lg text-slate-800 uppercase tracking-tight">Fornecedores</h2>
-            <p className="text-[10px] text-slate-400">
-              {loading ? 'A carregar...' : `${fornecedores.length} registado${fornecedores.length !== 1 ? 's' : ''} • ${ativos} ativo${ativos !== 1 ? 's' : ''}`}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={carregar}
-            disabled={loading}
-            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
-            title="Actualizar"
-          >
-            <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
-          </button>
-          <button
-            onClick={novoFornecedor}
-            className="flex items-center gap-2 px-4 py-2.5 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-colors" style={{ backgroundColor: '#EB8D00' }}
-          >
-            <Plus size={14} />
-            Novo Fornecedor
-          </button>
-        </div>
-      </div>
+        )}
+      />
 
       <ModalShell
         isOpen={isAdding}

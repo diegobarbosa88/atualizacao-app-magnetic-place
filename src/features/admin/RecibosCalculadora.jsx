@@ -5,6 +5,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { AlertTriangle, CheckCircle, ChevronDown, ChevronLeft, ChevronRight, Download, FileSpreadsheet, FileText, Pencil, Plus, RefreshCw, Save, Trash2, X } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import SectionHeaderShell from '../../components/common/SectionHeaderShell';
 import { getRateAtDate } from './cost-reports/useCostReportsData.js';
 import {
   IRS_TABELAS,
@@ -2350,56 +2351,53 @@ ${hdrRow}${bodyRows}${totRow}
       {/* ── Modo Calculadora: cabeçalho completo + sub-abas ── */}
       {subTab !== 'resumo' && (
         <>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl" style={{ background: '#EEF1F5' }}>
-                <FileText size={18} style={{ color: '#1B3A57' }} />
-              </div>
-              <div>
-                <h2 className="text-lg font-black leading-tight" style={{ color: '#1B3A57' }}>Calculadora de Recibos</h2>
-                <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Estimativas salariais</p>
-              </div>
-            </div>
+          <SectionHeaderShell
+            icon={<FileText size={18} />}
+            title="Calculadora de Recibos"
+            subtitle="Estimativas salariais"
+            rightSlot={(
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="flex items-center gap-1 rounded-xl border border-white/20 bg-white/10 px-1 py-0.5">
+                  <button onClick={() => navMes(-1)} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
+                    <ChevronLeft size={15} className="text-white" />
+                  </button>
+                  <span className="px-3 py-1 text-sm font-black min-w-[140px] text-center text-white">
+                    {MESES_PT[parseInt(inputs.mes, 10)] || ''} {inputs.ano}
+                  </span>
+                  <button onClick={() => navMes(1)} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
+                    <ChevronRight size={15} className="text-white" />
+                  </button>
+                </div>
 
-            <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-1 py-0.5">
-              <button onClick={() => navMes(-1)} className="p-1.5 rounded-lg hover:bg-slate-50 transition-colors">
-                <ChevronLeft size={15} style={{ color: '#869AAF' }} />
-              </button>
-              <span className="px-3 py-1 text-sm font-black min-w-[140px] text-center" style={{ color: '#1B3A57' }}>
-                {MESES_PT[parseInt(inputs.mes, 10)] || ''} {inputs.ano}
-              </span>
-              <button onClick={() => navMes(1)} className="p-1.5 rounded-lg hover:bg-slate-50 transition-colors">
-                <ChevronRight size={15} style={{ color: '#869AAF' }} />
-              </button>
-            </div>
-
-            <div className="flex items-center gap-2 flex-wrap">
-              <button
-                onClick={gerarRecibosBatchPDF}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider border border-slate-200 hover:bg-slate-50 transition-colors"
-                style={{ color: '#1B3A57' }}
-                title="PDF dos recibos de vencimento — todos os trabalhadores"
-              >
-                <FileText size={13} /> Recibos PDF
-              </button>
-              <button
-                onClick={exportRecibosBatchXLS}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider border border-slate-200 hover:bg-slate-50 transition-colors"
-                style={{ color: '#1B3A57' }}
-                title="Excel dos recibos de vencimento — todos os trabalhadores"
-              >
-                <FileSpreadsheet size={13} /> Recibos XLS
-              </button>
-              <button
-                onClick={gerarMapasAjudasPDF}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider border border-slate-200 hover:bg-slate-50 transition-colors"
-                style={{ color: '#1B3A57' }}
-                title="PDF dos mapas de ajudas de custo — todos os trabalhadores"
-              >
-                <Download size={13} /> Mapas AC
-              </button>
-            </div>
-          </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    onClick={gerarRecibosBatchPDF}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider border border-slate-200 bg-white hover:bg-slate-50 transition-colors"
+                    style={{ color: '#1B3A57' }}
+                    title="PDF dos recibos de vencimento — todos os trabalhadores"
+                  >
+                    <FileText size={13} /> Recibos PDF
+                  </button>
+                  <button
+                    onClick={exportRecibosBatchXLS}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider border border-slate-200 bg-white hover:bg-slate-50 transition-colors"
+                    style={{ color: '#1B3A57' }}
+                    title="Excel dos recibos de vencimento — todos os trabalhadores"
+                  >
+                    <FileSpreadsheet size={13} /> Recibos XLS
+                  </button>
+                  <button
+                    onClick={gerarMapasAjudasPDF}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider border border-slate-200 bg-white hover:bg-slate-50 transition-colors"
+                    style={{ color: '#1B3A57' }}
+                    title="PDF dos mapas de ajudas de custo — todos os trabalhadores"
+                  >
+                    <Download size={13} /> Mapas AC
+                  </button>
+                </div>
+              </div>
+            )}
+          />
 
           <div className="flex items-center gap-1 border-b border-slate-100">
             <button

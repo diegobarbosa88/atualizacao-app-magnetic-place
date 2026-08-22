@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
 import ClientTimesheetReport from '../../components/common/ClientTimesheetReport';
 import DateMultiPicker from '../../components/common/DateMultiPicker';
+import SectionHeaderShell from '../../components/common/SectionHeaderShell';
 import { FileText, History, Users, Building2, Activity, X, Zap, Calendar, CalendarRange, CalendarDays } from 'lucide-react';
 import { toISODateLocal } from '../../utils/dateUtils';
 
@@ -113,12 +114,10 @@ export default function AdminReports({ printingReport, setPrintingReport }) {
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-4 sm:space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0 mb-6">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: '#869AAF' }}><FileText size={20} /></div>
-          <h3 className="font-black text-base sm:text-xl text-slate-800 uppercase tracking-tight">Folhas de Horas para Clientes</h3>
-        </div>
-      </div>
+      <SectionHeaderShell
+        icon={<FileText size={18} />}
+        title="Folhas de Horas para Clientes"
+      />
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 md:gap-6">

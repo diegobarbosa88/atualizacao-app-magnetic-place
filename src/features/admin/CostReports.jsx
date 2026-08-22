@@ -11,6 +11,7 @@ import FaturasTab from './cost-reports/FaturasTab';
 import { generateMonthOptions } from './cost-reports/costReportsUtils';
 import { exportToXLS, exportRelatorioGeralPDF, exportRelatorioGeralXLS } from './cost-reports/exportUtils';
 import { useCostReportsData } from './cost-reports/useCostReportsData';
+import SectionHeaderShell from '../../components/common/SectionHeaderShell';
 import './reconciliacao/reconciliacao-mockup.css';
 
 const CostReports = () => {
@@ -157,40 +158,40 @@ const CostReports = () => {
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: '#869AAF' }}><FileText size={20} /></div>
-          <h3 className="font-black text-base sm:text-xl text-slate-800 uppercase tracking-tight">{getTitle()}</h3>
-        </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <button onClick={() => exportToXLS({ activeTab, ...exportArgs })} className="flex items-center gap-1.5 px-3 py-2 text-white rounded-xl font-black text-xs uppercase shadow-sm transition-all" style={{ backgroundColor: '#1B3A57' }}>
-            <Download size={13} /> Exportar
-          </button>
-          <div className="relative" ref={relatorioMenuRef}>
-            <button onClick={() => setShowRelatorioMenu(v => !v)} className="flex items-center gap-1.5 px-3 py-2 rounded-xl font-black text-xs uppercase shadow-sm transition-all border-2 hover:bg-slate-50" style={{ borderColor: '#869AAF', color: '#1B3A57' }}>
-              <BookOpen size={13} /> Geral <ChevronDown size={11} />
+      <SectionHeaderShell
+        icon={<FileText size={18} />}
+        title={getTitle()}
+        rightSlot={(
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <button onClick={() => exportToXLS({ activeTab, ...exportArgs })} className="flex items-center gap-1.5 px-3 py-2 text-white rounded-xl font-black text-xs uppercase shadow-sm transition-all" style={{ backgroundColor: '#1B3A57' }}>
+              <Download size={13} /> Exportar
             </button>
-            {showRelatorioMenu && (
-              <div className="absolute right-0 top-full mt-1 z-20 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden min-w-[160px]">
-                <button onClick={() => { setShowRelatorioMenu(false); exportRelatorioGeralPDF(exportArgs); }} className="w-full flex items-center gap-2 px-4 py-3 text-xs font-black uppercase text-slate-700 hover:bg-slate-50 hover:text-slate-700 transition-all">
-                  <FileText size={13} /> PDF
-                </button>
-                <button onClick={() => { setShowRelatorioMenu(false); exportRelatorioGeralXLS(exportArgs); }} className="w-full flex items-center gap-2 px-4 py-3 text-xs font-black uppercase text-slate-700 hover:bg-slate-50 hover:text-slate-700 transition-all border-t border-slate-100">
-                  <Download size={13} /> Excel / XLS
-                </button>
-              </div>
-            )}
+            <div className="relative" ref={relatorioMenuRef}>
+              <button onClick={() => setShowRelatorioMenu(v => !v)} className="flex items-center gap-1.5 px-3 py-2 rounded-xl font-black text-xs uppercase shadow-sm transition-all border-2 hover:bg-slate-50 bg-white" style={{ borderColor: '#869AAF', color: '#1B3A57' }}>
+                <BookOpen size={13} /> Geral <ChevronDown size={11} />
+              </button>
+              {showRelatorioMenu && (
+                <div className="absolute right-0 top-full mt-1 z-20 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden min-w-[160px]">
+                  <button onClick={() => { setShowRelatorioMenu(false); exportRelatorioGeralPDF(exportArgs); }} className="w-full flex items-center gap-2 px-4 py-3 text-xs font-black uppercase text-slate-700 hover:bg-slate-50 hover:text-slate-700 transition-all">
+                    <FileText size={13} /> PDF
+                  </button>
+                  <button onClick={() => { setShowRelatorioMenu(false); exportRelatorioGeralXLS(exportArgs); }} className="w-full flex items-center gap-2 px-4 py-3 text-xs font-black uppercase text-slate-700 hover:bg-slate-50 hover:text-slate-700 transition-all border-t border-slate-100">
+                    <Download size={13} /> Excel / XLS
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className="flex items-center gap-1.5 bg-white px-3 py-2 rounded-xl shadow-sm border border-slate-200 flex-1 sm:flex-none">
+              <CalendarRange size={13} className="text-slate-400 shrink-0" />
+              <select value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} className="bg-transparent border-none outline-none text-xs font-bold text-slate-700 cursor-pointer w-full">
+                {monthOptions.map((opt, idx) => (
+                  <option key={`${opt.val}-${idx}`} value={opt.val}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
           </div>
-          <div className="flex items-center gap-1.5 bg-white px-3 py-2 rounded-xl shadow-sm border border-slate-200 flex-1 sm:flex-none">
-            <CalendarRange size={13} className="text-slate-400 shrink-0" />
-            <select value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} className="bg-transparent border-none outline-none text-xs font-bold text-slate-700 cursor-pointer w-full">
-              {monthOptions.map((opt, idx) => (
-                <option key={`${opt.val}-${idx}`} value={opt.val}>{opt.label}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </div>
+        )}
+      />
 
       <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-xl border border-slate-200">
         <div className="recon-scope">
