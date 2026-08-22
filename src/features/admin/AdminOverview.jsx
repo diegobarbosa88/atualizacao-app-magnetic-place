@@ -10,6 +10,7 @@ import { formatHours, formatCurrency, calculateDuration } from '../../utils/form
 import { useReconciliationBadges } from './adminOverview/useReconciliationBadges';
 import KpiCard from './adminOverview/KpiCard';
 import FinancialSummaryPanel from './adminOverview/FinancialSummaryPanel';
+import SectionHeaderShell from '../../components/common/SectionHeaderShell';
 
 export default function AdminOverview({ currentMonth, setCurrentMonth }) {
   const { adminStats, workers, clients, schedules, logs, expenses, supabase } = useApp();
@@ -167,20 +168,19 @@ export default function AdminOverview({ currentMonth, setCurrentMonth }) {
 
   return (
     <div className="animate-in fade-in duration-500 space-y-4 sm:space-y-6 lg:space-y-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6 sm:mb-8">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(235,141,0,0.12)', color: '#EB8D00' }}><LayoutGrid size={20} /></div>
-          <h3 className="font-black text-base sm:text-xl text-slate-800 uppercase tracking-tight">Dashboard Geral</h3>
-        </div>
-        <div className="flex items-center gap-3 bg-white p-2 rounded-2xl shadow-sm border border-slate-200">
-          <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))} className="p-2 hover:bg-slate-100 rounded-xl text-slate-500"><ChevronLeft size={16} /></button>
-          <span className="font-bold text-sm min-w-[120px] text-center" style={{ color: '#1B3A57' }}>
-            {currentMonth.toLocaleDateString('pt-PT', { month: 'short', year: 'numeric' })}
-          </span>
-          <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))} className="p-2 hover:bg-slate-100 rounded-xl text-slate-500"><ChevronRight size={16} /></button>
-        </div>
-      </div>
+      <SectionHeaderShell
+        icon={<LayoutGrid size={18} />}
+        title="Dashboard Geral"
+        rightSlot={
+          <div className="flex items-center gap-1 bg-white/10 rounded-2xl p-1">
+            <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))} className="p-2 hover:bg-white/10 rounded-xl text-white/80"><ChevronLeft size={16} /></button>
+            <span className="font-bold text-sm min-w-[120px] text-center text-white">
+              {currentMonth.toLocaleDateString('pt-PT', { month: 'short', year: 'numeric' })}
+            </span>
+            <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))} className="p-2 hover:bg-white/10 rounded-xl text-white/80"><ChevronRight size={16} /></button>
+          </div>
+        }
+      />
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">

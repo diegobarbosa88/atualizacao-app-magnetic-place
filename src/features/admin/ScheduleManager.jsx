@@ -4,6 +4,7 @@ import { useSchedule, ScheduleProvider } from './contexts/ScheduleContext';
 import { Timer, LayoutGrid, List, Edit2, Trash2, Coffee, Clock, Users } from 'lucide-react';
 import ScheduleForm from './schedules/ScheduleForm';
 import ModalShell from '../../components/common/ModalShell';
+import SectionHeaderShell from '../../components/common/SectionHeaderShell';
 
 const ScheduleManagerContent = () => {
   const {
@@ -22,26 +23,27 @@ const ScheduleManagerContent = () => {
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex justify-between items-center gap-3 mb-5">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: '#869AAF' }}><Timer size={20} /></div>
-          <h3 className="font-black text-base sm:text-xl text-slate-800 uppercase tracking-tight">Turnos Magnetic</h3>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl p-1">
-            <button onClick={() => setSchedulesView('grid')} className={`p-2 rounded-lg transition-all ${schedulesView === 'grid' ? 'text-white' : 'text-slate-400 hover:text-slate-600'}`} style={schedulesView === 'grid' ? { backgroundColor: '#1B3A57' } : {}} title="Vista em Grade"><LayoutGrid size={18} /></button>
-            <button onClick={() => setSchedulesView('list')} className={`p-2 rounded-lg transition-all ${schedulesView === 'list' ? 'text-white' : 'text-slate-400 hover:text-slate-600'}`} style={schedulesView === 'list' ? { backgroundColor: '#1B3A57' } : {}} title="Vista em Lista"><List size={18} /></button>
+      <SectionHeaderShell
+        icon={<Timer size={18} />}
+        title="Turnos Magnetic"
+        subtitle={`${schedules.length} horário${schedules.length !== 1 ? 's' : ''}`}
+        rightSlot={
+          <div className="flex items-center gap-2">
+            <div className="flex items-center bg-white/10 rounded-xl p-1">
+              <button onClick={() => setSchedulesView('grid')} className={`p-2 rounded-lg transition-all ${schedulesView === 'grid' ? 'bg-white text-[#1B3A57]' : 'text-white/70 hover:text-white'}`} title="Vista em Grade"><LayoutGrid size={18} /></button>
+              <button onClick={() => setSchedulesView('list')} className={`p-2 rounded-lg transition-all ${schedulesView === 'list' ? 'bg-white text-[#1B3A57]' : 'text-white/70 hover:text-white'}`} title="Vista em Lista"><List size={18} /></button>
+            </div>
+            <button onClick={() => { setScheduleForm({ id: null, name: '', startTime: '', endTime: '', breakStart: '', breakEnd: '', hasBreak: false, assignedWorkers: [], weekdays: [1, 2, 3, 4, 5], isAdvanced: false, dailyConfigs: {} }); setIsAddingInTab(true); }} className="px-4 py-2.5 rounded-xl font-black text-xs uppercase shadow-lg transition-all" style={{ backgroundColor: '#EB8D00', color: '#12293e' }}>Novo Horário</button>
           </div>
-          <button onClick={() => { setScheduleForm({ id: null, name: '', startTime: '', endTime: '', breakStart: '', breakEnd: '', hasBreak: false, assignedWorkers: [], weekdays: [1, 2, 3, 4, 5], isAdvanced: false, dailyConfigs: {} }); setIsAddingInTab(true); }} className="px-6 py-3 rounded-2xl font-black text-xs uppercase shadow-lg transition-all text-white" style={{ backgroundColor: '#EB8D00' }}>Novo Horário</button>
-        </div>
-      </div>
+        }
+      />
 
       <ModalShell
         isOpen={isAddingInTab}
         onClose={() => setIsAddingInTab(false)}
         title={scheduleForm.id ? 'Editar Horário' : 'Novo Horário'}
         icon={<Timer size={16} />}
-        accent="slate"
+        accent="navyGradient"
         size="3xl"
       >
         <ScheduleForm />

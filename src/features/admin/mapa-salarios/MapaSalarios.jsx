@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, LayoutList, BarChart2, LayoutGrid, RefreshCw, AlertTriangle, FileDown } from 'lucide-react';
+import { ChevronLeft, ChevronRight, LayoutList, BarChart2, LayoutGrid, RefreshCw, AlertTriangle, FileDown, Table2 } from 'lucide-react';
 import { MESES_PT } from '../../../lib/payroll/reciboCalculations.js';
 import { useMapaSalarios } from './useMapaSalarios.js';
 import MapaFolhaObra from './MapaFolhaObra.jsx';
 import MapaPainelExecutivo from './MapaPainelExecutivo.jsx';
 import MapaCartoes from './MapaCartoes.jsx';
+import SectionHeaderShell from '../../../components/common/SectionHeaderShell';
 
 const NAVY   = '#1B3A57';
 const SLATE  = '#869AAF';
@@ -144,6 +145,14 @@ export default function MapaSalarios() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 0, height: '100%' }}>
+
+      <div style={{ padding: '0 0 12px' }}>
+        <SectionHeaderShell
+          icon={<Table2 size={18} />}
+          title="Mapa Salários"
+          subtitle={mesLabel}
+        />
+      </div>
 
       {/* Toolbar */}
       <div style={{

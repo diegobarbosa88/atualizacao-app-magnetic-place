@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Users, Loader2, ChevronDown, ChevronRight, CheckCircle2, XCircle, Circle, History, Calculator, ArrowRight, AlertTriangle, TrendingUp, Scale, Receipt } from 'lucide-react';
+import { Users, Loader2, ChevronDown, ChevronRight, CheckCircle2, XCircle, Circle, History, Calculator, ArrowRight, AlertTriangle, TrendingUp, Scale, Receipt, Coins } from 'lucide-react';
+import SectionHeaderShell from '../../components/common/SectionHeaderShell';
 import { useApp } from '../../context/AppContext';
 import { sugerirElegibilidade } from '../../lib/ajudas/elegibilidade';
 import { executarCalculoFase1, normalizarWorkerId } from '../../lib/ajudas/percentagemHistorica';
@@ -1677,22 +1678,18 @@ export default function AjudasCustoAdmin() {
   const subtab = params.get('subtab') || 'elegibilidade';
   const setSubtab = (id) => navigate(`/admin/ajudas-custo?subtab=${id}`);
 
+  const activeLabel = TABS.find(t => t.id === subtab)?.label;
+
   return (
     <div className="space-y-4">
-      <div className="flex gap-1 border-b border-slate-100 overflow-x-auto">
-        {TABS.map(({ id, label, icon: Icon }) => (
-          <button
-            key={id}
-            onClick={() => setSubtab(id)}
-            className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 text-xs font-black uppercase tracking-widest whitespace-nowrap border-b-2 transition-all shrink-0 ${
-              subtab === id ? 'border-[#EB8D00] text-[#1B3A57]' : 'border-transparent text-slate-400 hover:text-slate-600'
-            }`}
-          >
-            <Icon size={13} className="shrink-0" />
-            {label}
-          </button>
-        ))}
-      </div>
+      <SectionHeaderShell
+        icon={<Coins size={18} />}
+        title="Ajudas de Custo"
+        breadcrumbLabel={activeLabel}
+        tabs={TABS}
+        activeTab={subtab}
+        onTabChange={setSubtab}
+      />
 
       {subtab === 'elegibilidade' && <ElegibilidadeClientesTab />}
       {subtab === 'historico' && <HistoricoTab onIrParaElegibilidade={() => setSubtab('elegibilidade')} />}
