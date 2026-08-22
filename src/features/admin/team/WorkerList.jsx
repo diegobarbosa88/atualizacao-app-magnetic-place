@@ -17,7 +17,11 @@ function getInitials(name) {
 // usada em WorkerForm.jsx, para o mesmo idioma visual ler-se em cards e
 // lista sem reabrir a ficha. Substitui o antigo ssBadge() (dois estados
 // soltos "SS Admissão OK"/"SS Cessação pendente" competindo por espaço).
-function MiniTimeline({ w }) {
+// ssFlag (opcional): entrada de ssComunicacoesMap[w.nis] quando a consulta
+// obterComunicacoes da PSI encontrou esta comunicação "não aceite"
+// (rejeitada) ou presa "a processar" há vários dias — sobrepõe-se ao estado
+// normal (que só reflete o que a própria app gravou, não o estado real na SS).
+function MiniTimeline({ w, ssFlag }) {
   const admissaoFeita = !!w.ss_admissao_comunicada_em;
   const cessacaoFeita = !!w.ss_cessacao_comunicada_em;
   const temFim = !!w.dataFim;
@@ -25,16 +29,29 @@ function MiniTimeline({ w }) {
   const dotCls = (state) =>
     state === 'done' ? 'bg-emerald-500'
     : state === 'pending' ? 'bg-amber-400'
+    : state === 'rejected' ? 'bg-rose-500'
+    : state === 'stuck' ? 'bg-orange-500'
     : state === 'now' ? '' // usa style inline navy
     : 'bg-slate-200';
 
-  const admissaoState = admissaoFeita ? 'done' : 'pending';
+  let admissaoState = admissaoFeita ? 'done' : 'pending';
   const cessacaoState = !temFim ? 'na' : cessacaoFeita ? 'done' : 'pending';
 
   let label, labelCls;
   if (!admissaoFeita) { label = 'SS admissão por comunicar'; labelCls = 'text-amber-600'; }
   else if (temFim && !cessacaoFeita) { label = 'SS cessação por comunicar'; labelCls = 'text-amber-600'; }
   else { label = temFim ? 'SS ok · cessado' : 'SS ok'; labelCls = 'text-emerald-600'; }
+
+  // A consulta real à SS pode contradizer o que a app achava que estava OK.
+  if (ssFlag?.prioridade === 'rejeitada') {
+    admissaoState = 'rejected';
+    label = `SS rejeitou: ${ssFlag.motivo || 'ver detalhe'}`;
+    labelCls = 'text-rose-600';
+  } else if (ssFlag?.prioridade === 'presa') {
+    admissaoState = 'stuck';
+    label = 'SS presa a processar';
+    labelCls = 'text-orange-600';
+  }
 
   return (
     <div className="flex items-center gap-1" title={label}>
@@ -85,6 +102,7 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
   const [ssModal, setSsModal] = useState(null); // { worker, tipo: 'admissao'|'cessacao' }
   const [ssAmbiente, setSsAmbiente] = useState('teste');
   const [apoliceMap, setApoliceMap] = useState({});
+  const [ssComunicacoesMap, setSsComunicacoesMap] = useState({});
 
   useEffect(() => {
     // supabase vem do AppContext (nunca window.supabaseInstance direto) —
@@ -113,6 +131,26 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
     authFetch('/api/seguranca-social?action=status')
       .then(r => r.json())
       .then(d => { if (d.ambiente) setSsAmbiente(d.ambiente); })
+      .catch(() => {});
+  }, []);
+
+  // Consulta real ao serviço obterComunicacoes da PSI — pode contradizer o
+  // que a app achava resolvido (ex: admissão rejeitada depois de o envio
+  // síncrono ter parecido OK). Mapeado por NISS, que é a única chave comum
+  // devolvida pela SS.
+  useEffect(() => {
+    authFetch('/api/seguranca-social?action=comunicacoes-pendentes')
+      .then(r => r.json())
+      .then(d => {
+        const map = {};
+        (d.naoAceites || []).forEach(c => { map[c.nissTrabalhador] = { prioridade: 'rejeitada', motivo: c.motivo, dataComunicacao: c.dataComunicacao }; });
+        (d.aProcessar || []).forEach(c => {
+          if (map[c.nissTrabalhador]) return; // rejeitada tem prioridade sobre presa
+          const dias = Math.floor((Date.now() - new Date(c.dataComunicacao)) / 86400000);
+          if (dias >= 2) map[c.nissTrabalhador] = { prioridade: 'presa', dataComunicacao: c.dataComunicacao };
+        });
+        setSsComunicacoesMap(map);
+      })
       .catch(() => {});
   }, []);
 
@@ -177,7 +215,7 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                       <div className="min-w-0">
                         <p className="font-black text-slate-800 text-sm truncate">{w.name}</p>
                         <p className="text-xs text-slate-400 truncate">{w.profissao || 'Staff'}</p>
-                        <div className="mt-1"><MiniTimeline w={w} /></div>
+                        <div className="mt-1"><MiniTimeline w={w} ssFlag={ssComunicacoesMap[w.nis]} /></div>
                         <div className="mt-1">{apoliceBadge(w, apoliceMap)}</div>
                         {w.valorHora && <p className="text-[10px] text-slate-300 font-bold mt-0.5">{w.valorHora}€/h</p>}
                       </div>
@@ -372,7 +410,7 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                 <p className="text-[9px] text-slate-400 font-bold truncate">{w.profissao || 'Staff'}</p>
               </div>
             </div>
-            <div className="mb-1.5 overflow-hidden"><MiniTimeline w={w} /></div>
+            <div className="mb-1.5 overflow-hidden"><MiniTimeline w={w} ssFlag={ssComunicacoesMap[w.nis]} /></div>
             <div className="mb-2">{apoliceBadge(w, apoliceMap)}</div>
             <div className="text-[9px] text-slate-400 font-bold space-y-0.5 border-t border-slate-50 pt-1.5">
               <div className="flex items-center gap-1 truncate">

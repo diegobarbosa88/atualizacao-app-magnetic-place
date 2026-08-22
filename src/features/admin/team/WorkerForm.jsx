@@ -34,7 +34,7 @@ const TABS = [
 // admissão → hoje → cessação, com o estado da comunicação SS embutido em
 // cada ponta. Clicar num estado "por comunicar" abre o mesmo
 // SSComunicacaoModal de sempre.
-function VinculoTimeline({ workerForm, apoliceSeguro, onAbrirSS }) {
+function VinculoTimeline({ workerForm, apoliceSeguro, onAbrirSS, ssFlag }) {
   const temInicio = !!workerForm.dataInicio;
   const temFim = !!workerForm.dataFim;
   const admissaoFeita = !!workerForm.ss_admissao_comunicada_em;
@@ -57,10 +57,12 @@ function VinculoTimeline({ workerForm, apoliceSeguro, onAbrirSS }) {
         <div className="flex flex-col items-center text-center w-[120px] sm:w-[150px] shrink-0">
           <div className="flex items-center w-full">
             <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border-2 z-10 ${
-              admissaoFeita ? 'bg-emerald-500 border-emerald-500 text-white'
+              ssFlag?.prioridade === 'rejeitada' ? 'bg-rose-500 border-rose-500 text-white'
+              : ssFlag?.prioridade === 'presa' ? 'bg-orange-500 border-orange-500 text-white'
+              : admissaoFeita ? 'bg-emerald-500 border-emerald-500 text-white'
               : temInicio ? 'text-white' : 'bg-white border-slate-200 text-slate-300'
-            }`} style={!admissaoFeita && temInicio ? { backgroundColor: '#1B3A57', borderColor: '#1B3A57' } : {}}>
-              {admissaoFeita ? <Check size={13} /> : <Circle size={11} fill="currentColor" />}
+            }`} style={!admissaoFeita && temInicio && !ssFlag ? { backgroundColor: '#1B3A57', borderColor: '#1B3A57' } : {}}>
+              {ssFlag?.prioridade === 'rejeitada' ? <AlertTriangle size={12} /> : admissaoFeita ? <Check size={13} /> : <Circle size={11} fill="currentColor" />}
             </div>
             <div className="h-[2.5px] flex-1" style={{ background: temInicio ? '#10b981' : undefined, backgroundImage: !temInicio ? 'repeating-linear-gradient(90deg, #e2e8f0 0 6px, transparent 6px 11px)' : undefined }} />
           </div>
@@ -68,7 +70,20 @@ function VinculoTimeline({ workerForm, apoliceSeguro, onAbrirSS }) {
             <p className="text-[9px] font-black uppercase tracking-wide text-slate-400">Admissão</p>
             <p className="text-xs font-black text-slate-700 my-0.5">{temInicio ? fmtDate(workerForm.dataInicio) : '— sem data'}</p>
             {temInicio ? (
-              admissaoFeita ? (
+              ssFlag?.prioridade === 'rejeitada' ? (
+                <button
+                  type="button"
+                  onClick={() => onAbrirSS('admissao')}
+                  className="inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded-full bg-rose-50 border border-rose-200 text-rose-700 hover:bg-rose-100 transition-colors cursor-pointer"
+                  title={ssFlag.motivo || 'Rejeitada pela SS'}
+                >
+                  <AlertTriangle size={9} /> SS rejeitou — reenviar
+                </button>
+              ) : ssFlag?.prioridade === 'presa' ? (
+                <span className="inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded-full bg-orange-50 border border-orange-200 text-orange-700" title="A processar há vários dias — confirmar no portal da SS Direta">
+                  <AlertTriangle size={9} /> SS presa a processar
+                </span>
+              ) : admissaoFeita ? (
                 <span className="inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700">✓ SS comunicada</span>
               ) : (
                 <button
@@ -162,6 +177,7 @@ const WorkerForm = () => {
   const [apoliceSeguro, setApoliceSeguro] = useState(null);
   const [ssModal, setSsModal] = useState(null); // 'admissao' | 'cessacao' | null
   const [ssAmbiente, setSsAmbiente] = useState('teste');
+  const [ssFlag, setSsFlag] = useState(null);
 
   // supabase vem do AppContext, não de window.supabaseInstance direto — esse
   // global pode não estar pronto no primeiro mount em certas condições de
@@ -179,6 +195,26 @@ const WorkerForm = () => {
       .then(d => { if (d.ambiente) setSsAmbiente(d.ambiente); })
       .catch(() => {});
   }, []);
+
+  // Consulta real ao serviço obterComunicacoes da PSI — pode contradizer o
+  // que a app achava resolvido (admissão rejeitada ou presa a processar há
+  // vários dias). Só precisa de correr quando este trabalhador tem NIS.
+  useEffect(() => {
+    if (!workerForm.nis) { setSsFlag(null); return; }
+    authFetch('/api/seguranca-social?action=comunicacoes-pendentes')
+      .then(r => r.json())
+      .then(d => {
+        const rejeitada = (d.naoAceites || []).find(c => c.nissTrabalhador === workerForm.nis);
+        if (rejeitada) { setSsFlag({ prioridade: 'rejeitada', motivo: rejeitada.motivo, dataComunicacao: rejeitada.dataComunicacao }); return; }
+        const presa = (d.aProcessar || []).find(c => {
+          if (c.nissTrabalhador !== workerForm.nis) return false;
+          const dias = Math.floor((Date.now() - new Date(c.dataComunicacao)) / 86400000);
+          return dias >= 2;
+        });
+        setSsFlag(presa ? { prioridade: 'presa', dataComunicacao: presa.dataComunicacao } : null);
+      })
+      .catch(() => setSsFlag(null));
+  }, [workerForm.nis]);
 
   const handleSsSuccess = (data, tipo) => {
     const campo = tipo === 'admissao'
@@ -214,7 +250,7 @@ const WorkerForm = () => {
 
       {/* ── Linha do tempo do vínculo (proposta v2) ── */}
       {workerForm.id && (
-        <VinculoTimeline workerForm={workerForm} apoliceSeguro={apoliceSeguro} onAbrirSS={setSsModal} />
+        <VinculoTimeline workerForm={workerForm} apoliceSeguro={apoliceSeguro} onAbrirSS={setSsModal} ssFlag={ssFlag} />
       )}
 
       {/* ── Abas por assunto ── */}
