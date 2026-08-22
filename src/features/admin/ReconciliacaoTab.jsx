@@ -6,6 +6,7 @@ import ValidarReciboAdmin from '../../components/admin/ValidarReciboAdmin';
 import SalariosTab from './SalariosTab';
 import ReconciliacaoAdmin from './ReconciliacaoAdmin';
 import SectionHeaderShell from '../../components/common/SectionHeaderShell';
+import Card from "../../components/common/Card";
 
 const SECTIONS = [
   { id: 'recibos',  label: 'Recibos',  icon: ReceiptText },
@@ -13,7 +14,6 @@ const SECTIONS = [
   { id: 'bancaria', label: 'Bancária', icon: Landmark },
 ];
 
-const CARD_CLS = "bg-white rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-6 lg:p-8 shadow-sm border border-slate-100";
 
 export default function ReconciliacaoTab() {
   const navigate = useNavigate();
@@ -39,13 +39,13 @@ export default function ReconciliacaoTab() {
       />
 
       {activeSection === 'recibos' && (
-        <div className={CARD_CLS}><ValidarReciboAdmin workers={workers} /></div>
+        <Card><ValidarReciboAdmin workers={workers} /></Card>
       )}
       {activeSection === 'salarios' && (
-        <div className={CARD_CLS}><SalariosTab /></div>
+        <Card><SalariosTab /></Card>
       )}
       {activeSection === 'bancaria' && (
-        <div className={CARD_CLS}><ReconciliacaoAdmin /></div>
+        <Card><ReconciliacaoAdmin /></Card>
       )}
     </div>
   );

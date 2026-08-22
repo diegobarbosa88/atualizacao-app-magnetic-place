@@ -4,13 +4,13 @@ import { ArrowRightLeft, ListChecks } from 'lucide-react';
 import PagamentosTab from './pagamentos/PagamentosTab';
 import FilaAprovacaoTab from './pagamentos/FilaAprovacaoTab';
 import SectionHeaderShell from '../../components/common/SectionHeaderShell';
+import Card from "../../components/common/Card";
 
 const SECTIONS = [
   { id: 'fornecedores', label: 'Fornecedores', icon: ArrowRightLeft },
   { id: 'fila',         label: 'Fila de Pag.', icon: ListChecks },
 ];
 
-const CARD_CLS = "bg-white rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-6 lg:p-8 shadow-sm border border-slate-100";
 
 export default function PagamentosAdmin() {
   const navigate = useNavigate();
@@ -36,7 +36,7 @@ export default function PagamentosAdmin() {
 
       {activeSection === 'fornecedores' && <PagamentosTab />}
       {activeSection === 'fila' && (
-        <div className={CARD_CLS}><FilaAprovacaoTab /></div>
+        <Card><FilaAprovacaoTab /></Card>
       )}
     </div>
   );

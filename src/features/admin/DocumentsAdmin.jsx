@@ -5,6 +5,7 @@ import DocumentTemplatesAdmin from '../../components/admin/DocumentTemplatesAdmi
 import DocxPreviewModal from '../../components/common/DocxPreviewModal';
 import { getValidadeStatus } from '../../constants/rhCategories';
 import SectionHeaderShell from '../../components/common/SectionHeaderShell';
+import Card from "../../components/common/Card";
 
 import DocumentsFilters from './documents/DocumentsFilters';
 import DocumentsTable from './documents/DocumentsTable';
@@ -12,7 +13,6 @@ import UploadManualModal from './documents/UploadManualModal';
 import WorkerDocsFolderView from './documents/WorkerDocsFolderView';
 import { useDocumentsAdmin } from './documents/useDocumentsAdmin';
 
-const CARD_CLS = "bg-white rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-6 lg:p-8 shadow-sm border border-slate-100";
 
 export default function DocumentsAdmin() {
   const navigate = useNavigate();
@@ -78,7 +78,7 @@ export default function DocumentsAdmin() {
       />
 
       {activeSection === 'templates' && (
-        <div className={CARD_CLS}>
+        <Card>
           <DocumentTemplatesAdmin
             workers={a.workers}
             systemSettings={a.systemSettings}
@@ -90,7 +90,7 @@ export default function DocumentsAdmin() {
             onDeleteTemplate={a.handleDeleteTemplate}
             onGenerateDocuments={a.handleGenerateDocuments}
           />
-        </div>
+        </Card>
       )}
 
       {activeSection === 'documentos' && (

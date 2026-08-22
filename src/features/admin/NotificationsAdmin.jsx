@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Megaphone, Bell, BellRing, BellOff, Loader2, Plus, Trash2, X } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { usePushSubscription } from '../../hooks/usePushSubscription';
+import Card from '../../components/common/Card';
 
 const SYSTEM_PATTERNS = [
   'Pedido de Correção',
@@ -86,7 +87,7 @@ const NotificationsAdmin = ({ workers, appNotifications, saveToDb, handleDelete,
   };
 
   return (
-    <div className="bg-white rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-6 lg:p-8 shadow-sm border border-slate-100 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <Card className="animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex items-center gap-3 mb-5 border-b border-slate-50 pb-4">
         <div className="bg-amber-50 p-2 rounded-xl text-amber-600">
           <Megaphone size={20} />
@@ -327,7 +328,7 @@ const NotificationsAdmin = ({ workers, appNotifications, saveToDb, handleDelete,
           </div>
         </div>
       )}
-    </div>
+    </Card>
   );
 };
 

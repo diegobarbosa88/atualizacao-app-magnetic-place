@@ -3,6 +3,7 @@ import { ShieldAlert, Loader2, Eye, ThumbsUp, CheckCircle2, XCircle, AlertOctago
 import { useApp } from '../../context/AppContext';
 import ModalShell from '../../components/common/ModalShell';
 import SectionHeaderShell from '../../components/common/SectionHeaderShell';
+import Card from "../../components/common/Card";
 
 const SEVERIDADE_CFG = {
   alta:  { label: 'Alta',  order: 0, bg: 'bg-rose-50',   text: 'text-rose-600',   dot: 'bg-rose-500' },
@@ -109,7 +110,7 @@ export default function AlertasAdmin() {
   };
 
   return (
-    <div className="bg-white rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-6 lg:p-8 shadow-sm border border-slate-100 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <Card className="animate-in fade-in slide-in-from-bottom-4 duration-500">
       <SectionHeaderShell
         icon={<ShieldAlert size={18} />}
         title="Gestão de Alertas"
@@ -269,6 +270,6 @@ export default function AlertasAdmin() {
           </div>
         </div>
       )}
-    </div>
+    </Card>
   );
 }

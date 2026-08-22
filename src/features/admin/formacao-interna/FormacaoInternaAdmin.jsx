@@ -7,6 +7,7 @@ import HorasPorTrabalhadorTab from './HorasPorTrabalhadorTab';
 import CertificacoesValidadeTab from './CertificacoesValidadeTab';
 import RegistoIndividualTab from './RegistoIndividualTab';
 import SectionHeaderShell from '../../../components/common/SectionHeaderShell';
+import Card from "../../../components/common/Card";
 
 const TABS = [
   { id: 'lista', label: 'Ações Presenciais', icon: ListChecks },
@@ -27,7 +28,7 @@ export default function FormacaoInternaAdmin() {
   };
 
   return (
-    <div className="bg-white rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-6 lg:p-8 shadow-sm border border-slate-100 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <Card className="animate-in fade-in slide-in-from-bottom-4 duration-500">
       <SectionHeaderShell
         icon={<GraduationCap size={18} />}
         title="Formação Interna"
@@ -58,6 +59,6 @@ export default function FormacaoInternaAdmin() {
       {tab === 'certificacoes' && <CertificacoesValidadeTab key={refreshKey} />}
       {tab === 'horas' && <HorasPorTrabalhadorTab />}
       {tab === 'registo-individual' && <RegistoIndividualTab />}
-    </div>
+    </Card>
   );
 }
