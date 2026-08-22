@@ -9,6 +9,7 @@ import {
   User, FileText, Save, Search, RefreshCw, ChevronDown, ChevronUp,
   Layers, Calendar,
 } from 'lucide-react';
+import ModalShell from '../../../components/common/ModalShell';
 
 const DOCUMENT_SCANNER_PROMPT = `A tua função é analisar imagens e PDFs de documentos de trabalhadores em Portugal (como Cartão de Cidadão, Título de Residência, Comprovativo de NIF, NISS, Ficha de Aptidão Médica SST, Contratos de Trabalho, Recibos de Vencimento, Comprovativo de IBAN, etc.).
 
@@ -368,20 +369,15 @@ const DocumentScannerModal = ({ open, onClose }) => {
   });
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
-
-        {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-slate-100 flex-shrink-0">
-          <div className="flex items-center gap-2">
-            <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: '#869AAF' }}><ScanSearch size={18} /></div>
-            <h3 className="font-black text-slate-800 text-base uppercase tracking-tight">Scanner de Documentos</h3>
-            {step === 'results' && <span className="text-xs font-black text-slate-400">{files.length} ficheiro{files.length !== 1 ? 's' : ''}</span>}
-          </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 transition-colors"><X size={18} /></button>
-        </div>
-
-        <div className="overflow-y-auto flex-1 p-5 space-y-4">
+    <ModalShell
+      isOpen
+      onClose={onClose}
+      title="Scanner de Documentos"
+      meta={step === 'results' ? `${files.length} ficheiro${files.length !== 1 ? 's' : ''}` : undefined}
+      icon={<ScanSearch size={20} />}
+      size="2xl"
+    >
+        <div className="p-5 space-y-4">
 
           {/* FASE: upload */}
           {step === 'upload' && (
@@ -723,8 +719,7 @@ const DocumentScannerModal = ({ open, onClose }) => {
             </>
           )}
         </div>
-      </div>
-    </div>
+    </ModalShell>
   );
 };
 

@@ -5,9 +5,10 @@ import { renderPdfFirstPage, renderPdfToSrcDoc } from '../../../components/commo
 import {
   FileText, Clock,
   FolderOpen, Eye, EyeOff, CheckCircle, AlertTriangle, ChevronDown, ChevronUp, ChevronRight,
-  Folder, ArrowLeft, Search, X, FileSignature, Download, Trash2,
+  Folder, ArrowLeft, Search, FileSignature, Download, Trash2,
   Layers, Calendar, Plus, ScanSearch,
 } from 'lucide-react';
+import ModalShell from '../../../components/common/ModalShell';
 import { CATEGORIAS_RH_ACT, getValidadeStatus, getDiasRestantes, getExpiryRelativeLabel, CATEGORIA_CONFIG, CATEGORIA_COLOR_MAP } from '../../../constants/rhCategories';
 import { getCategoryFields } from '../../../constants/documentFieldsByCategory';
 import { toSentenceCase, toSentenceCaseFilename, getInitials } from '../../../utils/textUtils';
@@ -205,33 +206,23 @@ export function DocumentViewerModal({ doc, onClose }) {
   const title = buildDocTitle(doc);
 
   return (
-    <div
-      className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      <div className="relative bg-white rounded-2xl shadow-2xl flex flex-col w-full max-w-4xl max-h-[90vh] overflow-hidden">
-        {/* Header */}
-        <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-slate-100 flex-shrink-0">
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-black text-slate-800 truncate">{title}</p>
-            <p className="text-[10px] text-slate-400 mt-0.5">
-              {[doc.workerName, doc.categoria, doc.tipo].filter(Boolean).join(' · ')}
-            </p>
-          </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            {url && (
-              <a href={url} download className="p-2 rounded-xl bg-slate-100 hover:bg-indigo-50 text-slate-500 hover:text-indigo-600 transition-colors" title="Descarregar">
-                <Download size={14} />
-              </a>
-            )}
-            <button onClick={onClose} className="p-2 rounded-xl bg-slate-100 hover:bg-red-50 text-slate-500 hover:text-red-600 transition-colors">
-              <X size={14} />
-            </button>
-          </div>
+    <ModalShell
+      isOpen
+      onClose={onClose}
+      title={title}
+      meta={[doc.workerName, doc.categoria, doc.tipo].filter(Boolean).join(' · ') || undefined}
+      size="4xl"
+      layer="viewer"
+      footer={url ? (
+        <div className="flex justify-end px-5 py-3">
+          <a href={url} download className="p-2 rounded-xl bg-slate-100 hover:bg-indigo-50 text-slate-500 hover:text-indigo-600 transition-colors" title="Descarregar">
+            <Download size={14} />
+          </a>
         </div>
-
+      ) : null}
+    >
         {/* Corpo */}
-        <div className="flex-1 overflow-auto bg-slate-50 flex items-center justify-center">
+        <div className="h-full bg-slate-50 flex items-center justify-center">
           {loading ? (
             <div className="flex flex-col items-center gap-3 py-20 opacity-50">
               <Clock size={28} className="animate-spin text-indigo-400" />
@@ -251,8 +242,7 @@ export function DocumentViewerModal({ doc, onClose }) {
             </div>
           )}
         </div>
-      </div>
-    </div>
+    </ModalShell>
   );
 }
 
@@ -537,27 +527,17 @@ function SubPastaCard({ categoria, docs, onOpenDoc, onDelete }) {
       </button>
 
       {modalOpen && (
-        <div
-          className="fixed inset-0 z-[55] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-          onClick={e => { if (e.target === e.currentTarget) setModalOpen(false); }}
+        <ModalShell
+          isOpen
+          onClose={() => setModalOpen(false)}
+          title={toSentenceCase(categoria)}
+          meta={`${docs.length} doc${docs.length !== 1 ? 's' : ''}`}
+          icon={<Icon size={20} />}
+          size="2xl"
+          layer="nested"
         >
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
-            {/* Header */}
-            <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100 flex-shrink-0">
-              <div className={`p-2 rounded-xl ${colors.bg} ${colors.text} flex-shrink-0`}><Icon size={16} /></div>
-              <h3 className="flex-1 font-black text-slate-800">{toSentenceCase(categoria)}</h3>
-              <span className={`text-[10px] font-black px-2.5 py-1 rounded-lg ${colors.bg} ${colors.text}`}>
-                {docs.length} doc{docs.length !== 1 ? 's' : ''}
-              </span>
-              <button
-                onClick={() => setModalOpen(false)}
-                className="p-2 rounded-xl bg-slate-100 hover:bg-red-50 text-slate-500 hover:text-red-600 transition-colors"
-              >
-                <X size={14} />
-              </button>
-            </div>
             {/* Lista de docs completos */}
-            <div className="overflow-y-auto p-4">
+            <div className="p-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {renderItems.map((item, i) =>
                 item.type === 'pair' ? (
@@ -582,8 +562,7 @@ function SubPastaCard({ categoria, docs, onOpenDoc, onDelete }) {
               )}
               </div>
             </div>
-          </div>
-        </div>
+        </ModalShell>
       )}
     </>
   );

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
-import { X, Loader2, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle } from 'lucide-react';
 import { renderAsync } from 'docx-preview';
+import ModalShell from './ModalShell';
 
 export default function DocxPreviewModal({ title, blob, html, loading, error, onClose }) {
   const previewContainerRef = useRef(null);
@@ -85,25 +86,15 @@ export default function DocxPreviewModal({ title, blob, html, loading, error, on
   }, [blob, loading, error]);
 
   return (
-    <div className="fixed inset-0 z-[160] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
-      <div
-        className="w-[90vw] h-[90vh] max-w-5xl bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <header className="flex items-center justify-between px-6 py-4 border-b border-slate-200 flex-shrink-0">
-          <h2 className="text-base sm:text-lg font-black text-slate-800 truncate pr-4">
-            {title || 'Pré-visualização'}
-          </h2>
-          <button
-            onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl flex-shrink-0"
-            title="Fechar"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </header>
-
-        <div className="flex-1 min-h-0 bg-slate-100 relative">
+    <ModalShell
+      isOpen
+      onClose={onClose}
+      title={title || 'Pré-visualização'}
+      size="viewer"
+      layer="viewer"
+      closeOnOverlay={false}
+    >
+      <div className="h-full min-h-0 bg-slate-100 relative">
           {error ? (
             <div className="h-full flex items-center justify-center p-6">
               <div className="flex items-start gap-3 p-4 bg-rose-50 border border-rose-100 rounded-xl text-sm text-rose-700 max-w-md">
@@ -128,8 +119,7 @@ export default function DocxPreviewModal({ title, blob, html, loading, error, on
               className="absolute inset-0 overflow-auto p-4"
             />
           )}
-        </div>
       </div>
-    </div>
+    </ModalShell>
   );
 }

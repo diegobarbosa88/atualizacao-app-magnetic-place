@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import {
-  FileText, Users, Building2, History, Zap, X,
+  FileText, Users, Building2, History, Zap,
 } from 'lucide-react';
 import ClientTimesheetReport from '../../../components/common/ClientTimesheetReport';
+import ModalShell from '../../../components/common/ModalShell';
 
 export default function ReportsEmbedded({
   reportFilter, setReportFilter,
@@ -77,19 +78,21 @@ export default function ReportsEmbedded({
         </div>
       </div>
 
+      {/* size 5xl e não viewer: a folha de horas tem proporção A4 e a 92vw
+          esticava o conteúdo num monitor largo. Mantém-se a largura original
+          (max-w-5xl); só a camada é que sobe para viewer. */}
       {printingReport && (
-        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-lg z-[200] flex items-start justify-center p-4 overflow-y-auto" onClick={(e) => { if (e.target === e.currentTarget) setPrintingReport(null); }}>
-          <div className="w-full max-w-2xl lg:max-w-5xl mx-4 sm:mx-auto my-8 bg-white rounded-[2rem] sm:rounded-[3rem] shadow-2xl border border-indigo-100 animate-in fade-in zoom-in duration-300">
-            <div className="sticky top-0 z-10 flex items-center justify-between p-4 sm:p-6 border-b border-slate-100 bg-white rounded-t-[2rem] sm:rounded-t-[3rem]">
-              <div className="flex items-center gap-3">
-                <div className="bg-indigo-50 p-2.5 rounded-2xl text-indigo-600"><FileText size={20} /></div>
-                <div><h3 className="font-black text-lg text-slate-800">A Visualizar Relatório</h3><p className="text-[10px] font-bold text-slate-400 uppercase">{printingReport.month}</p></div>
-              </div>
-              <button onClick={() => setPrintingReport(null)} className="p-3 bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-500 rounded-2xl transition-all"><X size={20} /></button>
-            </div>
-            <ClientTimesheetReport data={reportData} onBack={() => setPrintingReport(null)} isEmbedded={true} />
-          </div>
-        </div>
+        <ModalShell
+          isOpen
+          onClose={() => setPrintingReport(null)}
+          title="A Visualizar Relatório"
+          meta={printingReport.month}
+          icon={<FileText size={20} />}
+          size="5xl"
+          layer="viewer"
+        >
+          <ClientTimesheetReport data={reportData} onBack={() => setPrintingReport(null)} isEmbedded={true} />
+        </ModalShell>
       )}
 
       <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">

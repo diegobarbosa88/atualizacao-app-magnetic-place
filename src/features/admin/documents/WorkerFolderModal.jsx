@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { X, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
+import ModalShell from '../../../components/common/ModalShell';
 import { useApp } from '../../../context/AppContext';
 import { useDocumentTemplates } from '../../../hooks/useDocumentTemplates';
 import { WorkerPastaView, DocumentViewerModal } from './WorkerDocsFolderView';
@@ -96,29 +97,25 @@ export default function WorkerFolderModal({ workerId, workerName, onClose }) {
   const worker = { workerId, workerName, docs: allDocs };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-10 bg-black/60 backdrop-blur-sm overflow-y-auto"
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl">
-        {/* Header */}
-        <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100">
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Pasta de Documentos</p>
-            <h3 className="font-black text-slate-800 truncate">{toSentenceCase(workerName)}</h3>
+    <>
+      <ModalShell
+        isOpen
+        onClose={onClose}
+        subtitle="Pasta de Documentos"
+        title={toSentenceCase(workerName)}
+        size="2xl"
+        footer={
+          <div className="flex justify-end px-5 py-4">
+            <button
+              onClick={() => setShowUpload(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-black text-xs transition-colors flex-shrink-0"
+              style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}
+            >
+              <Plus size={13} /> Adicionar
+            </button>
           </div>
-          <button
-            onClick={() => setShowUpload(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-black text-xs transition-colors flex-shrink-0"
-            style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}
-          >
-            <Plus size={13} /> Adicionar
-          </button>
-          <button onClick={onClose} className="p-2 rounded-xl bg-slate-100 hover:bg-red-50 text-slate-500 hover:text-red-600 transition-colors flex-shrink-0">
-            <X size={14} />
-          </button>
-        </div>
-
+        }
+      >
         {/* Corpo */}
         <div className="p-4">
           <WorkerPastaView
@@ -129,12 +126,12 @@ export default function WorkerFolderModal({ workerId, workerName, onClose }) {
             onDelete={handleDelete}
           />
         </div>
-      </div>
+      </ModalShell>
 
-      {/* Modal de pré-visualização (fixed, sobrepõe tudo) */}
+      {/* Modal de pré-visualização (layer="viewer", sobrepõe tudo) */}
       <DocumentViewerModal key={previewDoc?.id} doc={previewDoc} onClose={() => setPreviewDoc(null)} />
 
-      {/* Modal de upload (fixed, z-[200] sobrepõe tudo) */}
+      {/* Modal de upload (layer="nested", sobrepõe esta pasta) */}
       {showUpload && (
         <UploadManualModal
           hideWorkerSelect
@@ -150,6 +147,6 @@ export default function WorkerFolderModal({ workerId, workerName, onClose }) {
           onUpload={handleUpload}
         />
       )}
-    </div>
+    </>
   );
 }

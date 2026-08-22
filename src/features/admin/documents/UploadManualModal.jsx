@@ -1,5 +1,6 @@
 import React from 'react';
-import { Upload, X, Loader2 } from 'lucide-react';
+import { Upload, Loader2 } from 'lucide-react';
+import ModalShell from '../../../components/common/ModalShell';
 import { CATEGORIAS_RH_ACT, AUTO_CATEGORIA_TIPO, CATEGORIAS_COM_VALIDADE } from '../../../constants/rhCategories';
 
 const TIPOS_MANUAIS = ['Recibo de Vencimento', 'Mapa de Ajudas de Custo', 'Mapa de Deslocamento', 'Contrato de Trabalho', 'Outro'];
@@ -25,23 +26,36 @@ export default function UploadManualModal({
   const mostraValidade = CATEGORIAS_COM_VALIDADE.includes(selCategoria);
 
   return (
-    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[200] flex items-start justify-center p-4 overflow-y-auto">
-      <div className="bg-white w-full max-w-xl rounded-[2rem] p-6 shadow-2xl my-8 animate-in fade-in zoom-in-95 duration-200">
-        <div className="flex justify-between items-center mb-5">
-          <div className="flex items-center gap-3">
-            <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600"><Upload size={18} /></div>
-            <h2 className="text-lg font-black text-slate-800 uppercase tracking-tight">Upload Manual</h2>
-          </div>
+    <ModalShell
+      isOpen
+      onClose={() => !uploading && onClose()}
+      title="Upload Manual"
+      icon={<Upload size={20} />}
+      accent="brand"
+      size="xl"
+      layer="nested"
+      closeOnOverlay={false}
+      footer={
+        <div className="flex justify-end gap-2 px-6 py-4">
           <button
-            onClick={() => !uploading && onClose()}
-            className="p-2 text-slate-400 hover:text-slate-600 disabled:opacity-50"
+            onClick={onClose}
             disabled={uploading}
+            className="px-5 py-2.5 text-xs font-black uppercase tracking-widest text-slate-600 hover:bg-slate-100 rounded-xl transition-all disabled:opacity-50"
           >
-            <X size={20} />
+            Cancelar
+          </button>
+          <button
+            onClick={onUpload}
+            disabled={uploading || (!hideWorkerSelect && !selWorker) || !selFile}
+            className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-black uppercase text-xs tracking-widest flex items-center gap-2 disabled:opacity-50 transition-all hover:bg-indigo-700 shadow-lg shadow-indigo-200"
+          >
+            {uploading ? <Loader2 className="animate-spin" size={16} /> : <Upload size={16} />}
+            {uploading ? 'A Enviar...' : 'Submeter'}
           </button>
         </div>
-
-        <div className="space-y-4">
+      }
+    >
+        <div className="space-y-4 px-6 py-5">
           {!hideWorkerSelect && (
             <div className="space-y-1">
               <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Colaborador</label>
@@ -137,25 +151,6 @@ export default function UploadManualModal({
             )}
           </div>
         </div>
-
-        <div className="flex justify-end gap-2 mt-6 pt-5 border-t border-slate-100">
-          <button
-            onClick={onClose}
-            disabled={uploading}
-            className="px-5 py-2.5 text-xs font-black uppercase tracking-widest text-slate-600 hover:bg-slate-100 rounded-xl transition-all disabled:opacity-50"
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={onUpload}
-            disabled={uploading || (!hideWorkerSelect && !selWorker) || !selFile}
-            className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-black uppercase text-xs tracking-widest flex items-center gap-2 disabled:opacity-50 transition-all hover:bg-indigo-700 shadow-lg shadow-indigo-200"
-          >
-            {uploading ? <Loader2 className="animate-spin" size={16} /> : <Upload size={16} />}
-            {uploading ? 'A Enviar...' : 'Submeter'}
-          </button>
-        </div>
-      </div>
-    </div>
+    </ModalShell>
   );
 }
