@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { FileText, Users, BarChart2, Link2, Plus, Loader2, Zap, Landmark, TrendingUp } from 'lucide-react';
+import { FileText, Users, BarChart2, Link2, Plus, Loader2, Zap, Landmark, TrendingUp, BookOpen } from 'lucide-react';
 import TOConlinePanel from './faturas/TOConlinePanel';
 import TOConlineClientes from './toconline/TOConlineClientes';
 import TOConlineRelatorios from './toconline/TOConlineRelatorios';
@@ -8,6 +8,7 @@ import TOConlineBankAccounts from './toconline/TOConlineBankAccounts';
 import CriarDocumentoModal from './toconline/CriarDocumentoModal';
 import FaturarClienteModal from './toconline/FaturarClienteModal';
 import { authFetch } from '../../utils/authFetch';
+import SectionHeaderShell from '../../components/common/SectionHeaderShell';
 
 const TABS = [
   { id: 'documentos', label: 'Documentos', shortLabel: 'Docs', icon: FileText },
@@ -60,80 +61,59 @@ export default function TOConlineAdmin() {
 
   const setSubtab = (id) => navigate(`/admin/toconline?subtab=${id}`);
 
-  return (
-    <div className="p-6 space-y-6 w-full max-w-6xl mx-auto min-w-0">
-      <div className="flex items-center justify-between flex-wrap gap-3 min-w-0">
-        <div className="flex items-center gap-3 min-w-0">
-          {verificando ? (
-            <Loader2 size={14} className="text-slate-300 animate-spin shrink-0" />
-          ) : (
-            <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${ligado ? 'bg-emerald-500' : 'bg-slate-300'}`} />
-          )}
-          <div className="min-w-0">
-            <h1 className="text-lg font-black text-slate-800">TOConline</h1>
-            <p className="text-xs text-slate-400">
-              {verificando ? 'A verificar...' : ligado ? 'Ligado e operacional' : 'Não autenticado'}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3 flex-wrap">
-          {/* Card de saldo */}
-          {ligado && (
-            <div className="flex items-center gap-2.5 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2.5">
-              {saldoLoading ? (
-                <Loader2 size={13} style={{ color: '#869AAF' }} className="animate-spin" />
-              ) : (
-                <TrendingUp size={14} style={{ color: '#869AAF' }} className="shrink-0" />
-              )}
-              <div>
-                <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Saldo Contas</p>
-                <p className="text-sm font-black" style={{ color: '#1B3A57' }}>
-                  {saldoContas != null
-                    ? new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(saldoContas.total)
-                    : '—'}
-                </p>
-              </div>
-              {saldoContas && (
-                <span className="text-[9px] text-slate-400 font-semibold self-end pb-0.5">
-                  {saldoContas.n} conta{saldoContas.n !== 1 ? 's' : ''}
-                </span>
-              )}
-            </div>
-          )}
-          {!verificando && ligado && (
-            <div className="flex gap-2">
-              <button onClick={() => setMostrarFaturar(true)}
-                className="flex items-center gap-1.5 px-4 py-2.5 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-md hover:opacity-90"
-                style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}>
-                <Zap size={14} /> Faturar Cliente
-              </button>
-              <button onClick={() => setMostrarCriar(true)}
-                className="flex items-center gap-1.5 px-4 py-2.5 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-md hover:opacity-90"
-                style={{ backgroundColor: '#1B3A57' }}>
-                <Plus size={14} /> Criar Documento
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
+  const statusLabel = verificando ? 'A verificar...' : ligado ? 'Ligado e operacional' : 'Não autenticado';
+  const activeTabLabel = TABS.find(t => t.id === subtab)?.label;
 
-      <div className="flex gap-1 border-b border-slate-100 overflow-x-auto w-full min-w-0">
-        {TABS.map(({ id, label, shortLabel, icon: Icon }) => (
-          <button
-            key={id}
-            onClick={() => setSubtab(id)}
-            className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 text-xs font-black uppercase tracking-widest whitespace-nowrap border-b-2 transition-all shrink-0 ${
-              subtab === id
-                ? 'border-[#EB8D00] text-[#1B3A57]'
-                : 'border-transparent text-slate-400 hover:text-slate-600'
-            }`}
-          >
-            <Icon size={13} className="shrink-0" />
-            <span className="sm:hidden">{shortLabel}</span>
-            <span className="hidden sm:inline">{label}</span>
-          </button>
-        ))}
-      </div>
+  return (
+    <div className="p-6 space-y-5 w-full max-w-6xl mx-auto min-w-0">
+      <SectionHeaderShell
+        icon={verificando ? <Loader2 size={16} className="animate-spin" /> : <BookOpen size={18} />}
+        title="TOConline"
+        subtitle={statusLabel}
+        breadcrumbLabel={activeTabLabel}
+        tabs={TABS}
+        activeTab={subtab}
+        onTabChange={setSubtab}
+        rightSlot={
+          <div className="flex items-center gap-2.5 flex-wrap">
+            {ligado && (
+              <div className="flex items-center gap-2.5 bg-white/10 rounded-2xl px-4 py-2">
+                {saldoLoading ? (
+                  <Loader2 size={13} className="text-white/70 animate-spin" />
+                ) : (
+                  <TrendingUp size={14} className="text-white/70 shrink-0" />
+                )}
+                <div>
+                  <p className="text-[9px] font-black uppercase tracking-widest text-[#8ea6bc]">Saldo Contas</p>
+                  <p className="text-sm font-black text-white">
+                    {saldoContas != null
+                      ? new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(saldoContas.total)
+                      : '—'}
+                  </p>
+                </div>
+                {saldoContas && (
+                  <span className="text-[9px] text-[#8ea6bc] font-semibold self-end pb-0.5">
+                    {saldoContas.n} conta{saldoContas.n !== 1 ? 's' : ''}
+                  </span>
+                )}
+              </div>
+            )}
+            {!verificando && ligado && (
+              <div className="flex gap-2">
+                <button onClick={() => setMostrarFaturar(true)}
+                  className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-black uppercase tracking-widest rounded-xl transition-all shadow-md hover:opacity-90"
+                  style={{ backgroundColor: '#EB8D00', color: '#12293e' }}>
+                  <Zap size={13} /> Faturar
+                </button>
+                <button onClick={() => setMostrarCriar(true)}
+                  className="flex items-center gap-1.5 px-3.5 py-2 bg-white/10 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all hover:bg-white/20">
+                  <Plus size={13} /> Criar
+                </button>
+              </div>
+            )}
+          </div>
+        }
+      />
 
       <div>
         {verificando ? (

@@ -1,15 +1,17 @@
 import React, { useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Mail, Building2, MessageSquareText } from 'lucide-react';
+import { Mail, Building2, MessageSquareText, Receipt } from 'lucide-react';
 import FaturasAdmin from './FaturasAdmin';
 import FaturasTab from './FaturasTab';
 import ContadorEmailsAdmin from './faturas/ContadorEmailsAdmin';
+import SectionHeaderShell from '../../components/common/SectionHeaderShell';
 
 const SECTIONS = [
   { id: 'importar',     label: 'Importar',     icon: Mail },
   { id: 'fornecedores', label: 'Fornecedores', icon: Building2 },
   { id: 'contador',     label: 'Contador',     icon: MessageSquareText },
 ];
+const LABELS = { importar: 'Importar faturas', fornecedores: 'Fornecedores', contador: 'Contador' };
 
 export default function FaturacaoAdmin() {
   const navigate = useNavigate();
@@ -24,24 +26,15 @@ export default function FaturacaoAdmin() {
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {/* Secções — sublinhado laranja, mesmo padrão de Equipa */}
-      <div className="flex items-center gap-5 mb-5">
-        {SECTIONS.map(sec => {
-          const Icon = sec.icon;
-          const isActive = activeSection === sec.id;
-          return (
-            <button
-              key={sec.id}
-              onClick={() => navigateTo(sec.id)}
-              className={`flex items-center gap-1.5 text-sm transition-all ${
-                isActive ? 'text-[#1B3A57] font-medium' : 'text-slate-400 hover:text-slate-600'
-              }`}
-            >
-              <Icon size={13} /> {sec.label}
-            </button>
-          );
-        })}
-      </div>
+      <SectionHeaderShell
+        icon={<Receipt size={18} />}
+        title="Faturação"
+        subtitle="Importação e gestão de faturas de fornecedores"
+        breadcrumbLabel={LABELS[activeSection]}
+        tabs={SECTIONS}
+        activeTab={activeSection}
+        onTabChange={navigateTo}
+      />
 
       {activeSection === 'importar' && <FaturasAdmin />}
       {activeSection === 'fornecedores' && <FaturasTab />}
