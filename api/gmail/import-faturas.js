@@ -66,14 +66,31 @@ async function guardarFaturaAnexo(supabase, { gmailMessageId, buffer, filename, 
   }
 }
 
+// Mesmo padrão de api/contador/index.js (verificarAutorizacaoCron): permite
+// chamadas server-a-server autenticadas por CRON_SECRET, sem sessão de
+// utilizador. Usado pelo agente WhatsApp "Trabalhador Virtual" (repo
+// CONSELHEIRO-ESTRATEGICO) para disparar a importação da apólice sob pedido.
+// Restrito só ao modo apolice_seguros — os outros modos continuam a exigir
+// sessão admin (requireAuth), para não alargar o alcance do secret.
+function autorizadoPorSecret(req) {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) return false;
+  return req.headers['authorization'] === `Bearer ${secret}`;
+}
+
 export default async function handler(req, res) {
   try {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
+    let body = {};
+    try { body = req.body || {}; } catch (_) { /* ok */ }
+    const modeAntesAuth = body.mode || 'faturas';
+
     // CR-07: x-import-secret substituído por sessão assinada — o "secret"
     // vivia em VITE_GMAIL_IMPORT_SECRET, exposto no bundle do frontend a
     // qualquer visitante (mesma família de falha do share_token do CR-06).
-    if (!requireAuth(req, res, ['admin'])) return;
+    const viaSecret = modeAntesAuth === 'apolice_seguros' && autorizadoPorSecret(req);
+    if (!viaSecret && !requireAuth(req, res, ['admin'])) return;
 
     if (!process.env.GMAIL_CLIENT_ID || !process.env.GMAIL_CLIENT_SECRET || !process.env.GMAIL_REFRESH_TOKEN) {
       return res.status(500).json({ error: 'Missing GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET or GMAIL_REFRESH_TOKEN env vars' });
@@ -91,11 +108,8 @@ export default async function handler(req, res) {
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
-    let body = {};
-    try { body = req.body || {}; } catch (_) { /* ok */ }
-
     // mode: 'faturas' (default) | 'comprovativos' | 'contador' | 'apolice_seguros' | 'all'
-    const mode = body.mode || 'faturas';
+    const mode = modeAntesAuth;
     const userId = 'me';
 
     if (mode === 'contador') {
