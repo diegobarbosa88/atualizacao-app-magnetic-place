@@ -73,20 +73,26 @@ function apoliceBadge(w, apoliceMap) {
 }
 
 const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, setWorkersSort, onLogin, onEdit, onOpenVHHistory, onOpenEmpHistory, onVerPasta }) => {
-  const { approvals, currentMonthStr, schedules, clients, saveToDb, setWorkers } = useApp();
+  const { approvals, currentMonthStr, schedules, clients, saveToDb, setWorkers, supabase } = useApp();
   const [confirmDeleteWorkerId, setConfirmDeleteWorkerId] = useState(null);
   const [openMenuId, setOpenMenuId] = useState(null);
   const [ssModal, setSsModal] = useState(null); // { worker, tipo: 'admissao'|'cessacao' }
   const [ssAmbiente, setSsAmbiente] = useState('teste');
   const [apoliceMap, setApoliceMap] = useState({});
-  const supabase = window.supabaseInstance;
 
   useEffect(() => {
+    // supabase vem do AppContext (nunca window.supabaseInstance direto) —
+    // esse global só fica pronto depois do primeiro render em certas
+    // condições de arranque (F5 direto nesta página), o que fazia este
+    // fetch falhar silenciosamente e todos os colaboradores ficarem presos
+    // em "Apólice por confirmar" até trocar de separador (remount, já com
+    // o global pronto). O supabase do contexto já está garantidamente
+    // pronto sempre que este componente é montado.
     if (!supabase) return;
     supabase.from('worker_apolice_seguro').select('worker_id, status').then(({ data }) => {
       setApoliceMap(Object.fromEntries((data || []).map(r => [r.worker_id, r])));
     });
-  }, []);
+  }, [supabase]);
 
   const verPortal = async (w) => {
     try {
