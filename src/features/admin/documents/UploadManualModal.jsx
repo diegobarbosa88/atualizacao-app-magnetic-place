@@ -2,7 +2,7 @@ import React from 'react';
 import { Upload, X, Loader2 } from 'lucide-react';
 import { CATEGORIAS_RH_ACT, AUTO_CATEGORIA_TIPO, CATEGORIAS_COM_VALIDADE } from '../../../constants/rhCategories';
 
-const TIPOS_MANUAIS = ['Recibo de Vencimento', 'Mapa de Deslocamento', 'Contrato de Trabalho', 'Outro'];
+const TIPOS_MANUAIS = ['Recibo de Vencimento', 'Mapa de Ajudas de Custo', 'Mapa de Deslocamento', 'Contrato de Trabalho', 'Outro'];
 
 export default function UploadManualModal({
   workers,

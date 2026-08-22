@@ -7,6 +7,10 @@ import UploadManualModal from './UploadManualModal';
 import { mapManualDoc, mapGeneratedDoc } from './unifyDocuments';
 import { toSentenceCase } from '../../../utils/textUtils';
 
+// Recibo e mapa de ajudas ficam visíveis ao trabalhador logo no upload,
+// sem precisar do toggle manual (ver useDocumentsAdmin.js).
+const TIPOS_AUTO_VISIVEL = ['Recibo de Vencimento', 'Mapa de Ajudas de Custo'];
+
 export default function WorkerFolderModal({ workerId, workerName, onClose }) {
   const { documents, supabase, workers, setDocuments } = useApp();
   const { generatedDocs } = useDocumentTemplates(supabase);
@@ -58,6 +62,7 @@ export default function WorkerFolderModal({ workerId, workerName, onClose }) {
         categoria: selCategoria || null,
         data_validade: selValidade || null,
         dataEmissao: new Date().toISOString(),
+        visivel_worker: TIPOS_AUTO_VISIVEL.includes(selTipo),
       };
       const { error: dbError } = await supabase.from('documents').insert([newDoc]);
       if (dbError) throw dbError;

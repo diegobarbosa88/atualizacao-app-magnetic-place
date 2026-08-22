@@ -1,6 +1,10 @@
 import { PDFDocument } from 'pdf-lib';
 import { extrairPaginasPdf, extrairMetadadosTOConline } from './validarReciboTOConline';
 
+// Recibo e mapa de ajudas ficam visíveis ao trabalhador logo no upload,
+// sem precisar do toggle manual (ver useDocumentsAdmin.js).
+const TIPOS_AUTO_VISIVEL = ['Recibo de Vencimento', 'Mapa de Ajudas de Custo'];
+
 // Prioridade 1: NIF do funcionário (secção "Identificação do funcionário")
 // Prioridade 2: primeiro "Contribuinte" na página (TOConline — sem NIF de empresa)
 const NIF_FUNCIONARIO_REGEX = /Identifica[cç][aã]o do funcion[aá]rio[\s\S]{0,400}?Contribuinte[^0-9]*(\d{9})/i;
@@ -113,6 +117,7 @@ export async function associarDocumentoAoTrabalhador({ nif, nome, mes, tipo, wor
     status,
     categoria:    'Remuneração',
     dataEmissao:  new Date().toISOString(),
+    visivel_worker: TIPOS_AUTO_VISIVEL.includes(tipoDoc),
   });
   if (dbErr) throw dbErr;
 

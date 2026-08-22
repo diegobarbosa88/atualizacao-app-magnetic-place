@@ -6,7 +6,12 @@ import { downloadTemplateBytes, renderDocx, buildRenderData } from '../../../uti
 import { fetchPublicIp } from '../../../utils/deviceUtils';
 import { unifyDocuments } from './unifyDocuments';
 
-const TIPOS_MANUAIS = ['Recibo de Vencimento', 'Mapa de Deslocamento', 'Contrato de Trabalho', 'Outro'];
+const TIPOS_MANUAIS = ['Recibo de Vencimento', 'Mapa de Ajudas de Custo', 'Mapa de Deslocamento', 'Contrato de Trabalho', 'Outro'];
+
+// Tipos de documento que o trabalhador deve ver automaticamente na sua
+// dashboard assim que são carregados, sem precisar do toggle manual de
+// visibilidade (recibo e mapa de ajudas já são "oficialmente dele").
+const TIPOS_AUTO_VISIVEL = ['Recibo de Vencimento', 'Mapa de Ajudas de Custo'];
 
 // Estado + lógica de negócio da página "Documentos" (Arquivo). Extraído de
 // DocumentsAdmin.jsx para manter o componente focado em JSX — mesmo padrão
@@ -108,7 +113,7 @@ export function useDocumentsAdmin() {
       if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * dir;
       return String(va).localeCompare(String(vb), 'pt', { sensitivity: 'base' }) * dir;
     });
-  }, [unifiedDocs, stateFilter, sourceFilter, searchTerm, sortKey, sortDir, tipoFilter]);
+  }, [unifiedDocs, stateFilter, sourceFilter, searchTerm, sortKey, sortDir, tipoFilter, categoriaFilter, validadeFilter]);
 
   const counts = useMemo(() => {
     const c = { all: unifiedDocs.length, pending: 0, awaiting_admin: 0, signed: 0 };
@@ -150,6 +155,7 @@ export function useDocumentsAdmin() {
         categoria: selCategoria || null,
         data_validade: selValidade || null,
         dataEmissao: new Date().toISOString(),
+        visivel_worker: TIPOS_AUTO_VISIVEL.includes(selTipo),
       };
 
       const { file: _unused, ...docToInsert } = newDoc;
