@@ -335,56 +335,54 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
 
   return (
     <>
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
       {sortedWorkers.map(w => {
         const workerApproval = approvals.find(a => a.workerId === w.id && a.month === currentMonthStr);
         return (
-          <div key={w.id} onClick={() => onEdit(w)} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-slate-200 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer">
-            <div className="flex justify-between items-start mb-3">
-              <div className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase border flex items-center gap-1 ${w.status === 'inativo' ? 'text-rose-600 border-rose-200 bg-rose-50' : 'text-emerald-600 border-emerald-200 bg-emerald-50'}`}>
-                {w.status !== 'inativo' && <CheckCircle size={10} />}
+          <div key={w.id} onClick={() => onEdit(w)} className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm hover:shadow-md hover:border-slate-200 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer">
+            <div className="flex justify-between items-start mb-2">
+              <div className={`px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase border flex items-center gap-1 ${w.status === 'inativo' ? 'text-rose-600 border-rose-200 bg-rose-50' : 'text-emerald-600 border-emerald-200 bg-emerald-50'}`}>
+                {w.status !== 'inativo' && <CheckCircle size={8} />}
                 {w.status === 'inativo' ? 'Inativo' : 'Ativo'}
               </div>
-              <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                <button onClick={() => verPortal(w)} className="p-1.5 hover:bg-slate-50 rounded-lg transition-all border border-slate-100" style={{ color: '#869AAF' }} title="Ver Portal"><Search size={12} /></button>
-                <button onClick={() => onEdit(w)} className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-all border border-amber-100" title="Editar"><Edit2 size={12} /></button>
-                <button onClick={() => onVerPasta?.(w.id)} className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all border border-emerald-100" title="Ver Pasta de Documentos"><FolderOpen size={12} /></button>
-                <button onClick={() => onOpenEmpHistory(w.id, w.name)} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-all border border-slate-100 text-xs" title="Períodos de emprego">📅</button>
-                <button onClick={() => onOpenVHHistory(w.id, w.name)} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-all border border-slate-100 text-xs" title="Histórico de valor">📊</button>
+              <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
+                <button onClick={() => verPortal(w)} className="p-1 hover:bg-slate-50 rounded-md transition-all border border-slate-100" style={{ color: '#869AAF' }} title="Ver Portal"><Search size={10} /></button>
+                <button onClick={() => onEdit(w)} className="p-1 text-amber-600 hover:bg-amber-50 rounded-md transition-all border border-amber-100" title="Editar"><Edit2 size={10} /></button>
+                <button onClick={() => onVerPasta?.(w.id)} className="p-1 text-emerald-600 hover:bg-emerald-50 rounded-md transition-all border border-emerald-100" title="Ver Pasta de Documentos"><FolderOpen size={10} /></button>
                 {w.status === 'ativo' && !w.ss_admissao_comunicada_em && (
-                  <button onClick={() => setSsModal({ worker: w, tipo: 'admissao' })} className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-all border border-amber-200" title={`Comunicar Admissão à SS${ssAmbiente === 'teste' ? ' (TESTE)' : ''}`}><SendHorizonal size={12} /></button>
+                  <button onClick={() => setSsModal({ worker: w, tipo: 'admissao' })} className="p-1 text-amber-600 hover:bg-amber-50 rounded-md transition-all border border-amber-200" title={`Comunicar Admissão à SS${ssAmbiente === 'teste' ? ' (TESTE)' : ''}`}><SendHorizonal size={10} /></button>
                 )}
                 {w.dataFim && !w.ss_cessacao_comunicada_em && (
-                  <button onClick={() => setSsModal({ worker: w, tipo: 'cessacao' })} className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-all border border-amber-200" title={`Comunicar Cessação à SS${ssAmbiente === 'teste' ? ' (TESTE)' : ''}`}><SendHorizonal size={12} /></button>
+                  <button onClick={() => setSsModal({ worker: w, tipo: 'cessacao' })} className="p-1 text-amber-600 hover:bg-amber-50 rounded-md transition-all border border-amber-200" title={`Comunicar Cessação à SS${ssAmbiente === 'teste' ? ' (TESTE)' : ''}`}><SendHorizonal size={10} /></button>
                 )}
                 {confirmDeleteWorkerId === w.id ? (
                   <div className="flex items-center gap-1">
-                    <button onClick={() => { handleDelete(w.id); setConfirmDeleteWorkerId(null); }} className="px-2 py-1 bg-red-600 text-white text-xs font-bold rounded-lg">Sim</button>
-                    <button onClick={() => setConfirmDeleteWorkerId(null)} className="px-2 py-1 bg-slate-200 text-slate-600 text-xs font-bold rounded-lg">Não</button>
+                    <button onClick={() => { handleDelete(w.id); setConfirmDeleteWorkerId(null); }} className="px-1.5 py-0.5 bg-red-600 text-white text-[10px] font-bold rounded-md">Sim</button>
+                    <button onClick={() => setConfirmDeleteWorkerId(null)} className="px-1.5 py-0.5 bg-slate-200 text-slate-600 text-[10px] font-bold rounded-md">Não</button>
                   </div>
                 ) : (
-                  <button onClick={() => setConfirmDeleteWorkerId(w.id)} className="p-1.5 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all border border-slate-100"><Trash2 size={12} /></button>
+                  <button onClick={() => setConfirmDeleteWorkerId(w.id)} className="p-1 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-md transition-all border border-slate-100"><Trash2 size={10} /></button>
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-sm font-black" style={{ backgroundColor: '#1B3A57', color: '#EB8D00' }}>{getInitials(w.name)}</div>
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-[10px] font-black" style={{ backgroundColor: '#1B3A57', color: '#EB8D00' }}>{getInitials(w.name)}</div>
               <div className="min-w-0">
-                <h4 className="font-black text-slate-800 text-sm truncate">{w.name}</h4>
-                <p className="text-[10px] text-slate-400 font-bold truncate">{w.profissao || 'Staff'}</p>
+                <h4 className="font-black text-slate-800 text-xs truncate">{w.name}</h4>
+                <p className="text-[9px] text-slate-400 font-bold truncate">{w.profissao || 'Staff'}</p>
               </div>
             </div>
-            <div className="mb-2"><MiniTimeline w={w} /></div>
-            <div className="mb-3">{apoliceBadge(w, apoliceMap)}</div>
-            <div className="text-[10px] text-slate-400 font-bold space-y-1 border-t border-slate-50 pt-2">
-              <div className="flex items-center gap-1.5">
-                <span>⏱</span> {schedules.find(s => s.id === w.defaultScheduleId)?.name || 'N/A'}
+            <div className="mb-1.5 overflow-hidden"><MiniTimeline w={w} /></div>
+            <div className="mb-2">{apoliceBadge(w, apoliceMap)}</div>
+            <div className="text-[9px] text-slate-400 font-bold space-y-0.5 border-t border-slate-50 pt-1.5">
+              <div className="flex items-center gap-1 truncate">
+                <span>⏱</span> <span className="truncate">{schedules.find(s => s.id === w.defaultScheduleId)?.name || 'N/A'}</span>
               </div>
-              <div className="flex items-center gap-1.5">
-                <span>💼</span> {clients.find(c => c.id === w.defaultClientId)?.name || 'N/A'}
+              <div className="flex items-center gap-1 truncate">
+                <span>💼</span> <span className="truncate">{clients.find(c => c.id === w.defaultClientId)?.name || 'N/A'}</span>
               </div>
               {workerApproval && (
-                <div className="flex items-center gap-1 pt-1"><CheckCircle size={10} className="text-emerald-500" /><span className="text-emerald-600">Aprovado</span></div>
+                <div className="flex items-center gap-1 pt-1"><CheckCircle size={9} className="text-emerald-500" /><span className="text-emerald-600">Aprovado</span></div>
               )}
             </div>
           </div>
