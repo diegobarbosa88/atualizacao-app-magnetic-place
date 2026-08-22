@@ -609,14 +609,31 @@ async function importarApoliceSeguros(gmail, supabase, userId, queryOverride, pa
     .select('gmail_message_id');
   const importedIds = new Set((existingRows || []).map(r => r.gmail_message_id));
 
-  let processados = 0, skipped = 0;
+  let processados = 0, skipped = 0, restantes = 0;
   const erros = [];
 
   console.log(`[apolice] ${listRes.data.messages?.length || 0} mensagem(ns) encontradas, ${importedIds.size} já importadas.`);
 
-  for (const msg of listRes.data.messages || []) {
+  // Orçamento de tempo (mesmo padrão de importarFaturas/importarContador,
+  // abaixo) — sem isto, uma caixa com muitas mensagens já importadas
+  // excedia os 60s de maxDuration (vercel.json) e a chamada do agente
+  // WhatsApp expirava em timeout antes de sequer chegar à mensagem nova.
+  const inicioExecucao = Date.now();
+  const ORCAMENTO_MS = 45_000;
+  const mensagens = listRes.data.messages || [];
+
+  for (let i = 0; i < mensagens.length; i++) {
+    const msg = mensagens[i];
+
+    if (Date.now() - inicioExecucao > ORCAMENTO_MS) {
+      restantes = mensagens.length - i;
+      break;
+    }
+
     if (importedIds.has(msg.id)) {
-      try { await gmail.users.messages.modify({ userId, id: msg.id, requestBody: { removeLabelIds: ['UNREAD'] } }); } catch { /* best-effort */ }
+      // Já importada — não vale a pena gastar um round-trip à Gmail API só
+      // para tentar remover UNREAD de novo (idempotente e, na prática, já
+      // deve estar lida de uma execução anterior).
       skipped++;
       continue;
     }
@@ -702,5 +719,11 @@ async function importarApoliceSeguros(gmail, supabase, userId, queryOverride, pa
     }
   }
 
-  return { processados, skipped, erros };
+  return {
+    processados, skipped, erros,
+    ...(restantes > 0 ? {
+      restantes,
+      aviso: `Limite de tempo atingido — ${restantes} email(s) por processar. Chama outra vez para continuar.`,
+    } : {}),
+  };
 }
