@@ -683,7 +683,13 @@ async function importarApoliceSeguros(gmail, supabase, userId, queryOverride, pa
           recebido_em: internalDate,
           anexo_path: storagePath,
           dados_extraidos: dadosExtraidos,
-          status: 'importado',
+          // A tabela tem CHECK (status IN ('pendente','processado','erro')) —
+          // 'importado' violava sempre a constraint, e como o erro não
+          // contém a palavra "duplicate" (era ignorado só nesse caso), o
+          // insert falhava silenciosamente TODAS as vezes: nada ficava
+          // gravado, e cada nova chamada reprocessava as mesmas mensagens
+          // do zero (é o que causava o timeout de 60s no agente WhatsApp).
+          status: 'pendente',
         })
         .select('id')
         .single();
