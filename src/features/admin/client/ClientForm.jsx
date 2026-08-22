@@ -21,7 +21,7 @@ function Field({ label, icon: Icon, span2, children }) {
   );
 }
 
-const INPUT_CLS = "w-full bg-white border-[1.5px] border-[#E4E1D6] rounded-xl p-3.5 text-sm font-semibold text-[#222b33] outline-none shadow-sm focus:border-[#1B3A57] focus:ring-4 focus:ring-[#1B3A57]/10 transition-all";
+const INPUT_CLS = "w-full bg-white border-[1.5px] border-[#E4E1D6] rounded-[0.85rem] py-[0.72rem] px-[0.9rem] text-[0.86rem] font-semibold text-[#222b33] outline-none shadow-sm focus:border-[#1B3A57] focus:ring-4 focus:ring-[#1B3A57]/10 transition-all";
 
 export default function ClientForm() {
   const { schedules } = useApp();
@@ -232,16 +232,16 @@ export default function ClientForm() {
             <div className="grid grid-cols-2 gap-2.5 mb-2.5">
               <div className="space-y-1">
                 <label className="text-[9px] font-bold uppercase tracking-wider text-[#5C7086]" style={{ fontFamily: FONT_MONO }}>Latitude</label>
-                <input type="number" step="any" value={clientForm.lat ?? ''} onChange={e => setClientForm(prev => ({ ...prev, lat: e.target.value }))} className="w-full bg-white border-[1.5px] border-[#E4E1D6] rounded-[0.7rem] p-2.5 text-[13px] font-bold outline-none shadow-sm focus:border-[#1B3A57] focus:ring-4 focus:ring-[#1B3A57]/10 transition-all" style={{ fontFamily: FONT_MONO }} placeholder="38.7169" />
+                <input type="number" step="any" value={clientForm.lat ?? ''} onChange={e => setClientForm(prev => ({ ...prev, lat: e.target.value }))} className="w-full bg-white border-[1.5px] border-[#E4E1D6] rounded-[0.7rem] py-[0.55rem] px-[0.7rem] text-[0.78rem] font-bold outline-none shadow-sm focus:border-[#1B3A57] focus:ring-4 focus:ring-[#1B3A57]/10 transition-all" style={{ fontFamily: FONT_MONO }} placeholder="38.7169" />
               </div>
               <div className="space-y-1">
                 <label className="text-[9px] font-bold uppercase tracking-wider text-[#5C7086]" style={{ fontFamily: FONT_MONO }}>Longitude</label>
-                <input type="number" step="any" value={clientForm.lng ?? ''} onChange={e => setClientForm(prev => ({ ...prev, lng: e.target.value }))} className="w-full bg-white border-[1.5px] border-[#E4E1D6] rounded-[0.7rem] p-2.5 text-[13px] font-bold outline-none shadow-sm focus:border-[#1B3A57] focus:ring-4 focus:ring-[#1B3A57]/10 transition-all" style={{ fontFamily: FONT_MONO }} placeholder="-9.1399" />
+                <input type="number" step="any" value={clientForm.lng ?? ''} onChange={e => setClientForm(prev => ({ ...prev, lng: e.target.value }))} className="w-full bg-white border-[1.5px] border-[#E4E1D6] rounded-[0.7rem] py-[0.55rem] px-[0.7rem] text-[0.78rem] font-bold outline-none shadow-sm focus:border-[#1B3A57] focus:ring-4 focus:ring-[#1B3A57]/10 transition-all" style={{ fontFamily: FONT_MONO }} placeholder="-9.1399" />
               </div>
             </div>
             <div className="space-y-1 mb-3">
               <label className="text-[9px] font-bold uppercase tracking-wider text-[#5C7086]" style={{ fontFamily: FONT_MONO }}>Raio (metros)</label>
-              <input type="number" value={clientForm.geo_radius_m ?? 200} onChange={e => setClientForm(prev => ({ ...prev, geo_radius_m: e.target.value }))} className="w-full bg-white border-[1.5px] border-[#E4E1D6] rounded-[0.7rem] p-2.5 text-[13px] font-bold outline-none shadow-sm focus:border-[#1B3A57] focus:ring-4 focus:ring-[#1B3A57]/10 transition-all" style={{ fontFamily: FONT_MONO }} placeholder="200" />
+              <input type="number" value={clientForm.geo_radius_m ?? 200} onChange={e => setClientForm(prev => ({ ...prev, geo_radius_m: e.target.value }))} className="w-full bg-white border-[1.5px] border-[#E4E1D6] rounded-[0.7rem] py-[0.55rem] px-[0.7rem] text-[0.78rem] font-bold outline-none shadow-sm focus:border-[#1B3A57] focus:ring-4 focus:ring-[#1B3A57]/10 transition-all" style={{ fontFamily: FONT_MONO }} placeholder="200" />
             </div>
 
             <button
