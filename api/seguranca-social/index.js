@@ -24,8 +24,18 @@ function credenciaisConfiguradas() {
   return Boolean(process.env.SS_NISS_EMPRESA && process.env.SS_PSI_TOKEN);
 }
 
+// Bypass dedicado só para o Trabalhador Virtual (CONSELHEIRO-ESTRATEGICO),
+// que não tem sessão de admin — usado exclusivamente para a comunicação de
+// admissão/cessação já autorizada explicitamente pelo Diego no chat
+// (worker_ativacao_agendada). Segredo próprio, nunca o SESSION_SECRET dos
+// utilizadores.
+function isAgenteAutorizado(req) {
+  const secret = process.env.AGENTE_SERVICE_SECRET;
+  return !!secret && req.headers['x-agente-secret'] === secret;
+}
+
 export default async function handler(req, res) {
-  if (!requireAuth(req, res, ['admin'])) return;
+  if (!isAgenteAutorizado(req) && !requireAuth(req, res, ['admin'])) return;
 
   const action = req.method === 'GET'
     ? req.query?.action
