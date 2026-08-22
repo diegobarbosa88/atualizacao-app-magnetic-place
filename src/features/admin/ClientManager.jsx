@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { useClient, ClientProvider } from './contexts/ClientContext';
 import {
-  Briefcase, LayoutGrid, List, Edit2, Trash2, MapPin, Euro, ShieldOff, Send, AlertTriangle, Shield, Search, MoreVertical, Check, X, Building2
+  Briefcase, LayoutGrid, List, Edit2, Trash2, MapPin, Euro, ShieldOff, Send, AlertTriangle, Shield, Search, MoreVertical, Check, X, Building2, Save
 } from 'lucide-react';
 import ClientForm from './client/ClientForm';
 import ClientEnviosPanel from './client/ClientEnviosPanel';
@@ -33,7 +33,8 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
     clientsSearch, setClientsSearch,
     clientsSort, setClientsSort,
     clientForm, setClientForm,
-    handleDeleteClient
+    handleDeleteClient,
+    handleSaveClient
   } = useClient();
 
   // D-07: Estado para histórico de valor hora do cliente
@@ -183,10 +184,28 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
       <ModalShell
         isOpen={isAddingInTab}
         onClose={() => setIsAddingInTab(false)}
-        title={clientForm.id ? 'Editar Cliente' : 'Novo Cliente'}
+        title={clientForm.name || (clientForm.id ? 'Editar Cliente' : 'Novo Cliente')}
+        subtitle={clientForm.id ? 'Cliente · Ficha' : 'Cliente · Novo registo'}
         icon={<Briefcase size={16} />}
-        accent="slate"
+        accent="navyGradient"
         size="2xl"
+        footer={
+          <div className="flex items-center justify-end gap-2.5 px-5 py-4 border-t border-slate-100">
+            <button
+              onClick={() => setIsAddingInTab(false)}
+              className="px-5 py-3 rounded-2xl border-[1.5px] border-slate-200 bg-white text-[11px] font-black uppercase tracking-wide text-slate-500 hover:bg-slate-50 transition-all"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleSaveClient}
+              className="flex items-center gap-2 px-6 py-3 rounded-2xl text-[11.5px] font-black uppercase tracking-wide shadow-lg transition-all"
+              style={{ background: 'linear-gradient(135deg, #EB8D00, #C97600)', color: '#12293e' }}
+            >
+              <Save size={15} /> Gravar Cliente
+            </button>
+          </div>
+        }
       >
         <ClientForm />
       </ModalShell>
