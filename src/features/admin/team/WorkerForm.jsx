@@ -548,7 +548,7 @@ const WorkerForm = () => {
           tipo={ssModal}
           ambiente={ssAmbiente}
           onClose={() => setSsModal(null)}
-          onSuccess={(data) => { handleSsSuccess(data, ssModal); setSsModal(null); }}
+          onSuccess={(data) => handleSsSuccess(data, ssModal)}
         />
       )}
     </div>
