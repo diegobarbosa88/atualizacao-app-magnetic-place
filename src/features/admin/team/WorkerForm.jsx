@@ -20,7 +20,7 @@ const fmtDate = iso => { if (!iso) return 'atual'; const p = iso.split('T')[0].s
 const lbl = 'block text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1';
 
 const WorkerForm = () => {
-  const { clients, schedules } = useApp();
+  const { clients, schedules, supabase } = useApp();
   const { workerForm, setWorkerForm, handleSaveWorker } = useTeam();
   const [saveSuccessClientId, setSaveSuccessClientId] = useState(null);
   const [saveSuccessScheduleId, setSaveSuccessScheduleId] = useState(null);
@@ -29,14 +29,16 @@ const WorkerForm = () => {
   const [valorHoraHistory, setValorHoraHistory] = useState([]);
   const [employmentHistory, setEmploymentHistory] = useState([]);
   const [apoliceSeguro, setApoliceSeguro] = useState(null);
-  const supabase = window.supabaseInstance;
 
+  // supabase vem do AppContext, não de window.supabaseInstance direto — esse
+  // global pode não estar pronto no primeiro mount em certas condições de
+  // arranque (ver WorkerList.jsx, mesmo bug já apanhado lá).
   useEffect(() => {
     if (!workerForm.id || !supabase) { setValorHoraHistory([]); setEmploymentHistory([]); setApoliceSeguro(null); return; }
     supabase.from('worker_valorhora_history').select('*').eq('worker_id', workerForm.id).order('data_alteracao', { ascending: false }).limit(4).then(({ data }) => setValorHoraHistory(data || []));
     supabase.from('worker_employment_history').select('*').eq('worker_id', workerForm.id).order('created_at', { ascending: false }).limit(4).then(({ data }) => setEmploymentHistory(data || []));
     supabase.from('worker_apolice_seguro').select('*').eq('worker_id', workerForm.id).maybeSingle().then(({ data }) => setApoliceSeguro(data));
-  }, [workerForm.id]);
+  }, [workerForm.id, supabase]);
 
   const handleSaveClientDates = async (clientId, dataInicio, dataFim) => {
     if (!workerForm.id || !supabase) return;
