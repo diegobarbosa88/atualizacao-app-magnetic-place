@@ -26,6 +26,13 @@ export const FT = {
   teal: '#0F7C6E',
   tealBg: '#E3F4F1',
   border: '#E2DED4',
+
+  // Tons de contador/badge. São mais saturados do que os `warn`/`bad` acima,
+  // que estão calibrados para texto sobre fundo claro e ficam apagados quando
+  // usados como preenchimento de um círculo pequeno. Estavam copiados à mão
+  // em seis sítios sem nunca terem sido formalizados como token.
+  badgeWarn: '#E8A317',
+  badgeBad: '#E0455A',
 };
 
 export const FONT_TITLE = "'Barlow Condensed', sans-serif";

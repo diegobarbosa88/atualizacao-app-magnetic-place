@@ -1,4 +1,5 @@
 import React from 'react';
+import { FT } from '../../styles/designTokens';
 
 // Regra geral para navegação secundária (abas/filtros DENTRO de uma página
 // que já tem o seu próprio SectionHeaderShell) — pill cinza com aba ativa em
@@ -15,14 +16,14 @@ export default function SubTabBar({ tabs, activeTab, onTabChange, className = ''
             type="button"
             onClick={() => onTabChange(id)}
             className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[10.5px] font-black uppercase tracking-wide transition-all whitespace-nowrap ${
-              isActive ? 'bg-white text-[#1B3A57] shadow-sm' : 'text-slate-400 hover:text-slate-600'
+              isActive ? 'bg-white text-[var(--navy)] shadow-sm' : 'text-slate-400 hover:text-slate-600'
             }`}
           >
             {Icon && <Icon size={13} />} {label}
             {!!badge && (
               <span
                 className="text-white text-[9px] font-black px-1.5 py-0.5 rounded-full leading-none"
-                style={{ backgroundColor: badgeColor === 'amber' ? '#e8a317' : badgeColor === 'slate' ? '#869AAF' : '#e0455a' }}
+                style={{ backgroundColor: badgeColor === 'amber' ? FT.badgeWarn : badgeColor === 'slate' ? FT.slate : FT.badgeBad }}
               >
                 {badge}
               </span>

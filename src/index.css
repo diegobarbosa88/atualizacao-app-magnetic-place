@@ -12,6 +12,10 @@
 :root {
   --navy: #1b3a57;
   --navy-deep: #122741;
+  /* Fundo suave da marca — usado nas caixas de ícone dos cabeçalhos e modais.
+     Existe como variável porque o Tailwind não aplica o modificador de opacidade
+     (/8) a uma cor vinda de var(). */
+  --navy-soft: rgba(27, 58, 87, 0.08);
   --orange: #eb8d00;
   --orange-deep: #c97600;
   --slate: #869aaf;

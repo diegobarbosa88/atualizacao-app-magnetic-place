@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
+import { FT } from '../../styles/designTokens';
 
 /**
  * Camadas de sobreposição da app.
@@ -27,7 +28,7 @@ export const Z = {
  */
 const ACCENT = {
   default: { iconBg: 'bg-slate-100',           iconColor: 'text-slate-600'  },
-  brand:   { iconBg: 'bg-[#1B3A57]/[0.08]',    iconColor: 'text-[#1B3A57]'  },
+  brand:   { iconBg: 'bg-[var(--navy-soft)]', iconColor: 'text-[var(--navy)]'  },
   danger:  { iconBg: 'bg-rose-50',             iconColor: 'text-rose-600'   },
 };
 
@@ -126,7 +127,7 @@ export default function ModalShell({
                   {subtitle}
                 </p>
               )}
-              <h2 className="text-2xl font-bold leading-[1.05] tracking-[0.01em] text-[#1B3A57] truncate">{title}</h2>
+              <h2 className="text-2xl font-bold leading-[1.05] tracking-[0.01em] text-[var(--navy)] truncate">{title}</h2>
               {meta && <p className="text-[12px] font-semibold text-slate-500 truncate mt-0.5">{meta}</p>}
             </div>
             <button
@@ -141,7 +142,7 @@ export default function ModalShell({
           {/* O filete da marca só nos modais de ação principal (ficha de
               cliente, colaborador, horário). Num "Eliminar registo?" seria
               peso sem função. */}
-          {isBrand && <div className="h-[3px]" style={{ background: 'linear-gradient(90deg, #EB8D00, #ffb444)' }} />}
+          {isBrand && <div className="h-[3px]" style={{ background: `linear-gradient(90deg, ${FT.orange}, #ffb444)` }} />}
         </div>
 
         <div className="flex-1 overflow-y-auto overscroll-contain min-h-0">

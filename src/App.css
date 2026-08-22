@@ -34,9 +34,13 @@ input.lowercase { text-transform: lowercase !important; }
   white-space: nowrap !important;
 }
 
+/* `max-width: 0` faz as colunas distribuírem-se pelas larguras definidas
+   abaixo, em vez de pelo conteúdo. O `overflow: hidden` + `text-overflow:
+   ellipsis` que aqui estavam nunca chegaram a aplicar-se: a regra mais
+   abaixo neste mesmo ficheiro repõe `overflow: visible !important`. Ficam
+   removidos por serem letra morta — se a truncagem com reticências for
+   mesmo o comportamento pretendido, é a regra de baixo que tem de sair. */
 .admin-table td {
-  overflow: hidden;
-  text-overflow: ellipsis;
   max-width: 0;
 }
 

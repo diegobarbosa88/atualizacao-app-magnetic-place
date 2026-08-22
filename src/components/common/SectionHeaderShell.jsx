@@ -1,4 +1,5 @@
 import React from 'react';
+import { FT, SCALE } from '../../styles/designTokens';
 
 // Cabeçalho de secção do admin — faixa branca de uma linha (ícone, título,
 // sub-abas) com uma linha de resumo opcional por baixo.
@@ -17,13 +18,13 @@ export function StatChip({ label, value, dotColor, active, onClick }) {
     <Tag
       onClick={onClick}
       className={`relative flex items-center gap-1.5 text-[11.5px] font-semibold whitespace-nowrap transition-colors ${
-        active ? 'text-[#EB8D00]' : 'text-slate-500 hover:text-slate-700'
+        active ? 'text-[var(--orange)]' : 'text-slate-500 hover:text-slate-700'
       }`}
     >
       <span className="w-[7px] h-[7px] rounded-full shrink-0" style={{ backgroundColor: dotColor }} />
-      <b className={`font-extrabold tabular-nums ${active ? 'text-[#EB8D00]' : 'text-slate-800'}`}>{value}</b>
+      <b className={`font-extrabold tabular-nums ${active ? 'text-[var(--orange)]' : 'text-slate-800'}`}>{value}</b>
       {label}
-      {active && <span className="absolute left-0 right-0 -bottom-2 h-0.5 bg-[#EB8D00]" />}
+      {active && <span className="absolute left-0 right-0 -bottom-2 h-0.5 bg-[var(--orange)]" />}
     </Tag>
   );
 }
@@ -44,12 +45,12 @@ export default function SectionHeaderShell({
     <div className="bg-white border border-slate-200/70 rounded-2xl overflow-hidden mb-5">
       <div className="flex items-center gap-3 flex-wrap px-4 py-3">
         {icon && (
-          <span className="w-[26px] h-[26px] rounded-lg flex items-center justify-center shrink-0 bg-[#1B3A57]/[0.08] text-[#1B3A57] [&>svg]:w-[14px] [&>svg]:h-[14px]">
+          <span className="w-[26px] h-[26px] rounded-lg flex items-center justify-center shrink-0 bg-[var(--navy-soft)] text-[var(--navy)] [&>svg]:w-[14px] [&>svg]:h-[14px]">
             {icon}
           </span>
         )}
         <h2
-          className="text-[1.3rem] font-bold leading-none text-[#1B3A57] truncate"
+          className={`${SCALE.text.sectionTitle} text-[var(--navy)] truncate`}
           title={subtitle || undefined}
         >
           {title}
@@ -65,14 +66,14 @@ export default function SectionHeaderShell({
                   onClick={() => onTabChange(id)}
                   style={{ fontFamily: 'var(--mono)' }}
                   className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-[7px] text-[9.5px] font-bold uppercase tracking-[0.04em] whitespace-nowrap transition-all ${
-                    isActive ? 'bg-white text-[#1B3A57] shadow-sm' : 'text-slate-400 hover:text-slate-600'
+                    isActive ? 'bg-white text-[var(--navy)] shadow-sm' : 'text-slate-400 hover:text-slate-600'
                   }`}
                 >
                   {Icon && <Icon size={11} />} {label}
                   {!!badge && (
                     <span
                       className="text-white text-[8.5px] font-extrabold px-1.5 py-px rounded-full leading-none"
-                      style={{ backgroundColor: badgeColor === 'amber' ? '#e8a317' : '#e0455a' }}
+                      style={{ backgroundColor: badgeColor === 'amber' ? FT.badgeWarn : FT.badgeBad }}
                     >
                       {badge}
                     </span>
