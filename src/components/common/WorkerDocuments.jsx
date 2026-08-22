@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { FileText, X, Download, Loader2, Filter, FileSignature, Pencil, GraduationCap, HeartPulse, ChevronDown, ChevronUp } from 'lucide-react';
+import { FileText, Download, Loader2, Filter, FileSignature, Pencil, GraduationCap, HeartPulse, ChevronDown, ChevronUp } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { formatDocDate } from '../../utils/dateUtils';
 import { isPending, isSigned } from '../../constants/documentStatus';
 import { DocumentViewer } from '../worker/DocumentViewer';
 import SignDrawModal from '../worker/SignDrawModal';
+import ModalShell from './ModalShell';
 import { useDocumentPreview } from './workerDocuments/useDocumentPreview';
 import { useSignDocument } from './workerDocuments/useSignDocument';
 import { FT, FONT_TITLE, FONT_MONO } from '../../styles/designTokens';
@@ -400,14 +401,32 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb, pendingOnly = false
 
       {showSigner && selectedDoc && (
         <>
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-stretch sm:items-center justify-center p-2 sm:p-4">
-            <div className="bg-white rounded-2xl sm:rounded-3xl p-3 sm:p-6 max-w-5xl w-full h-full sm:h-[92vh] overflow-y-auto flex flex-col gap-3 sm:gap-4">
-              <div className="flex justify-between items-center">
-                <h4 className="font-black text-base sm:text-lg truncate pr-2">{selectedDoc.tipo || selectedDoc.title}</h4>
-                <button onClick={() => { setShowSigner(false); setShowSignPad(false); clearCanvas(); }}
-                  className="p-2 hover:bg-slate-100 rounded-xl shrink-0"><X size={20} /></button>
+          <ModalShell
+            isOpen
+            onClose={() => { setShowSigner(false); setShowSignPad(false); clearCanvas(); }}
+            busy={signing}
+            closeOnOverlay={false}
+            subtitle="Assinar Documento"
+            title={selectedDoc.tipo || selectedDoc.title}
+            icon={<FileSignature size={20} />}
+            accent="brand"
+            size="5xl"
+            layer="nested"
+            footer={
+              <div className="px-3 sm:px-6 py-3 sm:py-4">
+                <button onClick={() => setShowSignPad(true)} disabled={signing}
+                  className="w-full py-4 sm:py-5 text-white rounded-2xl font-black text-xs sm:text-sm uppercase tracking-widest transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                  style={{ background: FT.orange }}
+                  onMouseEnter={e => { if (!signing) e.currentTarget.style.background = FT.orangeDeep; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = FT.orange; }}
+                >
+                  {signing ? <><Loader2 size={18} className="animate-spin" /> A processar...</> : <><FileSignature size={18} /> Assinar Digitalmente</>}
+                </button>
               </div>
-              <div className="w-full flex-1 min-h-[60vh] sm:min-h-[70vh] border rounded-xl bg-slate-100 relative overflow-hidden">
+            }
+          >
+            <div className="p-3 sm:p-6">
+              <div className="w-full min-h-[60vh] sm:min-h-[70vh] border rounded-xl bg-slate-100 relative overflow-hidden">
                 {selectedDoc.url ? (
                   <>
                     {previewSrcDoc ? (
@@ -439,16 +458,8 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb, pendingOnly = false
                   </div>
                 )}
               </div>
-              <button onClick={() => setShowSignPad(true)} disabled={signing}
-                className="w-full py-4 sm:py-5 text-white rounded-2xl font-black text-xs sm:text-sm uppercase tracking-widest transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                style={{ background: FT.orange }}
-                onMouseEnter={e => { if (!signing) e.currentTarget.style.background = FT.orangeDeep; }}
-                onMouseLeave={e => { e.currentTarget.style.background = FT.orange; }}
-              >
-                {signing ? <><Loader2 size={18} className="animate-spin" /> A processar...</> : <><FileSignature size={18} /> Assinar Digitalmente</>}
-              </button>
             </div>
-          </div>
+          </ModalShell>
           {showSignPad && (
             <SignDrawModal
               workerName={currentUser?.name || currentUser?.nome}

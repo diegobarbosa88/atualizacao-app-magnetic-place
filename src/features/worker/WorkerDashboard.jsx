@@ -4,7 +4,7 @@ import { useApp } from '../../context/AppContext';
 import { isPending } from '../../constants/documentStatus';
 import {
   CheckCircle, Edit2,
-  ChevronUp, ChevronDown, Trash2, Plus, Zap, X, Bell,
+  ChevronUp, ChevronDown, Trash2, Plus, Zap, Bell,
 } from 'lucide-react';
 import SignatureCanvas from 'react-signature-canvas';
 import { toISODateLocal, isSameMonth } from '../../utils/dateUtils';
@@ -33,6 +33,7 @@ import ScheduleModal from './worker-dashboard/ScheduleModal';
 import ProfileModal from './worker-dashboard/ProfileModal';
 import DocumentsModal from './worker-dashboard/DocumentsModal';
 import FormacaoModal from './worker-dashboard/FormacaoModal';
+import ModalShell from '../../components/common/ModalShell';
 import { listMinhasFormacoes } from './worker-dashboard/formacaoWorkerApi';
 
 const WorkerDashboardContent = ({ onLogout, onLogin }) => {
@@ -510,44 +511,36 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
         onChanged={loadPendingFormacao}
       />
 
-      {notifModalOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setNotifModalOpen(false)} />
-          <div className="relative w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
-            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-2">
-                <Bell size={16} className="text-indigo-600" />
-                <h2 className="text-sm font-black text-slate-800 uppercase tracking-widest">Notificações</h2>
-                {myNotifications.length > 0 && (
-                  <span className="bg-indigo-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full">{myNotifications.length}</span>
-                )}
-              </div>
-              <button onClick={() => setNotifModalOpen(false)} className="p-1.5 text-slate-400 hover:text-slate-700 transition-colors"><X size={16} /></button>
+      <ModalShell
+        isOpen={notifModalOpen}
+        onClose={() => setNotifModalOpen(false)}
+        title="Notificações"
+        meta={myNotifications.length > 0 ? `${myNotifications.length} por ler` : undefined}
+        icon={<Bell size={20} />}
+        size="md"
+      >
+        <div className="divide-y divide-slate-50">
+          {myNotifications.length === 0 ? (
+            <div className="px-5 py-10 text-center">
+              <Bell size={28} className="text-slate-200 mx-auto mb-3" />
+              <p className="text-xs font-black uppercase text-slate-400 tracking-widest">Sem notificações novas</p>
             </div>
-            <div className="overflow-y-auto flex-1 divide-y divide-slate-50">
-              {myNotifications.length === 0 ? (
-                <div className="px-5 py-10 text-center">
-                  <Bell size={28} className="text-slate-200 mx-auto mb-3" />
-                  <p className="text-xs font-black uppercase text-slate-400 tracking-widest">Sem notificações novas</p>
+          ) : myNotifications.map(n => {
+            const colorMap = { success: 'bg-emerald-100 text-emerald-600', warning: 'bg-amber-100 text-amber-600', error: 'bg-rose-100 text-rose-600', info: 'bg-indigo-100 text-indigo-600' };
+            const bgClass = colorMap[n.type] || colorMap.info;
+            return (
+              <div key={n.id} className="px-5 py-4 flex items-start gap-3 hover:bg-slate-50 transition-colors">
+                <div className={`p-2 rounded-xl shrink-0 mt-0.5 ${bgClass}`}><Bell size={14} /></div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-black text-slate-800 leading-snug">{n.title}</p>
+                  {n.message && <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">{n.message}</p>}
+                  {n.created_at && <p className="text-[9px] text-slate-400 mt-1">{new Date(n.created_at).toLocaleString('pt-PT')}</p>}
                 </div>
-              ) : myNotifications.map(n => {
-                const colorMap = { success: 'bg-emerald-100 text-emerald-600', warning: 'bg-amber-100 text-amber-600', error: 'bg-rose-100 text-rose-600', info: 'bg-indigo-100 text-indigo-600' };
-                const bgClass = colorMap[n.type] || colorMap.info;
-                return (
-                  <div key={n.id} className="px-5 py-4 flex items-start gap-3 hover:bg-slate-50 transition-colors">
-                    <div className={`p-2 rounded-xl shrink-0 mt-0.5 ${bgClass}`}><Bell size={14} /></div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-black text-slate-800 leading-snug">{n.title}</p>
-                      {n.message && <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">{n.message}</p>}
-                      {n.created_at && <p className="text-[9px] text-slate-400 mt-1">{new Date(n.created_at).toLocaleString('pt-PT')}</p>}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+              </div>
+            );
+          })}
         </div>
-      )}
+      </ModalShell>
     </div>
   );
 };

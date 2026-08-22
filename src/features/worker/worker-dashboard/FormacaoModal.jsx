@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import {
-  X, ChevronLeft, Flame, Box, Award, ShieldCheck, Wrench, Wind, UserPlus, GraduationCap,
+  ChevronLeft, Flame, Box, Award, ShieldCheck, Wrench, Wind, UserPlus, GraduationCap,
   Zap, CircleDot, Layers, PenTool, Ruler, Eye, Scissors, Compass, Building2, Cylinder, Database,
   FileCheck, ClipboardCheck, Shield, HardHat, Container, ArrowUpDown, ChevronsUp,
   TowerControl, HeartPulse, Siren, Move, Anchor, ClipboardList, FileText, MapPin,
 } from 'lucide-react';
 import SignDrawModal from '../../../components/worker/SignDrawModal';
+import ModalShell from '../../../components/common/ModalShell';
 import FormacaoElearningFlow from './FormacaoElearningFlow';
 import { listMinhasFormacoes, assinarMinhaFormacao } from './formacaoWorkerApi';
 import { CATEGORIAS } from '../../admin/formacao-interna/formacaoTemplates';
@@ -129,28 +130,29 @@ export default function FormacaoModal({ isOpen, onClose, currentUser, onChanged 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex flex-col sm:items-center sm:justify-center">
-      <button className="flex-shrink-0 h-16 sm:hidden" onClick={onClose} aria-label="Fechar" />
-      <div className="flex-1 sm:flex-none rounded-t-3xl sm:rounded-3xl overflow-hidden flex flex-col sm:w-full sm:max-w-2xl sm:max-h-[85vh]" style={{ background: FT.bg }}>
-        <div className="flex items-center gap-3 px-5 py-4 shrink-0 text-white" style={{ background: FT.navyDeep }}>
-          {elearningAlvo ? (
-            <button onClick={() => setElearningAlvo(null)} className="p-2 -ml-2 text-white/70 hover:text-white hover:bg-white/10 rounded-xl transition-all shrink-0">
-              <ChevronLeft size={18} />
-            </button>
-          ) : (
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ background: FT.orange }}>
-              <GraduationCap size={16} className="text-white" />
-            </div>
-          )}
-          <h2 className="flex-1 font-bold uppercase tracking-wide text-sm truncate" style={{ fontFamily: FONT_TITLE, color: '#fff' }}>
-            {elearningAlvo ? elearningAlvo.tipo_formacao : 'As tuas formações'}
-          </h2>
-          <button onClick={onClose} className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-xl transition-all">
-            <X size={18} />
+    <>
+      <ModalShell
+        isOpen
+        onClose={onClose}
+        busy={signBusy}
+        closeOnOverlay={false}
+        subtitle={elearningAlvo ? (CATEGORIA_LABEL[elearningAlvo.categoria] || elearningAlvo.categoria) : undefined}
+        title={elearningAlvo ? elearningAlvo.tipo_formacao : 'As tuas formações'}
+        icon={elearningAlvo ? (
+          <button
+            onClick={() => setElearningAlvo(null)}
+            aria-label="Voltar"
+            className="w-full h-full flex items-center justify-center rounded-[14px] transition-all"
+          >
+            <ChevronLeft size={20} />
           </button>
-        </div>
-
-        <div className="overflow-y-auto flex-1 px-4 py-4">
+        ) : (
+          <GraduationCap size={20} />
+        )}
+        accent="brand"
+        size="2xl"
+      >
+        <div className="px-4 py-4 min-h-full" style={{ background: FT.bg }}>
           {error && <div className="mb-4 p-3 rounded-xl text-xs font-bold" style={{ background: FT.badBg, color: FT.bad }}>{error}</div>}
 
           {elearningAlvo ? (
@@ -217,7 +219,7 @@ export default function FormacaoModal({ isOpen, onClose, currentUser, onChanged 
             </div>
           )}
         </div>
-      </div>
+      </ModalShell>
 
       {signAlvo && (
         <SignDrawModal
@@ -227,6 +229,6 @@ export default function FormacaoModal({ isOpen, onClose, currentUser, onChanged 
           onSign={handleAssinarPresencial}
         />
       )}
-    </div>
+    </>
   );
 }
