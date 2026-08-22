@@ -319,7 +319,7 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
           tipo={ssModal.tipo}
           ambiente={ssAmbiente}
           onClose={() => setSsModal(null)}
-          onSuccess={(data) => { handleSsSuccess(data); setSsModal(null); }}
+          onSuccess={(data) => handleSsSuccess(data)}
         />
       )}
     </>
@@ -389,7 +389,7 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
         tipo={ssModal.tipo}
         ambiente={ssAmbiente}
         onClose={() => setSsModal(null)}
-        onSuccess={(data) => { handleSsSuccess(data); setSsModal(null); }}
+        onSuccess={(data) => handleSsSuccess(data)}
       />
     )}
     </>

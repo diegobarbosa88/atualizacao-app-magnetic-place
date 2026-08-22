@@ -166,7 +166,10 @@ export default function SSComunicacaoModal({ worker, tipo, ambiente, onClose, on
     profissaoCnp:       worker.profissao_cnp || '',
     enquadramento:      worker.enquadramento || 'REGE',
     localTrabalho:      worker.local_trabalho || '',
-    motivoContrato:            '',
+    // EOPA (execução de obra/projeto/atividade definida e temporária) é o
+    // motivo mais comum para trabalhadores de produção afetos a
+    // obras/clientes — pré-selecionado por defeito, o admin pode trocar.
+    motivoContrato:            'EOPA',
     nissTrabalhadorSubstituir: '',
     dataCessacao:          worker.dataFim || '',
     motivoCessacao:        '',
@@ -384,7 +387,7 @@ export default function SSComunicacaoModal({ worker, tipo, ambiente, onClose, on
 
                     <div className="col-span-2">
                       <label className={lbl}>Modalidade de Contrato PSI <span className="text-red-500">*</span></label>
-                      <select value={form.modalidadeContrato} onChange={e => setForm(p => ({ ...p, modalidadeContrato: e.target.value, motivoContrato: '' }))} className={inp}>
+                      <select value={form.modalidadeContrato} onChange={e => setForm(p => ({ ...p, modalidadeContrato: e.target.value, motivoContrato: 'EOPA' }))} className={inp}>
                         {MODALIDADE_CONTRATO.map(m => (
                           <option key={m.value} value={m.value}>{m.label}</option>
                         ))}
