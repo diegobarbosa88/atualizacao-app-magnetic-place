@@ -157,7 +157,7 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
               const schedule = schedules.find(s => s.id === w.defaultScheduleId);
               const client = clients.find(c => c.id === w.defaultClientId);
               return (
-                <tr key={w.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                <tr key={w.id} onClick={() => onEdit(w)} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors cursor-pointer">
                   {/* Colaborador */}
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
@@ -178,7 +178,7 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                   </td>
 
                   {/* Estado — dois toggles compactos */}
-                  <td className="px-3 py-3">
+                  <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => saveToDb('workers', w.id, { ...w, status: w.status === 'inativo' ? 'ativo' : 'inativo' })}
@@ -198,7 +198,7 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                   </td>
 
                   {/* Ações — dropdown ⋮ */}
-                  <td className="px-3 py-3 text-right">
+                  <td className="px-3 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                     <div className="relative inline-block">
                       <button
                         onClick={() => setOpenMenuId(openMenuId === w.id ? null : w.id)}
@@ -326,13 +326,13 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
       {sortedWorkers.map(w => {
         const workerApproval = approvals.find(a => a.workerId === w.id && a.month === currentMonthStr);
         return (
-          <div key={w.id} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-slate-200 hover:-translate-y-0.5 transition-all duration-200">
+          <div key={w.id} onClick={() => onEdit(w)} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-slate-200 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer">
             <div className="flex justify-between items-start mb-3">
               <div className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase border flex items-center gap-1 ${w.status === 'inativo' ? 'text-rose-600 border-rose-200 bg-rose-50' : 'text-emerald-600 border-emerald-200 bg-emerald-50'}`}>
                 {w.status !== 'inativo' && <CheckCircle size={10} />}
                 {w.status === 'inativo' ? 'Inativo' : 'Ativo'}
               </div>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                 <button onClick={() => verPortal(w)} className="p-1.5 hover:bg-slate-50 rounded-lg transition-all border border-slate-100" style={{ color: '#869AAF' }} title="Ver Portal"><Search size={12} /></button>
                 <button onClick={() => onEdit(w)} className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-all border border-amber-100" title="Editar"><Edit2 size={12} /></button>
                 <button onClick={() => onVerPasta?.(w.id)} className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all border border-emerald-100" title="Ver Pasta de Documentos"><FolderOpen size={12} /></button>
