@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { ShieldCheck, Loader2, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { authFetch } from '../../../utils/authFetch';
 
-// Importa emails de 88diegobarbosa@gmail.com com o "Quadro de Pessoal
-// Seguro" (Allianz) anexado, extrai a lista de segurados e compara
+// Importa emails da Allianz (allianz.pt) recebidos em 88diegobarbosa@gmail.com
+// com o "Quadro de Pessoal Seguro" anexado, extrai a lista de segurados e compara
 // automaticamente contra worker_apolice_seguro (comparar_apolice_seguros) —
 // só comparação, não escreve em workers/worker_apolice_seguro. Discrepâncias
 // aparecem na pendência discrepancias_apolice do resumo diário do
@@ -53,7 +53,7 @@ export default function ApoliceSegurosImportPanel() {
         </button>
       </div>
       <p className="text-xs text-slate-400 font-semibold mt-2">
-        Procura emails de 88diegobarbosa@gmail.com, extrai o Quadro de Pessoal Seguro e compara com o sistema.
+        Procura emails da Allianz (allianz.pt) em 88diegobarbosa@gmail.com, extrai o Quadro de Pessoal Seguro e compara com o sistema.
       </p>
 
       {erro && (

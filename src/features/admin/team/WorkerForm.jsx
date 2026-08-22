@@ -28,12 +28,14 @@ const WorkerForm = () => {
   const [expandedSchedulePeriods, setExpandedSchedulePeriods] = useState({});
   const [valorHoraHistory, setValorHoraHistory] = useState([]);
   const [employmentHistory, setEmploymentHistory] = useState([]);
+  const [apoliceSeguro, setApoliceSeguro] = useState(null);
   const supabase = window.supabaseInstance;
 
   useEffect(() => {
-    if (!workerForm.id || !supabase) { setValorHoraHistory([]); setEmploymentHistory([]); return; }
+    if (!workerForm.id || !supabase) { setValorHoraHistory([]); setEmploymentHistory([]); setApoliceSeguro(null); return; }
     supabase.from('worker_valorhora_history').select('*').eq('worker_id', workerForm.id).order('data_alteracao', { ascending: false }).limit(4).then(({ data }) => setValorHoraHistory(data || []));
     supabase.from('worker_employment_history').select('*').eq('worker_id', workerForm.id).order('created_at', { ascending: false }).limit(4).then(({ data }) => setEmploymentHistory(data || []));
+    supabase.from('worker_apolice_seguro').select('*').eq('worker_id', workerForm.id).maybeSingle().then(({ data }) => setApoliceSeguro(data));
   }, [workerForm.id]);
 
   const handleSaveClientDates = async (clientId, dataInicio, dataFim) => {
@@ -262,6 +264,28 @@ const WorkerForm = () => {
                       ? <><AlertTriangle size={10} className="shrink-0" /> Cessação por comunicar</>
                       : <span className="text-slate-400">Cessação — n/a</span>}
                 </div>
+                {(() => {
+                  const status = apoliceSeguro?.status;
+                  const estilos = {
+                    ativo: 'bg-emerald-50 border-emerald-200 text-emerald-700',
+                    solicitado: 'bg-amber-50 border-amber-200 text-amber-700',
+                    excluido: 'bg-slate-50 border-slate-200 text-slate-500',
+                    pendente: 'bg-amber-50 border-amber-200 text-amber-700',
+                  };
+                  const dataRelevante = status === 'ativo' ? apoliceSeguro.ativo_em
+                    : status === 'excluido' ? apoliceSeguro.excluido_em
+                    : apoliceSeguro?.solicitado_em || apoliceSeguro?.pedido_enviado_em;
+                  return (
+                    <div className={`col-span-2 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold border ${estilos[status] || 'bg-slate-50 border-slate-200 text-slate-400'}`}>
+                      {status === 'ativo'
+                        ? <ShieldCheck size={10} className="shrink-0" />
+                        : <AlertTriangle size={10} className="shrink-0" />}
+                      Apólice de Seguro: {status
+                        ? `${status[0].toUpperCase()}${status.slice(1)}${dataRelevante ? ` (${fmtTs(dataRelevante)})` : ''}`
+                        : 'Sem registo'}
+                    </div>
+                  );
+                })()}
               </div>
             )}
           </div>
