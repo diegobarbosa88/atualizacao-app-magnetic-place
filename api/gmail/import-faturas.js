@@ -13,7 +13,11 @@ async function getParser() {
 const ALLOWED_MIME_TYPES = ['application/pdf', 'application/xml', 'text/xml'];
 const ZIP_MIME_TYPES = ['application/zip', 'application/x-zip-compressed'];
 const FATURAS_QUERY = 'is:unread has:attachment {subject:fatura subject:invoice subject:FT}';
-const APOLICE_QUERY = 'from:88diegobarbosa@gmail.com';
+// A apólice chega de noreply@allianz.pt para 88diegobarbosa@gmail.com — o
+// filtro anterior ('from:88diegobarbosa@gmail.com') procurava emails
+// enviados pelo PRÓPRIO Diego, nunca os da Allianz, por isso a tabela
+// apolice_seguro_importacoes nunca teve uma única linha gravada com sucesso.
+const APOLICE_QUERY = 'from:allianz.pt has:attachment';
 const MAX_RESULTS = 50;
 
 // Deteção por mimetype OU extensão do filename — muitos remetentes (ex:
