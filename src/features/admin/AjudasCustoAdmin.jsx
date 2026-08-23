@@ -8,6 +8,7 @@ import { executarCalculoFase1, normalizarWorkerId } from '../../lib/ajudas/perce
 import { calcularEstimativaMensal } from '../../lib/ajudas/estimativaMensal';
 import { verificarFechoMes, fecharReconciliacaoMes, SALDO_ACUMULADO_INICIAL } from '../../lib/ajudas/reconciliacao';
 import { buscarFaturasVendasPeriodo } from '../../lib/ajudas/faturasToConline.js';
+import { FT } from '../../styles/designTokens';
 import { mesSeguinte } from '../../lib/ajudas/valoresPorFatura.js';
 import { fetchTudoPaginado } from '../../lib/ajudas/paginacao.js';
 import { calcularFaturacaoCliente } from '../../lib/faturacao/tarifaHistorica.js';
@@ -66,7 +67,7 @@ function EvidenciaExpandida({ evidencia }) {
                   <td className="py-1.5 pr-3 text-slate-600">{ev.workerId}</td>
                   <td className="py-1.5 pr-3 text-right text-slate-700">{fmtHoras(ev.horasCliente)}</td>
                   <td className="py-1.5 pr-3 text-right text-slate-400">{fmtHoras(ev.horasTotalTrabalhadorNoMes)}</td>
-                  <td className="py-1.5 pr-3 text-right font-bold" style={{ color: '#1B3A57' }}>{fmtPct(ev.pctHorasCliente)}</td>
+                  <td className="py-1.5 pr-3 text-right font-bold" style={{ color: FT.navy }}>{fmtPct(ev.pctHorasCliente)}</td>
                   <td className="py-1.5 pr-3 text-right text-slate-400">{fmtEur(ev.ajudaCustoDoMes)}</td>
                   <td className="py-1.5 text-right font-bold text-slate-700">{fmtEur(ev.ajudaAtribuidaProporcional)}</td>
                 </tr>
@@ -95,7 +96,7 @@ function LinhaCliente({ candidato, nomeCliente, decisao, onDecidir, salvando, ex
           </button>
         </td>
         <td className="px-4 py-3 text-right text-slate-600">{fmtHoras(horasTotalCliente)}</td>
-        <td className="px-4 py-3 text-right font-bold" style={{ color: '#1B3A57' }}>{fmtPct(pctTopo)}</td>
+        <td className="px-4 py-3 text-right font-bold" style={{ color: FT.navy }}>{fmtPct(pctTopo)}</td>
         <td className="px-4 py-3 text-right text-slate-700">{fmtEur(ajudaTotalAtribuida)}</td>
         <td className="px-4 py-3">
           <div className="flex items-center justify-center gap-1.5">
@@ -430,7 +431,7 @@ function CardClientesPorDecidir({ clientes, onIrParaElegibilidade }) {
       <button
         onClick={onIrParaElegibilidade}
         className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest text-white transition-all hover:opacity-90"
-        style={{ backgroundColor: '#EB8D00' }}
+        style={{ backgroundColor: FT.orange }}
       >
         Ir para Elegibilidade de Clientes <ArrowRight size={13} />
       </button>
@@ -458,7 +459,7 @@ function CardPercentagem({ titulo, registo, destaque, workersMap, interativo, re
           </span>
         )}
       </div>
-      <p className="text-3xl font-black" style={{ color: '#1B3A57' }}>{fmtPct(registo.percentagem)}</p>
+      <p className="text-3xl font-black" style={{ color: FT.navy }}>{fmtPct(registo.percentagem)}</p>
       <div className="grid grid-cols-2 gap-3 text-xs">
         <div>
           <p className="text-slate-400 font-semibold">Período</p>
@@ -696,7 +697,7 @@ function HistoricoTab({ onIrParaElegibilidade }) {
             onClick={recalcular}
             disabled={calculando}
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest text-white transition-all hover:opacity-90 disabled:opacity-60"
-            style={{ backgroundColor: '#1B3A57' }}
+            style={{ backgroundColor: FT.navy }}
           >
             {calculando ? <Loader2 size={13} className="animate-spin" /> : <Calculator size={13} />}
             Recalcular % Histórica
@@ -763,7 +764,7 @@ function HistoricoTab({ onIrParaElegibilidade }) {
               onClick={confirmarAtivacao}
               disabled={ativando}
               className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest text-white transition-all hover:opacity-90 disabled:opacity-60"
-              style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}
+              style={{ backgroundColor: FT.orange, color: FT.navy }}
             >
               {ativando ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={13} />}
               Confirmar e Marcar como Ativa
@@ -773,7 +774,7 @@ function HistoricoTab({ onIrParaElegibilidade }) {
               onClick={confirmarGravacaoLinhas}
               disabled={gravandoLinhas}
               className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest text-white transition-all hover:opacity-90 disabled:opacity-60"
-              style={{ backgroundColor: '#1B3A57' }}
+              style={{ backgroundColor: FT.navy }}
             >
               {gravandoLinhas ? <Loader2 size={13} className="animate-spin" /> : <History size={13} />}
               Gravar Linhas Históricas em ajudas_estimativas_fatura
@@ -855,7 +856,7 @@ function LinhaResolucaoSemCliente({ fatura, clients, desabilitado, onConfirmar, 
           onClick={() => escolha && onConfirmar(escolha)}
           disabled={!escolha || desabilitado}
           className="px-3 py-1.5 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all disabled:opacity-50 hover:opacity-90"
-          style={{ backgroundColor: '#1B3A57' }}>
+          style={{ backgroundColor: FT.navy }}>
           Confirmar correspondência
         </button>
         <button
@@ -1090,7 +1091,7 @@ function EstimativaMensalTab({ onIrParaElegibilidade }) {
               onClick={simular}
               disabled={simulando}
               className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest text-white transition-all hover:opacity-90 disabled:opacity-60"
-              style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}
+              style={{ backgroundColor: FT.orange, color: FT.navy }}
             >
               {simulando ? <Loader2 size={13} className="animate-spin" /> : <Calculator size={13} />}
               Simular
@@ -1178,7 +1179,7 @@ function EstimativaMensalTab({ onIrParaElegibilidade }) {
                     </td>
                     <td className="px-4 py-3 text-right text-slate-600">{fmtEur(l.valorEstimadoBruto)}</td>
                     <td className="px-4 py-3 text-right text-slate-500">{fmtEur(l.residuoAplicado)}</td>
-                    <td className="px-4 py-3 text-right font-bold" style={{ color: l.status === 'bloqueado' ? '#B45309' : '#1B3A57' }}>{fmtEur(l.valorFinal)}</td>
+                    <td className="px-4 py-3 text-right font-bold" style={{ color: l.status === 'bloqueado' ? '#B45309' : FT.navy }}>{fmtEur(l.valorFinal)}</td>
                     <td className="px-4 py-3">
                       {l.status === 'calculado' ? (
                         <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest bg-emerald-100 text-emerald-700">Calculado</span>
@@ -1189,7 +1190,7 @@ function EstimativaMensalTab({ onIrParaElegibilidade }) {
                           </span>
                           <span className="text-slate-500">{l.motivoBloqueio}</span>
                           {l.motivoBloqueio === 'cliente sem decisao de elegibilidade' && (
-                            <button onClick={onIrParaElegibilidade} className="text-[10px] font-black uppercase tracking-widest hover:opacity-80" style={{ color: '#EB8D00' }}>
+                            <button onClick={onIrParaElegibilidade} className="text-[10px] font-black uppercase tracking-widest hover:opacity-80" style={{ color: FT.orange }}>
                               Ir para Elegibilidade →
                             </button>
                           )}
@@ -1201,7 +1202,7 @@ function EstimativaMensalTab({ onIrParaElegibilidade }) {
                         <button
                           onClick={() => setDadosFaturar({ clienteId: l.clientId, ajudasValor: l.valorFinal })}
                           className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-widest text-white rounded-lg transition-all hover:opacity-90"
-                          style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}>
+                          style={{ backgroundColor: FT.orange, color: FT.navy }}>
                           Criar Fatura
                         </button>
                       )}
@@ -1212,7 +1213,7 @@ function EstimativaMensalTab({ onIrParaElegibilidade }) {
               <tfoot>
                 <tr className="border-t border-slate-200 bg-slate-50">
                   <td colSpan={4} className="px-4 py-3 text-right text-[10px] font-black uppercase tracking-widest text-slate-500">Total (linhas calculadas)</td>
-                  <td className="px-4 py-3 text-right font-black" style={{ color: '#1B3A57' }}>{fmtEur(totalFinal)}</td>
+                  <td className="px-4 py-3 text-right font-black" style={{ color: FT.navy }}>{fmtEur(totalFinal)}</td>
                   <td colSpan={2}></td>
                 </tr>
               </tfoot>
@@ -1334,7 +1335,7 @@ function ReconciliacaoTab() {
             </select>
             <button onClick={handleVerificar} disabled={verificando}
               className="flex items-center gap-1.5 px-4 py-2.5 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all disabled:opacity-50 shadow-md hover:opacity-90"
-              style={{ backgroundColor: '#1B3A57' }}>
+              style={{ backgroundColor: FT.navy }}>
               {verificando && <Loader2 size={13} className="animate-spin" />}
               Fechar mês {mes}
             </button>
@@ -1382,7 +1383,7 @@ function ReconciliacaoTab() {
               </button>
               <button onClick={handleConfirmarFecho} disabled={fechando}
                 className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-white rounded-lg transition-all disabled:opacity-60 hover:opacity-90"
-                style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}>
+                style={{ backgroundColor: FT.orange, color: FT.navy }}>
                 {fechando ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
                 Confirmar Fecho
               </button>
@@ -1519,21 +1520,21 @@ function FaturasComObservacoesTab() {
             className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
               secao === 'faturadas' ? 'text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
             }`}
-            style={secao === 'faturadas' ? { backgroundColor: '#1B3A57' } : undefined}>
+            style={secao === 'faturadas' ? { backgroundColor: FT.navy } : undefined}>
             Faturas Emitidas ({faturadas.length})
           </button>
           <button onClick={() => setSecao('simuladas')}
             className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
               secao === 'simuladas' ? 'text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
             }`}
-            style={secao === 'simuladas' ? { backgroundColor: '#1B3A57' } : undefined}>
+            style={secao === 'simuladas' ? { backgroundColor: FT.navy } : undefined}>
             Simuladas — Ainda Não Emitidas ({simuladas.length})
           </button>
           <button onClick={() => setSecao('historicas')}
             className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
               secao === 'historicas' ? 'text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
             }`}
-            style={secao === 'historicas' ? { backgroundColor: '#1B3A57' } : undefined}>
+            style={secao === 'historicas' ? { backgroundColor: FT.navy } : undefined}>
             Retroativo — Histórico ({historicas.length})
           </button>
         </div>

@@ -62,7 +62,7 @@ export default function MargemTab({ clientMargins }) {
               <tr key={item.id} className="bg-slate-50/30 hover:bg-white hover:shadow-md transition-all duration-300">
                 <td className="px-4 py-3 rounded-l-2xl border-y border-l border-slate-100 text-sm font-black text-slate-800">{item.name}</td>
                 <td className="px-4 py-3 border-y border-slate-100 text-sm font-bold text-slate-600 whitespace-nowrap">{item.totalHours.toFixed(1)}h</td>
-                <td className="px-4 py-3 border-y border-slate-100 text-sm font-black text-[#1B3A57] whitespace-nowrap">{formatCurrency(item.faturation)}</td>
+                <td className="px-4 py-3 border-y border-slate-100 text-sm font-black text-[var(--navy)] whitespace-nowrap">{formatCurrency(item.faturation)}</td>
                 <td className="px-4 py-3 border-y border-slate-100 text-sm font-black text-rose-600 whitespace-nowrap">{formatCurrency(item.cost)}</td>
                 <td className={`px-4 py-3 border-y border-slate-100 text-sm font-black whitespace-nowrap ${corMargem(item)}`}>{formatCurrency(item.margin)}</td>
                 <td className={`px-4 py-3 rounded-r-2xl border-y border-r border-slate-100 text-sm font-black whitespace-nowrap ${corMargem(item)}`}>{(margemPct(item) * 100).toFixed(1)}%</td>
@@ -72,7 +72,7 @@ export default function MargemTab({ clientMargins }) {
               <tr className="bg-slate-100/60">
                 <td className="px-4 py-3 rounded-l-2xl text-[10px] font-black uppercase text-slate-500">Total</td>
                 <td className="px-4 py-3 text-sm font-black text-slate-700">{totalHours.toFixed(1)}h</td>
-                <td className="px-4 py-3 text-sm font-black text-[#1B3A57]">{formatCurrency(totalFaturation)}</td>
+                <td className="px-4 py-3 text-sm font-black text-[var(--navy)]">{formatCurrency(totalFaturation)}</td>
                 <td className="px-4 py-3 text-sm font-black text-rose-600">{formatCurrency(totalCost)}</td>
                 <td className="px-4 py-3 text-sm font-black text-emerald-600">{formatCurrency(totalMargin)}</td>
                 <td className="px-4 py-3 rounded-r-2xl text-sm font-black text-emerald-600">{margemMediaPct.toFixed(1)}%</td>

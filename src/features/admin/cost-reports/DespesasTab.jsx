@@ -3,6 +3,7 @@ import { Trash2, ChevronDown, Loader2 } from 'lucide-react';
 import { formatCurrency, parseFaturaValor, getMonthLabel } from './costReportsUtils';
 import { toISODateLocal } from '../../../utils/dateUtils';
 import '../reconciliacao/reconciliacao-mockup.css';
+import { FT } from '../../../styles/designTokens';
 
 function TypeBadge({ tipo }) {
   if (tipo === 'fornecedor') return <span className="px-2 py-0.5 rounded-md text-[9px] font-black uppercase bg-rose-100 text-rose-700">Fornecedor</span>;
@@ -34,7 +35,7 @@ export default function DespesasTab({
   return (
     <div>
       <div className="flex items-center justify-end mb-4">
-        <button onClick={() => { setExpenseForm({ id: null, name: '', amount: '', type: 'fixo', date: toISODateLocal(new Date()) }); setIsAddingExpense(!isAddingExpense); }} className={`px-3 py-2 rounded-xl font-black text-xs uppercase shadow-sm transition-all border-2 ${isAddingExpense ? 'text-white' : 'hover:bg-slate-50'}`} style={isAddingExpense ? { backgroundColor: '#1B3A57', borderColor: '#1B3A57' } : { borderColor: '#869AAF', color: '#1B3A57' }}>
+        <button onClick={() => { setExpenseForm({ id: null, name: '', amount: '', type: 'fixo', date: toISODateLocal(new Date()) }); setIsAddingExpense(!isAddingExpense); }} className={`px-3 py-2 rounded-xl font-black text-xs uppercase shadow-sm transition-all border-2 ${isAddingExpense ? 'text-white' : 'hover:bg-slate-50'}`} style={isAddingExpense ? { backgroundColor: FT.navy, borderColor: FT.navy } : { borderColor: FT.slate, color: FT.navy }}>
           {isAddingExpense ? 'Fechar' : '+ Despesa'}
         </button>
       </div>
@@ -63,7 +64,7 @@ export default function DespesasTab({
             </div>
           </div>
           <div className="mt-6 flex items-center gap-3">
-            <button onClick={handleSaveExpense} className="flex-1 text-white py-5 rounded-2xl font-black text-sm uppercase shadow-lg transition-colors hover:opacity-90" style={{ backgroundColor: '#1B3A57' }}>Registar Gasto</button>
+            <button onClick={handleSaveExpense} className="flex-1 text-white py-5 rounded-2xl font-black text-sm uppercase shadow-lg transition-colors hover:opacity-90" style={{ backgroundColor: FT.navy }}>Registar Gasto</button>
             <button onClick={() => { setIsAddingExpense(false); setExpenseForm({ id: null, name: '', amount: '', type: 'fixo', date: toISODateLocal(new Date()) }); }} className="px-6 py-5 bg-slate-100 text-slate-600 rounded-2xl font-black text-sm uppercase shadow-sm hover:bg-slate-200 transition-colors">Cancelar</button>
           </div>
         </div>
@@ -90,7 +91,7 @@ export default function DespesasTab({
       </div>
 
       {/* Banner da fonte de verdade da data */}
-      <div className="flex items-start gap-2.5 bg-white border border-slate-200 rounded-2xl px-4 py-3 mb-5 text-xs text-slate-500" style={{ borderLeftWidth: '3px', borderLeftColor: '#869AAF' }}>
+      <div className="flex items-start gap-2.5 bg-white border border-slate-200 rounded-2xl px-4 py-3 mb-5 text-xs text-slate-500" style={{ borderLeftWidth: '3px', borderLeftColor: FT.slate }}>
         <span className="shrink-0">ℹ️</span>
         <p>Mês definido por <strong className="text-slate-700 font-black">data de pagamento</strong> quando disponível, senão <strong className="text-slate-700 font-black">data da fatura</strong>. Faturas sem nenhuma das duas aparecem em <strong className="text-slate-700 font-black">Faturas sem data</strong> — nunca atribuídas silenciosamente a um mês.</p>
       </div>

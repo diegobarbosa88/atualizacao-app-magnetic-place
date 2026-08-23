@@ -2,6 +2,7 @@ import React from 'react';
 import { X, Loader2, Plus } from 'lucide-react';
 import { formatCurrency } from './costReportsUtils';
 import ModalShell from '../../../components/common/ModalShell';
+import { FT } from '../../../styles/designTokens';
 
 const LinkPagamentoModal = ({
   linkModal,
@@ -80,13 +81,13 @@ const LinkPagamentoModal = ({
                 key={`${section}_${index}`}
                 onClick={() => associarPagamento(section, index, tx)}
                 disabled={linkSaving}
-                className="w-full flex items-center justify-between bg-slate-50 hover:bg-slate-100 border border-slate-100 hover:border-[#869AAF] rounded-2xl px-4 py-3 transition-all text-left disabled:opacity-50"
+                className="w-full flex items-center justify-between bg-slate-50 hover:bg-slate-100 border border-slate-100 hover:border-[var(--slate)] rounded-2xl px-4 py-3 transition-all text-left disabled:opacity-50"
               >
                 <div>
                   <p className="text-sm font-bold text-slate-800">{formatCurrency(Number(tx.valor))}</p>
                   <p className="text-[10px] text-slate-500">{tx.data} · {(tx.descricao || '').slice(0, 55)}</p>
                 </div>
-                {linkSaving ? <Loader2 size={13} className="animate-spin" style={{ color: '#1B3A57' }} /> : <Plus size={14} style={{ color: '#869AAF' }} />}
+                {linkSaving ? <Loader2 size={13} className="animate-spin" style={{ color: FT.navy }} /> : <Plus size={14} style={{ color: FT.slate }} />}
               </button>
             ))}
           </div>

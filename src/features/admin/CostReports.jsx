@@ -13,6 +13,7 @@ import { exportToXLS, exportRelatorioGeralPDF, exportRelatorioGeralXLS } from '.
 import { useCostReportsData } from './cost-reports/useCostReportsData';
 import SectionHeaderShell from '../../components/common/SectionHeaderShell';
 import './reconciliacao/reconciliacao-mockup.css';
+import { FT } from '../../styles/designTokens';
 
 const CostReports = () => {
   const { workers, clients, logs, expenses, saveToDb, handleDelete, supabase } = useApp();
@@ -143,7 +144,7 @@ const CostReports = () => {
     if (activeTab === 'ajudas') {
       return (
         <div>
-          <div className="flex items-start gap-2.5 bg-white border border-slate-200 rounded-2xl px-4 py-3 mb-5 text-xs text-slate-500" style={{ borderLeftWidth: '3px', borderLeftColor: '#869AAF' }}>
+          <div className="flex items-start gap-2.5 bg-white border border-slate-200 rounded-2xl px-4 py-3 mb-5 text-xs text-slate-500" style={{ borderLeftWidth: '3px', borderLeftColor: FT.slate }}>
             <span className="shrink-0">🎫</span>
             <p>Valor extraído dos recibos do mês (<strong className="text-slate-700 font-black">ajudas de custo</strong>) por trabalhador, a faturar aos clientes. O <strong className="text-slate-700 font-black">saldo de meses anteriores</strong> (sub- ou sobre-faturado face ao recibo real) é compensado automaticamente na previsão do mês seguinte.</p>
           </div>
@@ -163,11 +164,11 @@ const CostReports = () => {
         title={getTitle()}
         rightSlot={(
           <div className="flex items-center gap-2 w-full sm:w-auto">
-            <button onClick={() => exportToXLS({ activeTab, ...exportArgs })} className="flex items-center gap-1.5 px-3 py-2 text-white rounded-xl font-black text-xs uppercase shadow-sm transition-all" style={{ backgroundColor: '#1B3A57' }}>
+            <button onClick={() => exportToXLS({ activeTab, ...exportArgs })} className="flex items-center gap-1.5 px-3 py-2 text-white rounded-xl font-black text-xs uppercase shadow-sm transition-all" style={{ backgroundColor: FT.navy }}>
               <Download size={13} /> Exportar
             </button>
             <div className="relative" ref={relatorioMenuRef}>
-              <button onClick={() => setShowRelatorioMenu(v => !v)} className="flex items-center gap-1.5 px-3 py-2 rounded-xl font-black text-xs uppercase shadow-sm transition-all border-2 hover:bg-slate-50 bg-white" style={{ borderColor: '#869AAF', color: '#1B3A57' }}>
+              <button onClick={() => setShowRelatorioMenu(v => !v)} className="flex items-center gap-1.5 px-3 py-2 rounded-xl font-black text-xs uppercase shadow-sm transition-all border-2 hover:bg-slate-50 bg-white" style={{ borderColor: FT.slate, color: FT.navy }}>
                 <BookOpen size={13} /> Geral <ChevronDown size={11} />
               </button>
               {showRelatorioMenu && (

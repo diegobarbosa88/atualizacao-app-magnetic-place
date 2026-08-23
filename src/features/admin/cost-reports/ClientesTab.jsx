@@ -3,6 +3,7 @@ import { Link2 } from 'lucide-react';
 import { formatCurrency } from './costReportsUtils';
 import LinkPagamentoModal from './LinkPagamentoModal';
 import '../reconciliacao/reconciliacao-mockup.css';
+import { FT } from '../../../styles/designTokens';
 
 export default function ClientesTab({ clientCosts, supabase, selectedMonth }) {
   const [pagamentos, setPagamentos] = useState([]);
@@ -129,7 +130,7 @@ export default function ClientesTab({ clientCosts, supabase, selectedMonth }) {
                 <tr key={item.id} className="bg-slate-50/30 hover:bg-white hover:shadow-md transition-all duration-300">
                   <td className="px-4 py-3 rounded-l-2xl border-y border-l border-slate-100 text-sm font-black text-slate-800">{item.name}</td>
                   <td className="px-4 py-3 border-y border-slate-100 text-sm font-bold text-slate-600">{item.totalHours.toFixed(1)}h</td>
-                  <td className="px-4 py-3 border-y border-slate-100 text-sm font-black text-[#1B3A57]">{formatCurrency(item.cost)}</td>
+                  <td className="px-4 py-3 border-y border-slate-100 text-sm font-black text-[var(--navy)]">{formatCurrency(item.cost)}</td>
                   <td className="px-4 py-3 border-y border-slate-100 text-sm font-bold text-emerald-700">
                     {totalPago > 0 ? formatCurrency(totalPago) : <span className="text-slate-300">—</span>}
                   </td>
@@ -139,7 +140,7 @@ export default function ClientesTab({ clientCosts, supabase, selectedMonth }) {
                         estado === 'PAGO' ? 'bg-emerald-100 text-emerald-700' :
                         estado === 'PARCIAL' ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-600'
                       }`}>{estado}</span>
-                      <button onClick={() => abrirLinkModal(item.id, item.name, item.cost)} className="p-1 rounded-lg hover:bg-slate-50 transition-all" style={{ color: '#869AAF' }} title="Associar pagamento bancário">
+                      <button onClick={() => abrirLinkModal(item.id, item.name, item.cost)} className="p-1 rounded-lg hover:bg-slate-50 transition-all" style={{ color: FT.slate }} title="Associar pagamento bancário">
                         <Link2 size={13} />
                       </button>
                     </div>
@@ -151,7 +152,7 @@ export default function ClientesTab({ clientCosts, supabase, selectedMonth }) {
               <tr className="bg-slate-100/60">
                 <td className="px-4 py-3 rounded-l-2xl text-[10px] font-black uppercase text-slate-500">Total</td>
                 <td className="px-4 py-3 text-sm font-black text-slate-700">{clientCosts.reduce((a, i) => a + i.totalHours, 0).toFixed(1)}h</td>
-                <td className="px-4 py-3 text-sm font-black text-[#1B3A57]">{formatCurrency(clientCosts.reduce((a, i) => a + i.cost, 0))}</td>
+                <td className="px-4 py-3 text-sm font-black text-[var(--navy)]">{formatCurrency(clientCosts.reduce((a, i) => a + i.cost, 0))}</td>
                 <td className="px-4 py-3 text-sm font-black text-emerald-700">{formatCurrency(pagamentos.reduce((s, p) => s + Number(p.valor_pago || 0), 0))}</td>
                 <td className="px-4 py-3 rounded-r-2xl"></td>
               </tr>

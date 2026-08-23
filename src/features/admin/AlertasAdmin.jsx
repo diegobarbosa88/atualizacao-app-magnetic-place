@@ -4,6 +4,7 @@ import { useApp } from '../../context/AppContext';
 import ModalShell from '../../components/common/ModalShell';
 import SectionHeaderShell from '../../components/common/SectionHeaderShell';
 import Card from "../../components/common/Card";
+import { FT } from '../../styles/designTokens';
 
 const SEVERIDADE_CFG = {
   alta:  { label: 'Alta',  order: 0, bg: 'bg-rose-50',   text: 'text-rose-600',   dot: 'bg-rose-500' },
@@ -130,7 +131,7 @@ export default function AlertasAdmin() {
             className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
               statusFilter === s ? 'text-white' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
             }`}
-            style={statusFilter === s ? { backgroundColor: '#1B3A57' } : {}}
+            style={statusFilter === s ? { backgroundColor: FT.navy } : {}}
           >
             {s === 'todos' ? 'Todos' : STATUS_CFG[s].label}
           </button>
