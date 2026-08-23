@@ -64,7 +64,7 @@ function ComprovativosSection() {
         <button
           onClick={consultar}
           disabled={estado?.loading}
-          className="flex items-center gap-1.5 px-3 py-1.5 border rounded text-sm disabled:opacity-50 hover:bg-slate-50 transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 border rounded text-sm disabled:opacity-50 hover:bg-[var(--surface)] transition-colors"
           style={{ borderColor: FT.slate, color: FT.slateDim }}
         >
           <Search size={13} />
@@ -124,7 +124,7 @@ function DocumentosPagamentoSection() {
         <button
           onClick={consultar}
           disabled={estado?.loading}
-          className="flex items-center gap-1.5 px-3 py-1.5 border rounded text-sm disabled:opacity-50 hover:bg-slate-50 transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 border rounded text-sm disabled:opacity-50 hover:bg-[var(--surface)] transition-colors"
           style={{ borderColor: FT.slate, color: FT.slateDim }}
         >
           <Search size={13} />
@@ -220,7 +220,7 @@ function RemuneracoesSection() {
           <button
             onClick={consultar}
             disabled={estado?.loading}
-            className="flex items-center gap-1.5 px-3 py-1.5 border rounded text-sm disabled:opacity-50 hover:bg-slate-50 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 border rounded text-sm disabled:opacity-50 hover:bg-[var(--surface)] transition-colors"
           style={{ borderColor: FT.slate, color: FT.slateDim }}
           >
             <Search size={13} />

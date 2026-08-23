@@ -20,15 +20,15 @@ const ADMIN_FIELDS_VAZIO = {
   comunicar_ss: false, solicitar_seguro: false,
 };
 
-const labelCls = 'block text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1';
-const inputCls = 'w-full bg-white border border-slate-200 rounded-lg py-[3px] px-2.5 text-sm font-semibold text-slate-800 outline-none focus:border-[var(--navy)] focus:ring-2 focus:ring-[#1B3A57]/10 transition-all';
+const labelCls = 'block text-[10px] font-bold uppercase tracking-wide text-[var(--slate-dim)] mb-1';
+const inputCls = 'w-full bg-white border border-[var(--border)] rounded-lg py-[3px] px-2.5 text-sm font-semibold text-[var(--ink)] outline-none focus:border-[var(--navy)] focus:ring-2 focus:ring-[#1B3A57]/10 transition-all';
 
 function Row({ label, value }) {
   if (!value) return null;
   return (
-    <div className="flex gap-2 py-1.5 border-b border-slate-50 last:border-0">
-      <span className="text-[10px] font-black text-slate-400 uppercase tracking-wide w-28 shrink-0 pt-0.5">{label}</span>
-      <span className="text-sm font-semibold text-slate-700 break-all">{value}</span>
+    <div className="flex gap-2 py-1.5 border-b border-[var(--border-soft)] last:border-0">
+      <span className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-wide w-28 shrink-0 pt-0.5">{label}</span>
+      <span className="text-sm font-semibold text-[var(--ink-mid)] break-all">{value}</span>
     </div>
   );
 }
@@ -173,47 +173,47 @@ export default function OnboardingPendentes() {
         <div className="flex items-center gap-2">
           <div className="bg-amber-50 p-2 rounded-xl text-amber-600"><Clock size={18} /></div>
           <div>
-            <h3 className="font-black text-base text-slate-800 uppercase tracking-tight">Pedidos Pendentes</h3>
-            <p className="text-[10px] text-slate-400 font-bold">Formulários de onboarding aguardando aprovação</p>
+            <h3 className="font-black text-base text-[var(--ink)] uppercase tracking-tight">Pedidos Pendentes</h3>
+            <p className="text-[10px] text-[var(--slate-dim)] font-bold">Formulários de onboarding aguardando aprovação</p>
           </div>
         </div>
-        <button onClick={loadSubmissions} className="p-2 text-slate-400 hover:text-[var(--slate)] hover:bg-slate-100 rounded-xl transition-all" title="Atualizar">
+        <button onClick={loadSubmissions} className="p-2 text-[var(--slate)] hover:text-[var(--slate)] hover:bg-[var(--surface-dim)] rounded-xl transition-all" title="Atualizar">
           <RefreshCw size={16} />
         </button>
       </div>
 
       {submissions.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-10 text-center">
+        <div className="bg-white rounded-2xl border border-[var(--border-soft)] shadow-sm p-10 text-center">
           <CheckCircle className="text-emerald-300 mx-auto mb-3" size={32} />
-          <p className="font-black text-slate-400 text-sm uppercase tracking-wide">Sem pedidos pendentes</p>
-          <p className="text-xs text-slate-300 mt-1">Todos os formulários foram revistos.</p>
+          <p className="font-black text-[var(--slate-dim)] text-sm uppercase tracking-wide">Sem pedidos pendentes</p>
+          <p className="text-xs text-[var(--slate-dim)] mt-1">Todos os formulários foram revistos.</p>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-x-auto">
+        <div className="bg-white rounded-2xl border border-[var(--border-soft)] shadow-sm overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-100 bg-slate-50">
-                <th className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Colaborador</th>
-                <th className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest hidden sm:table-cell">Profissão</th>
-                <th className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Submetido em</th>
-                <th className="text-right px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Ações</th>
+              <tr className="border-b border-[var(--border-soft)] bg-[var(--surface)]">
+                <th className="text-left px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Colaborador</th>
+                <th className="text-left px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest hidden sm:table-cell">Profissão</th>
+                <th className="text-left px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Submetido em</th>
+                <th className="text-right px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Ações</th>
               </tr>
             </thead>
             <tbody>
               {submissions.map(s => (
-                <tr key={s.id} className="border-b border-slate-50 hover:bg-slate-50/60 transition-colors">
+                <tr key={s.id} className="border-b border-[var(--border-soft)] hover:bg-[var(--surface)] transition-colors">
                   <td className="px-4 py-3">
-                    <p className="font-black text-slate-800 uppercase text-sm">{s.nome}</p>
-                    <p className="text-xs text-slate-400">{s.email || '—'}</p>
+                    <p className="font-black text-[var(--ink)] uppercase text-sm">{s.nome}</p>
+                    <p className="text-xs text-[var(--slate-dim)]">{s.email || '—'}</p>
                   </td>
                   <td className="px-4 py-3 hidden sm:table-cell">
-                    <p className="text-xs font-bold text-slate-500">{s.profissao || '—'}</p>
+                    <p className="text-xs font-bold text-[var(--slate-dim)]">{s.profissao || '—'}</p>
                   </td>
                   <td className="px-4 py-3">
-                    <p className="text-xs font-bold text-slate-500">
+                    <p className="text-xs font-bold text-[var(--slate-dim)]">
                       {new Date(s.submitted_at).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                     </p>
-                    <p className="text-[10px] text-slate-400">
+                    <p className="text-[10px] text-[var(--slate-dim)]">
                       {new Date(s.submitted_at).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
                     </p>
                   </td>
@@ -256,7 +256,7 @@ export default function OnboardingPendentes() {
               ) : (
                 <div className="flex items-center gap-2">
                   <input
-                    className="border border-slate-200 rounded-lg py-1.5 px-3 text-xs font-semibold outline-none focus:border-rose-400 w-48"
+                    className="border border-[var(--border)] rounded-lg py-1.5 px-3 text-xs font-semibold outline-none focus:border-rose-400 w-48"
                     placeholder="Motivo (opcional)"
                     value={rejectionReason}
                     onChange={e => setRejectionReason(e.target.value)}
@@ -269,7 +269,7 @@ export default function OnboardingPendentes() {
                     {saving ? <Loader2 size={12} className="animate-spin" /> : <XCircle size={12} />}
                     Confirmar
                   </button>
-                  <button onClick={() => setShowRejectInput(false)} className="text-xs text-slate-400 hover:text-slate-600">
+                  <button onClick={() => setShowRejectInput(false)} className="text-xs text-[var(--slate-dim)] hover:text-[var(--ink-soft)]">
                     Cancelar
                   </button>
                 </div>
@@ -289,13 +289,13 @@ export default function OnboardingPendentes() {
         {selected && (
           <div className="space-y-5">
             {/* Tabs */}
-            <div className="flex items-end gap-1 border-b border-slate-100">
+            <div className="flex items-end gap-1 border-b border-[var(--border-soft)]">
               {['dados', 'completar'].map(t => (
                 <button
                   key={t}
                   onClick={() => setModalTab(t)}
                   className={`px-4 py-2 -mb-px border-b-2 text-[11px] font-black uppercase tracking-wide transition-all
-                    ${modalTab === t ? 'border-[var(--orange)] text-[var(--navy)]' : 'border-transparent text-slate-400 hover:text-[var(--navy)]'}`}
+                    ${modalTab === t ? 'border-[var(--orange)] text-[var(--navy)]' : 'border-transparent text-[var(--slate-dim)] hover:text-[var(--navy)]'}`}
                 >
                   {t === 'dados' ? 'Dados submetidos' : 'Completar registo'}
                 </button>
@@ -323,7 +323,7 @@ export default function OnboardingPendentes() {
                 </Section>
 
                 <div className="pt-2">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Editar campos se necessário</p>
+                  <p className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest mb-2">Editar campos se necessário</p>
                   <div className="grid grid-cols-2 gap-3">
                     {[
                       { key: 'nome', label: 'Nome' },
@@ -409,7 +409,7 @@ export default function OnboardingPendentes() {
                 </div>
 
                 <div className="pt-1">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Contrato e Segurança Social</p>
+                  <p className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest mb-2">Contrato e Segurança Social</p>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className={labelCls}>Tipo de Contrato</label>
@@ -480,7 +480,7 @@ export default function OnboardingPendentes() {
                 </div>
 
                 <div className="pt-1">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Afetação</p>
+                  <p className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest mb-2">Afetação</p>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className={labelCls}>Cliente Padrão</label>
@@ -501,24 +501,24 @@ export default function OnboardingPendentes() {
                   </div>
                 </div>
 
-                <div className="pt-2 border-t border-slate-100">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                <div className="pt-2 border-t border-[var(--border-soft)]">
+                  <p className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest mb-2 flex items-center gap-1.5">
                     <ShieldCheck size={11} /> Ao aprovar, agendar para o dia anterior ao início
                   </p>
-                  <div className="bg-slate-50 rounded-xl p-3 space-y-2">
+                  <div className="bg-[var(--surface)] rounded-xl p-3 space-y-2">
                     <label className="flex items-center gap-2.5 cursor-pointer">
                       <input type="checkbox" checked={adminFields.comunicar_ss}
                         onChange={e => setAdminFields(p => ({ ...p, comunicar_ss: e.target.checked }))}
-                        className="w-4 h-4 rounded border-slate-300" />
-                      <span className="text-xs font-semibold text-slate-600">Comunicar admissão à Segurança Social</span>
+                        className="w-4 h-4 rounded border-[var(--border)]" />
+                      <span className="text-xs font-semibold text-[var(--ink-soft)]">Comunicar admissão à Segurança Social</span>
                     </label>
                     <label className="flex items-center gap-2.5 cursor-pointer">
                       <input type="checkbox" checked={adminFields.solicitar_seguro}
                         onChange={e => setAdminFields(p => ({ ...p, solicitar_seguro: e.target.checked }))}
-                        className="w-4 h-4 rounded border-slate-300" />
-                      <span className="text-xs font-semibold text-slate-600">Solicitar inclusão no seguro de acidentes de trabalho</span>
+                        className="w-4 h-4 rounded border-[var(--border)]" />
+                      <span className="text-xs font-semibold text-[var(--ink-soft)]">Solicitar inclusão no seguro de acidentes de trabalho</span>
                     </label>
-                    <p className="text-[10px] text-slate-400 leading-relaxed pt-1">
+                    <p className="text-[10px] text-[var(--slate-dim)] leading-relaxed pt-1">
                       Nada é comunicado agora. O Trabalhador Virtual pede-te autorização por WhatsApp no dia
                       anterior à data de início e só executa depois de confirmares — precisa de uma data de início preenchida acima.
                     </p>
@@ -536,8 +536,8 @@ export default function OnboardingPendentes() {
 function Section({ title, children }) {
   return (
     <div>
-      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{title}</p>
-      <div className="bg-slate-50 rounded-xl px-4 py-1">
+      <p className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest mb-2">{title}</p>
+      <div className="bg-[var(--surface)] rounded-xl px-4 py-1">
         {children}
       </div>
     </div>

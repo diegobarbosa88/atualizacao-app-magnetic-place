@@ -55,22 +55,22 @@ const ChangeRequestsPanel = ({ requests, onUpdate }) => {
         <span className="bg-amber-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full">{requests.length}</span>
       </div>
       {requests.map(req => (
-        <div key={req.id} className="px-5 py-4 border-b border-slate-50 last:border-b-0">
+        <div key={req.id} className="px-5 py-4 border-b border-[var(--border-soft)] last:border-b-0">
           <div className="flex items-start gap-3 flex-wrap">
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-black text-slate-800">{req.worker_name}</p>
+              <p className="text-xs font-black text-[var(--ink)]">{req.worker_name}</p>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
-                <span className="text-[10px] font-bold text-slate-400 uppercase">{req.field_label}</span>
-                <span className="text-[10px] text-slate-400 line-through">{req.before || '—'}</span>
-                <ArrowRight size={10} className="text-slate-300" />
+                <span className="text-[10px] font-bold text-[var(--slate-dim)] uppercase">{req.field_label}</span>
+                <span className="text-[10px] text-[var(--slate-dim)] line-through">{req.before || '—'}</span>
+                <ArrowRight size={10} className="text-[var(--slate)]" />
                 <span className="text-[10px] font-black text-indigo-600">{req.proposed}</span>
               </div>
-              <p className="text-[9px] text-slate-400 mt-1">{new Date(req.created_at).toLocaleString('pt-PT')}</p>
+              <p className="text-[9px] text-[var(--slate-dim)] mt-1">{new Date(req.created_at).toLocaleString('pt-PT')}</p>
               {rejectingId === req.id && (
                 <div className="mt-2 flex gap-2">
-                  <input value={rejectNote} onChange={e => setRejectNote(e.target.value)} placeholder="Motivo da rejeição (opcional)..." className="flex-1 text-xs border border-slate-200 rounded-xl px-3 py-2 outline-none focus:border-rose-300" autoFocus />
+                  <input value={rejectNote} onChange={e => setRejectNote(e.target.value)} placeholder="Motivo da rejeição (opcional)..." className="flex-1 text-xs border border-[var(--border)] rounded-xl px-3 py-2 outline-none focus:border-rose-300" autoFocus />
                   <button onClick={() => handleReject(req)} className="px-3 py-1.5 bg-rose-600 text-white rounded-xl text-[10px] font-black uppercase">Confirmar</button>
-                  <button onClick={() => { setRejectingId(null); setRejectNote(''); }} className="px-3 py-1.5 bg-slate-100 text-slate-500 rounded-xl text-[10px] font-black uppercase">Cancelar</button>
+                  <button onClick={() => { setRejectingId(null); setRejectNote(''); }} className="px-3 py-1.5 bg-[var(--surface-dim)] text-[var(--slate-dim)] rounded-xl text-[10px] font-black uppercase">Cancelar</button>
                 </div>
               )}
             </div>

@@ -235,6 +235,19 @@ perguntar. E usar sempre a mesma métrica: o script conta **ocorrências**, não
   - **Antes de mudar o valor de um token, contar em que papéis ele é usado.** Um token com nome de
     superfície pode estar a servir de tinta noutro sítio; nesse caso a correcção é um token novo,
     não um valor novo.
+- **`--panel` e `--surface` têm o mesmo valor no bloco `.dark` (#16202c).** Hoje é inofensivo porque
+  `var(--panel)` não é usado em lado nenhum — os painéis ainda são `bg-white` e o modo escuro
+  chega-lhes pela regra-ponte do `App.css` (#1e293b), que é distinta do `--surface`, por isso os 90
+  `hover:bg-[var(--surface)]` continuam visíveis. Mas assim que um lote converter `bg-white` para
+  `bg-[var(--panel)]`, painel e hover passam a ser a mesma cor no escuro e o hover desaparece sem dar
+  erro nenhum. Separar os dois valores **antes** desse lote, não depois.
+- **O fundo global do painel admin é um hex fixo:** `bg-[#EEF2F5]` em `AdminDashboard.jsx:585`. Não
+  inverte no modo escuro, por isso qualquer texto que assente directamente nele — sem painel próprio
+  por baixo — fica claro-sobre-claro. Já estava partido antes da migração (a regra-ponte punha o
+  texto a #F1F5F9, 1,03:1); converter para tokens não piorou (1,08:1) mas também não resolve, porque
+  o problema é o fundo. Passá-lo a `--surface-dim` resolve (12,48:1 no escuro) e no claro é quase
+  neutro (15,02 → 14,45). É a mudança visual de maior alcance que falta — muda o fundo de todos os
+  ecrãs do admin de cinzento-azulado para o bege da marca.
 - **O varrimento "regressões globais" do script não é global — olha só para `src/features/admin` e
   `src/components/admin`.** Está a zero ali, mas há 6 botões laranja com texto branco (2,52:1) fora
   desse alcance, em `components/common/EntryForm.jsx`, `components/common/WorkerDocuments.jsx`,
