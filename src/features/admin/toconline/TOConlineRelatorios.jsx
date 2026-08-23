@@ -9,16 +9,16 @@ import { useTableFilters } from './hooks/useTableFilters';
 import { useTocRelatorios } from './hooks/useTocRelatorios';
 import ModalDocToc from './components/ModalDocToc';
 
-const selectClass = "w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30 bg-white";
+const selectClass = "w-full px-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30 bg-white";
 
 function ThSort({ campo, label, ordem, toggleOrdem }) {
   return (
-    <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 cursor-pointer select-none hover:text-slate-600 transition-colors"
+    <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] cursor-pointer select-none hover:text-[var(--ink-soft)] transition-colors"
       onClick={() => toggleOrdem(campo)}>
       <span className="flex items-center gap-1">
         {label}
         {ordem.campo !== campo
-          ? <ArrowUpDown size={11} className="text-slate-300" />
+          ? <ArrowUpDown size={11} className="text-[var(--slate)]" />
           : ordem.dir === 'asc' ? <ArrowUp size={11} style={{ color: FT.slate }} /> : <ArrowDown size={11} style={{ color: FT.slate }} />
         }
       </span>
@@ -58,19 +58,19 @@ export default function TOConlineRelatorios({ onDesligado }) {
   return (
     <div className="space-y-5">
       {/* Controlos principais */}
-      <div className="bg-white rounded-2xl border border-slate-100 p-5 space-y-4">
-        <p className="text-xs font-black uppercase tracking-widest text-slate-400">Filtrar documentos</p>
+      <div className="bg-white rounded-2xl border border-[var(--border-soft)] p-5 space-y-4">
+        <p className="text-xs font-black uppercase tracking-widest text-[var(--slate-dim)]">Filtrar documentos</p>
         <div className="flex flex-wrap gap-3 items-end">
           <div className="space-y-1">
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Tipo</p>
-            <div className="flex gap-1 bg-slate-100 p-1 rounded-xl">
+            <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Tipo</p>
+            <div className="flex gap-1 bg-[var(--surface-dim)] p-1 rounded-xl">
               {[
                 { key: 'vendas', label: 'Vendas' },
                 { key: 'compras', label: 'Compras' },
                 { key: 'recibos', label: 'Recibos' },
               ].map(({ key, label }) => (
                 <button key={key} onClick={() => { setTipo(key); }}
-                  className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${tipo === key ? '' : 'text-slate-400 hover:text-slate-600'}`}
+                  className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${tipo === key ? '' : 'text-[var(--slate-dim)] hover:text-[var(--ink-soft)]'}`}
                   style={tipo === key ? { backgroundColor: 'rgba(235,141,0,0.15)', color: 'var(--navy)' } : {}}>
                   {label}
                 </button>
@@ -79,15 +79,15 @@ export default function TOConlineRelatorios({ onDesligado }) {
           </div>
 
           <div className="space-y-1">
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Data de</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Data de</p>
             <input type="date" value={dataDe} onChange={e => setDataDe(e.target.value)}
-              className="px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30" />
+              className="px-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30" />
           </div>
 
           <div className="space-y-1">
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Data até</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Data até</p>
             <input type="date" value={dataAte} onChange={e => setDataAte(e.target.value)}
-              className="px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30" />
+              className="px-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30" />
           </div>
 
           <button onClick={handleGerar} disabled={loading}
@@ -107,21 +107,21 @@ export default function TOConlineRelatorios({ onDesligado }) {
         <>
           {/* Totais */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            <div className="bg-white rounded-2xl border border-slate-100 p-4">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Documentos</p>
-              <p className="text-2xl font-black text-slate-800">
+            <div className="bg-white rounded-2xl border border-[var(--border-soft)] p-4">
+              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-1">Documentos</p>
+              <p className="text-2xl font-black text-[var(--ink)]">
                 {docsFiltrados.length}
-                {docsFiltrados.length !== docs.length && <span className="text-sm text-slate-400 font-semibold ml-1">/ {docs.length}</span>}
+                {docsFiltrados.length !== docs.length && <span className="text-sm text-[var(--slate-dim)] font-semibold ml-1">/ {docs.length}</span>}
               </p>
             </div>
-            <div className="bg-white rounded-2xl border border-slate-100 p-4">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Total</p>
-              <p className="text-2xl font-black text-slate-800">{totalValor.toFixed(2)} €</p>
+            <div className="bg-white rounded-2xl border border-[var(--border-soft)] p-4">
+              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-1">Total</p>
+              <p className="text-2xl font-black text-[var(--ink)]">{totalValor.toFixed(2)} €</p>
             </div>
             {totalIva > 0 && (
-              <div className="bg-white rounded-2xl border border-slate-100 p-4">
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">IVA</p>
-                <p className="text-2xl font-black text-slate-800">{totalIva.toFixed(2)} €</p>
+              <div className="bg-white rounded-2xl border border-[var(--border-soft)] p-4">
+                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-1">IVA</p>
+                <p className="text-2xl font-black text-[var(--ink)]">{totalIva.toFixed(2)} €</p>
               </div>
             )}
           </div>
@@ -130,47 +130,47 @@ export default function TOConlineRelatorios({ onDesligado }) {
           <div className="space-y-3">
             <div className="flex gap-2 items-center">
               <div className="relative flex-1">
-                <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--slate)]" />
                 <input value={pesquisa} onChange={e => setPesquisa(e.target.value)}
                   placeholder={`Pesquisar por ${tipo === 'compras' ? 'fornecedor' : 'cliente'} ou nº documento...`}
-                  className="w-full pl-9 pr-4 py-2.5 rounded-2xl border border-slate-200 text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30" />
+                  className="w-full pl-9 pr-4 py-2.5 rounded-2xl border border-[var(--border)] text-sm text-[var(--ink-mid)] placeholder-[var(--slate)] focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30" />
                 {pesquisa && (
-                  <button onClick={() => setPesquisa('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                  <button onClick={() => setPesquisa('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--slate)] hover:text-[var(--ink-soft)]">
                     <X size={13} />
                   </button>
                 )}
               </div>
               <button onClick={() => setMostrarFiltros(v => !v)}
-                className={`flex items-center gap-1.5 px-4 py-2.5 rounded-2xl border text-xs font-black uppercase tracking-widest transition-all ${mostrarFiltros || filtrosAtivos ? '' : 'bg-white border-slate-200 text-slate-500 hover:text-[var(--slate)] hover:border-[var(--slate)]'}`}
+                className={`flex items-center gap-1.5 px-4 py-2.5 rounded-2xl border text-xs font-black uppercase tracking-widest transition-all ${mostrarFiltros || filtrosAtivos ? '' : 'bg-white border-[var(--border)] text-[var(--slate-dim)] hover:text-[var(--slate)] hover:border-[var(--slate)]'}`}
                 style={mostrarFiltros || filtrosAtivos ? { backgroundColor: 'rgba(134,154,175,0.1)', borderColor: FT.slate, color: FT.slateDim } : {}}>
                 {mostrarFiltros ? <ChevronUp size={13} /> : <ChevronDown size={13} />} Filtros
                 {filtrosAtivos && <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: FT.slate }} />}
               </button>
               {filtrosAtivos && (
-                <button onClick={limparFiltros} className="flex items-center gap-1 px-3 py-2.5 text-xs font-black uppercase tracking-widest text-slate-400 hover:text-red-500 transition-colors">
+                <button onClick={limparFiltros} className="flex items-center gap-1 px-3 py-2.5 text-xs font-black uppercase tracking-widest text-[var(--slate-dim)] hover:text-red-500 transition-colors">
                   <X size={12} /> Limpar
                 </button>
               )}
             </div>
 
             {mostrarFiltros && (
-              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="bg-white rounded-2xl border border-[var(--border-soft)] shadow-sm p-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Ano</label>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Ano</label>
                   <select value={filtroAno} onChange={e => setFiltroAno(e.target.value)} className={selectClass}>
                     <option value="">Todos</option>
                     {anosDisponiveis.map(a => <option key={a} value={a}>{a}</option>)}
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Mês</label>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Mês</label>
                   <select value={filtroMes} onChange={e => setFiltroMes(e.target.value)} className={selectClass}>
                     <option value="">Todos</option>
                     {MESES.map(m => <option key={m.val} value={m.val}>{m.label}</option>)}
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">
                     {tipo === 'compras' ? 'Fornecedor' : 'Cliente'}
                   </label>
                   <select value={filtroEntidade} onChange={e => setFiltroEntidade(e.target.value)} className={selectClass}>
@@ -184,23 +184,23 @@ export default function TOConlineRelatorios({ onDesligado }) {
 
           {/* Tabela */}
           {docsFiltrados.length === 0 ? (
-            <div className="text-center py-12 text-slate-400 text-sm font-semibold">
+            <div className="text-center py-12 text-[var(--slate-dim)] text-sm font-semibold">
               Nenhum documento corresponde aos filtros.
               <button onClick={limparFiltros} className="ml-2 hover:underline" style={{ color: FT.slateDim }}>Limpar filtros</button>
             </div>
           ) : (
-            <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden">
+            <div className="bg-white rounded-[2rem] border border-[var(--border-soft)] shadow-sm overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="border-b border-slate-100 bg-slate-50">
-                      <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Nº Doc.</th>
+                    <tr className="border-b border-[var(--border-soft)] bg-[var(--surface)]">
+                      <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Nº Doc.</th>
                       <ThSort campo="entidade" label={tipo === 'compras' ? 'Fornecedor' : 'Cliente'} ordem={ordem} toggleOrdem={toggleOrdem} />
                       <ThSort campo="date" label="Data" ordem={ordem} toggleOrdem={toggleOrdem} />
                       <ThSort campo="total" label="Total" ordem={ordem} toggleOrdem={toggleOrdem} />
-                      <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400">IVA</th>
-                      <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Observação</th>
-                      <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Ações</th>
+                      <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">IVA</th>
+                      <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Observação</th>
+                      <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Ações</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -213,25 +213,25 @@ export default function TOConlineRelatorios({ onDesligado }) {
                       const obs = getObservacao(a);
                       return (
                         <tr key={item.id ?? i}
-                          className={`border-b border-slate-50 transition-colors cursor-pointer ${i % 2 === 0 ? 'hover:bg-slate-50' : 'bg-slate-50/40 hover:bg-slate-100/60'}`}
+                          className={`border-b border-[var(--border-soft)] transition-colors cursor-pointer ${i % 2 === 0 ? 'hover:bg-[var(--surface)]' : 'bg-[var(--surface)] hover:bg-[var(--surface-dim)]'}`}
                           onClick={() => setItemDetalhe(item)}>
-                          <td className="px-4 py-3 text-xs font-mono text-slate-600 whitespace-nowrap">{docNum}</td>
-                          <td className="px-4 py-3 text-xs font-semibold text-slate-700 max-w-[180px] truncate">{ent || '—'}</td>
-                          <td className="px-4 py-3 text-xs text-slate-500 whitespace-nowrap">{a.date || '—'}</td>
-                          <td className="px-4 py-3 text-xs font-semibold text-slate-700 whitespace-nowrap">
+                          <td className="px-4 py-3 text-xs font-mono text-[var(--ink-soft)] whitespace-nowrap">{docNum}</td>
+                          <td className="px-4 py-3 text-xs font-semibold text-[var(--ink-mid)] max-w-[180px] truncate">{ent || '—'}</td>
+                          <td className="px-4 py-3 text-xs text-[var(--slate-dim)] whitespace-nowrap">{a.date || '—'}</td>
+                          <td className="px-4 py-3 text-xs font-semibold text-[var(--ink-mid)] whitespace-nowrap">
                             {total != null ? Number(total).toFixed(2) + ' €' : '—'}
                           </td>
-                          <td className="px-4 py-3 text-xs text-slate-500 whitespace-nowrap">
+                          <td className="px-4 py-3 text-xs text-[var(--slate-dim)] whitespace-nowrap">
                             {iva != null ? Number(iva).toFixed(2) + ' €' : '—'}
                           </td>
-                          <td className="px-4 py-3 text-xs text-slate-500 max-w-[200px]">
+                          <td className="px-4 py-3 text-xs text-[var(--slate-dim)] max-w-[200px]">
                             {obs
                               ? <span className="truncate block" title={obs}>{obs}</span>
-                              : <span className="text-slate-300">—</span>}
+                              : <span className="text-[var(--slate)]">—</span>}
                           </td>
                           <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                             <button onClick={() => setItemDetalhe(item)}
-                              className="p-1.5 text-slate-400 hover:text-[var(--slate)] transition-colors" title="Ver detalhes e descarregar PDF">
+                              className="p-1.5 text-[var(--slate)] hover:text-[var(--slate)] transition-colors" title="Ver detalhes e descarregar PDF">
                               <Eye size={14} />
                             </button>
                           </td>
@@ -241,7 +241,7 @@ export default function TOConlineRelatorios({ onDesligado }) {
                   </tbody>
                 </table>
               </div>
-              <div className="px-4 py-3 text-xs text-slate-400 font-semibold border-t border-slate-50 flex items-center justify-between gap-2">
+              <div className="px-4 py-3 text-xs text-[var(--slate-dim)] font-semibold border-t border-[var(--border-soft)] flex items-center justify-between gap-2">
                 <span>
                   {docsFiltrados.length !== docs.length
                     ? `${docsFiltrados.length} de ${docs.length} documento(s)`
@@ -257,7 +257,7 @@ export default function TOConlineRelatorios({ onDesligado }) {
       )}
 
       {!loading && docs.length === 0 && !erro && (
-        <div className="text-center py-16 text-slate-400 text-sm font-semibold">
+        <div className="text-center py-16 text-[var(--slate-dim)] text-sm font-semibold">
           Selecione o tipo e o período, depois clique em <span className="font-bold" style={{ color: 'var(--navy)' }}>Carregar</span>.
         </div>
       )}

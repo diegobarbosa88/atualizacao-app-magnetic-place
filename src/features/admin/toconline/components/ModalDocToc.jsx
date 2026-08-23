@@ -59,7 +59,7 @@ export default function ModalDocToc({ item, tipo, onClose }) {
           <button
             onClick={handleBaixarPdf}
             disabled={carregandoPdf}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl text-sm font-black uppercase tracking-widest transition-all disabled:opacity-60 border-2 hover:bg-slate-50"
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl text-sm font-black uppercase tracking-widest transition-all disabled:opacity-60 border-2 hover:bg-[var(--surface)]"
             style={{ borderColor: FT.slate, color: 'var(--navy)' }}
           >
             {carregandoPdf ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
@@ -70,15 +70,15 @@ export default function ModalDocToc({ item, tipo, onClose }) {
     >
       <div className="px-6 py-4">
         {campos.length === 0 ? (
-          <p className="text-sm text-slate-400 text-center py-8">Sem dados disponíveis.</p>
+          <p className="text-sm text-[var(--slate-dim)] text-center py-8">Sem dados disponíveis.</p>
         ) : (
           <div className="space-y-3">
             {campos.map(([k, v]) => (
               <div key={k} className="flex gap-3">
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 w-36 shrink-0 pt-0.5">
+                <span className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] w-36 shrink-0 pt-0.5">
                   {FIELD_LABELS_TOC[k] || k.replace(/_/g, ' ')}
                 </span>
-                <span className="text-sm text-slate-700 font-semibold flex-1 break-words">
+                <span className="text-sm text-[var(--ink-mid)] font-semibold flex-1 break-words">
                   {formatValToc(k, v)}
                 </span>
               </div>

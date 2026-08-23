@@ -53,28 +53,28 @@ function NovaConta({ onClose, onSalva }) {
       <form onSubmit={handleSubmit} className="px-6 py-5 space-y-3">
           {[{ key: 'nome', label: 'Nome *', required: true }, { key: 'iban', label: 'IBAN' }, { key: 'banco', label: 'Banco' }].map(({ key, label, required }) => (
             <div key={key} className="space-y-1">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">{label}</p>
               <input type="text" value={form[key]} onChange={e => set(key, e.target.value)} required={required}
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30" />
+                className="w-full px-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30" />
             </div>
           ))}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Moeda</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Moeda</p>
               <select value={form.moeda} onChange={e => set('moeda', e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30">
+                className="w-full px-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30">
                 <option value="EUR">EUR</option><option value="USD">USD</option><option value="GBP">GBP</option>
               </select>
             </div>
             <div className="space-y-1">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Saldo Inicial</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Saldo Inicial</p>
               <input type="number" step="0.01" value={form.saldo_inicial} onChange={e => set('saldo_inicial', e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30" />
+                className="w-full px-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30" />
             </div>
           </div>
           {erro && <p className="text-xs text-red-600 font-semibold">{erro}</p>}
           <div className="flex gap-2 pt-1">
-            <button type="button" onClick={onClose} className="flex-1 px-4 py-2 text-xs font-black uppercase tracking-widest text-slate-500 hover:bg-slate-100 rounded-xl transition-all">Cancelar</button>
+            <button type="button" onClick={onClose} className="flex-1 px-4 py-2 text-xs font-black uppercase tracking-widest text-[var(--slate-dim)] hover:bg-[var(--surface-dim)] rounded-xl transition-all">Cancelar</button>
             <button type="submit" disabled={salvando} className="flex-1 px-4 py-2 text-xs font-black uppercase tracking-widest rounded-xl transition-all disabled:opacity-60 flex items-center justify-center gap-1.5 hover:opacity-90" style={{ backgroundColor: FT.orange, color: FT.navy }}>
               {salvando && <Loader2 size={13} className="animate-spin" />} Guardar
             </button>
@@ -147,11 +147,11 @@ function PainelMovimentos({ conta, onClose }) {
       <>
         {/* Seletor de mês + contagem */}
         {!loading && !erro && movimentos.length > 0 && (
-          <div className="flex items-center justify-between gap-2 px-5 py-3 border-b border-slate-100 shrink-0 flex-wrap">
+          <div className="flex items-center justify-between gap-2 px-5 py-3 border-b border-[var(--border-soft)] shrink-0 flex-wrap">
             <select
               value={mesSelecionado}
               onChange={e => setMesSelecionado(e.target.value)}
-              className="border border-slate-200 rounded-2xl px-4 py-2 text-[11px] font-black tracking-widest text-slate-600 bg-white hover:bg-slate-50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30"
+              className="border border-[var(--border)] rounded-2xl px-4 py-2 text-[11px] font-black tracking-widest text-[var(--ink-soft)] bg-white hover:bg-[var(--surface)] cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30"
               style={{ textTransform: 'uppercase' }}
             >
               <option value="">Todos os meses</option>
@@ -160,12 +160,12 @@ function PainelMovimentos({ conta, onClose }) {
               ))}
             </select>
             <div className="text-right">
-              <p className="text-xs font-bold text-slate-600">
+              <p className="text-xs font-bold text-[var(--ink-soft)]">
                 {movimentosFiltrados.length} movimento{movimentosFiltrados.length !== 1 ? 's' : ''}
                 {mesSelecionado ? ` — ${fmtMes(mesSelecionado)}` : ''}
               </p>
               {mesSelecionado && (
-                <p className="text-[10px] text-slate-400" title="Total carregado para esta conta">
+                <p className="text-[10px] text-[var(--slate-dim)]" title="Total carregado para esta conta">
                   {movimentos.length} no total
                 </p>
               )}
@@ -177,15 +177,15 @@ function PainelMovimentos({ conta, onClose }) {
         <div>
           {loading ? (
             <div className="flex flex-col items-center gap-2 py-10">
-              <Loader2 size={20} className="animate-spin text-slate-300" />
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">A carregar todos os movimentos…</p>
+              <Loader2 size={20} className="animate-spin text-[var(--slate)]" />
+              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">A carregar todos os movimentos…</p>
             </div>
           ) : erro ? (
             <div className="px-5 py-4 text-xs text-red-600 font-semibold">{erro}</div>
           ) : movimentos.length === 0 ? (
-            <div className="px-5 py-10 text-center text-xs text-slate-400 font-semibold">Sem movimentos registados</div>
+            <div className="px-5 py-10 text-center text-xs text-[var(--slate-dim)] font-semibold">Sem movimentos registados</div>
           ) : (
-            <div className="divide-y divide-slate-50">
+            <div className="divide-y divide-[var(--border-soft)]">
               {movimentosFiltrados.map((m, i) => {
                 const at = m.attributes || m;
                 const valor = Number(at.value ?? 0);
@@ -199,15 +199,15 @@ function PainelMovimentos({ conta, onClose }) {
                         : <ArrowUpRight size={13} className="text-rose-500" />}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-slate-700 truncate">{at.description || at.annotation || '—'}</p>
-                      <p className="text-[10px] text-slate-400">{fmtData(at.transaction_date || at.posted_date)}</p>
+                      <p className="text-xs font-semibold text-[var(--ink-mid)] truncate">{at.description || at.annotation || '—'}</p>
+                      <p className="text-[10px] text-[var(--slate-dim)]">{fmtData(at.transaction_date || at.posted_date)}</p>
                     </div>
                     <div className="text-right shrink-0">
                       <p className={`text-xs font-black ${entrada ? 'text-emerald-600' : 'text-rose-500'}`}>
                         {entrada ? '+' : ''}{fmtEur(valor)}
                       </p>
                       {saldoApos != null && (
-                        <p className="text-[10px] text-slate-400">{fmtEur(saldoApos)}</p>
+                        <p className="text-[10px] text-[var(--slate-dim)]">{fmtEur(saldoApos)}</p>
                       )}
                     </div>
                   </div>
@@ -252,27 +252,27 @@ export default function TOConlineBankAccounts({ onDesligado }) {
     <div className="space-y-4">
       {/* Card de saldo total */}
       {contas.length > 0 && (
-        <div className="bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 flex items-center justify-between">
+        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl px-5 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)' }}><Landmark size={16} style={{ color: FT.slate }} /></div>
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Saldo Total</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Saldo Total</p>
               <p className="text-2xl font-black" style={{ color: 'var(--navy)' }}>{fmtEur(totalSaldo)}</p>
             </div>
           </div>
-          <p className="text-[10px] text-slate-400 font-semibold">{contas.length} conta{contas.length !== 1 ? 's' : ''}</p>
+          <p className="text-[10px] text-[var(--slate-dim)] font-semibold">{contas.length} conta{contas.length !== 1 ? 's' : ''}</p>
         </div>
       )}
 
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between gap-3 flex-wrap">
+      <div className="bg-white rounded-2xl border border-[var(--border)] shadow-sm overflow-hidden">
+        <div className="px-5 py-4 border-b border-[var(--border-soft)] flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)' }}><Landmark size={16} style={{ color: FT.slate }} /></div>
-            <span className="text-sm font-black text-slate-800">Contas Bancárias</span>
+            <span className="text-sm font-black text-[var(--ink)]">Contas Bancárias</span>
           </div>
           <div className="flex items-center gap-2">
             <button onClick={carregar}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-black uppercase tracking-widest text-slate-500 hover:bg-slate-100 rounded-xl transition-all">
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-black uppercase tracking-widest text-[var(--slate-dim)] hover:bg-[var(--surface-dim)] rounded-xl transition-all">
               <RefreshCw size={13} /> Sincronizar
             </button>
             <button onClick={() => setMostrarModal(true)}
@@ -288,35 +288,35 @@ export default function TOConlineBankAccounts({ onDesligado }) {
         )}
 
         {loading ? (
-          <div className="flex items-center justify-center py-12 text-slate-400">
+          <div className="flex items-center justify-center py-12 text-[var(--slate-dim)]">
             <Loader2 size={20} className="animate-spin" />
           </div>
         ) : !erro && contas.length === 0 ? (
-          <div className="px-5 py-12 text-center text-slate-400 text-xs font-semibold">
+          <div className="px-5 py-12 text-center text-[var(--slate-dim)] text-xs font-semibold">
             Sem contas bancárias registadas
           </div>
         ) : (
-          <div className="divide-y divide-slate-50">
+          <div className="divide-y divide-[var(--border-soft)]">
             {contas.map((c) => {
               const a = c.attributes || c;
               return (
                 <button key={c.id} onClick={() => setContaMovimentos(c)}
-                  className="w-full px-5 py-4 flex items-center gap-4 hover:bg-slate-50 transition-colors text-left">
-                  <div className="p-2 bg-slate-100 rounded-xl shrink-0">
-                    <Landmark size={14} className="text-slate-500" />
+                  className="w-full px-5 py-4 flex items-center gap-4 hover:bg-[var(--surface)] transition-colors text-left">
+                  <div className="p-2 bg-[var(--surface-dim)] rounded-xl shrink-0">
+                    <Landmark size={14} className="text-[var(--slate-dim)]" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-slate-800">{a.name || '—'}</p>
-                    <p className="text-[10px] font-mono text-slate-400 truncate">{a.iban || a.nib || '—'}</p>
-                    {a.swift && <p className="text-[10px] text-slate-300 font-mono">{a.swift}</p>}
+                    <p className="text-sm font-bold text-[var(--ink)]">{a.name || '—'}</p>
+                    <p className="text-[10px] font-mono text-[var(--slate-dim)] truncate">{a.iban || a.nib || '—'}</p>
+                    {a.swift && <p className="text-[10px] text-[var(--slate-dim)] font-mono">{a.swift}</p>}
                   </div>
                   <div className="text-right shrink-0">
                     <p className="text-base font-black" style={{ color: 'var(--navy)' }}>
                       {c.saldo_atual != null ? fmtEur(c.saldo_atual) : '—'}
                     </p>
-                    <p className="text-[10px] text-slate-400">{a.account_type || '—'}</p>
+                    <p className="text-[10px] text-[var(--slate-dim)]">{a.account_type || '—'}</p>
                   </div>
-                  <ChevronRight size={14} className="text-slate-300 shrink-0" />
+                  <ChevronRight size={14} className="text-[var(--slate)] shrink-0" />
                 </button>
               );
             })}

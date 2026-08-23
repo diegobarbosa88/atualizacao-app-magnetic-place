@@ -51,13 +51,13 @@ function NovoClienteModal({ onClose, onSalvo }) {
             { key: 'localidade', label: 'Localidade' },
           ].map(({ key, label, required, type = 'text' }) => (
             <div key={key} className="space-y-1">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">{label}</p>
               <input
                 type={type}
                 value={form[key]}
                 onChange={e => set(key, e.target.value)}
                 required={required}
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                className="w-full px-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-blue-300"
               />
             </div>
           ))}
@@ -66,7 +66,7 @@ function NovoClienteModal({ onClose, onSalvo }) {
 
           <div className="flex gap-2 pt-1">
             <button type="button" onClick={onClose}
-              className="flex-1 px-4 py-2 text-xs font-black uppercase tracking-widest text-slate-500 hover:bg-slate-100 rounded-xl transition-all">
+              className="flex-1 px-4 py-2 text-xs font-black uppercase tracking-widest text-[var(--slate-dim)] hover:bg-[var(--surface-dim)] rounded-xl transition-all">
               Cancelar
             </button>
             <button type="submit" disabled={salvando}
@@ -119,18 +119,18 @@ export default function TOConlineClientes({ onDesligado }) {
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+    <div className="bg-white rounded-2xl border border-[var(--border)] shadow-sm overflow-hidden">
       {/* Header */}
-      <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between gap-3 flex-wrap">
+      <div className="px-5 py-4 border-b border-[var(--border-soft)] flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)' }}>
             <Users size={16} style={{ color: FT.slate }} />
           </div>
-          <span className="text-sm font-black text-slate-800">Clientes</span>
+          <span className="text-sm font-black text-[var(--ink)]">Clientes</span>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => carregar()}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-black uppercase tracking-widest text-slate-500 hover:bg-slate-100 rounded-xl transition-all">
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-black uppercase tracking-widest text-[var(--slate-dim)] hover:bg-[var(--surface-dim)] rounded-xl transition-all">
             <RefreshCw size={13} /> Sincronizar
           </button>
           <button onClick={() => setMostrarModal(true)}
@@ -142,15 +142,15 @@ export default function TOConlineClientes({ onDesligado }) {
       </div>
 
       {/* Pesquisa */}
-      <div className="px-5 py-3 border-b border-slate-100">
+      <div className="px-5 py-3 border-b border-[var(--border-soft)]">
         <div className="relative">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--slate)]" />
           <input
             type="text"
             placeholder="Pesquisar por nome ou NIF..."
             value={pesquisa}
             onChange={e => handlePesquisa(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
+            className="w-full pl-9 pr-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-blue-300"
           />
         </div>
       </div>
@@ -160,37 +160,37 @@ export default function TOConlineClientes({ onDesligado }) {
       )}
 
       {loading ? (
-        <div className="flex items-center justify-center py-12 text-slate-400">
+        <div className="flex items-center justify-center py-12 text-[var(--slate-dim)]">
           <Loader2 size={20} className="animate-spin" />
         </div>
       ) : !erro && clientes.length === 0 ? (
-        <div className="px-5 py-12 text-center text-slate-400 text-xs font-semibold">
+        <div className="px-5 py-12 text-center text-[var(--slate-dim)] text-xs font-semibold">
           {pesquisa ? 'Nenhum cliente encontrado' : 'Sem clientes — sincronize ou crie um novo'}
         </div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
-              <tr className="bg-slate-50 border-b border-slate-100">
+              <tr className="bg-[var(--surface)] border-b border-[var(--border-soft)]">
                 {['Nome', 'NIF', 'Email', 'Morada'].map(h => (
-                  <th key={h} className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">{h}</th>
+                  <th key={h} className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
+            <tbody className="divide-y divide-[var(--border-soft)]">
               {clientes.map((c) => {
                 const a = c.attributes || {};
                 return (
-                  <tr key={c.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-4 py-3 font-semibold text-slate-800">
+                  <tr key={c.id} className="hover:bg-[var(--surface)] transition-colors">
+                    <td className="px-4 py-3 font-semibold text-[var(--ink)]">
                       <div className="flex items-center gap-2">
-                        <User size={12} className="text-slate-400 shrink-0" />
+                        <User size={12} className="text-[var(--slate)] shrink-0" />
                         {a.business_name || '—'}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-slate-600 font-mono">{a.tax_registration_number || '—'}</td>
-                    <td className="px-4 py-3 text-slate-500">{a.email || '—'}</td>
-                    <td className="px-4 py-3 text-slate-500 max-w-[200px] truncate">{a.address || a.main_address?.street || '—'}</td>
+                    <td className="px-4 py-3 text-[var(--ink-soft)] font-mono">{a.tax_registration_number || '—'}</td>
+                    <td className="px-4 py-3 text-[var(--slate-dim)]">{a.email || '—'}</td>
+                    <td className="px-4 py-3 text-[var(--slate-dim)] max-w-[200px] truncate">{a.address || a.main_address?.street || '—'}</td>
                   </tr>
                 );
               })}
@@ -200,14 +200,14 @@ export default function TOConlineClientes({ onDesligado }) {
       )}
 
       {meta.total_pages > 1 && (
-        <div className="px-5 py-3 border-t border-slate-100 flex items-center justify-center gap-2">
+        <div className="px-5 py-3 border-t border-[var(--border-soft)] flex items-center justify-center gap-2">
           <button disabled={pagina <= 1} onClick={() => { setPagina(p => p - 1); carregar(pesquisa, pagina - 1); }}
-            className="px-3 py-1.5 text-xs font-bold text-slate-500 hover:bg-slate-100 rounded-xl disabled:opacity-40 transition-all">
+            className="px-3 py-1.5 text-xs font-bold text-[var(--slate-dim)] hover:bg-[var(--surface-dim)] rounded-xl disabled:opacity-40 transition-all">
             Anterior
           </button>
-          <span className="text-xs text-slate-400">{pagina} / {meta.total_pages}</span>
+          <span className="text-xs text-[var(--slate-dim)]">{pagina} / {meta.total_pages}</span>
           <button disabled={pagina >= meta.total_pages} onClick={() => { setPagina(p => p + 1); carregar(pesquisa, pagina + 1); }}
-            className="px-3 py-1.5 text-xs font-bold text-slate-500 hover:bg-slate-100 rounded-xl disabled:opacity-40 transition-all">
+            className="px-3 py-1.5 text-xs font-bold text-[var(--slate-dim)] hover:bg-[var(--surface-dim)] rounded-xl disabled:opacity-40 transition-all">
             Próxima
           </button>
         </div>

@@ -84,26 +84,26 @@ function AutocompleteCliente({ value, onChange }) {
   return (
     <div className="relative">
       <div className="relative">
-        <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+        <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--slate)]" />
         <input
           type="text"
           placeholder="Pesquisar cliente..."
           value={query}
           onChange={e => pesquisar(e.target.value)}
           onFocus={() => resultados.length > 0 && setAberto(true)}
-          className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[var(--navy)]"
+          className="w-full pl-9 pr-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-[var(--navy)]"
         />
-        {loading && <Loader2 size={12} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-slate-400" />}
+        {loading && <Loader2 size={12} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-[var(--slate)]" />}
       </div>
       {aberto && resultados.length > 0 && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+        <div className="absolute z-50 w-full mt-1 bg-white border border-[var(--border)] rounded-xl shadow-lg max-h-48 overflow-y-auto">
           {resultados.map(c => {
             const a = c.attributes || {};
             return (
               <button key={c.id} type="button" onClick={() => selecionar(c)}
                 className="w-full px-3 py-2 text-left text-xs hover:bg-blue-50 transition-colors">
-                <span className="font-semibold text-slate-800">{a.business_name || a.name}</span>
-                {a.tax_registration_number && <span className="text-slate-400 ml-2 font-mono">{a.tax_registration_number}</span>}
+                <span className="font-semibold text-[var(--ink)]">{a.business_name || a.name}</span>
+                {a.tax_registration_number && <span className="text-[var(--slate-dim)] ml-2 font-mono">{a.tax_registration_number}</span>}
               </button>
             );
           })}
@@ -159,18 +159,18 @@ function AutocompleteArtigo({ value, onChange }) {
         value={query}
         onChange={e => pesquisar(e.target.value)}
         onFocus={() => resultados.length > 0 && setAberto(true)}
-        className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[var(--navy)]"
+        className="w-full px-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-[var(--navy)]"
       />
-      {loading && <Loader2 size={12} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-slate-400" />}
+      {loading && <Loader2 size={12} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-[var(--slate)]" />}
       {aberto && resultados.length > 0 && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-40 overflow-y-auto">
+        <div className="absolute z-50 w-full mt-1 bg-white border border-[var(--border)] rounded-xl shadow-lg max-h-40 overflow-y-auto">
           {resultados.map(a => {
             const attrs = a.attributes || {};
             return (
               <button key={a.id} type="button" onClick={() => selecionar(a)}
                 className="w-full px-3 py-2 text-left text-xs hover:bg-blue-50 transition-colors">
-                <span className="font-semibold text-slate-800">{attrs.item_description || attrs.description}</span>
-                {(attrs.sales_price ?? attrs.unit_price) != null && <span className="text-slate-400 ml-2">{Number(attrs.sales_price ?? attrs.unit_price).toFixed(2)} €</span>}
+                <span className="font-semibold text-[var(--ink)]">{attrs.item_description || attrs.description}</span>
+                {(attrs.sales_price ?? attrs.unit_price) != null && <span className="text-[var(--slate-dim)] ml-2">{Number(attrs.sales_price ?? attrs.unit_price).toFixed(2)} €</span>}
               </button>
             );
           })}
@@ -255,26 +255,26 @@ export default function CriarDocumentoModal({ onClose, onCriado, onClienteElegiv
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <div className="space-y-1">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Tipo Doc.</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Tipo Doc.</p>
               <select value={tipo} onChange={e => setTipo(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[var(--navy)]">
+                className="w-full px-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-[var(--navy)]">
                 {TIPOS_DOC.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
               </select>
             </div>
             <div className="space-y-1">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Data</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Data</p>
               <input type="date" value={data} onChange={e => setData(e.target.value)} required
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[var(--navy)]" />
+                className="w-full px-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-[var(--navy)]" />
             </div>
             <div className="space-y-1">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Série (opcional)</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Série (opcional)</p>
               <input type="text" value={serie} onChange={e => setSerie(e.target.value)} placeholder="Ex: A"
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[var(--navy)]" />
+                className="w-full px-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-[var(--navy)]" />
             </div>
           </div>
 
           <div className="space-y-1">
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Cliente *</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Cliente *</p>
             <AutocompleteCliente value={cliente} onChange={setCliente} />
             {cliente && (
               <p className="text-[10px] text-emerald-600 font-semibold">
@@ -285,7 +285,7 @@ export default function CriarDocumentoModal({ onClose, onCriado, onClienteElegiv
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Linhas *</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Linhas *</p>
               <button type="button" onClick={addLinha}
                 className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-blue-600 hover:text-blue-700 transition-colors">
                 <Plus size={11} /> Adicionar linha
@@ -297,37 +297,37 @@ export default function CriarDocumentoModal({ onClose, onCriado, onClienteElegiv
                 <div key={i} className="grid gap-2 items-start" style={{ gridTemplateColumns: '1fr 70px 90px 70px auto' }}>
                   <AutocompleteArtigo value={l} onChange={v => setLinhas(prev => prev.map((x, idx) => idx === i ? { ...x, ...v } : x))} />
                   <input type="number" min="0.01" step="0.01" value={l.quantidade} onChange={e => setLinha(i, 'quantidade', e.target.value)}
-                    placeholder="Qtd" className="px-2 py-2 rounded-xl border border-slate-200 text-xs text-center focus:outline-none focus:ring-2 focus:ring-[var(--navy)]" />
+                    placeholder="Qtd" className="px-2 py-2 rounded-xl border border-[var(--border)] text-xs text-center focus:outline-none focus:ring-2 focus:ring-[var(--navy)]" />
                   <input type="number" min="0" step="0.01" value={l.preco_unitario} onChange={e => setLinha(i, 'preco_unitario', e.target.value)}
-                    placeholder="€/un" className="px-2 py-2 rounded-xl border border-slate-200 text-xs text-center focus:outline-none focus:ring-2 focus:ring-[var(--navy)]" />
+                    placeholder="€/un" className="px-2 py-2 rounded-xl border border-[var(--border)] text-xs text-center focus:outline-none focus:ring-2 focus:ring-[var(--navy)]" />
                   <select value={l.taxa_iva} onChange={e => setLinha(i, 'taxa_iva', e.target.value)}
-                    className="px-2 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-[var(--navy)]">
+                    className="px-2 py-2 rounded-xl border border-[var(--border)] text-xs focus:outline-none focus:ring-2 focus:ring-[var(--navy)]">
                     {[0, 6, 13, 23].map(v => <option key={v} value={v}>{v}%</option>)}
                   </select>
                   <button type="button" onClick={() => removeLinha(i)} disabled={linhas.length === 1}
-                    className="p-2 text-slate-300 hover:text-red-500 transition-colors disabled:opacity-0">
+                    className="p-2 text-[var(--slate)] hover:text-red-500 transition-colors disabled:opacity-0">
                     <Trash2 size={13} />
                   </button>
                 </div>
               ))}
             </div>
 
-            <div className="text-right text-sm font-black text-slate-700 pt-1">
+            <div className="text-right text-sm font-black text-[var(--ink-mid)] pt-1">
               Total c/IVA: {totalLinhas.toFixed(2)} €
             </div>
           </div>
 
           <div className="space-y-1">
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Observações</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Observações</p>
             <textarea value={observacoes} onChange={e => setObservacoes(e.target.value)} rows={2}
-              className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[var(--navy)] resize-none" />
+              className="w-full px-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-[var(--navy)] resize-none" />
           </div>
 
           {erro && <p className="text-xs text-red-600 font-semibold">{erro}</p>}
 
           <div className="flex gap-2 pt-1">
             <button type="button" onClick={onClose}
-              className="flex-1 px-4 py-2.5 text-xs font-black uppercase tracking-widest text-slate-500 hover:bg-slate-100 rounded-xl transition-all">
+              className="flex-1 px-4 py-2.5 text-xs font-black uppercase tracking-widest text-[var(--slate-dim)] hover:bg-[var(--surface-dim)] rounded-xl transition-all">
               Cancelar
             </button>
             <button type="submit" disabled={criando}
