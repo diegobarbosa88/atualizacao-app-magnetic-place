@@ -148,7 +148,7 @@ export default function ImportarIBANsModal({ workers, supabase, onClose, onImpor
           <div className="px-5 py-4 flex items-center justify-between">
             <button
               onClick={() => { setPasso('upload'); setEntradas([]); setOverrides({}); }}
-              className="text-sm font-bold text-slate-400 hover:text-slate-600 transition-colors"
+              className="text-sm font-bold text-[var(--slate-dim)] hover:text-[var(--ink-soft)] transition-colors"
             >
               Voltar
             </button>
@@ -164,7 +164,7 @@ export default function ImportarIBANsModal({ workers, supabase, onClose, onImpor
           <div className="px-5 py-4">
             <button
               onClick={onClose}
-              className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl text-sm font-black uppercase tracking-widest transition-all"
+              className="w-full py-2.5 bg-[var(--surface-dim)] hover:bg-[var(--border)] text-[var(--ink-mid)] rounded-2xl text-sm font-black uppercase tracking-widest transition-all"
             >
               Fechar
             </button>
@@ -180,8 +180,8 @@ export default function ImportarIBANsModal({ workers, supabase, onClose, onImpor
                 <Upload size={30} className="text-emerald-400" />
               </div>
               <div className="text-center">
-                <p className="text-base font-bold text-slate-700">Lista de Beneficiários (.xls)</p>
-                <p className="text-sm text-slate-400 mt-1">Exportado do novobanco — folha "Empregados"</p>
+                <p className="text-base font-bold text-[var(--ink-mid)]">Lista de Beneficiários (.xls)</p>
+                <p className="text-sm text-[var(--slate-dim)] mt-1">Exportado do novobanco — folha "Empregados"</p>
               </div>
               <button
                 onClick={() => fileRef.current?.click()}
@@ -196,15 +196,15 @@ export default function ImportarIBANsModal({ workers, supabase, onClose, onImpor
 
           {passo === 'preview' && (
             <>
-              <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between flex-shrink-0">
-                <p className="text-sm text-slate-500">
-                  <span className="font-black text-slate-700">{entradas.length}</span> registos ·{' '}
+              <div className="px-5 py-3 border-b border-[var(--border-soft)] flex items-center justify-between flex-shrink-0">
+                <p className="text-sm text-[var(--slate-dim)]">
+                  <span className="font-black text-[var(--ink-mid)]">{entradas.length}</span> registos ·{' '}
                   <span className="font-black text-emerald-600">{seleccionados.length}</span> a actualizar
                 </p>
-                <p className="text-xs text-slate-400 uppercase tracking-widest font-bold">Empregados</p>
+                <p className="text-xs text-[var(--slate-dim)] uppercase tracking-widest font-bold">Empregados</p>
               </div>
 
-              <div className="divide-y divide-slate-50">
+              <div className="divide-y divide-[var(--border-soft)]">
                 {entradas.map((entrada, idx) => {
                   const wid = getWorkerId(idx);
                   const semMatch = !wid;
@@ -222,8 +222,8 @@ export default function ImportarIBANsModal({ workers, supabase, onClose, onImpor
                           }
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-bold text-slate-700 truncate">{entrada.nome}</p>
-                          <p className="text-xs font-mono text-slate-400 mt-0.5">{entrada.iban}</p>
+                          <p className="text-sm font-bold text-[var(--ink-mid)] truncate">{entrada.nome}</p>
+                          <p className="text-xs font-mono text-[var(--slate-dim)] mt-0.5">{entrada.iban}</p>
                           {jaIgual && (
                             <p className="text-xs text-emerald-500 font-bold mt-1">IBAN já registado — sem alteração</p>
                           )}
@@ -231,7 +231,7 @@ export default function ImportarIBANsModal({ workers, supabase, onClose, onImpor
                             <select
                               value={wid || ''}
                               onChange={e => setOverrides(prev => ({ ...prev, [idx]: e.target.value || null }))}
-                              className="mt-2 w-full border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30"
+                              className="mt-2 w-full border border-[var(--border)] rounded-xl px-3 py-1.5 text-sm text-[var(--ink-mid)] bg-white focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30"
                             >
                               <option value="">— sem correspondência —</option>
                               {workers
@@ -261,7 +261,7 @@ export default function ImportarIBANsModal({ workers, supabase, onClose, onImpor
                 : <AlertCircle size={48} className="text-amber-500" />
               }
               <div>
-                <p className="font-black text-slate-700 text-base">
+                <p className="font-black text-[var(--ink-mid)] text-base">
                   {resultado.ok} IBAN{resultado.ok !== 1 ? 's' : ''} guardado{resultado.ok !== 1 ? 's' : ''} com sucesso
                 </p>
                 {resultado.fail > 0 && (

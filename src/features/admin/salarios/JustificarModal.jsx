@@ -15,7 +15,7 @@ export default function JustificarModal({ entry, text, onTextChange, saving, onS
       footer={
         <div className="flex gap-2 px-6 py-4">
           <button onClick={onClose}
-            className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">
+            className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-[var(--border)] text-[var(--ink-soft)] hover:bg-[var(--surface)] transition-colors">
             Cancelar
           </button>
           <button
@@ -32,19 +32,19 @@ export default function JustificarModal({ entry, text, onTextChange, saving, onS
       <div className="p-6 space-y-4">
         <div className="bg-amber-50 rounded-2xl px-4 py-3">
           <p className="text-[10px] font-black uppercase tracking-widest text-amber-600 mb-1">Mês pendente</p>
-          <p className="text-sm font-bold text-slate-800">{entry.employee_name}</p>
-          <p className="text-[11px] text-slate-500 mt-0.5">
+          <p className="text-sm font-bold text-[var(--ink)]">{entry.employee_name}</p>
+          <p className="text-[11px] text-[var(--slate-dim)] mt-0.5">
             {fmtMes(entry.month)} · Saldo em falta: <strong className="text-red-600">{fmtEur(Math.abs(entry.balance))}</strong>
           </p>
         </div>
         <div>
-          <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1">Justificação</label>
+          <label className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] block mb-1">Justificação</label>
           <textarea
             value={text}
             onChange={e => onTextChange(e.target.value)}
             placeholder="Ex: Adiantamento pago em numerário, remuneração acordada diferente, pagamento parcial pendente…"
             rows={3}
-            className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30 resize-none"
+            className="w-full border border-[var(--border)] rounded-xl px-3 py-2 text-sm text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30 resize-none"
           />
         </div>
       </div>
