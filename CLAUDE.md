@@ -544,6 +544,27 @@ para quem um dia a tomar não ter de as redescobrir:
   regra nenhuma no `.dark`.** Tratar metade do par piora; tratar as duas metades é um lote grande e
   precisa de medir onde é que esses textos assentam em fundos que não invertem. Fica por decidir.
 
+**Ponte de cor de estado — projecto próprio, ainda não iniciado.** Categoria à parte: não é
+migração de neutros nem cor de marca, é o modo escuro das cores de estado, e é o maior bloco que
+resta.
+
+- **O quê:** o bloco-ponte do `App.css` cobre três fundos de estado (`.dark .bg-emerald-50`,
+  `.bg-rose-50`, `.bg-amber-50`) e **nenhum texto de estado**. Ficam de fora 24 fundos com
+  modificador de opacidade (`bg-amber-50/50` compila para outra classe, que o selector por classe
+  exacta não apanha) e **1.025 ocorrências** de
+  `text-{amber,emerald,rose,red,indigo,violet,orange,…}-{600,700,800}`.
+- **Porque não se corrige metade:** a regra actual não muda só o fundo, muda também o `color` do
+  elemento, e os filhos herdam-no — mas um `text-amber-700` tem cor própria e não herda. Medido:
+  hoje esse texto fica escuro sobre creme claro (4,93:1, passa); alargando só os fundos fica escuro
+  sobre escuro (3,03:1, falha); com fundo *e* texto invertidos dá 9,11:1. **Fundo e texto de estado
+  são um par: mexer num sem o outro é regressão.** Foi tentado e revertido.
+- **O que é preciso antes de começar:** medir onde é que esses 1.025 textos assentam em fundos que
+  **não** invertem — clareá-los todos resolveria a maioria e partiria esses. O
+  `scripts/fundo-do-ancestral.pl` serve para triar; a medição no browser decide.
+- **Tamanho e tratamento:** 1.025 ocorrências é um projecto novo, não a continuação de um lote —
+  merece levantamento próprio, ordem decidida e sub-lotes com checkpoint, como qualquer módulo
+  grande desta migração.
+
 **Cor de marca fora do alcance dos tokens.** Categoria à parte das anteriores: aqui o problema não é
 uma variável que colide, é cor que os tokens não conseguem alcançar de todo. Não se resolve com mais
 lotes de conversão.
