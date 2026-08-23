@@ -166,6 +166,25 @@ Aplicam-se a qualquer lote de conversão Tailwind → tokens `FT`/CSS vars (`des
 `index.css`). Servem para decidir sozinho os casos repetidos; só escalar ao Diego os genuinamente
 novos.
 
+
+### Resíduo ou intenção — a pergunta que decide o sentido da convergência
+
+Antes de convergir seja o que for, perguntar **por que é que o valor divergente está ali**. A
+resposta decide qual dos lados se move, e as duas respostas levam a caminhos opostos:
+
+- **Resíduo** — ninguém o escolheu. O indigo `#4F46E5` era o roxo do template `create-vite`, a
+  scrollbar `#4f46e5` sobreviveu a todos os lotes porque nenhum grep de JSX chega a CSS puro, o
+  `text-white` morto ficou em 23 botões onde o `style` inline já punha navy. Nada disto foi
+  decidido: aconteceu. **A app converge para a escala.**
+- **Intenção** — alguém escolheu, e repetiu. O `rounded-xl` estava em 709 sítios, 39% de todos os
+  raios do admin, sempre no mesmo papel: caixas de ícone, botões com padding, contentores pequenos.
+  Isso não é desvio, é a convenção real da app, e a escala é que estava incompleta por vir dos
+  mockups. **A escala converge para a app** — ganhou o degrau `box`.
+
+O sinal que separa os dois é **a consistência do uso**, não o número absoluto: 709 usos coerentes no
+mesmo papel são uma decisão; 34 hex arbitrários espalhados por ficheiros sem relação são acumulação.
+E quando a resposta for "intenção", mudar a app custa o que a migração inteira tem evitado — mudança
+visual sem ganho de contraste, de acessibilidade ou de identidade por trás.
 ### Contagens
 
 **Nunca comunicar um número sem o ter corrido.** Aconteceu três vezes nesta migração, sempre no
