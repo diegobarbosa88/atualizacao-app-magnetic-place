@@ -5,6 +5,7 @@ import { Timer, LayoutGrid, List, Edit2, Trash2, Coffee, Clock, Users, Save } fr
 import ScheduleForm from './schedules/ScheduleForm';
 import ModalShell from '../../components/common/ModalShell';
 import SectionHeaderShell from '../../components/common/SectionHeaderShell';
+import { FT } from '../../styles/designTokens';
 
 const ScheduleManagerContent = () => {
   const {
@@ -32,10 +33,10 @@ const ScheduleManagerContent = () => {
         rightSlot={
           <div className="flex items-center gap-2">
             <div className="flex items-center bg-slate-100 rounded-xl p-1">
-              <button onClick={() => setSchedulesView('grid')} className={`p-1.5 rounded-lg transition-all ${schedulesView === 'grid' ? 'bg-white text-[#1B3A57] shadow-sm' : 'text-slate-400 hover:text-slate-600'}`} title="Vista em Grade"><LayoutGrid size={16} /></button>
-              <button onClick={() => setSchedulesView('list')} className={`p-1.5 rounded-lg transition-all ${schedulesView === 'list' ? 'bg-white text-[#1B3A57] shadow-sm' : 'text-slate-400 hover:text-slate-600'}`} title="Vista em Lista"><List size={16} /></button>
+              <button onClick={() => setSchedulesView('grid')} className={`p-1.5 rounded-lg transition-all ${schedulesView === 'grid' ? 'bg-white text-[var(--navy)] shadow-sm' : 'text-slate-400 hover:text-slate-600'}`} title="Vista em Grade"><LayoutGrid size={16} /></button>
+              <button onClick={() => setSchedulesView('list')} className={`p-1.5 rounded-lg transition-all ${schedulesView === 'list' ? 'bg-white text-[var(--navy)] shadow-sm' : 'text-slate-400 hover:text-slate-600'}`} title="Vista em Lista"><List size={16} /></button>
             </div>
-            <button onClick={() => { setScheduleForm({ id: null, name: '', startTime: '', endTime: '', breakStart: '', breakEnd: '', hasBreak: false, assignedWorkers: [], weekdays: [1, 2, 3, 4, 5], isAdvanced: false, dailyConfigs: {} }); setIsAddingInTab(true); }} className="px-3.5 py-2 rounded-lg font-black text-[10px] uppercase tracking-wide shadow-sm transition-all" style={{ backgroundColor: '#EB8D00', color: '#12293e' }}>Novo Horário</button>
+            <button onClick={() => { setScheduleForm({ id: null, name: '', startTime: '', endTime: '', breakStart: '', breakEnd: '', hasBreak: false, assignedWorkers: [], weekdays: [1, 2, 3, 4, 5], isAdvanced: false, dailyConfigs: {} }); setIsAddingInTab(true); }} className="px-3.5 py-2 rounded-lg font-black text-[10px] uppercase tracking-wide shadow-sm transition-all" style={{ backgroundColor: FT.orange, color: '#12293e' }}>Novo Horário</button>
           </div>
         }
       />
@@ -62,7 +63,7 @@ const ScheduleManagerContent = () => {
             <button
               onClick={() => handleSaveSchedule(assignmentDates)}
               className="px-8 py-3 rounded-2xl font-black text-xs uppercase shadow-lg transition-all flex items-center justify-center gap-2"
-              style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}
+              style={{ backgroundColor: FT.orange, color: FT.navy }}
             >
               <Save size={16} /> Salvar Horário
             </button>
@@ -94,7 +95,7 @@ const ScheduleManagerContent = () => {
                     <div className="flex flex-nowrap gap-1 overflow-x-auto">
                       {[{ v: 1, l: '2ª' }, { v: 2, l: '3ª' }, { v: 3, l: '4ª' }, { v: 4, l: '5ª' }, { v: 5, l: '6ª' }, { v: 6, l: 'Sáb' }, { v: 0, l: 'Dom' }].map(d => {
                         const isActive = s.isAdvanced ? (s.dailyConfigs?.[d.v]?.isActive) : (s.weekdays || [1, 2, 3, 4, 5]).includes(d.v);
-                        return isActive ? <span key={d.v} className="px-2 py-1 rounded text-[10px] font-black uppercase whitespace-nowrap" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: '#869AAF' }}>{d.l}</span> : null;
+                        return isActive ? <span key={d.v} className="px-2 py-1 rounded text-[10px] font-black uppercase whitespace-nowrap" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: FT.slate }}>{d.l}</span> : null;
                       })}
                     </div>
                   </td>
@@ -105,7 +106,7 @@ const ScheduleManagerContent = () => {
                         const assigned = workers.filter(w => w.assignedSchedules?.includes(s.id)).map(w => w.id);
                         setScheduleForm({ ...s, assignedWorkers: assigned });
                         setIsAddingInTab(true);
-                      }} className="p-1.5 rounded-lg hover:bg-slate-50 transition-all" style={{ color: '#869AAF' }} title="Editar"><Edit2 size={13} /></button>
+                      }} className="p-1.5 rounded-lg hover:bg-slate-50 transition-all" style={{ color: FT.slate }} title="Editar"><Edit2 size={13} /></button>
                       <button onClick={() => handleDeleteSchedule(s.id)} className="p-1.5 text-rose-400 hover:bg-rose-50 rounded-lg transition-all" title="Apagar"><Trash2 size={13} /></button>
                     </div>
                   </td>
@@ -120,7 +121,7 @@ const ScheduleManagerContent = () => {
             <div key={s.id} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-slate-200 hover:-translate-y-0.5 transition-all duration-200">
               {/* Header */}
               <div className="flex justify-between items-start mb-3">
-                <div className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase border flex items-center gap-1" style={{ color: '#869AAF', borderColor: 'rgba(134,154,175,0.4)', backgroundColor: 'rgba(134,154,175,0.1)' }}>
+                <div className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase border flex items-center gap-1" style={{ color: FT.slate, borderColor: 'rgba(134,154,175,0.4)', backgroundColor: 'rgba(134,154,175,0.1)' }}>
                   <Timer size={10} /> Turno
                 </div>
                 <div className="flex items-center gap-1">
@@ -128,7 +129,7 @@ const ScheduleManagerContent = () => {
                     const assigned = workers.filter(w => w.assignedSchedules?.includes(s.id)).map(w => w.id);
                     setScheduleForm({ ...s, assignedWorkers: assigned });
                     setIsAddingInTab(true);
-                  }} className="p-1.5 rounded-lg hover:bg-slate-50 transition-all border" style={{ color: '#869AAF', borderColor: 'rgba(134,154,175,0.3)' }} title="Editar"><Edit2 size={12} /></button>
+                  }} className="p-1.5 rounded-lg hover:bg-slate-50 transition-all border" style={{ color: FT.slate, borderColor: 'rgba(134,154,175,0.3)' }} title="Editar"><Edit2 size={12} /></button>
                   <button onClick={() => handleDeleteSchedule(s.id)} className="p-1.5 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all border border-slate-100"><Trash2 size={12} /></button>
                 </div>
               </div>
@@ -140,7 +141,7 @@ const ScheduleManagerContent = () => {
                 <div className="flex flex-wrap gap-1">
                   {[{ v: 1, l: '2ª' }, { v: 2, l: '3ª' }, { v: 3, l: '4ª' }, { v: 4, l: '5ª' }, { v: 5, l: '6ª' }, { v: 6, l: 'Sáb' }, { v: 0, l: 'Dom' }].map(d => {
                     const isActive = s.isAdvanced ? (s.dailyConfigs?.[d.v]?.isActive) : (s.weekdays || [1, 2, 3, 4, 5]).includes(d.v);
-                    return isActive ? <span key={d.v} className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: '#869AAF' }}>{d.l}</span> : null;
+                    return isActive ? <span key={d.v} className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: FT.slate }}>{d.l}</span> : null;
                   })}
                 </div>
                 <div className="flex items-center gap-1.5"><Coffee size={10} /> {s.isAdvanced ? 'Variável' : `${s.breakStart || '--:--'}-${s.breakEnd || '--:--'}`}</div>

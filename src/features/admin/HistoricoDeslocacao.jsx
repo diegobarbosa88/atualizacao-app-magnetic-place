@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Plane, MapPin, AlertTriangle, ChevronRight, Calendar } from 'lucide-react';
+import { FT } from '../../styles/designTokens';
 
 const GAP_PADRAO = 5;
 const DIAS_PT = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
@@ -48,7 +49,7 @@ function WorkerRow({ worker, isOpen, onToggle, onUsarData, onEditarManualmente }
   return (
     <div
       className="rounded-xl border bg-white mb-2 overflow-hidden transition-all"
-      style={{ borderColor: isFerias ? '#EB8D00' : '#E3E7EC' }}
+      style={{ borderColor: isFerias ? FT.orange : '#E3E7EC' }}
     >
       <button
         onClick={onToggle}
@@ -58,11 +59,11 @@ function WorkerRow({ worker, isOpen, onToggle, onUsarData, onEditarManualmente }
         <div className="flex items-center gap-3">
           <div
             className="w-9 h-9 rounded-lg flex items-center justify-center font-black text-sm shrink-0"
-            style={{ background: '#EEF1F5', color: '#1B3A57' }}
+            style={{ background: '#EEF1F5', color: FT.navy }}
           >
             {worker.nome.split(' ').map(w => w[0]).slice(0, 2).join('')}
           </div>
-          <div className="font-bold text-sm" style={{ color: '#1B3A57' }}>
+          <div className="font-bold text-sm" style={{ color: FT.navy }}>
             {worker.nome}
           </div>
         </div>
@@ -74,7 +75,7 @@ function WorkerRow({ worker, isOpen, onToggle, onUsarData, onEditarManualmente }
           {isFerias && (
             <span
               className="flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full"
-              style={{ color: '#EB8D00', background: '#FDF1E0' }}
+              style={{ color: FT.orange, background: '#FDF1E0' }}
             >
               <AlertTriangle size={11} strokeWidth={2.5} />
               Confirmar datas
@@ -109,7 +110,7 @@ function WorkerRow({ worker, isOpen, onToggle, onUsarData, onEditarManualmente }
                 <MapPin size={10} />
                 Chegada anterior
               </div>
-              <div className="font-black text-base" style={{ color: '#1B3A57' }}>
+              <div className="font-black text-base" style={{ color: FT.navy }}>
                 {worker.chegadaAnterior.data}
               </div>
               <div className="text-xs" style={{ color: '#8891A0' }}>
@@ -121,7 +122,7 @@ function WorkerRow({ worker, isOpen, onToggle, onUsarData, onEditarManualmente }
             <div className="flex-1 text-center px-2">
               <div
                 className="relative w-full"
-                style={{ height: 2, background: isFerias ? '#EB8D00' : '#869AAF', marginTop: 20 }}
+                style={{ height: 2, background: isFerias ? FT.orange : FT.slate, marginTop: 20 }}
               >
                 <Plane
                   size={15}
@@ -130,14 +131,14 @@ function WorkerRow({ worker, isOpen, onToggle, onUsarData, onEditarManualmente }
                     top: -9,
                     left: '50%',
                     transform: 'translateX(-50%) rotate(90deg)',
-                    color: isFerias ? '#EB8D00' : '#869AAF',
+                    color: isFerias ? FT.orange : FT.slate,
                     background: '#F7F8FA',
                   }}
                 />
               </div>
               <div
                 className="mt-2 text-xs font-bold"
-                style={{ color: isFerias ? '#EB8D00' : '#1B3A57' }}
+                style={{ color: isFerias ? FT.orange : FT.navy }}
               >
                 {worker.gapReal === 1 ? '1 dia de folga' : `${worker.gapReal} dias de folga`}
               </div>
@@ -155,7 +156,7 @@ function WorkerRow({ worker, isOpen, onToggle, onUsarData, onEditarManualmente }
                 Partida sugerida
                 <Calendar size={10} />
               </div>
-              <div className="font-black text-base" style={{ color: '#1B3A57' }}>
+              <div className="font-black text-base" style={{ color: FT.navy }}>
                 {worker.partidaSugerida.data}
               </div>
               <div className="text-xs" style={{ color: '#8891A0' }}>
@@ -170,7 +171,7 @@ function WorkerRow({ worker, isOpen, onToggle, onUsarData, onEditarManualmente }
               className="mt-2.5 flex items-start gap-2 text-xs rounded-lg px-3 py-2.5"
               style={{ color: '#7A4A00', background: '#FDF1E0' }}
             >
-              <AlertTriangle size={13} className="shrink-0 mt-0.5" style={{ color: '#EB8D00' }} />
+              <AlertTriangle size={13} className="shrink-0 mt-0.5" style={{ color: FT.orange }} />
               <span>
                 O intervalo real ({worker.gapReal} dias) é superior ao habitual — pode indicar férias.
                 A data sugerida não foi aplicada automaticamente; confirme manualmente.
@@ -183,16 +184,16 @@ function WorkerRow({ worker, isOpen, onToggle, onUsarData, onEditarManualmente }
             <button
               onClick={() => onUsarData(worker.partidaSugerida.raw)}
               className="text-xs font-bold text-white px-3.5 py-2 rounded-lg transition-colors"
-              style={{ background: '#1B3A57' }}
+              style={{ background: FT.navy }}
               onMouseEnter={e => { e.currentTarget.style.background = '#142d45'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = '#1B3A57'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = FT.navy; }}
             >
               Usar data sugerida
             </button>
             <button
               onClick={onEditarManualmente}
               className="text-xs font-bold px-3.5 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
-              style={{ color: '#1B3A57', background: 'transparent' }}
+              style={{ color: FT.navy, background: 'transparent' }}
             >
               Editar manualmente
             </button>
@@ -296,7 +297,7 @@ export default function HistoricoDeslocacao({ supabase, workers, mesStr, setMapa
     <div className="mb-4">
       <p
         className="uppercase font-black mb-2"
-        style={{ fontSize: 10, color: '#869AAF', letterSpacing: '0.06em' }}
+        style={{ fontSize: 10, color: FT.slate, letterSpacing: '0.06em' }}
       >
         Histórico de deslocação
       </p>

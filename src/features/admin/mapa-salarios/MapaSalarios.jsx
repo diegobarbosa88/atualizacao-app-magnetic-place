@@ -7,10 +7,11 @@ import MapaFolhaObra from './MapaFolhaObra.jsx';
 import MapaPainelExecutivo from './MapaPainelExecutivo.jsx';
 import MapaCartoes from './MapaCartoes.jsx';
 import SectionHeaderShell from '../../../components/common/SectionHeaderShell';
+import { FT } from '../../../styles/designTokens';
 
-const NAVY   = '#1B3A57';
-const SLATE  = '#869AAF';
-const ORANGE = '#EB8D00';
+const NAVY   = FT.navy;
+const SLATE  = FT.slate;
+const ORANGE = FT.orange;
 const BORDER = '#E2E7EC';
 
 const LAYOUTS = [

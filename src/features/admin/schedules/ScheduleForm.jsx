@@ -4,6 +4,7 @@ import { useSchedule } from '../contexts/ScheduleContext';
 import {
   Timer, Edit2, Trash2, Coffee, Clock, Users, Search, CalendarRange, ArrowRight, CheckCircle2
 } from 'lucide-react';
+import { FT } from '../../../styles/designTokens';
 import ModalShell from '../../../components/common/ModalShell';
 
 export default function ScheduleForm() {
@@ -73,16 +74,16 @@ export default function ScheduleForm() {
         <div className="@lg:col-span-1 space-y-6">
           <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 space-y-6">
             <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: '#869AAF' }}><Clock size={18} /></div>
+              <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: FT.slate }}><Clock size={18} /></div>
               <h4 className="font-black text-slate-700 text-lg uppercase tracking-tight">Configuração</h4>
             </div>
 
             <div className="space-y-2">
               <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Nome do Turno</label>
-              <input type="text" value={scheduleForm.name} onChange={e => setScheduleForm({ ...scheduleForm, name: e.target.value })} className="w-full bg-white border border-slate-200 rounded-2xl p-4 text-sm font-bold outline-none shadow-sm focus:border-[#1B3A57] focus:ring-4 focus:ring-[#1B3A57]/10 transition-all" placeholder="Ex: Manhã, Tarde..." />
+              <input type="text" value={scheduleForm.name} onChange={e => setScheduleForm({ ...scheduleForm, name: e.target.value })} className="w-full bg-white border border-slate-200 rounded-2xl p-4 text-sm font-bold outline-none shadow-sm focus:border-[var(--navy)] focus:ring-4 focus:ring-[#1B3A57]/10 transition-all" placeholder="Ex: Manhã, Tarde..." />
             </div>
 
-            <label className="flex items-center gap-3 cursor-pointer p-4 bg-white rounded-2xl border border-slate-200 shadow-sm hover:border-[#869AAF] transition-all">
+            <label className="flex items-center gap-3 cursor-pointer p-4 bg-white rounded-2xl border border-slate-200 shadow-sm hover:border-[var(--slate)] transition-all">
               <input type="checkbox" checked={scheduleForm.isAdvanced || false} onChange={e => {
                 const baseHasBreak = scheduleForm.hasBreak || !!scheduleForm.breakStart;
                 const dailyConfigs = scheduleForm.dailyConfigs || {
@@ -95,7 +96,7 @@ export default function ScheduleForm() {
                   0: { isActive: false, hasBreak: baseHasBreak, startTime: scheduleForm.startTime || '', breakStart: scheduleForm.breakStart || '', breakEnd: scheduleForm.breakEnd || '', endTime: scheduleForm.endTime || '' },
                 };
                 setScheduleForm({ ...scheduleForm, isAdvanced: e.target.checked, dailyConfigs });
-              }} className="w-5 h-5 rounded text-[#1B3A57] focus:ring-[#1B3A57]" />
+              }} className="w-5 h-5 rounded text-[var(--navy)] focus:ring-[var(--navy)]" />
               <span className="text-xs font-bold text-slate-700">Horários diferentes por dia</span>
             </label>
 
@@ -131,7 +132,7 @@ export default function ScheduleForm() {
                   <button type="button" onClick={() => {
                     const nextHasBreak = !(scheduleForm.hasBreak || !!scheduleForm.breakStart);
                     setScheduleForm({ ...scheduleForm, hasBreak: nextHasBreak, breakStart: nextHasBreak ? scheduleForm.breakStart : '', breakEnd: nextHasBreak ? scheduleForm.breakEnd : '' });
-                  }} className="text-[10px] font-black uppercase text-[#869AAF] bg-slate-100 px-3 py-1.5 rounded-xl hover:bg-slate-200 transition-colors">
+                  }} className="text-[10px] font-black uppercase text-[var(--slate)] bg-slate-100 px-3 py-1.5 rounded-xl hover:bg-slate-200 transition-colors">
                     {(scheduleForm.hasBreak || !!scheduleForm.breakStart) ? 'Remover Pausa' : '+ Adicionar'}
                   </button>
                 </div>
@@ -153,7 +154,7 @@ export default function ScheduleForm() {
                           const current = scheduleForm.weekdays || [1, 2, 3, 4, 5];
                           const updated = isActive ? current.filter(d => d !== day.v) : [...current, day.v];
                           setScheduleForm({ ...scheduleForm, weekdays: updated });
-                        }} className={`px-4 py-2 rounded-full text-xs font-black transition-all shadow-sm ${isActive ? 'text-white' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`} style={isActive ? { backgroundColor: '#1B3A57' } : {}}>
+                        }} className={`px-4 py-2 rounded-full text-xs font-black transition-all shadow-sm ${isActive ? 'text-white' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`} style={isActive ? { backgroundColor: FT.navy } : {}}>
                           {day.l}
                         </button>
                       );
@@ -179,8 +180,8 @@ export default function ScheduleForm() {
                                 [day.v]: { ...config, isActive: e.target.checked }
                               }
                             });
-                          }} className="rounded text-[#1B3A57] w-4 h-4 cursor-pointer" />
-                          <span className="text-sm font-bold" style={{ color: config.isActive ? '#1B3A57' : '#94A3B8' }}>{day.l}</span>
+                          }} className="rounded text-[var(--navy)] w-4 h-4 cursor-pointer" />
+                          <span className="text-sm font-bold" style={{ color: config.isActive ? FT.navy : '#94A3B8' }}>{day.l}</span>
                         </div>
                         {config.isActive && (
                           <button type="button" onClick={() => {
@@ -224,7 +225,7 @@ export default function ScheduleForm() {
         <div className={`${scheduleForm.isAdvanced ? '@lg:col-span-1' : '@lg:col-span-2'} space-y-6`}>
           <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 space-y-6">
             <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: '#869AAF' }}><Users size={18} /></div>
+              <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: FT.slate }}><Users size={18} /></div>
               <h4 className="font-black text-slate-700 text-lg uppercase tracking-tight">Atribuição</h4>
             </div>
 
@@ -238,7 +239,7 @@ export default function ScheduleForm() {
                     value={workerSearch}
                     onChange={e => setWorkerSearch(e.target.value)}
                     placeholder="Pesquisar trabalhador..."
-                    className="w-full bg-white border border-slate-200 rounded-xl py-3 pl-10 pr-4 text-sm font-bold outline-none shadow-sm focus:border-[#1B3A57] focus:ring-4 focus:ring-[#1B3A57]/10 transition-all"
+                    className="w-full bg-white border border-slate-200 rounded-xl py-3 pl-10 pr-4 text-sm font-bold outline-none shadow-sm focus:border-[var(--navy)] focus:ring-4 focus:ring-[#1B3A57]/10 transition-all"
                   />
                 </div>
 
@@ -246,7 +247,7 @@ export default function ScheduleForm() {
                   {[...workers].sort((a, b) => a.name.localeCompare(b.name)).filter(w => w.name.toLowerCase().includes(workerSearch.toLowerCase())).map(w => {
                     const isAssigned = scheduleForm.assignedWorkers?.includes(w.id);
                     return (
-                      <div key={w.id} className={`flex items-center gap-3 p-3 rounded-xl border shadow-sm transition-all cursor-pointer ${isAssigned ? '' : 'bg-white border-slate-100 hover:border-[#869AAF]'}`} style={isAssigned ? { backgroundColor: 'rgba(27,58,87,0.04)', borderColor: 'rgba(27,58,87,0.2)' } : {}}>
+                      <div key={w.id} className={`flex items-center gap-3 p-3 rounded-xl border shadow-sm transition-all cursor-pointer ${isAssigned ? '' : 'bg-white border-slate-100 hover:border-[var(--slate)]'}`} style={isAssigned ? { backgroundColor: 'rgba(27,58,87,0.04)', borderColor: 'rgba(27,58,87,0.2)' } : {}}>
                         <input type="checkbox" checked={isAssigned} onChange={(e) => {
                           const current = scheduleForm.assignedWorkers || [];
                           const updated = e.target.checked ? [...current, w.id] : current.filter(id => id !== w.id);
@@ -261,8 +262,8 @@ export default function ScheduleForm() {
                               }
                             }));
                           }
-                        }} className="rounded text-[#1B3A57] w-5 h-5 focus:ring-[#1B3A57] cursor-pointer" />
-                        <span className="text-sm font-bold flex-1" style={{ color: isAssigned ? '#1B3A57' : '#334155' }}>{w.name}</span>
+                        }} className="rounded text-[var(--navy)] w-5 h-5 focus:ring-[var(--navy)] cursor-pointer" />
+                        <span className="text-sm font-bold flex-1" style={{ color: isAssigned ? FT.navy : '#334155' }}>{w.name}</span>
                       </div>
                     );
                   })}
@@ -280,12 +281,12 @@ export default function ScheduleForm() {
                   workers.filter(w => scheduleForm.assignedWorkers?.includes(w.id)).sort((a, b) => a.name.localeCompare(b.name)).map(w => (
                     <div key={w.id} className="p-5 bg-white rounded-2xl border border-slate-100 shadow-md space-y-4 transition-all hover:shadow-lg">
                       <div className="flex items-center justify-between border-b border-slate-50 pb-3">
-                        <span className="font-black text-base" style={{ color: '#1B3A57' }}>{w.name}</span>
+                        <span className="font-black text-base" style={{ color: FT.navy }}>{w.name}</span>
                         <div className="flex gap-2">
                           {scheduleForm.id && (
                             <button
                               onClick={() => loadScheduleHistory(w.id, w.name, scheduleForm.id, scheduleForm.name)}
-                              className="text-xs font-bold text-slate-400 hover:text-[#869AAF] px-2 py-1 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors flex items-center gap-1"
+                              className="text-xs font-bold text-slate-400 hover:text-[var(--slate)] px-2 py-1 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors flex items-center gap-1"
                               title="Histórico"
                             >📅 <span className="hidden xl:inline">Histórico</span></button>
                           )}
@@ -296,7 +297,7 @@ export default function ScheduleForm() {
                               setTimeout(() => setSaveSuccessWorkerId(null), 3000);
                             }}
                             className={`${saveSuccessWorkerId === w.id ? 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-200' : 'shadow-md'} text-white px-3 py-1.5 rounded-lg font-black text-[10px] uppercase transition-all flex items-center gap-1`}
-                            style={saveSuccessWorkerId === w.id ? {} : { backgroundColor: '#1B3A57' }}
+                            style={saveSuccessWorkerId === w.id ? {} : { backgroundColor: FT.navy }}
                           >
                             {saveSuccessWorkerId === w.id ? <><CheckCircle2 size={12} /> Gravado</> : 'Gravar'}
                           </button>
@@ -312,7 +313,7 @@ export default function ScheduleForm() {
                               ...prev,
                               [w.id]: { ...prev[w.id], dataInicio: e.target.value, dataFim: prev[w.id]?.dataFim ?? w.assignedScheduleDates?.[scheduleForm.id]?.dataFim ?? '' }
                             }))}
-                            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none shadow-sm focus:border-[#1B3A57] focus:ring-4 focus:ring-[#1B3A57]/10 transition-all"
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none shadow-sm focus:border-[var(--navy)] focus:ring-4 focus:ring-[#1B3A57]/10 transition-all"
                           />
                         </div>
                         <div className="space-y-1">
@@ -324,7 +325,7 @@ export default function ScheduleForm() {
                               ...prev,
                               [w.id]: { ...prev[w.id], dataInicio: prev[w.id]?.dataInicio ?? w.assignedScheduleDates?.[scheduleForm.id]?.dataInicio ?? new Date().toISOString().split('T')[0], dataFim: e.target.value }
                             }))}
-                            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none shadow-sm focus:border-[#1B3A57] focus:ring-4 focus:ring-[#1B3A57]/10 transition-all"
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none shadow-sm focus:border-[var(--navy)] focus:ring-4 focus:ring-[#1B3A57]/10 transition-all"
                           />
                         </div>
                       </div>
@@ -357,7 +358,7 @@ export default function ScheduleForm() {
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-bold text-slate-600">{h.data_inicio}</span>
                       <span className="text-slate-400">→</span>
-                      <span className="text-sm font-bold" style={{ color: '#1B3A57' }}>{h.data_fim || 'Atual'}</span>
+                      <span className="text-sm font-bold" style={{ color: FT.navy }}>{h.data_fim || 'Atual'}</span>
                     </div>
                     <button
                       onClick={() => handleDeleteScheduleHistory(h.id)}
