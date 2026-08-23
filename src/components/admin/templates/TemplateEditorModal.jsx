@@ -136,7 +136,7 @@ export default function TemplateEditorModal({ template, supabase, onClose, onSav
       busy={submitting || saving}
       footer={
         <div className="flex justify-end gap-2 px-6 py-4">
-          <button onClick={onClose} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl">Cancelar</button>
+          <button onClick={onClose} className="px-4 py-2 text-[var(--ink-soft)] hover:bg-[var(--surface-dim)] rounded-xl">Cancelar</button>
           <button onClick={handleSubmit} disabled={submitting || saving || (!isEditing && !file)}
             className="flex items-center gap-2 px-6 py-2 text-white font-bold rounded-xl hover:opacity-90 disabled:opacity-50"
             style={{ backgroundColor: FT.orange, color: FT.navy }}>
@@ -150,18 +150,18 @@ export default function TemplateEditorModal({ template, supabase, onClose, onSav
       <div className="grid grid-cols-1 @lg:grid-cols-2 gap-6">
         <div className="space-y-4">
           <div>
-            <label className="text-xs font-bold text-slate-600 uppercase">Nome</label>
+            <label className="text-xs font-bold text-[var(--ink-soft)] uppercase">Nome</label>
             <input value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Contrato de Trabalho"
-              className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[var(--navy)]" />
+              className="mt-1 w-full px-3 py-2 border border-[var(--border)] rounded-xl focus:outline-none focus:border-[var(--navy)]" />
           </div>
           <div>
-            <label className="text-xs font-bold text-slate-600 uppercase">Descrição (opcional)</label>
+            <label className="text-xs font-bold text-[var(--ink-soft)] uppercase">Descrição (opcional)</label>
             <input value={description} onChange={e => setDescription(e.target.value)} placeholder="Curta descrição interna"
-              className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[var(--navy)]" />
+              className="mt-1 w-full px-3 py-2 border border-[var(--border)] rounded-xl focus:outline-none focus:border-[var(--navy)]" />
           </div>
           <div>
-            <label className="text-xs font-bold text-slate-600 uppercase">
-              Ficheiro Word (.docx) {isEditing && <span className="text-slate-400 font-normal">(opcional - substituir)</span>}
+            <label className="text-xs font-bold text-[var(--ink-soft)] uppercase">
+              Ficheiro Word (.docx) {isEditing && <span className="text-[var(--slate-dim)] font-normal">(opcional - substituir)</span>}
             </label>
             <div className="mt-1 flex items-center gap-3">
               <input ref={fileInputRef} type="file"
@@ -169,13 +169,13 @@ export default function TemplateEditorModal({ template, supabase, onClose, onSav
                 onChange={handleFileChange} className="text-sm" />
             </div>
             {isEditing && !file && (
-              <p className="text-xs text-slate-500 mt-1">Ficheiro atual será mantido se não selecionar um novo.</p>
+              <p className="text-xs text-[var(--slate-dim)] mt-1">Ficheiro atual será mantido se não selecionar um novo.</p>
             )}
           </div>
 
           {previewFields && previewFields.length > 0 && (
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
+            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-3">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--ink-soft)] mb-2">
                 Variáveis detetadas ({previewFields.length})
               </h4>
               <div className="flex flex-wrap gap-1">
@@ -200,9 +200,9 @@ export default function TemplateEditorModal({ template, supabase, onClose, onSav
             page={stampAdminPage} setPage={setStampAdminPage}
           />
 
-          <details className="bg-slate-50 border border-slate-200 rounded-xl p-3">
-            <summary className="text-xs font-bold uppercase tracking-wider text-slate-600 cursor-pointer">
-              Variáveis disponíveis <span className="font-normal text-slate-400 normal-case">— clica para copiar</span>
+          <details className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-3">
+            <summary className="text-xs font-bold uppercase tracking-wider text-[var(--ink-soft)] cursor-pointer">
+              Variáveis disponíveis <span className="font-normal text-[var(--slate-dim)] normal-case">— clica para copiar</span>
             </summary>
             <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-1 max-h-60 overflow-y-auto">
               {KNOWN_FIELD_NAMES.map(f => {
@@ -219,10 +219,10 @@ export default function TemplateEditorModal({ template, supabase, onClose, onSav
                 const isCopied = copiedTag === f.name;
                 return (
                   <button type="button" key={f.name} onClick={copy} title={`Copiar ${tag}`}
-                    className={`flex items-center gap-2 text-xs text-left px-2 py-1 rounded-md border transition-all ${isCopied ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-slate-200 hover:border-[var(--slate)] hover:bg-slate-50'}`}>
+                    className={`flex items-center gap-2 text-xs text-left px-2 py-1 rounded-md border transition-all ${isCopied ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-[var(--border)] hover:border-[var(--slate)] hover:bg-[var(--surface)]'}`}>
                     <code className={isCopied ? 'font-mono text-emerald-700' : 'font-mono'} style={isCopied ? {} : { color: FT.slateDim }}>{tag}</code>
-                    <span className="text-slate-500 truncate flex-1">{f.label}</span>
-                    <span className={`text-[10px] font-black uppercase tracking-widest ${isCopied ? 'text-emerald-600' : 'text-slate-300'}`}>
+                    <span className="text-[var(--slate-dim)] truncate flex-1">{f.label}</span>
+                    <span className={`text-[10px] font-black uppercase tracking-widest ${isCopied ? 'text-emerald-600' : 'text-[var(--slate-dim)]'}`}>
                       {isCopied ? 'Copiado' : 'Copiar'}
                     </span>
                   </button>
@@ -233,18 +233,18 @@ export default function TemplateEditorModal({ template, supabase, onClose, onSav
         </div>
 
         <div className="space-y-3">
-          <h4 className="text-sm font-bold text-slate-700">Pré-visualização da Última Página</h4>
-          <div className="bg-slate-100 rounded-xl p-2 mx-auto" style={{ aspectRatio: '210 / 297', maxWidth: '420px' }}>
+          <h4 className="text-sm font-bold text-[var(--ink-mid)]">Pré-visualização da Última Página</h4>
+          <div className="bg-[var(--surface-dim)] rounded-xl p-2 mx-auto" style={{ aspectRatio: '210 / 297', maxWidth: '420px' }}>
             <div className="relative w-full h-full">
               {loadingPreview ? (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-slate-400">
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-[var(--slate-dim)]">
                   <Loader2 className="w-8 h-8 animate-spin" />
                   <span className="text-xs">A gerar preview...</span>
                 </div>
               ) : pdfPreviewUrl ? (
                 <>
                   <iframe src={`${pdfPreviewUrl}#toolbar=0&navpanes=0&scrollbar=0&view=Fit`}
-                    className="absolute inset-0 w-full h-full rounded-lg border border-slate-300 bg-white"
+                    className="absolute inset-0 w-full h-full rounded-lg border border-[var(--border)] bg-white"
                     title="Preview última página" />
                   <div className="absolute bg-sky-500/70 rounded text-white text-[10px] font-bold flex items-center justify-center pointer-events-none border-2 border-sky-700"
                     style={{ width: `${(70 / 210) * 100}%`, height: `${(25 / 297) * 100}%`, left: `${(stampX / 210) * 100}%`, bottom: `${(stampY / 297) * 100}%` }}>
@@ -256,7 +256,7 @@ export default function TemplateEditorModal({ template, supabase, onClose, onSav
                   </div>
                 </>
               ) : (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-slate-400">
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-[var(--slate-dim)]">
                   <FileText className="w-12 h-12" />
                   <span className="text-xs text-center px-4">
                     {isEditing ? 'A carregar preview...' : 'Seleciona um ficheiro .docx para ver o preview'}
@@ -266,10 +266,10 @@ export default function TemplateEditorModal({ template, supabase, onClose, onSav
             </div>
           </div>
 
-          <div className="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-1">
+          <div className="text-xs text-[var(--slate-dim)] bg-[var(--surface)] border border-[var(--border)] rounded-lg p-3 space-y-1">
             <p><span className="inline-block w-2 h-2 rounded-full bg-sky-500 mr-1" /><strong>Trabalhador</strong> — aplicado quando o trabalhador assina.</p>
             <p><span className="inline-block w-2 h-2 rounded-full bg-amber-500 mr-1" /><strong>Empresa</strong> — aplicado depois pelo responsável da Magnetic Place ao aprovar.</p>
-            <p className="text-slate-400 pt-1">Ambos os carimbos têm 70×25mm, posicionados a partir do canto inferior-esquerdo. O QR é colocado automaticamente em todas as páginas.</p>
+            <p className="text-[var(--slate-dim)] pt-1">Ambos os carimbos têm 70×25mm, posicionados a partir do canto inferior-esquerdo. O QR é colocado automaticamente em todas as páginas.</p>
           </div>
         </div>
       </div>
@@ -293,13 +293,13 @@ function StampSection({ title, color, x, setX, y, setY, page, setPage }) {
     focus: `focus:border-${color}-500`,
   };
   return (
-    <div className="border-t border-slate-200 pt-4">
-      <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+    <div className="border-t border-[var(--border)] pt-4">
+      <h4 className="text-sm font-bold text-[var(--ink-mid)] mb-3 flex items-center gap-2">
         <span className={`w-2 h-2 rounded-full ${cls.dot}`} />
         {title}
       </h4>
       <div className="mb-3">
-        <label className="text-xs font-bold text-slate-500 uppercase mb-2 block">Posições Predefinidas</label>
+        <label className="text-xs font-bold text-[var(--slate-dim)] uppercase mb-2 block">Posições Predefinidas</label>
         <div className="flex flex-wrap gap-2">
           {PRESETS.map(p => (
             <button key={p.label} type="button" onClick={() => { setX(p.x); setY(p.y); }}
@@ -315,15 +315,15 @@ function StampSection({ title, color, x, setX, y, setY, page, setPage }) {
           { label: 'Y (mm)', val: y, set: setY, max: 297 },
         ].map(({ label, val, set, max }) => (
           <div key={label}>
-            <label className="text-xs font-bold text-slate-500 uppercase">{label}</label>
+            <label className="text-xs font-bold text-[var(--slate-dim)] uppercase">{label}</label>
             <input type="number" value={val} onChange={e => set(e.target.value)} min={0} max={max}
-              className={`mt-1 w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none ${cls.focus} text-sm`} />
+              className={`mt-1 w-full px-3 py-2 border border-[var(--border)] rounded-xl focus:outline-none ${cls.focus} text-sm`} />
           </div>
         ))}
         <div>
-          <label className="text-xs font-bold text-slate-500 uppercase">Página</label>
+          <label className="text-xs font-bold text-[var(--slate-dim)] uppercase">Página</label>
           <select value={page} onChange={e => setPage(e.target.value)}
-            className={`mt-1 w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none ${cls.focus} text-sm`}>
+            className={`mt-1 w-full px-3 py-2 border border-[var(--border)] rounded-xl focus:outline-none ${cls.focus} text-sm`}>
             <option value="last">Última</option>
             <option value="first">Primeira</option>
             <option value="all">Todas</option>

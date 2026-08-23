@@ -207,9 +207,9 @@ const ModoBursting = ({ workers, logs, systemSettings, saveToDb, workerRateHisto
   return (
     <div className="space-y-5">
       {/* Upload */}
-      <div className="bg-white border-2 border-dashed border-slate-200 rounded-2xl p-8 flex flex-col items-center gap-3 hover:border-[var(--slate)] transition-colors">
-        <Scissors size={28} className="text-slate-300" />
-        <p className="text-[11px] font-black text-slate-400 tracking-widest">PDF AGREGADO TOCONLINE</p>
+      <div className="bg-white border-2 border-dashed border-[var(--border)] rounded-2xl p-8 flex flex-col items-center gap-3 hover:border-[var(--slate)] transition-colors">
+        <Scissors size={28} className="text-[var(--slate)]" />
+        <p className="text-[11px] font-black text-[var(--slate-dim)] tracking-widest">PDF AGREGADO TOCONLINE</p>
         <label className="cursor-pointer">
           <input type="file" accept="application/pdf" className="hidden" onChange={handleFicheiro} />
           <span className="flex items-center gap-2 px-4 py-2 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-colors" style={{ backgroundColor: FT.navy }}>
@@ -217,7 +217,7 @@ const ModoBursting = ({ workers, logs, systemSettings, saveToDb, workerRateHisto
           </span>
         </label>
         {ficheiro && (
-          <p className="text-[10px] text-slate-500 font-medium">{ficheiro.name}</p>
+          <p className="text-[10px] text-[var(--slate-dim)] font-medium">{ficheiro.name}</p>
         )}
       </div>
 
@@ -235,7 +235,7 @@ const ModoBursting = ({ workers, logs, systemSettings, saveToDb, workerRateHisto
 
       {/* Barra de progresso */}
       {processando && progresso.total > 0 && (
-        <div className="w-full bg-slate-100 rounded-full h-1.5">
+        <div className="w-full bg-[var(--surface-dim)] rounded-full h-1.5">
           <div className="h-1.5 rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: FT.navy }} />
         </div>
       )}
@@ -244,27 +244,27 @@ const ModoBursting = ({ workers, logs, systemSettings, saveToDb, workerRateHisto
       {resultado && (
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:flex-wrap">
-            <p className="text-[10px] font-black text-slate-500 tracking-widest sm:flex-1">
+            <p className="text-[10px] font-black text-[var(--slate-dim)] tracking-widest sm:flex-1">
               {totalResultados} RECIBO{totalResultados !== 1 ? 'S' : ''}
               {totalOrfaos > 0 && ` · ${totalOrfaos} ÓRFÃO${totalOrfaos !== 1 ? 'S' : ''}`}
               {selecionados.size > 0 && ` · ${selecionados.size} SEL.`}
             </p>
             <button onClick={handleGuardarValidacoes} disabled={guardando || guardados}
-              className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:border-[var(--slate)] hover:text-[var(--slate)] transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+              className="flex items-center gap-1.5 px-3 py-2 bg-white border border-[var(--border)] rounded-xl text-[10px] font-black uppercase tracking-widest text-[var(--ink-soft)] hover:border-[var(--slate)] hover:text-[var(--slate)] transition-all disabled:opacity-40 disabled:cursor-not-allowed">
               {guardando ? <Loader2 size={11} className="animate-spin" /> : <Save size={11} />}
               {guardados ? 'Guardado' : 'Guardar'}
             </button>
             <button onClick={handleAdicionarACustosBurst} disabled={adicionando || adicionado}
-              className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:border-[var(--slate)] hover:text-[var(--slate)] transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+              className="flex items-center gap-1.5 px-3 py-2 bg-white border border-[var(--border)] rounded-xl text-[10px] font-black uppercase tracking-widest text-[var(--ink-soft)] hover:border-[var(--slate)] hover:text-[var(--slate)] transition-all disabled:opacity-40 disabled:cursor-not-allowed">
               {adicionando ? <Loader2 size={11} className="animate-spin" /> : <Coins size={11} />}
               {adicionado ? 'Adicionado' : 'A Custos'}
             </button>
             <button onClick={downloadTodos}
-              className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:border-[var(--slate)] hover:text-[var(--slate)] transition-all">
+              className="flex items-center gap-1.5 px-3 py-2 bg-white border border-[var(--border)] rounded-xl text-[10px] font-black uppercase tracking-widest text-[var(--ink-soft)] hover:border-[var(--slate)] hover:text-[var(--slate)] transition-all">
               <FileDown size={11} /> PDF
             </button>
             <button onClick={handleGuardarNoPortal} disabled={guardandoPortal || guardadosPortal}
-              className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:border-[var(--slate)] hover:text-[var(--slate)] transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+              className="flex items-center gap-1.5 px-3 py-2 bg-white border border-[var(--border)] rounded-xl text-[10px] font-black uppercase tracking-widest text-[var(--ink-soft)] hover:border-[var(--slate)] hover:text-[var(--slate)] transition-all disabled:opacity-40 disabled:cursor-not-allowed">
               {guardandoPortal ? <Loader2 size={11} className="animate-spin" /> : <Save size={11} />}
               {guardadosPortal ? 'Guardado' : 'Guardar no Portal'}
             </button>
@@ -291,7 +291,7 @@ const ModoBursting = ({ workers, logs, systemSettings, saveToDb, workerRateHisto
                 })));
               }
             }}
-              className="text-[10px] font-black uppercase tracking-widest border border-slate-200 rounded-xl px-3 py-2 bg-white text-slate-600 focus:outline-none focus:border-[var(--navy)]">
+              className="text-[10px] font-black uppercase tracking-widest border border-[var(--border)] rounded-xl px-3 py-2 bg-white text-[var(--ink-soft)] focus:outline-none focus:border-[var(--navy)]">
               {['Recibo de Vencimento','Mapa de Ajudas de Custo','Mapa de Deslocamento','Contrato de Trabalho','Outro'].map(t => (
                 <option key={t} value={t}>{t}</option>
               ))}
@@ -300,7 +300,7 @@ const ModoBursting = ({ workers, logs, systemSettings, saveToDb, workerRateHisto
               value={prefixo}
               onChange={e => setPrefixo(e.target.value)}
               placeholder="Nome base (ex: Mapa de Ajuda de Custo)"
-              className="flex-1 text-[10px] border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-[var(--navy)] bg-white text-slate-700 placeholder:text-slate-300"
+              className="flex-1 text-[10px] border border-[var(--border)] rounded-xl px-3 py-2 focus:outline-none focus:border-[var(--navy)] bg-white text-[var(--ink-mid)] placeholder:text-[var(--slate-dim)]"
             />
             <button onClick={aplicarPrefixo} disabled={!prefixo.trim()}
               className="flex items-center gap-1.5 px-3 py-2 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors disabled:opacity-40 hover:opacity-90"
@@ -309,26 +309,26 @@ const ModoBursting = ({ workers, logs, systemSettings, saveToDb, workerRateHisto
             </button>
           </div>
 
-          <div className="rounded-2xl border border-slate-100 overflow-hidden">
+          <div className="rounded-2xl border border-[var(--border-soft)] overflow-hidden">
             <table className="w-full text-[10px]">
-              <thead className="bg-slate-50">
+              <thead className="bg-[var(--surface)]">
                 <tr>
                   <th className="px-3 py-2.5">
                     <input type="checkbox" checked={todosSelected} onChange={() => toggleTodos(nifsTodos)}
                       className="rounded accent-[var(--navy)] cursor-pointer" />
                   </th>
                   {['Trabalhador','Mês','Nome do ficheiro',''].map(h => (
-                    <th key={h} className="px-3 py-2.5 text-left font-black text-slate-400 tracking-widest">{h}</th>
+                    <th key={h} className="px-3 py-2.5 text-left font-black text-[var(--slate-dim)] tracking-widest">{h}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50">
+              <tbody className="divide-y divide-[var(--border-soft)]">
                 {resultado.resultados.map(r => {
                   const enviado     = enviados.has(r.nif);
                   const selecionado = selecionados.has(r.nif);
                   return (
                     <tr key={r.nif} onClick={() => !enviado && toggleSelecionado(r.nif)}
-                      className={`transition-colors cursor-pointer ${selecionado ? '' : 'hover:bg-slate-50'} ${enviado ? 'opacity-50 cursor-default' : ''}`}
+                      className={`transition-colors cursor-pointer ${selecionado ? '' : 'hover:bg-[var(--surface)]'} ${enviado ? 'opacity-50 cursor-default' : ''}`}
                       style={selecionado ? { backgroundColor: 'rgba(235,141,0,0.08)' } : {}}>
                       <td className="px-3 py-2.5">
                         <input type="checkbox" checked={selecionado} readOnly disabled={enviado}
@@ -336,23 +336,23 @@ const ModoBursting = ({ workers, logs, systemSettings, saveToDb, workerRateHisto
                       </td>
                       <td className="px-3 py-2.5">
                         {r.worker
-                          ? <span className="text-slate-700 font-black">{r.worker.name}</span>
+                          ? <span className="text-[var(--ink-mid)] font-black">{r.worker.name}</span>
                           : <span className="text-red-400 font-black">{r.nomeExtraido ?? r.nome ?? '—'}</span>}
                       </td>
-                      <td className="px-3 py-2.5 text-slate-500 whitespace-nowrap">{r.mes ? formatarMes(r.mes) : '—'}</td>
+                      <td className="px-3 py-2.5 text-[var(--slate-dim)] whitespace-nowrap">{r.mes ? formatarMes(r.mes) : '—'}</td>
                       <td className="px-3 py-2.5" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center gap-0.5">
                           <input
                             value={nomes.get(r.nif) ?? ''}
                             onChange={e => setNomes(prev => { const next = new Map(prev); next.set(r.nif, e.target.value); return next; })}
-                            className="text-[10px] text-slate-700 border border-slate-200 rounded-lg px-2 py-1 w-48 focus:outline-none focus:border-[var(--navy)] bg-white"
+                            className="text-[10px] text-[var(--ink-mid)] border border-[var(--border)] rounded-lg px-2 py-1 w-48 focus:outline-none focus:border-[var(--navy)] bg-white"
                           />
-                          <span className="text-[10px] text-slate-400">.pdf</span>
+                          <span className="text-[10px] text-[var(--slate-dim)]">.pdf</span>
                         </div>
                       </td>
                       <td className="px-3 py-2.5" onClick={e => e.stopPropagation()}>
                         <button onClick={() => downloadPdf(r)} title="Guardar PDF"
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-[var(--slate)] hover:bg-slate-100 transition-colors">
+                          className="p-1.5 rounded-lg text-[var(--slate)] hover:text-[var(--slate)] hover:bg-[var(--surface-dim)] transition-colors">
                           <FileDown size={13} />
                         </button>
                       </td>

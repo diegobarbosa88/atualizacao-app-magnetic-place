@@ -95,8 +95,8 @@ export default function DocumentTemplatesAdmin({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-black text-slate-800">Templates de Documentos</h2>
-          <p className="text-sm text-slate-500 mt-1">Templates Word (.docx) com variáveis preenchidas automaticamente.</p>
+          <h2 className="text-2xl font-black text-[var(--ink)]">Templates de Documentos</h2>
+          <p className="text-sm text-[var(--slate-dim)] mt-1">Templates Word (.docx) com variáveis preenchidas automaticamente.</p>
         </div>
         <button onClick={openCreateModal} className="flex items-center gap-2 px-4 py-2 font-bold rounded-xl hover:opacity-90" style={{ backgroundColor: FT.orange, color: FT.navy }}>
           <Plus className="w-4 h-4" /> Novo Template
@@ -105,7 +105,7 @@ export default function DocumentTemplatesAdmin({
 
       <div>
         {loading ? (
-          <div className="py-16 text-center text-slate-300">
+          <div className="py-16 text-center text-[var(--slate-dim)]">
             <Loader2 className="w-6 h-6 animate-spin mx-auto" />
           </div>
         ) : templates.length === 0 ? (
@@ -124,12 +124,12 @@ export default function DocumentTemplatesAdmin({
                 </div>
                 <p className="text-[1.05rem] font-bold leading-[1.15] text-[#28323c] truncate" style={{ fontFamily: FONT_TITLE }} title={t.name}>{t.name}</p>
                 <p className="text-[11px] font-semibold text-[#5c6a76] mt-1 mb-3 line-clamp-2 min-h-[2rem]">
-                  {t.description || <span className="italic text-slate-300">Sem descrição</span>}
+                  {t.description || <span className="italic text-[var(--slate-dim)]">Sem descrição</span>}
                 </p>
                 <div className="flex items-center gap-1.5 pt-[0.7rem] border-t border-[#F1EFE8]">
-                  <button onClick={() => openTemplatePreview(t)} className="p-1.5 bg-white text-slate-500 rounded-lg border border-slate-200 hover:bg-slate-600 hover:text-white transition-all" title="Pré-visualizar"><Eye className="w-3.5 h-3.5" /></button>
-                  <button onClick={() => openEditModal(t)} className="p-1.5 bg-white rounded-lg border border-slate-200 text-[var(--slate)] hover:bg-[var(--slate)] hover:text-white transition-all" title="Editar"><Edit3 className="w-3.5 h-3.5" /></button>
-                  <button onClick={() => openGenerateModal(t)} className="p-1.5 bg-white rounded-lg border border-slate-200 text-[var(--slate)] hover:bg-[var(--slate)] hover:text-white transition-all" title="Gerar"><Send className="w-3.5 h-3.5" /></button>
+                  <button onClick={() => openTemplatePreview(t)} className="p-1.5 bg-white text-[var(--slate-dim)] rounded-lg border border-[var(--border)] hover:bg-[var(--navy-solid)] hover:text-white transition-all" title="Pré-visualizar"><Eye className="w-3.5 h-3.5" /></button>
+                  <button onClick={() => openEditModal(t)} className="p-1.5 bg-white rounded-lg border border-[var(--border)] text-[var(--slate)] hover:bg-[var(--slate)] hover:text-white transition-all" title="Editar"><Edit3 className="w-3.5 h-3.5" /></button>
+                  <button onClick={() => openGenerateModal(t)} className="p-1.5 bg-white rounded-lg border border-[var(--border)] text-[var(--slate)] hover:bg-[var(--slate)] hover:text-white transition-all" title="Gerar"><Send className="w-3.5 h-3.5" /></button>
                   <button onClick={() => onDeleteTemplate(t)} className="p-1.5 bg-white text-rose-500 rounded-lg border border-rose-100 hover:bg-rose-500 hover:text-white transition-all ml-auto" title="Apagar"><Trash2 className="w-3.5 h-3.5" /></button>
                 </div>
               </Card>
