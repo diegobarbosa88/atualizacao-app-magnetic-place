@@ -168,7 +168,7 @@ const CostReports = () => {
               <Download size={13} /> Exportar
             </button>
             <div className="relative" ref={relatorioMenuRef}>
-              <button onClick={() => setShowRelatorioMenu(v => !v)} className="flex items-center gap-1.5 px-3 py-2 rounded-xl font-black text-xs uppercase shadow-sm transition-all border-2 hover:bg-slate-50 bg-white" style={{ borderColor: FT.slate, color: FT.navy }}>
+              <button onClick={() => setShowRelatorioMenu(v => !v)} className="flex items-center gap-1.5 px-3 py-2 rounded-xl font-black text-xs uppercase shadow-sm transition-all border-2 hover:bg-slate-50 bg-white" style={{ borderColor: FT.slate, color: 'var(--navy)' }}>
                 <BookOpen size={13} /> Geral <ChevronDown size={11} />
               </button>
               {showRelatorioMenu && (

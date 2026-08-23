@@ -455,7 +455,7 @@ const DocumentScannerModal = ({ open, onClose }) => {
                   <p className="text-[10px] font-black text-emerald-600 uppercase">Guardados</p>
                 </div>
                 <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
-                  <p className="text-lg font-black" style={{ color: FT.navy }}>{matchedCount}</p>
+                  <p className="text-lg font-black" style={{ color: 'var(--navy)' }}>{matchedCount}</p>
                   <p className="text-[10px] font-black uppercase text-slate-500">Para guardar</p>
                 </div>
                 <div className="bg-amber-50 border border-amber-100 rounded-xl p-3">
@@ -502,11 +502,11 @@ const DocumentScannerModal = ({ open, onClose }) => {
                         onClick={() => { if (fi >= 0) toggleExpanded(fi); if (vi >= 0) toggleExpanded(vi); }}
                         className="w-full flex items-center gap-3 p-3 bg-slate-50 hover:bg-slate-100 transition-colors text-left"
                       >
-                        <div className="p-1.5 rounded-lg flex-shrink-0" style={{ backgroundColor: 'rgba(27,58,87,0.1)', color: FT.navy }}>
+                        <div className="p-1.5 rounded-lg flex-shrink-0" style={{ backgroundColor: 'rgba(27,58,87,0.1)', color: 'var(--navy)' }}>
                           <Layers size={13} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-black" style={{ color: FT.navy }}>{tipoDoc} — Frente &amp; Verso</p>
+                          <p className="text-xs font-black" style={{ color: 'var(--navy)' }}>{tipoDoc} — Frente &amp; Verso</p>
                           {worker && <p className="text-[10px] text-slate-500 font-bold">{worker.name}</p>}
                         </div>
                         {isSaved && <CheckCircle size={14} className="text-emerald-500 flex-shrink-0" />}

@@ -257,7 +257,7 @@ export default function TOConlineBankAccounts({ onDesligado }) {
             <div className="p-2.5 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)' }}><Landmark size={16} style={{ color: FT.slate }} /></div>
             <div>
               <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Saldo Total</p>
-              <p className="text-2xl font-black" style={{ color: FT.navy }}>{fmtEur(totalSaldo)}</p>
+              <p className="text-2xl font-black" style={{ color: 'var(--navy)' }}>{fmtEur(totalSaldo)}</p>
             </div>
           </div>
           <p className="text-[10px] text-slate-400 font-semibold">{contas.length} conta{contas.length !== 1 ? 's' : ''}</p>
@@ -311,7 +311,7 @@ export default function TOConlineBankAccounts({ onDesligado }) {
                     {a.swift && <p className="text-[10px] text-slate-300 font-mono">{a.swift}</p>}
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="text-base font-black" style={{ color: FT.navy }}>
+                    <p className="text-base font-black" style={{ color: 'var(--navy)' }}>
                       {c.saldo_atual != null ? fmtEur(c.saldo_atual) : '—'}
                     </p>
                     <p className="text-[10px] text-slate-400">{a.account_type || '—'}</p>

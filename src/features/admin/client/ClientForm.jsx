@@ -225,7 +225,7 @@ export default function ClientForm() {
               >
                 <span className="w-2 h-2 rounded-full bg-white" style={{ transform: 'rotate(45deg)' }} />
               </div>
-              <div className="absolute left-2.5 bottom-2.5 bg-white/90 rounded-lg px-2 py-1 text-[9.5px] font-bold" style={{ fontFamily: FONT_MONO, color: FT.navy }}>
+              <div className="absolute left-2.5 bottom-2.5 bg-white/90 rounded-lg px-2 py-1 text-[9.5px] font-bold" style={{ fontFamily: FONT_MONO, color: 'var(--navy)' }}>
                 raio {raio}m
               </div>
             </div>
@@ -249,7 +249,7 @@ export default function ClientForm() {
               onClick={handleUseCurrentLocation}
               disabled={geoLoading}
               className="w-full flex items-center justify-center gap-2 disabled:opacity-50 px-4 py-2.5 rounded-xl font-bold text-[10.5px] uppercase tracking-wide shadow-sm transition-all border-[1.5px] hover:bg-white"
-              style={{ fontFamily: FONT_MONO, borderColor: FT.slate, color: FT.navy }}
+              style={{ fontFamily: FONT_MONO, borderColor: FT.slate, color: 'var(--navy)' }}
             >
               {geoLoading ? <Loader2 size={13} className="animate-spin" /> : <Navigation size={13} />}
               Usar localização atual

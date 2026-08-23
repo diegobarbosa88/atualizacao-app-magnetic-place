@@ -71,7 +71,7 @@ export default function TOConlineRelatorios({ onDesligado }) {
               ].map(({ key, label }) => (
                 <button key={key} onClick={() => { setTipo(key); }}
                   className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${tipo === key ? '' : 'text-slate-400 hover:text-slate-600'}`}
-                  style={tipo === key ? { backgroundColor: 'rgba(235,141,0,0.15)', color: FT.navy } : {}}>
+                  style={tipo === key ? { backgroundColor: 'rgba(235,141,0,0.15)', color: 'var(--navy)' } : {}}>
                   {label}
                 </button>
               ))}
@@ -258,7 +258,7 @@ export default function TOConlineRelatorios({ onDesligado }) {
 
       {!loading && docs.length === 0 && !erro && (
         <div className="text-center py-16 text-slate-400 text-sm font-semibold">
-          Selecione o tipo e o período, depois clique em <span className="font-bold" style={{ color: FT.navy }}>Carregar</span>.
+          Selecione o tipo e o período, depois clique em <span className="font-bold" style={{ color: 'var(--navy)' }}>Carregar</span>.
         </div>
       )}
 

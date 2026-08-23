@@ -216,7 +216,7 @@ export default function AdminReports({ printingReport, setPrintingReport }) {
       {/* Botões de ação */}
       <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
         <div className="flex flex-col md:flex-row gap-3 md:gap-4">
-          <button onClick={handleGenerateClientReport} disabled={!hasValidPeriod || (!reportFilter.clientId && !reportFilter.workerId)} className="flex-1 py-4 rounded-2xl font-black text-sm uppercase tracking-widest shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 active:scale-95 transition-all border-2" style={{ color: FT.navy, borderColor: FT.navy, backgroundColor: 'transparent' }}>
+          <button onClick={handleGenerateClientReport} disabled={!hasValidPeriod || (!reportFilter.clientId && !reportFilter.workerId)} className="flex-1 py-4 rounded-2xl font-black text-sm uppercase tracking-widest shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 active:scale-95 transition-all border-2" style={{ color: 'var(--navy)', borderColor: FT.navy, backgroundColor: 'transparent' }}>
             <FileText size={18} /> Gerar Selecção
           </button>
           <button onClick={() => {

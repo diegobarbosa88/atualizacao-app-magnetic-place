@@ -163,7 +163,7 @@ function SectionHeader({ n: num, label }) {
   return (
     <div className="flex items-center gap-2.5 mb-4">
       <span className="w-5 h-5 rounded-full text-white text-[10px] font-black flex items-center justify-center shrink-0" style={{ background: FT.navy }}>{num}</span>
-      <h3 className="text-[11px] font-black uppercase tracking-widest" style={{ color: FT.navy }}>{label}</h3>
+      <h3 className="text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--navy)' }}>{label}</h3>
     </div>
   );
 }
@@ -2375,7 +2375,7 @@ ${hdrRow}${bodyRows}${totRow}
                   <button
                     onClick={gerarRecibosBatchPDF}
                     className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider border border-slate-200 bg-white hover:bg-slate-50 transition-colors"
-                    style={{ color: FT.navy }}
+                    style={{ color: 'var(--navy)' }}
                     title="PDF dos recibos de vencimento — todos os trabalhadores"
                   >
                     <FileText size={13} /> Recibos PDF
@@ -2383,7 +2383,7 @@ ${hdrRow}${bodyRows}${totRow}
                   <button
                     onClick={exportRecibosBatchXLS}
                     className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider border border-slate-200 bg-white hover:bg-slate-50 transition-colors"
-                    style={{ color: FT.navy }}
+                    style={{ color: 'var(--navy)' }}
                     title="Excel dos recibos de vencimento — todos os trabalhadores"
                   >
                     <FileSpreadsheet size={13} /> Recibos XLS
@@ -2391,7 +2391,7 @@ ${hdrRow}${bodyRows}${totRow}
                   <button
                     onClick={gerarMapasAjudasPDF}
                     className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider border border-slate-200 bg-white hover:bg-slate-50 transition-colors"
-                    style={{ color: FT.navy }}
+                    style={{ color: 'var(--navy)' }}
                     title="PDF dos mapas de ajudas de custo — todos os trabalhadores"
                   >
                     <Download size={13} /> Mapas AC
@@ -2424,7 +2424,7 @@ ${hdrRow}${bodyRows}${totRow}
               <span className="text-[8px] font-black uppercase tracking-wide px-2 py-0.5 rounded"
                 style={isValidado
                   ? { background: '#d1fae5', color: '#065f46' }
-                  : { background: '#dce6f0', color: FT.navy }}>
+                  : { background: '#dce6f0', color: 'var(--navy)' }}>
                 {isValidado ? 'Validado' : 'Em elaboração'}
               </span>
             )}
@@ -2563,7 +2563,7 @@ ${hdrRow}${bodyRows}${totRow}
                   </div>
                   <div className="rounded-xl px-4 py-3 mb-4" style={{ background: '#EEF1F5' }}>
                     <p className="text-[9px] font-black uppercase tracking-wider mb-0.5" style={{ color: FT.slateDim }}>Líquido a receber</p>
-                    <p className="text-xl font-black" style={{ color: FT.navy }}>{eur(liquidoDisplay)}</p>
+                    <p className="text-xl font-black" style={{ color: 'var(--navy)' }}>{eur(liquidoDisplay)}</p>
                   </div>
                 </>
               ) : (
@@ -3129,7 +3129,7 @@ ${hdrRow}${bodyRows}${totRow}
                             padding: '3px 10px',
                             fontSize: 10, fontWeight: 900, textTransform: 'uppercase',
                             letterSpacing: '.04em', cursor: 'pointer', appearance: 'none',
-                            ...(row.tipo === 'Partida'    ? { background: '#dce6f0', color: FT.navy }
+                            ...(row.tipo === 'Partida'    ? { background: '#dce6f0', color: 'var(--navy)' }
                               : row.tipo === 'Chegada'    ? { background: '#fef0d5', color: '#c57800' }
                               :                            { background: '#edf0f3', color: '#6B7A8D' })
                           }}
@@ -4050,7 +4050,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                       key={ci}
                       className={`px-2 py-2.5 text-[11px] font-black whitespace-nowrap text-center ${col.highlight ? hlFoot(col.highlight) : 'bg-slate-100'}`}
                       style={{
-                        ...(col.highlight ? {} : { color: FT.navy }),
+                        ...(col.highlight ? {} : { color: 'var(--navy)' }),
                         ...(ai === 0 ? { position: 'sticky', left: 0, zIndex: 5, background: '#eef2ff', color: '#4338ca' } : {}),
                         ...(col.key === 'completo' ? { position: 'sticky', right: 0, zIndex: 5, background: '#eef2ff' } : {}),
                         ...(isLastInGroup && def.border ? { borderRight: `2px solid ${def.border}` } : {}),

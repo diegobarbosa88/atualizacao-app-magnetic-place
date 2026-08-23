@@ -267,8 +267,8 @@ export default function ContadorEmailsAdmin() {
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl sm:text-2xl font-black flex items-center gap-2" style={{ color: FT.navy }}>
-          <MessageSquareText size={22} style={{ color: FT.navy }} />
+        <h2 className="text-xl sm:text-2xl font-black flex items-center gap-2" style={{ color: 'var(--navy)' }}>
+          <MessageSquareText size={22} style={{ color: 'var(--navy)' }} />
           Emails do Contador
         </h2>
         <button onClick={carregar} disabled={loading}
@@ -415,7 +415,7 @@ export default function ContadorEmailsAdmin() {
                       <button
                         onClick={() => aberto ? fecharRevisao() : abrirRevisao(email)}
                         className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all hover:bg-slate-50"
-                        style={{ borderColor: FT.slate, color: FT.navy }}
+                        style={{ borderColor: FT.slate, color: 'var(--navy)' }}
                       >
                         {aberto ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
                         {aberto ? 'Fechar' : 'Rever Rascunho'}

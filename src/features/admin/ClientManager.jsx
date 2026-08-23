@@ -234,7 +234,7 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
                     <p className="text-xs text-[var(--slate-dim)] truncate">NIF: {c.nif || 'N/A'}</p>
                   </td>
                   <td className="hidden sm:table-cell px-4 py-3 text-sm font-bold text-[var(--slate-dim)] truncate">{c.morada || 'N/A'}</td>
-                  <td className="px-4 py-3 text-right text-sm font-bold whitespace-nowrap" style={{ color: FT.navy }}>{c.valorHora ? `${c.valorHora}€` : 'N/A'}</td>
+                  <td className="px-4 py-3 text-right text-sm font-bold whitespace-nowrap" style={{ color: 'var(--navy)' }}>{c.valorHora ? `${c.valorHora}€` : 'N/A'}</td>
                   <td className="px-3 py-3 text-right">
                     <div className="relative inline-block">
                       <button
@@ -388,7 +388,7 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-bold text-[var(--ink-soft)]">{h.valor_anterior || 'N/A'}€</span>
                           <span className="text-[var(--slate)]">→</span>
-                          <span className="text-sm font-bold" style={{ color: FT.navy }}>{h.valor_novo}€</span>
+                          <span className="text-sm font-bold" style={{ color: 'var(--navy)' }}>{h.valor_novo}€</span>
                         </div>
                         <div className="flex items-center gap-3">
                           <span className="text-xs text-[var(--slate-dim)]">{new Date(h.data_alteracao).toLocaleDateString('pt-PT')}</span>

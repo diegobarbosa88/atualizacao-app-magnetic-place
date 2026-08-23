@@ -38,8 +38,8 @@ export default function ApoliceSegurosImportPanel() {
     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 sm:p-5">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2">
-          <ShieldCheck size={18} style={{ color: FT.navy }} />
-          <h3 className="text-sm font-black uppercase tracking-wide" style={{ color: FT.navy }}>
+          <ShieldCheck size={18} style={{ color: 'var(--navy)' }} />
+          <h3 className="text-sm font-black uppercase tracking-wide" style={{ color: 'var(--navy)' }}>
             Apólice de Seguros (Allianz)
           </h3>
         </div>

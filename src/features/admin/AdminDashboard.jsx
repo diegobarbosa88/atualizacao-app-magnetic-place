@@ -843,7 +843,7 @@ function AdminDashboard(props) {
               <div className="px-4 py-8 text-center text-slate-400 text-xs font-bold">Sem notificações novas</div>
             )}
           </div>
-          <button onClick={() => { setActiveTab('notificacoes'); setShowNotifDropdown(false); }} className="w-full text-center text-[10px] font-black uppercase tracking-widest py-1.5 hover:bg-slate-50 rounded-xl transition-colors" style={{ color: FT.navy }}>
+          <button onClick={() => { setActiveTab('notificacoes'); setShowNotifDropdown(false); }} className="w-full text-center text-[10px] font-black uppercase tracking-widest py-1.5 hover:bg-slate-50 rounded-xl transition-colors" style={{ color: 'var(--navy)' }}>
             Ver Todas as Notificações
           </button>
         </div>

@@ -763,7 +763,7 @@ export default function SalariosTab({ month }) {
                   <div key={a.id} className="flex items-center gap-1 bg-[var(--surface-dim)] rounded-xl px-2 py-1">
                     <span className="text-[10px] text-[var(--ink-soft)] max-w-[120px] truncate">{a.pattern}</span>
                     <span className="text-[9px] text-[var(--slate)]">→</span>
-                    <span className="text-[10px] font-bold max-w-[100px] truncate" style={{ color: FT.navy }}>{a.worker_name}</span>
+                    <span className="text-[10px] font-bold max-w-[100px] truncate" style={{ color: 'var(--navy)' }}>{a.worker_name}</span>
                     <button
                       onClick={async () => {
                         await supabase.from('reconciliacao_salarial_aliases').delete().eq('id', a.id);
@@ -852,7 +852,7 @@ export default function SalariosTab({ month }) {
               <div className="px-5 py-4 flex items-center justify-between gap-3">
                 <div>
                   <p className="text-xs font-bold text-[var(--slate-dim)] uppercase tracking-widest">Total selecionado</p>
-                  <p className="text-xl font-black" style={{ color: FT.navy }}>{fmtEur(total)}</p>
+                  <p className="text-xl font-black" style={{ color: 'var(--navy)' }}>{fmtEur(total)}</p>
                 </div>
                 <button
                   onClick={confirmarSepa}
@@ -966,7 +966,7 @@ export default function SalariosTab({ month }) {
                             </div>
                           </div>
                           <div className="mt-3 flex justify-end">
-                            <p className="text-sm font-black" style={{ color: FT.navy }}>
+                            <p className="text-sm font-black" style={{ color: 'var(--navy)' }}>
                               Total: {fmtEur(valorFinal)}
                             </p>
                           </div>

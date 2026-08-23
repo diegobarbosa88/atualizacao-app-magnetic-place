@@ -59,11 +59,11 @@ function WorkerRow({ worker, isOpen, onToggle, onUsarData, onEditarManualmente }
         <div className="flex items-center gap-3">
           <div
             className="w-9 h-9 rounded-lg flex items-center justify-center font-black text-sm shrink-0"
-            style={{ background: '#EEF1F5', color: FT.navy }}
+            style={{ background: '#EEF1F5', color: 'var(--navy)' }}
           >
             {worker.nome.split(' ').map(w => w[0]).slice(0, 2).join('')}
           </div>
-          <div className="font-bold text-sm" style={{ color: FT.navy }}>
+          <div className="font-bold text-sm" style={{ color: 'var(--navy)' }}>
             {worker.nome}
           </div>
         </div>
@@ -110,7 +110,7 @@ function WorkerRow({ worker, isOpen, onToggle, onUsarData, onEditarManualmente }
                 <MapPin size={10} />
                 Chegada anterior
               </div>
-              <div className="font-black text-base" style={{ color: FT.navy }}>
+              <div className="font-black text-base" style={{ color: 'var(--navy)' }}>
                 {worker.chegadaAnterior.data}
               </div>
               <div className="text-xs" style={{ color: '#8891A0' }}>
@@ -156,7 +156,7 @@ function WorkerRow({ worker, isOpen, onToggle, onUsarData, onEditarManualmente }
                 Partida sugerida
                 <Calendar size={10} />
               </div>
-              <div className="font-black text-base" style={{ color: FT.navy }}>
+              <div className="font-black text-base" style={{ color: 'var(--navy)' }}>
                 {worker.partidaSugerida.data}
               </div>
               <div className="text-xs" style={{ color: '#8891A0' }}>
@@ -193,7 +193,7 @@ function WorkerRow({ worker, isOpen, onToggle, onUsarData, onEditarManualmente }
             <button
               onClick={onEditarManualmente}
               className="text-xs font-bold px-3.5 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
-              style={{ color: FT.navy, background: 'transparent' }}
+              style={{ color: 'var(--navy)', background: 'transparent' }}
             >
               Editar manualmente
             </button>

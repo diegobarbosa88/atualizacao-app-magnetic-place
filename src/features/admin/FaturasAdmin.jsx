@@ -71,7 +71,7 @@ function ModalDetalhe({ fatura, onClose }) {
             href={fatura.url}
             download={fatura.filename}
             className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-2xl text-sm font-black uppercase tracking-widest transition-all border-2 hover:bg-slate-50"
-            style={{ borderColor: FT.slate, color: FT.navy }}
+            style={{ borderColor: FT.slate, color: 'var(--navy)' }}
           >
             <Download size={16} /> Baixar PDF Original
           </a>
@@ -435,22 +435,22 @@ export default function FaturasAdmin() {
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl sm:text-2xl font-black flex items-center gap-2" style={{ color: FT.navy }}>
-          <FileText size={22} style={{ color: FT.navy }} />
+        <h2 className="text-xl sm:text-2xl font-black flex items-center gap-2" style={{ color: 'var(--navy)' }}>
+          <FileText size={22} style={{ color: 'var(--navy)' }} />
           Faturas Importadas
         </h2>
         <div className="flex items-center gap-2">
           <button onClick={() => handleGerarPDF(faturas.filter(f => f.status === 'PAGO'))}
             disabled={gerandoPdf || faturas.filter(f => f.status === 'PAGO').length === 0}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all disabled:opacity-50 border-2 hover:bg-slate-50"
-            style={{ borderColor: FT.slate, color: FT.navy }}>
+            style={{ borderColor: FT.slate, color: 'var(--navy)' }}>
             {gerandoPdf ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />}
             <span className="hidden sm:inline">Reconciliadas</span>
           </button>
           <button onClick={() => handleGerarPDF()}
             disabled={gerandoPdf || faturasFiltradas.length === 0}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all disabled:opacity-50 border-2 hover:bg-slate-50"
-            style={{ borderColor: FT.slate, color: FT.navy }}>
+            style={{ borderColor: FT.slate, color: 'var(--navy)' }}>
             {gerandoPdf ? <Loader2 size={14} className="animate-spin" /> : <Printer size={14} />}
             <span className="hidden sm:inline">{selecionados.size > 0 ? `PDF (${selecionados.size})` : 'PDF'}</span>
           </button>
@@ -490,7 +490,7 @@ export default function FaturasAdmin() {
             onClick={handleImportarComprovativos}
             disabled={importandoComp}
             className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-widest transition-all disabled:opacity-50 border-2 hover:bg-slate-50"
-            style={{ borderColor: FT.slate, color: FT.navy }}
+            style={{ borderColor: FT.slate, color: 'var(--navy)' }}
           >
             {importandoComp ? <Loader2 size={14} className="animate-spin" /> : <Receipt size={14} />}
             {importandoComp ? 'A importar...' : 'Importar Comprovativos'}

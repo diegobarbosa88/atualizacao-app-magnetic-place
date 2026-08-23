@@ -60,8 +60,8 @@ export default function FornecedorList() {
           />
         </div>
         <div className="flex items-center gap-1 p-1 bg-[var(--surface-dim)] rounded-xl">
-          <button onClick={() => setView('list')} className={`p-1.5 rounded-lg transition-colors ${view === 'list' ? 'bg-white shadow-sm' : 'text-[var(--slate)] hover:text-[var(--ink-soft)]'}`} style={view === 'list' ? { color: FT.navy } : {}}><List size={15} /></button>
-          <button onClick={() => setView('grid')} className={`p-1.5 rounded-lg transition-colors ${view === 'grid' ? 'bg-white shadow-sm' : 'text-[var(--slate)] hover:text-[var(--ink-soft)]'}`} style={view === 'grid' ? { color: FT.navy } : {}}><LayoutGrid size={15} /></button>
+          <button onClick={() => setView('list')} className={`p-1.5 rounded-lg transition-colors ${view === 'list' ? 'bg-white shadow-sm' : 'text-[var(--slate)] hover:text-[var(--ink-soft)]'}`} style={view === 'list' ? { color: 'var(--navy)' } : {}}><List size={15} /></button>
+          <button onClick={() => setView('grid')} className={`p-1.5 rounded-lg transition-colors ${view === 'grid' ? 'bg-white shadow-sm' : 'text-[var(--slate)] hover:text-[var(--ink-soft)]'}`} style={view === 'grid' ? { color: 'var(--navy)' } : {}}><LayoutGrid size={15} /></button>
         </div>
       </div>
 
@@ -161,7 +161,7 @@ export default function FornecedorList() {
                   <div className="p-1.5 rounded-lg" style={{ backgroundColor: 'rgba(134,154,175,0.2)' }}>
                     <Truck size={14} style={{ color: FT.slate }} />
                   </div>
-                  <span className="text-xs font-black truncate max-w-[160px]" style={{ color: FT.navy }}>{f.nome}</span>
+                  <span className="text-xs font-black truncate max-w-[160px]" style={{ color: 'var(--navy)' }}>{f.nome}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   {f.debito_automatico && (

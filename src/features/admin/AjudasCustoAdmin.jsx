@@ -67,7 +67,7 @@ function EvidenciaExpandida({ evidencia }) {
                   <td className="py-1.5 pr-3 text-slate-600">{ev.workerId}</td>
                   <td className="py-1.5 pr-3 text-right text-slate-700">{fmtHoras(ev.horasCliente)}</td>
                   <td className="py-1.5 pr-3 text-right text-slate-400">{fmtHoras(ev.horasTotalTrabalhadorNoMes)}</td>
-                  <td className="py-1.5 pr-3 text-right font-bold" style={{ color: FT.navy }}>{fmtPct(ev.pctHorasCliente)}</td>
+                  <td className="py-1.5 pr-3 text-right font-bold" style={{ color: 'var(--navy)' }}>{fmtPct(ev.pctHorasCliente)}</td>
                   <td className="py-1.5 pr-3 text-right text-slate-400">{fmtEur(ev.ajudaCustoDoMes)}</td>
                   <td className="py-1.5 text-right font-bold text-slate-700">{fmtEur(ev.ajudaAtribuidaProporcional)}</td>
                 </tr>
@@ -96,7 +96,7 @@ function LinhaCliente({ candidato, nomeCliente, decisao, onDecidir, salvando, ex
           </button>
         </td>
         <td className="px-4 py-3 text-right text-slate-600">{fmtHoras(horasTotalCliente)}</td>
-        <td className="px-4 py-3 text-right font-bold" style={{ color: FT.navy }}>{fmtPct(pctTopo)}</td>
+        <td className="px-4 py-3 text-right font-bold" style={{ color: 'var(--navy)' }}>{fmtPct(pctTopo)}</td>
         <td className="px-4 py-3 text-right text-slate-700">{fmtEur(ajudaTotalAtribuida)}</td>
         <td className="px-4 py-3">
           <div className="flex items-center justify-center gap-1.5">
@@ -459,7 +459,7 @@ function CardPercentagem({ titulo, registo, destaque, workersMap, interativo, re
           </span>
         )}
       </div>
-      <p className="text-3xl font-black" style={{ color: FT.navy }}>{fmtPct(registo.percentagem)}</p>
+      <p className="text-3xl font-black" style={{ color: 'var(--navy)' }}>{fmtPct(registo.percentagem)}</p>
       <div className="grid grid-cols-2 gap-3 text-xs">
         <div>
           <p className="text-slate-400 font-semibold">Período</p>
@@ -1213,7 +1213,7 @@ function EstimativaMensalTab({ onIrParaElegibilidade }) {
               <tfoot>
                 <tr className="border-t border-slate-200 bg-slate-50">
                   <td colSpan={4} className="px-4 py-3 text-right text-[10px] font-black uppercase tracking-widest text-slate-500">Total (linhas calculadas)</td>
-                  <td className="px-4 py-3 text-right font-black" style={{ color: FT.navy }}>{fmtEur(totalFinal)}</td>
+                  <td className="px-4 py-3 text-right font-black" style={{ color: 'var(--navy)' }}>{fmtEur(totalFinal)}</td>
                   <td colSpan={2}></td>
                 </tr>
               </tfoot>

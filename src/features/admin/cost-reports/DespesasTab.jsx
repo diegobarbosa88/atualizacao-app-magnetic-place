@@ -35,7 +35,7 @@ export default function DespesasTab({
   return (
     <div>
       <div className="flex items-center justify-end mb-4">
-        <button onClick={() => { setExpenseForm({ id: null, name: '', amount: '', type: 'fixo', date: toISODateLocal(new Date()) }); setIsAddingExpense(!isAddingExpense); }} className={`px-3 py-2 rounded-xl font-black text-xs uppercase shadow-sm transition-all border-2 ${isAddingExpense ? 'text-white' : 'hover:bg-slate-50'}`} style={isAddingExpense ? { backgroundColor: FT.navy, borderColor: FT.navy } : { borderColor: FT.slate, color: FT.navy }}>
+        <button onClick={() => { setExpenseForm({ id: null, name: '', amount: '', type: 'fixo', date: toISODateLocal(new Date()) }); setIsAddingExpense(!isAddingExpense); }} className={`px-3 py-2 rounded-xl font-black text-xs uppercase shadow-sm transition-all border-2 ${isAddingExpense ? 'text-white' : 'hover:bg-slate-50'}`} style={isAddingExpense ? { backgroundColor: FT.navy, borderColor: FT.navy } : { borderColor: FT.slate, color: 'var(--navy)' }}>
           {isAddingExpense ? 'Fechar' : '+ Despesa'}
         </button>
       </div>

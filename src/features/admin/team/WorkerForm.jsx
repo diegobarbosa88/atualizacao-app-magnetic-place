@@ -328,7 +328,7 @@ const WorkerForm = () => {
                 </div>
                 <div>
                   <label className={lbl}>Admin</label>
-                  <button type="button" onClick={tog('isAdmin')} className={`w-full flex items-center justify-between p-2.5 rounded-lg border text-xs font-semibold transition-all ${workerForm.isAdmin ? '' : 'bg-white border-slate-200 text-slate-500'}`} style={workerForm.isAdmin ? { backgroundColor: 'rgba(27,58,87,0.06)', borderColor: 'rgba(27,58,87,0.25)', color: FT.navy } : {}}>
+                  <button type="button" onClick={tog('isAdmin')} className={`w-full flex items-center justify-between p-2.5 rounded-lg border text-xs font-semibold transition-all ${workerForm.isAdmin ? '' : 'bg-white border-slate-200 text-slate-500'}`} style={workerForm.isAdmin ? { backgroundColor: 'rgba(27,58,87,0.06)', borderColor: 'rgba(27,58,87,0.25)', color: 'var(--navy)' } : {}}>
                     <span>Admin</span>
                     <div className="w-8 h-4 rounded-full relative transition-all" style={{ backgroundColor: workerForm.isAdmin ? FT.navy : '#E2E8F0' }}>
                       <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full shadow transition-all ${workerForm.isAdmin ? 'left-4' : 'left-0.5'}`} />
@@ -382,7 +382,7 @@ const WorkerForm = () => {
                           }));
                         }}
                         className="w-full text-[10px] font-bold uppercase tracking-wide px-2.5 py-2 rounded-lg border border-dashed transition-all hover:bg-slate-50"
-                        style={{ color: FT.navy, borderColor: FT.navy }}
+                        style={{ color: 'var(--navy)', borderColor: FT.navy }}
                         title="Fecha o período atual (guarda no histórico ao gravar) e prepara um novo período em aberto — limpa também as comunicações de admissão/cessação à SS para poderes comunicar de novo."
                       >
                         ↻ Iniciar Novo Período (reentrada)
@@ -399,7 +399,7 @@ const WorkerForm = () => {
                     <div className="col-span-2 border-l-2 border-slate-100 pl-2 space-y-0.5">
                       {employmentHistory.map(p => (
                         <p key={p.id} className="text-[9px] text-slate-400 font-mono leading-tight">
-                          {fmtDate(p.data_inicio)} → {p.data_fim ? fmtDate(p.data_fim) : <span className="font-bold" style={{ color: FT.navy }}>atual</span>}
+                          {fmtDate(p.data_inicio)} → {p.data_fim ? fmtDate(p.data_fim) : <span className="font-bold" style={{ color: 'var(--navy)' }}>atual</span>}
                         </p>
                       ))}
                     </div>
@@ -643,7 +643,7 @@ function AfetacaoCards({
               return (
                 <div key={c.id} className="border border-slate-100 rounded-lg overflow-hidden">
                   <button type="button" onClick={() => setExpandedClientPeriods(prev => ({ ...prev, [c.id]: !prev[c.id] }))} className="w-full flex items-center justify-between px-2.5 py-1.5 hover:bg-slate-50 transition-colors">
-                    <span className="text-[9px] font-black uppercase truncate" style={{ color: FT.navy }}>{c.name}</span>
+                    <span className="text-[9px] font-black uppercase truncate" style={{ color: 'var(--navy)' }}>{c.name}</span>
                     <ChevronDown size={11} className={`text-slate-400 shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
                   </button>
                   {isOpen && (
@@ -715,7 +715,7 @@ function AfetacaoCards({
               return (
                 <div key={s.id} className="border border-slate-100 rounded-lg overflow-hidden">
                   <button type="button" onClick={() => setExpandedSchedulePeriods(prev => ({ ...prev, [s.id]: !prev[s.id] }))} className="w-full flex items-center justify-between px-2.5 py-1.5 hover:bg-slate-50 transition-colors">
-                    <span className="text-[9px] font-black uppercase truncate" style={{ color: FT.navy }}>{s.name}</span>
+                    <span className="text-[9px] font-black uppercase truncate" style={{ color: 'var(--navy)' }}>{s.name}</span>
                     <ChevronDown size={11} className={`text-slate-400 shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
                   </button>
                   {isOpen && (

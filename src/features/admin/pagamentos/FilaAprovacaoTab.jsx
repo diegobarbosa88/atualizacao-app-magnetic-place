@@ -323,7 +323,7 @@ export default function FilaAprovacaoTab() {
               className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
                 tab === key ? '' : 'text-[var(--slate-dim)] hover:text-[var(--ink-soft)]'
               }`}
-              style={tab === key ? { backgroundColor: 'rgba(235,141,0,0.15)', color: FT.navy } : {}}
+              style={tab === key ? { backgroundColor: 'rgba(235,141,0,0.15)', color: 'var(--navy)' } : {}}
             >
               {label}
               {count > 0 && (

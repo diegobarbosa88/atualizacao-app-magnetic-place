@@ -181,7 +181,7 @@ export default function ClientPortalAuditPanel() {
           <button
             onClick={() => setShowFilters(s => !s)}
             className="flex items-center gap-2 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all border-2 hover:bg-[var(--surface)]"
-            style={showFilters || hasFilters ? { borderColor: FT.slate, color: FT.navy, backgroundColor: 'rgba(134,154,175,0.1)' } : { borderColor: 'transparent', color: '#64748b' }}
+            style={showFilters || hasFilters ? { borderColor: FT.slate, color: 'var(--navy)', backgroundColor: 'rgba(134,154,175,0.1)' } : { borderColor: 'transparent', color: '#64748b' }}
           >
             <Filter size={13} /> Filtros {hasFilters && `(${[filterClient, filterAction, filterDateFrom, filterDateTo].filter(Boolean).length})`}
           </button>
@@ -229,7 +229,7 @@ export default function ClientPortalAuditPanel() {
             <button
               onClick={() => { setFilterClient(''); setFilterAction(''); setFilterDateFrom(''); setFilterDateTo(''); }}
               className="col-span-2 sm:col-span-4 text-[10px] font-black uppercase tracking-widest transition-colors hover:opacity-70"
-              style={{ color: FT.navy }}
+              style={{ color: 'var(--navy)' }}
             >
               Limpar filtros
             </button>

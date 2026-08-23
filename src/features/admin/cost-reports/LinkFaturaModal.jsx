@@ -105,7 +105,7 @@ const LinkFaturaModal = ({
                   <p className="text-[10px] text-slate-500">{tx.data} · {(tx.descricao || '').slice(0, 55)}</p>
                 </div>
                 {linkSaving
-                  ? <Loader2 size={13} className="animate-spin" style={{ color: FT.navy }} />
+                  ? <Loader2 size={13} className="animate-spin" style={{ color: 'var(--navy)' }} />
                   : <Plus size={14} style={{ color: FT.slate }} />
                 }
               </button>

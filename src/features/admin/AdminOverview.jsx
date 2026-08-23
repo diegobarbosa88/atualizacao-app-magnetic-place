@@ -296,7 +296,7 @@ export default function AdminOverview({ currentMonth, setCurrentMonth }) {
         <div className="space-y-4 sm:space-y-6 lg:space-y-8">
           <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
             <div className="flex items-center gap-3 mb-6">
-              <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(27,58,87,0.1)', color: FT.navy }}><Trophy size={20} /></div>
+              <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(27,58,87,0.1)', color: 'var(--navy)' }}><Trophy size={20} /></div>
               <h3 className="font-medium text-base text-slate-700">Top Unidades (Horas)</h3>
             </div>
             <div className="space-y-4">
@@ -311,7 +311,7 @@ export default function AdminOverview({ currentMonth, setCurrentMonth }) {
                             {c.pct >= 0 ? '▲' : '▼'} {Math.abs(c.pct)}%
                           </span>
                         )}
-                        <span className="text-xs font-black" style={{ color: FT.navy }}>{formatHours(c.hours)}</span>
+                        <span className="text-xs font-black" style={{ color: 'var(--navy)' }}>{formatHours(c.hours)}</span>
                       </div>
                     </div>
                     <div className="w-full bg-slate-50 rounded-full h-2">
@@ -340,7 +340,7 @@ export default function AdminOverview({ currentMonth, setCurrentMonth }) {
                       <p className="text-xs font-bold text-slate-700 truncate">{workers.find(w => w.id === log.workerId)?.name || 'Colaborador'}</p>
                       <p className="text-[10px] text-slate-400 uppercase tracking-widest">{clients.find(c => c.id === log.clientId)?.name} • {formatLogDate(log.date)}</p>
                     </div>
-                    <div className="text-xs font-black px-2 py-1 rounded-lg shrink-0" style={{ color: FT.navy, backgroundColor: 'rgba(27,58,87,0.08)' }}>
+                    <div className="text-xs font-black px-2 py-1 rounded-lg shrink-0" style={{ color: 'var(--navy)', backgroundColor: 'rgba(27,58,87,0.08)' }}>
                       {formatHours(Number(log.hours) || 0)}
                     </div>
                   </div>

@@ -106,7 +106,7 @@ export default function ClientEnviosPanel({
                 <tr key={c.id} className="border-b border-[var(--border-soft)] hover:bg-[var(--surface)] transition-colors">
                   <td className="px-4 py-3 font-bold text-[var(--ink)]">{c.name}</td>
                   <td className="px-4 py-3 text-[var(--slate-dim)] text-xs hidden sm:table-cell">{c.email || '—'}</td>
-                  <td className="px-4 py-3 text-right font-black tabular-nums" style={{ color: FT.navy }}>{formatHours(c.totalHoras)}h</td>
+                  <td className="px-4 py-3 text-right font-black tabular-nums" style={{ color: 'var(--navy)' }}>{formatHours(c.totalHoras)}h</td>
                   <td className="px-4 py-3 text-center">
                     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wide ${
                       c.status === 'validado' ? 'bg-emerald-100 text-emerald-700' :
@@ -133,7 +133,7 @@ export default function ClientEnviosPanel({
                           <button onClick={() => setPrintingReport({ client: c, logs, workers, clients, month: portalMonthStr, clientApprovals })} className="p-1.5 rounded-lg hover:bg-[var(--surface-dim)] transition-all" style={{ color: FT.slateDim }} title="Relatório"><Download size={13} /></button>
                         </>
                       ) : (
-                        <button onClick={() => { setClienteSelecionado(c); setModalEmailAberto(true); }} className="p-1.5 rounded-lg hover:bg-[var(--surface-dim)] transition-all" style={{ color: FT.navy }} title="Enviar Email"><Mail size={13} /></button>
+                        <button onClick={() => { setClienteSelecionado(c); setModalEmailAberto(true); }} className="p-1.5 rounded-lg hover:bg-[var(--surface-dim)] transition-all" style={{ color: 'var(--navy)' }} title="Enviar Email"><Mail size={13} /></button>
                       )}
                     </div>
                   </td>
@@ -158,7 +158,7 @@ export default function ClientEnviosPanel({
                     {c.status === 'enviado' && <Mail size={10} />}
                     {c.status === 'validado' ? 'Validado' : c.status === 'enviado' ? 'Enviado' : 'Pendente'}
                   </div>
-                  <span className="text-lg font-black" style={{ color: FT.navy }}>{formatHours(c.totalHoras)}h</span>
+                  <span className="text-lg font-black" style={{ color: 'var(--navy)' }}>{formatHours(c.totalHoras)}h</span>
                 </div>
                 <h4 className="font-black text-[var(--ink)] text-sm truncate mb-0.5">{c.name}</h4>
                 <p className="text-[10px] text-[var(--slate-dim)] font-bold truncate mb-3">{c.email || 'Sem email'}</p>
@@ -170,7 +170,7 @@ export default function ClientEnviosPanel({
                   {c.status === 'validado' ? (
                     <>
                       <button onClick={() => handleAnularValidacao(c)} className="flex-1 flex items-center justify-center gap-1.5 py-2 text-rose-500 hover:bg-rose-50 rounded-xl text-[10px] font-black uppercase transition-all border border-rose-100"><RotateCcw size={12} /> Anular</button>
-                      <button onClick={() => setPrintingReport({ client: c, logs, workers, clients, month: portalMonthStr, clientApprovals })} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[10px] font-black uppercase transition-all border hover:bg-[var(--surface)]" style={{ color: FT.navy, borderColor: FT.slate }}><Download size={12} /> Relatório</button>
+                      <button onClick={() => setPrintingReport({ client: c, logs, workers, clients, month: portalMonthStr, clientApprovals })} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[10px] font-black uppercase transition-all border hover:bg-[var(--surface)]" style={{ color: 'var(--navy)', borderColor: FT.slate }}><Download size={12} /> Relatório</button>
                     </>
                   ) : (
                     <button onClick={() => { setClienteSelecionado(c); setModalEmailAberto(true); }} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[10px] font-black uppercase transition-all text-white hover:opacity-90" style={{ backgroundColor: FT.navy }}><Mail size={12} /> {c.status === 'enviado' ? 'Reenviar' : 'Enviar Email'}</button>

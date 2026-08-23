@@ -284,7 +284,7 @@ export default function ScheduleForm() {
                   workers.filter(w => scheduleForm.assignedWorkers?.includes(w.id)).sort((a, b) => a.name.localeCompare(b.name)).map(w => (
                     <div key={w.id} className="p-5 bg-white rounded-2xl border border-slate-100 shadow-md space-y-4 transition-all hover:shadow-lg">
                       <div className="flex items-center justify-between border-b border-slate-50 pb-3">
-                        <span className="font-black text-base" style={{ color: FT.navy }}>{w.name}</span>
+                        <span className="font-black text-base" style={{ color: 'var(--navy)' }}>{w.name}</span>
                         <div className="flex gap-2">
                           {scheduleForm.id && (
                             <button
@@ -361,7 +361,7 @@ export default function ScheduleForm() {
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-bold text-slate-600">{h.data_inicio}</span>
                       <span className="text-slate-400">→</span>
-                      <span className="text-sm font-bold" style={{ color: FT.navy }}>{h.data_fim || 'Atual'}</span>
+                      <span className="text-sm font-bold" style={{ color: 'var(--navy)' }}>{h.data_fim || 'Atual'}</span>
                     </div>
                     <button
                       onClick={() => handleDeleteScheduleHistory(h.id)}
