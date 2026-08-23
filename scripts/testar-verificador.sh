@@ -83,12 +83,12 @@ echo "── cobertura do mapa do conversor ──"
 faltam=$(perl -e '
   my %mapa;
   open my $s, "<", "scripts/converter-neutros.pl" or die "sem conversor\n";
-  while (<$s>) { while (/'"'"'((?:bg|text|border|divide|ring|placeholder)-\d{2,3})'"'"'\s*=>/g) { $mapa{$1} = 1 } }
+  while (<$s>) { while (/'"'"'([a-z][a-z-]*-\d{2,3})'"'"'\s*=>/g) { $mapa{$1} = 1 } }
   close $s;
   my %vistos;
   for my $f (split /\n/, `find src/features/admin src/components/admin -name "*.jsx"`) {
     open my $fh, "<:raw", $f or next; local $/; my $c = <$fh>; close $fh;
-    while ($c =~ /(bg|text|border|divide|ring|placeholder)-slate-(\d{2,3})/g) { $vistos{"$1-$2"} = 1 }
+    while ($c =~ /(?<![\w-])([a-z][a-z-]*)-slate-(\d{2,3})/g) { $vistos{"$1-$2"} = 1 }
   }
   # text-300/400 sao resolvidos pela classificacao icone/texto, nao pelo mapa
   # bg-500 e border-800 ficam DELIBERADAMENTE fora, por razoes DIFERENTES:
@@ -101,8 +101,12 @@ faltam=$(perl -e '
   #              NAO ha risco de export. Ficam fora so porque o destino depende
   #              de o fundo da pre-visualizacao inverter no modo escuro, e isso
   #              decide-se no lote 21K com o ficheiro aberto.
+  #   accent-700 e a cor de um checkbox nativo (accent-color) no mesmo
+  #              ficheiro. Nao e texto nem fundo: e um controlo, e o destino
+  #              tem de continuar visivel nos DOIS modos — o --navy-solid
+  #              desapareceria no escuro. Tambem 21K.
   delete $vistos{"text-300"}; delete $vistos{"text-400"};
-  delete $vistos{"bg-500"};   delete $vistos{"border-800"};
+  delete $vistos{"bg-500"};   delete $vistos{"accent-700"};   delete $vistos{"border-800"};
   my @f = grep { !$mapa{$_} } sort keys %vistos;
   print join(" ", @f);
 ')

@@ -283,6 +283,18 @@ perguntar. E usar sempre a mesma métrica: o script conta **ocorrências**, não
   dá 11,74:1, com o laranja a pertencer a um elemento vizinho. **O lote dos 34 precisa de
   confirmação caso a caso do fundo real, não de conversão em massa** — o script lista candidatos,
   não confirmações. Medir o fundo computado de cada um no browser antes de lhe tocar.
+- **Um teste escrito a partir da mesma premissa do código que testa herda-lhe o ponto cego.** O
+  conversor não conhecia a propriedade `placeholder` (o Tailwind antigo escreve
+  `placeholder-slate-400`, com hífen, não `placeholder:text-slate-400`) e deixou uma classe por
+  converter em silêncio. O teste de cobertura **não podia** tê-lo apanhado: procurava as variantes
+  com a mesma lista `bg|text|border|divide|ring` que o conversor usava. Não era uma segunda opinião,
+  era a mesma opinião escrita duas vezes.
+  **Regra: um teste de cobertura deriva a lista de uma fonte independente do código que verifica.**
+  Aqui isso resolveu-se com uma linha — em vez de repetir a lista de propriedades, o teste passou a
+  capturar qualquer prefixo (`([a-z][a-z-]*)-slate-(\d{2,3})`) directamente do código-fonte, que é a
+  realidade que interessa. À primeira execução acusou logo `accent-slate-700`, um checkbox nativo no
+  RecibosCalculadora que nenhuma das duas listas continha. É a mesma família do detector de
+  laranja+branco: instrumento e verificação a espelhar o mesmo ponto cego.
 - **`constants/rhCategories.js:139`** — a entrada `amberCustom` usa `text-[#854F0B]` sobre
   `bg-[rgba(235,141,0,0.15)]`: 1,73:1 no modo escuro, porque nenhum dos dois hex inverte. É um mapa
   de cor-à-escolha (categorias de documentos), por isso não se converte às cegas — fica com as
