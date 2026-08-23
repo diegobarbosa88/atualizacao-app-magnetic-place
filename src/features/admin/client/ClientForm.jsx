@@ -6,6 +6,7 @@ import {
   AlertTriangle, Info,
 } from 'lucide-react';
 import { getCurrentPosition } from '../../../utils/geoUtils';
+import { FT } from '../../../styles/designTokens';
 
 const FONT_TITLE = "'Barlow Condensed', sans-serif";
 const FONT_MONO = "'IBM Plex Mono', monospace";
@@ -21,7 +22,7 @@ function Field({ label, icon: Icon, span2, children }) {
   );
 }
 
-const INPUT_CLS = "w-full bg-white border-[1.5px] border-[#E4E1D6] rounded-[0.85rem] py-[0.72rem] px-[0.9rem] text-[0.86rem] font-semibold text-[#222b33] outline-none shadow-sm focus:border-[#1B3A57] focus:ring-4 focus:ring-[#1B3A57]/10 transition-all";
+const INPUT_CLS = "w-full bg-white border-[1.5px] border-[#E4E1D6] rounded-[0.85rem] py-[0.72rem] px-[0.9rem] text-[0.86rem] font-semibold text-[#222b33] outline-none shadow-sm focus:border-[var(--navy)] focus:ring-4 focus:ring-[#1B3A57]/10 transition-all";
 
 export default function ClientForm() {
   const { schedules } = useApp();
@@ -76,7 +77,7 @@ export default function ClientForm() {
           {/* IDENTIFICAÇÃO */}
           <div className="bg-[#FAFAF7] border border-[#E5E1D6] rounded-[1.5rem] pt-[1.4rem] px-[1.5rem] pb-[1.6rem] space-y-5">
             <div className="flex items-center gap-2.5">
-              <div className="w-[34px] h-[34px] rounded-[11px] flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(134,154,175,0.16)', color: '#869AAF' }}>
+              <div className="w-[34px] h-[34px] rounded-[11px] flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(134,154,175,0.16)', color: FT.slate }}>
                 <Briefcase size={16} />
               </div>
               <div>
@@ -133,7 +134,7 @@ export default function ClientForm() {
                   />
                   <span
                     className="relative w-[38px] h-[22px] rounded-full shrink-0 transition-colors"
-                    style={{ backgroundColor: clientForm.triggers_limited_mode ? '#EB8D00' : '#D8D2C4' }}
+                    style={{ backgroundColor: clientForm.triggers_limited_mode ? FT.orange : '#D8D2C4' }}
                   >
                     <span
                       className="absolute top-[2px] w-[18px] h-[18px] rounded-full bg-white shadow transition-all"
@@ -158,7 +159,7 @@ export default function ClientForm() {
             </div>
 
             {currentClient && (
-              <div className="relative overflow-hidden flex items-end justify-between gap-4 rounded-[1.15rem] px-[1.35rem] py-[1.15rem] mb-[1.1rem]" style={{ background: 'linear-gradient(135deg, #1B3A57 0%, #20415F 100%)' }}>
+              <div className="relative overflow-hidden flex items-end justify-between gap-4 rounded-[1.15rem] px-[1.35rem] py-[1.15rem] mb-[1.1rem]" style={{ background: `linear-gradient(135deg, ${FT.navy} 0%, ${FT.navyMid} 100%)` }}>
                 <div>
                   <p className="text-[9.5px] font-bold uppercase tracking-widest mb-1" style={{ fontFamily: FONT_MONO, color: '#9fb4c8' }}>Valor / hora atual</p>
                   <p className="font-bold leading-none text-white" style={{ fontFamily: FONT_TITLE, fontSize: '2.5rem' }}>
@@ -184,7 +185,7 @@ export default function ClientForm() {
             </div>
 
             <div className="flex items-start gap-2.5 rounded-[0.85rem] px-[0.8rem] py-[0.65rem] mt-[0.9rem]" style={{ background: '#EEF2F6' }}>
-              <Info size={14} style={{ color: '#869AAF' }} className="shrink-0 mt-0.5" />
+              <Info size={14} style={{ color: FT.slate }} className="shrink-0 mt-0.5" />
               <p className="text-[0.72rem] leading-relaxed font-medium" style={{ color: '#51606E' }}>
                 Ao atualizar o valor/hora, todos os registos futuros e os pendentes do mês atual são atualizados automaticamente com o novo valor.
               </p>
@@ -198,7 +199,7 @@ export default function ClientForm() {
           {/* GEOLOCALIZAÇÃO */}
           <div className="bg-[#F7F8FA] border border-[#E5E1D6] rounded-[1.5rem] py-[1.25rem] px-[1.3rem]">
             <div className="flex items-center gap-2.5 mb-4">
-              <div className="w-[34px] h-[34px] rounded-[11px] flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(134,154,175,0.16)', color: '#869AAF' }}>
+              <div className="w-[34px] h-[34px] rounded-[11px] flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(134,154,175,0.16)', color: FT.slate }}>
                 <MapPin size={16} />
               </div>
               <h4 className="font-bold uppercase tracking-wide text-[0.95rem]" style={{ fontFamily: FONT_MONO, color: '#51606E' }}>Geolocalização</h4>
@@ -220,11 +221,11 @@ export default function ClientForm() {
               />
               <div
                 className="absolute flex items-center justify-center"
-                style={{ left: '50%', top: '50%', transform: 'translate(-50%,-100%)', width: 26, height: 26, borderRadius: '50% 50% 50% 0', background: '#EB8D00', boxShadow: '0 4px 10px rgba(235,141,0,0.4)' }}
+                style={{ left: '50%', top: '50%', transform: 'translate(-50%,-100%)', width: 26, height: 26, borderRadius: '50% 50% 50% 0', background: FT.orange, boxShadow: '0 4px 10px rgba(235,141,0,0.4)' }}
               >
                 <span className="w-2 h-2 rounded-full bg-white" style={{ transform: 'rotate(45deg)' }} />
               </div>
-              <div className="absolute left-2.5 bottom-2.5 bg-white/90 rounded-lg px-2 py-1 text-[9.5px] font-bold" style={{ fontFamily: FONT_MONO, color: '#1B3A57' }}>
+              <div className="absolute left-2.5 bottom-2.5 bg-white/90 rounded-lg px-2 py-1 text-[9.5px] font-bold" style={{ fontFamily: FONT_MONO, color: FT.navy }}>
                 raio {raio}m
               </div>
             </div>
@@ -232,23 +233,23 @@ export default function ClientForm() {
             <div className="grid grid-cols-2 gap-[0.7rem] mb-[0.7rem]">
               <div className="space-y-1">
                 <label className="text-[9px] font-bold uppercase tracking-wider text-[#5C7086]" style={{ fontFamily: FONT_MONO }}>Latitude</label>
-                <input type="number" step="any" value={clientForm.lat ?? ''} onChange={e => setClientForm(prev => ({ ...prev, lat: e.target.value }))} className="w-full bg-white border-[1.5px] border-[#E4E1D6] rounded-[0.7rem] py-[0.55rem] px-[0.7rem] text-[0.78rem] font-bold outline-none shadow-sm focus:border-[#1B3A57] focus:ring-4 focus:ring-[#1B3A57]/10 transition-all" style={{ fontFamily: FONT_MONO }} placeholder="38.7169" />
+                <input type="number" step="any" value={clientForm.lat ?? ''} onChange={e => setClientForm(prev => ({ ...prev, lat: e.target.value }))} className="w-full bg-white border-[1.5px] border-[#E4E1D6] rounded-[0.7rem] py-[0.55rem] px-[0.7rem] text-[0.78rem] font-bold outline-none shadow-sm focus:border-[var(--navy)] focus:ring-4 focus:ring-[#1B3A57]/10 transition-all" style={{ fontFamily: FONT_MONO }} placeholder="38.7169" />
               </div>
               <div className="space-y-1">
                 <label className="text-[9px] font-bold uppercase tracking-wider text-[#5C7086]" style={{ fontFamily: FONT_MONO }}>Longitude</label>
-                <input type="number" step="any" value={clientForm.lng ?? ''} onChange={e => setClientForm(prev => ({ ...prev, lng: e.target.value }))} className="w-full bg-white border-[1.5px] border-[#E4E1D6] rounded-[0.7rem] py-[0.55rem] px-[0.7rem] text-[0.78rem] font-bold outline-none shadow-sm focus:border-[#1B3A57] focus:ring-4 focus:ring-[#1B3A57]/10 transition-all" style={{ fontFamily: FONT_MONO }} placeholder="-9.1399" />
+                <input type="number" step="any" value={clientForm.lng ?? ''} onChange={e => setClientForm(prev => ({ ...prev, lng: e.target.value }))} className="w-full bg-white border-[1.5px] border-[#E4E1D6] rounded-[0.7rem] py-[0.55rem] px-[0.7rem] text-[0.78rem] font-bold outline-none shadow-sm focus:border-[var(--navy)] focus:ring-4 focus:ring-[#1B3A57]/10 transition-all" style={{ fontFamily: FONT_MONO }} placeholder="-9.1399" />
               </div>
             </div>
             <div className="space-y-1 mb-3">
               <label className="text-[9px] font-bold uppercase tracking-wider text-[#5C7086]" style={{ fontFamily: FONT_MONO }}>Raio (metros)</label>
-              <input type="number" value={clientForm.geo_radius_m ?? 200} onChange={e => setClientForm(prev => ({ ...prev, geo_radius_m: e.target.value }))} className="w-full bg-white border-[1.5px] border-[#E4E1D6] rounded-[0.7rem] py-[0.55rem] px-[0.7rem] text-[0.78rem] font-bold outline-none shadow-sm focus:border-[#1B3A57] focus:ring-4 focus:ring-[#1B3A57]/10 transition-all" style={{ fontFamily: FONT_MONO }} placeholder="200" />
+              <input type="number" value={clientForm.geo_radius_m ?? 200} onChange={e => setClientForm(prev => ({ ...prev, geo_radius_m: e.target.value }))} className="w-full bg-white border-[1.5px] border-[#E4E1D6] rounded-[0.7rem] py-[0.55rem] px-[0.7rem] text-[0.78rem] font-bold outline-none shadow-sm focus:border-[var(--navy)] focus:ring-4 focus:ring-[#1B3A57]/10 transition-all" style={{ fontFamily: FONT_MONO }} placeholder="200" />
             </div>
 
             <button
               onClick={handleUseCurrentLocation}
               disabled={geoLoading}
               className="w-full flex items-center justify-center gap-2 disabled:opacity-50 px-4 py-2.5 rounded-xl font-bold text-[10.5px] uppercase tracking-wide shadow-sm transition-all border-[1.5px] hover:bg-white"
-              style={{ fontFamily: FONT_MONO, borderColor: '#869AAF', color: '#1B3A57' }}
+              style={{ fontFamily: FONT_MONO, borderColor: FT.slate, color: FT.navy }}
             >
               {geoLoading ? <Loader2 size={13} className="animate-spin" /> : <Navigation size={13} />}
               Usar localização atual
@@ -269,13 +270,13 @@ export default function ClientForm() {
           {/* HORÁRIOS */}
           <div className="bg-[#F7F8FA] border border-[#E5E1D6] rounded-[1.5rem] py-[1.25rem] px-[1.3rem]">
             <div className="flex items-center gap-2.5 mb-3.5">
-              <div className="w-[34px] h-[34px] rounded-[11px] flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(134,154,175,0.16)', color: '#869AAF' }}>
+              <div className="w-[34px] h-[34px] rounded-[11px] flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(134,154,175,0.16)', color: FT.slate }}>
                 <Clock size={16} />
               </div>
               <h4 className="font-bold uppercase tracking-wide text-[0.95rem]" style={{ fontFamily: FONT_MONO, color: '#51606E' }}>Horários</h4>
               <span
                 className="ml-auto text-[9.5px] font-bold px-2 py-0.5 rounded-full text-white"
-                style={{ fontFamily: FONT_MONO, backgroundColor: '#1B3A57' }}
+                style={{ fontFamily: FONT_MONO, backgroundColor: FT.navy }}
               >
                 {(clientForm.assignedSchedules || []).length} selec.
               </span>
@@ -298,8 +299,8 @@ export default function ClientForm() {
                     className="flex items-center gap-1.5 rounded-[0.6rem] px-2.5 py-1.5 text-[10px] font-bold border-[1.5px] transition-all"
                     style={{
                       fontFamily: FONT_MONO,
-                      backgroundColor: isAssigned ? '#1B3A57' : '#fff',
-                      borderColor: isAssigned ? '#1B3A57' : '#E4E1D6',
+                      backgroundColor: isAssigned ? FT.navy : '#fff',
+                      borderColor: isAssigned ? FT.navy : '#E4E1D6',
                       color: isAssigned ? '#fff' : '#5b6570',
                     }}
                   >

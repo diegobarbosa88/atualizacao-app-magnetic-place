@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Shield, ChevronDown, ChevronRight, Filter } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
+import { FT } from '../../../styles/designTokens';
 
 const ACTION_LABELS = {
   log_criado:      { label: 'Registo Criado',   color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
@@ -80,7 +81,7 @@ function ClientGroup({ clientName, clientId, entries }) {
         onClick={() => setExpanded(e => !e)}
         className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors text-left border-b border-slate-100"
       >
-        <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-[10px] font-black" style={{ backgroundColor: '#1B3A57', color: '#EB8D00' }}>
+        <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-[10px] font-black" style={{ backgroundColor: FT.navy, color: FT.orange }}>
           {getClientInitials(clientName || clientId)}
         </div>
         <div className="flex-1 min-w-0">
@@ -167,7 +168,7 @@ export default function ClientPortalAuditPanel() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(134,154,175,0.15)' }}>
-            <Shield size={16} style={{ color: '#869AAF' }} />
+            <Shield size={16} style={{ color: FT.slate }} />
           </div>
           <div>
             <h3 className="font-black text-slate-800 text-base uppercase tracking-tight">Auditoria Portal do Cliente</h3>
@@ -180,7 +181,7 @@ export default function ClientPortalAuditPanel() {
           <button
             onClick={() => setShowFilters(s => !s)}
             className="flex items-center gap-2 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all border-2 hover:bg-slate-50"
-            style={showFilters || hasFilters ? { borderColor: '#869AAF', color: '#1B3A57', backgroundColor: 'rgba(134,154,175,0.1)' } : { borderColor: 'transparent', color: '#64748b' }}
+            style={showFilters || hasFilters ? { borderColor: FT.slate, color: FT.navy, backgroundColor: 'rgba(134,154,175,0.1)' } : { borderColor: 'transparent', color: '#64748b' }}
           >
             <Filter size={13} /> Filtros {hasFilters && `(${[filterClient, filterAction, filterDateFrom, filterDateTo].filter(Boolean).length})`}
           </button>
@@ -197,7 +198,7 @@ export default function ClientPortalAuditPanel() {
             <select
               value={filterClient}
               onChange={e => setFilterClient(e.target.value)}
-              className="w-full px-2 py-1.5 text-xs border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#1B3A57]"
+              className="w-full px-2 py-1.5 text-xs border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[var(--navy)]"
             >
               <option value="">Todos</option>
               {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -208,7 +209,7 @@ export default function ClientPortalAuditPanel() {
             <select
               value={filterAction}
               onChange={e => setFilterAction(e.target.value)}
-              className="w-full px-2 py-1.5 text-xs border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#1B3A57]"
+              className="w-full px-2 py-1.5 text-xs border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[var(--navy)]"
             >
               <option value="">Todas</option>
               {Object.entries(ACTION_LABELS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
@@ -217,18 +218,18 @@ export default function ClientPortalAuditPanel() {
           <div>
             <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1 block">De</label>
             <input type="date" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)}
-              className="w-full px-2 py-1.5 text-xs border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#1B3A57]" />
+              className="w-full px-2 py-1.5 text-xs border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[var(--navy)]" />
           </div>
           <div>
             <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Até</label>
             <input type="date" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)}
-              className="w-full px-2 py-1.5 text-xs border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#1B3A57]" />
+              className="w-full px-2 py-1.5 text-xs border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[var(--navy)]" />
           </div>
           {hasFilters && (
             <button
               onClick={() => { setFilterClient(''); setFilterAction(''); setFilterDateFrom(''); setFilterDateTo(''); }}
               className="col-span-2 sm:col-span-4 text-[10px] font-black uppercase tracking-widest transition-colors hover:opacity-70"
-              style={{ color: '#1B3A57' }}
+              style={{ color: FT.navy }}
             >
               Limpar filtros
             </button>
@@ -247,7 +248,7 @@ export default function ClientPortalAuditPanel() {
         </div>
       ) : loading ? (
         <div className="flex items-center justify-center py-16">
-          <div className="w-8 h-8 border-4 border-slate-200 rounded-full animate-spin" style={{ borderTopColor: '#1B3A57' }} />
+          <div className="w-8 h-8 border-4 border-slate-200 rounded-full animate-spin" style={{ borderTopColor: FT.navy }} />
         </div>
       ) : grouped.length === 0 ? (
         <div className="bg-white rounded-2xl border border-slate-100 p-12 text-center">

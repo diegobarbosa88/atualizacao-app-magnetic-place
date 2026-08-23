@@ -6,6 +6,7 @@ import {
 import { useApp } from '../../../context/AppContext';
 import { calculateDuration, formatHours } from '../../../utils/formatUtils';
 import { toISODateLocal } from '../../../utils/dateUtils';
+import { FT } from '../../../styles/designTokens';
 import { sendValidationEmail } from '../../../utils/emailUtils';
 import { shouldSendNotification } from '../../../config';
 
@@ -78,14 +79,14 @@ export default function ClientEnviosPanel({
         <div className="flex items-center gap-1.5 bg-white p-1.5 rounded-xl shadow-sm border border-slate-100">
           <button onClick={() => setPortalMonth(new Date(portalMonth.getFullYear(), portalMonth.getMonth() - 1, 1))} className="p-1.5 hover:bg-slate-50 rounded-lg transition-all text-slate-400"><ChevronLeft size={15} /></button>
           <div className="flex items-center gap-1.5 px-2 border-x border-slate-100">
-            <Calendar size={13} style={{ color: '#869AAF' }} />
+            <Calendar size={13} style={{ color: FT.slate }} />
             <span className="text-xs font-black uppercase text-slate-700">{portalMonth.toLocaleDateString('pt-PT', { month: 'short', year: 'numeric' })}</span>
           </div>
           <button onClick={() => setPortalMonth(new Date(portalMonth.getFullYear(), portalMonth.getMonth() + 1, 1))} className="p-1.5 hover:bg-slate-50 rounded-lg transition-all text-slate-400"><ChevronRight size={15} /></button>
         </div>
         <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-2xl shrink-0">
-          <button onClick={() => setView('list')} className={`p-1.5 rounded-xl transition-all ${view === 'list' ? 'text-white' : 'text-slate-400 hover:text-slate-600'}`} style={view === 'list' ? { backgroundColor: '#1B3A57' } : {}}><LayoutList size={14} /></button>
-          <button onClick={() => setView('grid')} className={`p-1.5 rounded-xl transition-all ${view === 'grid' ? 'text-white' : 'text-slate-400 hover:text-slate-600'}`} style={view === 'grid' ? { backgroundColor: '#1B3A57' } : {}}><LayoutGrid size={14} /></button>
+          <button onClick={() => setView('list')} className={`p-1.5 rounded-xl transition-all ${view === 'list' ? 'text-white' : 'text-slate-400 hover:text-slate-600'}`} style={view === 'list' ? { backgroundColor: FT.navy } : {}}><LayoutList size={14} /></button>
+          <button onClick={() => setView('grid')} className={`p-1.5 rounded-xl transition-all ${view === 'grid' ? 'text-white' : 'text-slate-400 hover:text-slate-600'}`} style={view === 'grid' ? { backgroundColor: FT.navy } : {}}><LayoutGrid size={14} /></button>
         </div>
       </div>
 
@@ -105,7 +106,7 @@ export default function ClientEnviosPanel({
                 <tr key={c.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
                   <td className="px-4 py-3 font-bold text-slate-800">{c.name}</td>
                   <td className="px-4 py-3 text-slate-400 text-xs hidden sm:table-cell">{c.email || '—'}</td>
-                  <td className="px-4 py-3 text-right font-black tabular-nums" style={{ color: '#1B3A57' }}>{formatHours(c.totalHoras)}h</td>
+                  <td className="px-4 py-3 text-right font-black tabular-nums" style={{ color: FT.navy }}>{formatHours(c.totalHoras)}h</td>
                   <td className="px-4 py-3 text-center">
                     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wide ${
                       c.status === 'validado' ? 'bg-emerald-100 text-emerald-700' :
@@ -122,17 +123,17 @@ export default function ClientEnviosPanel({
                       if (!c.share_token) { alert('Este cliente não tem share_token gerado.'); return; }
                       const link = `https://painelcliente.magneticplace.pt/?token=${encodeURIComponent(c.share_token)}&month=${encodeURIComponent(portalMonthStr)}`;
                       navigator.clipboard.writeText(link);
-                    }} className="p-1.5 rounded-lg hover:bg-slate-100 transition-all" style={{ color: '#869AAF' }} title="Copiar Link"><Link size={13} /></button>
+                    }} className="p-1.5 rounded-lg hover:bg-slate-100 transition-all" style={{ color: FT.slate }} title="Copiar Link"><Link size={13} /></button>
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-1">
                       {c.status === 'validado' ? (
                         <>
                           <button onClick={() => handleAnularValidacao(c)} className="p-1.5 text-rose-400 hover:bg-rose-50 rounded-lg transition-all" title="Anular"><RotateCcw size={13} /></button>
-                          <button onClick={() => setPrintingReport({ client: c, logs, workers, clients, month: portalMonthStr, clientApprovals })} className="p-1.5 rounded-lg hover:bg-slate-100 transition-all" style={{ color: '#869AAF' }} title="Relatório"><Download size={13} /></button>
+                          <button onClick={() => setPrintingReport({ client: c, logs, workers, clients, month: portalMonthStr, clientApprovals })} className="p-1.5 rounded-lg hover:bg-slate-100 transition-all" style={{ color: FT.slate }} title="Relatório"><Download size={13} /></button>
                         </>
                       ) : (
-                        <button onClick={() => { setClienteSelecionado(c); setModalEmailAberto(true); }} className="p-1.5 rounded-lg hover:bg-slate-100 transition-all" style={{ color: '#1B3A57' }} title="Enviar Email"><Mail size={13} /></button>
+                        <button onClick={() => { setClienteSelecionado(c); setModalEmailAberto(true); }} className="p-1.5 rounded-lg hover:bg-slate-100 transition-all" style={{ color: FT.navy }} title="Enviar Email"><Mail size={13} /></button>
                       )}
                     </div>
                   </td>
@@ -157,22 +158,22 @@ export default function ClientEnviosPanel({
                     {c.status === 'enviado' && <Mail size={10} />}
                     {c.status === 'validado' ? 'Validado' : c.status === 'enviado' ? 'Enviado' : 'Pendente'}
                   </div>
-                  <span className="text-lg font-black" style={{ color: '#1B3A57' }}>{formatHours(c.totalHoras)}h</span>
+                  <span className="text-lg font-black" style={{ color: FT.navy }}>{formatHours(c.totalHoras)}h</span>
                 </div>
                 <h4 className="font-black text-slate-800 text-sm truncate mb-0.5">{c.name}</h4>
                 <p className="text-[10px] text-slate-400 font-bold truncate mb-3">{c.email || 'Sem email'}</p>
                 <div className="flex items-center gap-1.5 mb-3 bg-slate-50 rounded-xl p-2 border border-slate-100">
                   <span className="text-[9px] font-mono text-slate-400 truncate flex-1">{linkUnico ? linkUnico.replace(/.*\?/, '?') : 'Sem share_token'}</span>
-                  <button disabled={!linkUnico} onClick={() => linkUnico && navigator.clipboard.writeText(linkUnico)} className="text-slate-300 hover:text-[#869AAF] transition-colors shrink-0 disabled:opacity-30"><Copy size={12} /></button>
+                  <button disabled={!linkUnico} onClick={() => linkUnico && navigator.clipboard.writeText(linkUnico)} className="text-slate-300 hover:text-[var(--slate)] transition-colors shrink-0 disabled:opacity-30"><Copy size={12} /></button>
                 </div>
                 <div className="flex gap-2">
                   {c.status === 'validado' ? (
                     <>
                       <button onClick={() => handleAnularValidacao(c)} className="flex-1 flex items-center justify-center gap-1.5 py-2 text-rose-500 hover:bg-rose-50 rounded-xl text-[10px] font-black uppercase transition-all border border-rose-100"><RotateCcw size={12} /> Anular</button>
-                      <button onClick={() => setPrintingReport({ client: c, logs, workers, clients, month: portalMonthStr, clientApprovals })} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[10px] font-black uppercase transition-all border hover:bg-slate-50" style={{ color: '#1B3A57', borderColor: '#869AAF' }}><Download size={12} /> Relatório</button>
+                      <button onClick={() => setPrintingReport({ client: c, logs, workers, clients, month: portalMonthStr, clientApprovals })} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[10px] font-black uppercase transition-all border hover:bg-slate-50" style={{ color: FT.navy, borderColor: FT.slate }}><Download size={12} /> Relatório</button>
                     </>
                   ) : (
-                    <button onClick={() => { setClienteSelecionado(c); setModalEmailAberto(true); }} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[10px] font-black uppercase transition-all text-white hover:opacity-90" style={{ backgroundColor: '#1B3A57' }}><Mail size={12} /> {c.status === 'enviado' ? 'Reenviar' : 'Enviar Email'}</button>
+                    <button onClick={() => { setClienteSelecionado(c); setModalEmailAberto(true); }} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[10px] font-black uppercase transition-all text-white hover:opacity-90" style={{ backgroundColor: FT.navy }}><Mail size={12} /> {c.status === 'enviado' ? 'Reenviar' : 'Enviar Email'}</button>
                   )}
                 </div>
               </div>

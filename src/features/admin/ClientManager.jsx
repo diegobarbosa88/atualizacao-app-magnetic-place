@@ -6,7 +6,7 @@ import {
   Briefcase, LayoutGrid, List, Edit2, Trash2, MapPin, Euro, ShieldOff, Send, AlertTriangle, Shield, Search, MoreVertical, Check, X, Building2, Save, Clock
 } from 'lucide-react';
 import Card, { CardGrid } from '../../components/common/Card';
-import { FONT_TITLE, FONT_MONO } from '../../styles/designTokens';
+import { FT, FONT_TITLE, FONT_MONO } from '../../styles/designTokens';
 import ClientForm from './client/ClientForm';
 import ClientEnviosPanel from './client/ClientEnviosPanel';
 import CorrectionsInbox from './corrections/CorrectionsInbox';
@@ -130,8 +130,8 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
         activeTab={clientSubTab}
         onTabChange={setClientSubTab}
         stats={[
-          { label: 'Clientes ativos', value: clients.length, colorText: '#1B3A57', dotColor: '#869AAF' },
-          { label: 'Valor/hora médio', value: `${valorMedio.toFixed(2)}€`, colorText: '#C97600', dotColor: '#EB8D00' },
+          { label: 'Clientes ativos', value: clients.length, colorText: FT.navy, dotColor: FT.slate },
+          { label: 'Valor/hora médio', value: `${valorMedio.toFixed(2)}€`, colorText: FT.orangeDeep, dotColor: FT.orange },
           { label: 'Modo limitado', value: clientesLimitados, colorText: '#B8791F', dotColor: '#D98A2B' },
           { label: 'Sem morada', value: clientesSemMorada, colorText: '#B4432F', dotColor: '#B4432F' },
         ]}
@@ -164,15 +164,15 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
             placeholder="Pesquisar cliente..."
             value={clientsSearch}
             onChange={e => setClientsSearch(e.target.value)}
-            className="pl-8 pr-3 py-2 text-xs border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#1B3A57] w-48 sm:w-64"
+            className="pl-8 pr-3 py-2 text-xs border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[var(--navy)] w-48 sm:w-64"
           />
         </div>
         <div className="flex items-center gap-2">
           <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl p-1">
-            <button onClick={() => setClientsView('grid')} className={`p-2 rounded-lg transition-all ${clientsView === 'grid' ? 'text-white' : 'text-slate-400 hover:text-slate-600'}`} style={clientsView === 'grid' ? { backgroundColor: '#1B3A57' } : {}} title="Vista em Grade"><LayoutGrid size={18} /></button>
-            <button onClick={() => setClientsView('list')} className={`p-2 rounded-lg transition-all ${clientsView === 'list' ? 'text-white' : 'text-slate-400 hover:text-slate-600'}`} style={clientsView === 'list' ? { backgroundColor: '#1B3A57' } : {}} title="Vista em Lista"><List size={18} /></button>
+            <button onClick={() => setClientsView('grid')} className={`p-2 rounded-lg transition-all ${clientsView === 'grid' ? 'text-white' : 'text-slate-400 hover:text-slate-600'}`} style={clientsView === 'grid' ? { backgroundColor: FT.navy } : {}} title="Vista em Grade"><LayoutGrid size={18} /></button>
+            <button onClick={() => setClientsView('list')} className={`p-2 rounded-lg transition-all ${clientsView === 'list' ? 'text-white' : 'text-slate-400 hover:text-slate-600'}`} style={clientsView === 'list' ? { backgroundColor: FT.navy } : {}} title="Vista em Lista"><List size={18} /></button>
           </div>
-          <button onClick={() => { setClientForm({ id: null, name: '', morada: '', nif: '', valorHora: '', email: '', dataAlteracao: new Date().toISOString().split('T')[0] }); setIsAddingInTab(true); }} className="px-3 sm:px-5 py-2 rounded-xl font-black text-xs uppercase shadow-lg transition-all whitespace-nowrap text-white" style={{ backgroundColor: '#EB8D00' }}>Novo</button>
+          <button onClick={() => { setClientForm({ id: null, name: '', morada: '', nif: '', valorHora: '', email: '', dataAlteracao: new Date().toISOString().split('T')[0] }); setIsAddingInTab(true); }} className="px-3 sm:px-5 py-2 rounded-xl font-black text-xs uppercase shadow-lg transition-all whitespace-nowrap text-white" style={{ backgroundColor: FT.orange }}>Novo</button>
         </div>
       </div>
 
@@ -195,7 +195,7 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
             <button
               onClick={handleSaveClient}
               className="flex items-center gap-2 px-6 py-3 rounded-2xl text-[11.5px] font-black uppercase tracking-wide shadow-lg transition-all"
-              style={{ background: 'linear-gradient(135deg, #EB8D00, #C97600)', color: '#12293e' }}
+              style={{ background: `linear-gradient(135deg, ${FT.orange}, ${FT.orangeDeep})`, color: '#12293e' }}
             >
               <Save size={15} /> Gravar Cliente
             </button>
@@ -234,7 +234,7 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
                     <p className="text-xs text-slate-400 truncate">NIF: {c.nif || 'N/A'}</p>
                   </td>
                   <td className="hidden sm:table-cell px-4 py-3 text-sm font-bold text-slate-500 truncate">{c.morada || 'N/A'}</td>
-                  <td className="px-4 py-3 text-right text-sm font-bold whitespace-nowrap" style={{ color: '#1B3A57' }}>{c.valorHora ? `${c.valorHora}€` : 'N/A'}</td>
+                  <td className="px-4 py-3 text-right text-sm font-bold whitespace-nowrap" style={{ color: FT.navy }}>{c.valorHora ? `${c.valorHora}€` : 'N/A'}</td>
                   <td className="px-3 py-3 text-right">
                     <div className="relative inline-block">
                       <button
@@ -252,7 +252,7 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
                               onClick={() => { openEditClient(c); setOpenMenuId(null); }}
                               className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-slate-50 group transition-colors"
                             >
-                              <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-slate-100 group-hover:bg-slate-200 transition-colors shrink-0" style={{ color: '#869AAF' }}><Edit2 size={13} /></span>
+                              <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-slate-100 group-hover:bg-slate-200 transition-colors shrink-0" style={{ color: FT.slate }}><Edit2 size={13} /></span>
                               <span className="text-xs font-semibold text-slate-700">Editar</span>
                             </button>
                             <button
@@ -297,12 +297,12 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
             return (
               <Card key={c.id} variant="item" interactive>
                 <div className="flex items-start justify-between mb-[0.7rem]">
-                  <div className="w-[38px] h-[38px] rounded-[11px] flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: '#869AAF' }}>
+                  <div className="w-[38px] h-[38px] rounded-[11px] flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: FT.slate }}>
                     <Briefcase size={17} />
                   </div>
                   <div className="flex items-center gap-1">
                     <button onClick={() => loadClientValorHoraHistory(c.id, c.name)} className="w-[26px] h-[26px] rounded-lg border border-[#E5E1D6] bg-white text-slate-400 hover:text-slate-600 flex items-center justify-center transition-all text-[11px]" title="Histórico de valor">📊</button>
-                    <button onClick={() => openEditClient(c)} className="w-[26px] h-[26px] rounded-lg border border-[#E5E1D6] bg-white text-slate-400 hover:text-[#1B3A57] flex items-center justify-center transition-all" title="Editar"><Edit2 size={12} /></button>
+                    <button onClick={() => openEditClient(c)} className="w-[26px] h-[26px] rounded-lg border border-[#E5E1D6] bg-white text-slate-400 hover:text-[var(--navy)] flex items-center justify-center transition-all" title="Editar"><Edit2 size={12} /></button>
                     {confirmDeleteClientId === c.id ? (
                       <>
                         <button onClick={() => { handleDeleteClient(c.id); setConfirmDeleteClientId(null); }} className="px-2 h-[26px] bg-rose-600 text-white text-[10px] font-black rounded-lg">Sim</button>
@@ -320,7 +320,7 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
                 </p>
 
                 <div className="flex items-center gap-1.5 mt-[0.55rem] text-[11px] font-semibold text-[#5c6a76]">
-                  <MapPin size={12} className="shrink-0" style={{ color: '#869AAF' }} />
+                  <MapPin size={12} className="shrink-0" style={{ color: FT.slate }} />
                   <span className="truncate" title={c.morada || undefined}>{c.morada || 'Sem morada registada'}</span>
                 </div>
 
@@ -336,7 +336,7 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
                 )}
 
                 <div className="flex items-center justify-between mt-[0.85rem] pt-[0.7rem] border-t border-[#F1EFE8]">
-                  <span className="text-[1.15rem] font-bold leading-none text-[#1B3A57]" style={{ fontFamily: FONT_TITLE }}>
+                  <span className="text-[1.15rem] font-bold leading-none text-[var(--navy)]" style={{ fontFamily: FONT_TITLE }}>
                     {c.valorHora ? Number(c.valorHora).toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
                     <span className="text-[10px] font-semibold text-slate-400 ml-0.5">€/h</span>
                   </span>
@@ -388,7 +388,7 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-bold text-slate-600">{h.valor_anterior || 'N/A'}€</span>
                           <span className="text-slate-400">→</span>
-                          <span className="text-sm font-bold" style={{ color: '#1B3A57' }}>{h.valor_novo}€</span>
+                          <span className="text-sm font-bold" style={{ color: FT.navy }}>{h.valor_novo}€</span>
                         </div>
                         <div className="flex items-center gap-3">
                           <span className="text-xs text-slate-400">{new Date(h.data_alteracao).toLocaleDateString('pt-PT')}</span>
