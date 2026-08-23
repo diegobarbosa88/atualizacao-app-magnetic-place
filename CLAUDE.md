@@ -531,13 +531,18 @@ para quem um dia a tomar não ter de as redescobrir:
     de escolher o destino, como no lote do par chip.
 - **`bg-emerald-600` com `text-white` dá 3,77:1** (`corrections/ItemRow.jsx:103`, o botão "aceitar"). O
   irmão `bg-rose-600` passa (4,70:1). Cor semântica, fora dos lotes de neutros.
-- **A regra-ponte do `App.css` não cobre as variantes com opacidade.** `.dark .bg-amber-50` apanha
-  `bg-amber-50`, mas não `bg-amber-50/50` — que o Tailwind compila para outra classe. São 12 casos
-  (`bg-indigo-50/50`, `bg-amber-50/40`, `bg-rose-50/30`…) onde o fundo fica creme claro no modo
-  escuro e o texto por cima, já convertido para tinta que inverte, fica claro-sobre-claro. Já
-  estavam partidos antes da migração pela mesma razão (a ponte também não os cobria com
-  `text-slate-800`), e a conversão melhorou-os marginalmente. São cor semântica, fora do lote de
-  neutros — tratar quando se decidir o que fazer ao bloco-ponte.
+- **A regra-ponte não alcança as variantes com opacidade — e corrigir só isso PIORA.** `.dark
+  .bg-amber-50` apanha `bg-amber-50` mas não `bg-amber-50/50`, que o Tailwind compila para outra
+  classe. São 24 casos. Mas a experiência de alargar a ponte com um selector de atributo
+  (`.dark [class*="bg-amber-50/"]`) mostrou que a correção isolada é **uma regressão**: a regra
+  original não muda só o fundo, muda também o `color` do elemento, e os filhos herdam-no. Um
+  `text-amber-700` dentro da caixa tem cor própria e não herda — hoje fica escuro sobre fundo creme
+  claro (4,93:1, passa); com o fundo invertido e o texto na mesma, fica escuro sobre escuro
+  (3,03:1). Com os dois invertidos daria 9,11:1.
+  **A causa raiz é maior do que os 24 fundos: a ponte cobre fundos de estado e não cobre texto de
+  estado — são 1.025 ocorrências de `text-{amber,emerald,rose,red,indigo,…}-{600,700,800}` sem
+  regra nenhuma no `.dark`.** Tratar metade do par piora; tratar as duas metades é um lote grande e
+  precisa de medir onde é que esses textos assentam em fundos que não invertem. Fica por decidir.
 
 **Cor de marca fora do alcance dos tokens.** Categoria à parte das anteriores: aqui o problema não é
 uma variável que colide, é cor que os tokens não conseguem alcançar de todo. Não se resolve com mais

@@ -100,7 +100,7 @@ export default function ItemRow({ item, supabase, disabled, setCorrectionItems }
             </>
           ) : item.item_status === 'pending' ? (
             <>
-              <button onClick={onAccept} disabled={busy} className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-1"><CheckCircle size={12} /> {acceptLabel}</button>
+              <button onClick={onAccept} disabled={busy} className="px-3 py-1.5 bg-emerald-700 text-white rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-1"><CheckCircle size={12} /> {acceptLabel}</button>
               {kind !== 'remove' && (
                 <button onClick={() => setEditing(true)} className="px-3 py-1.5 bg-[var(--orange)] text-[var(--navy-solid)] rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-1"><Edit2 size={12} /> Editar</button>
               )}
