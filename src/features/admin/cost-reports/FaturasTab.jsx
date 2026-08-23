@@ -227,7 +227,7 @@ export default function FaturasTab({ supabase }) {
                       }
                       return (
                         <div className="flex items-center justify-end gap-2">
-                          <button onClick={() => abrirLinkFaturaModal(f)} className="flex items-center gap-1 px-2 py-1 bg-slate-50 hover:bg-slate-100 rounded-lg text-[9px] font-black uppercase transition-colors" style={{ color: FT.slate }}>
+                          <button onClick={() => abrirLinkFaturaModal(f)} className="flex items-center gap-1 px-2 py-1 bg-slate-50 hover:bg-slate-100 rounded-lg text-[9px] font-black uppercase transition-colors" style={{ color: FT.slateDim }}>
                             <Link2 size={10} /> Ligar
                           </button>
                           {f.status === 'PENDENTE' && (

@@ -308,7 +308,7 @@ function DocCardSingle({ d, onOpenDoc, onDelete, confirmDeleteId, setConfirmDele
           </div>
         ) : (
           <div className="flex items-center justify-center gap-6 pt-2.5 border-t border-slate-100">
-            <button onClick={() => onOpenDoc(d)} title="Ver" className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors" style={{ color: FT.slate }}><Eye size={16} /></button>
+            <button onClick={() => onOpenDoc(d)} title="Ver" className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors" style={{ color: FT.slateDim }}><Eye size={16} /></button>
             {d.source === 'manual' && (
               <button
                 onClick={async () => {
@@ -451,7 +451,7 @@ function DocCardPair({ pair, onOpenDoc, onDelete, confirmDeleteId, setConfirmDel
                   </div>
                 ) : (
                   <div className="flex items-center justify-center gap-4">
-                    <button onClick={() => onOpenDoc(doc)} className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors" style={{ color: FT.slate }} title="Ver"><Eye size={14} /></button>
+                    <button onClick={() => onOpenDoc(doc)} className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors" style={{ color: FT.slateDim }} title="Ver"><Eye size={14} /></button>
                     <button onClick={() => setConfirmDeleteId(doc.id)} className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 transition-colors" title="Apagar"><Trash2 size={14} /></button>
                   </div>
                 )}
@@ -605,7 +605,7 @@ export function WorkerPastaView({ worker, docs, onBack, onOpenDoc, onDelete, onA
           <button
             onClick={onScan}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border-2 hover:bg-slate-50 text-xs font-black transition-colors"
-            style={{ borderColor: FT.slate, color: FT.slate }}
+            style={{ borderColor: FT.slate, color: FT.slateDim }}
           >
             <ScanSearch size={13} /> Scanner
           </button>
@@ -778,7 +778,7 @@ export default function WorkerDocsFolderView({ docs, onPreview, onDeleteManual, 
         <button
           onClick={() => setScannerOpen(true)}
           className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl border-2 hover:bg-slate-50 text-xs font-black transition-colors flex-shrink-0"
-          style={{ borderColor: FT.slate, color: FT.slate }}
+          style={{ borderColor: FT.slate, color: FT.slateDim }}
         >
           <ScanSearch size={13} /> Scanner
         </button>

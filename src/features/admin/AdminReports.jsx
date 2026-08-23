@@ -307,7 +307,7 @@ export default function AdminReports({ printingReport, setPrintingReport }) {
                         } else {
                           setPrintingReport({ isGlobal: true, month: entry.month || null, periodLabel: entry.periodLabel });
                         }
-                      }} className="px-4 py-1.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all hover:bg-slate-50" style={{ color: FT.slate }}>
+                      }} className="px-4 py-1.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all hover:bg-slate-50" style={{ color: FT.slateDim }}>
                         Ver
                       </button>
                     </td>

@@ -140,7 +140,7 @@ export default function ClientesTab({ clientCosts, supabase, selectedMonth }) {
                         estado === 'PAGO' ? 'bg-emerald-100 text-emerald-700' :
                         estado === 'PARCIAL' ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-600'
                       }`}>{estado}</span>
-                      <button onClick={() => abrirLinkModal(item.id, item.name, item.cost)} className="p-1 rounded-lg hover:bg-slate-50 transition-all" style={{ color: FT.slate }} title="Associar pagamento bancário">
+                      <button onClick={() => abrirLinkModal(item.id, item.name, item.cost)} className="p-1 rounded-lg hover:bg-slate-50 transition-all" style={{ color: FT.slateDim }} title="Associar pagamento bancário">
                         <Link2 size={13} />
                       </button>
                     </div>

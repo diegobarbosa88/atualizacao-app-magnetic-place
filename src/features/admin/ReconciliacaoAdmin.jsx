@@ -362,7 +362,7 @@ export default function ReconciliacaoAdmin() {
           )}
           <button onClick={() => setShowForm(v => !v)}
             className="flex items-center gap-2 px-4 py-2 bg-slate-100 rounded-2xl border border-slate-200 hover:bg-slate-200 transition-all text-[10px] font-black uppercase tracking-widest"
-            style={{ color: FT.slate }}>
+            style={{ color: FT.slateDim }}>
             <Plus size={14} /> Inserir Fatura Manual
           </button>
         </div>
@@ -524,7 +524,7 @@ export default function ReconciliacaoAdmin() {
                         className="text-slate-400 hover:text-rose-500 flex-shrink-0"><X size={13} /></button>
                     </div>
                   ))}
-                  <p className="text-[10px] font-bold uppercase tracking-widest pt-1 cursor-pointer hover:underline" style={{ color: FT.slate }}
+                  <p className="text-[10px] font-bold uppercase tracking-widest pt-1 cursor-pointer hover:underline" style={{ color: FT.slateDim }}
                     onClick={() => inputRef.current?.click()}>
                     + Adicionar mais ficheiros
                   </p>
@@ -560,7 +560,7 @@ export default function ReconciliacaoAdmin() {
               </button>
             )}
             {previewing && (
-              <div className="mt-4 flex items-center justify-center gap-2" style={{ color: FT.slate }}>
+              <div className="mt-4 flex items-center justify-center gap-2" style={{ color: FT.slateDim }}>
                 <Loader2 size={18} className="animate-spin" /> A ler ficheiros...
               </div>
             )}

@@ -256,7 +256,7 @@ export default function PagamentosTab() {
             </button>
             <button onClick={handleExportarSEPA} disabled={exportando}
               className="flex items-center gap-1.5 px-3 py-2 border rounded-xl text-xs font-black uppercase tracking-widest transition-all disabled:opacity-60 hover:bg-slate-100"
-              style={{ borderColor: FT.slate, color: FT.slate }}>
+              style={{ borderColor: FT.slate, color: FT.slateDim }}>
               {exportando ? <Loader2 size={12} className="animate-spin" /> : <Download size={12} />}
               Exportar SEPA XML
             </button>

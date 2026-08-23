@@ -749,7 +749,7 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
                 <div className="flex items-center justify-between">
                   <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Linhas da fatura</p>
                   <button onClick={handleGuardarConfig} disabled={guardandoConfig}
-                    className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-slate-100 rounded-lg transition-all disabled:opacity-50" style={{ color: FT.slate }}>
+                    className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-slate-100 rounded-lg transition-all disabled:opacity-50" style={{ color: FT.slateDim }}>
                     {guardandoConfig ? <Loader2 size={11} className="animate-spin" /> : configGuardada ? <CheckCircle size={11} className="text-emerald-500" /> : <Save size={11} />}
                     {configGuardada ? 'Guardado' : 'Guardar padrão'}
                   </button>
@@ -823,7 +823,7 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
 
                   <div className="px-3 py-2 border-t border-slate-100">
                     <button onClick={adicionarLinhaFixa}
-                      className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest hover:opacity-80 transition-colors" style={{ color: FT.slate }}>
+                      className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest hover:opacity-80 transition-colors" style={{ color: FT.slateDim }}>
                       <Plus size={11} /> Adicionar linha
                     </button>
                   </div>
@@ -1229,7 +1229,7 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
                   <p className="text-xs text-red-600 mt-1">{resultado.erro}</p>
                 </div>
                 <button onClick={() => { setPasso(2); setResultado(null); }}
-                  className="px-4 py-2 text-xs font-black uppercase tracking-widest hover:bg-slate-100 rounded-xl transition-all" style={{ color: FT.slate }}>
+                  className="px-4 py-2 text-xs font-black uppercase tracking-widest hover:bg-slate-100 rounded-xl transition-all" style={{ color: FT.slateDim }}>
                   Tentar novamente
                 </button>
               </div>

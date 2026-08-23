@@ -224,7 +224,7 @@ const TeamManagerContent = ({ onLogin }) => {
           <button
             onClick={() => { setInviteEmail(''); setGeneratedLink(''); setInviteModal(true); }}
             className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl font-black text-xs uppercase transition-all whitespace-nowrap border-2 hover:bg-slate-50"
-            style={{ borderColor: FT.slate, color: FT.slate }}
+            style={{ borderColor: FT.slate, color: FT.slateDim }}
             title="Convidar novo colaborador via link de onboarding"
           >
             <UserPlus size={14} /> Convidar
@@ -232,7 +232,7 @@ const TeamManagerContent = ({ onLogin }) => {
           <button
             onClick={() => setScannerOpen(true)}
             className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl font-black text-xs uppercase transition-all whitespace-nowrap border-2 hover:bg-slate-50"
-            style={{ borderColor: FT.slate, color: FT.slate }}
+            style={{ borderColor: FT.slate, color: FT.slateDim }}
             title="Scanner de Documentos com IA"
           >
             <ScanSearch size={14} /> Scanner

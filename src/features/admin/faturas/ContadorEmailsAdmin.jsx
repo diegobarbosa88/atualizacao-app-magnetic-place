@@ -457,7 +457,7 @@ export default function ContadorEmailsAdmin() {
                   <div className="border-t border-slate-100 p-4 sm:p-5 space-y-3 bg-slate-50/50">
                     <div className="flex items-center gap-2">
                       <ShieldAlert size={13} style={{ color: FT.slate }} />
-                      <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: FT.slate }}>
+                      <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: FT.slateDim }}>
                         Revê o texto antes de aprovar — o envio só acontece depois de confirmares
                       </p>
                     </div>
