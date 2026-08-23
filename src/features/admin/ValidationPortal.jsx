@@ -88,30 +88,30 @@ const ValidationPortal = ({
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-5">
         <div className="flex items-center gap-3">
           <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600"><ShieldCheck size={20} /></div>
-          <h3 className="font-black text-base sm:text-xl text-slate-800 uppercase tracking-tight">Portal de Validação</h3>
+          <h3 className="font-black text-base sm:text-xl text-[var(--ink)] uppercase tracking-tight">Portal de Validação</h3>
         </div>
         <div className="flex items-center gap-3">
           <button
             onClick={() => setShowNotifPrefs(true)}
-            className="p-2 bg-white rounded-xl shadow-sm border border-slate-100 text-slate-400 hover:text-indigo-600 hover:border-indigo-200 transition-all"
+            className="p-2 bg-white rounded-xl shadow-sm border border-[var(--border-soft)] text-[var(--slate)] hover:text-indigo-600 hover:border-indigo-200 transition-all"
             title="Preferências de Notificações"
           >
             <Settings size={16} />
           </button>
         </div>
-        <div className="flex items-center gap-1.5 bg-white p-1.5 rounded-xl shadow-sm border border-slate-100">
-          <button onClick={() => setPortalMonth(new Date(portalMonth.getFullYear(), portalMonth.getMonth() - 1, 1))} className="p-1.5 hover:bg-slate-50 rounded-lg transition-all text-slate-400"><ChevronLeft size={15} /></button>
-          <div className="flex items-center gap-1.5 px-2 border-x border-slate-100">
+        <div className="flex items-center gap-1.5 bg-white p-1.5 rounded-xl shadow-sm border border-[var(--border-soft)]">
+          <button onClick={() => setPortalMonth(new Date(portalMonth.getFullYear(), portalMonth.getMonth() - 1, 1))} className="p-1.5 hover:bg-[var(--surface)] rounded-lg transition-all text-[var(--slate)]"><ChevronLeft size={15} /></button>
+          <div className="flex items-center gap-1.5 px-2 border-x border-[var(--border-soft)]">
             <Calendar size={13} className="text-indigo-600" />
-            <span className="text-xs font-black uppercase text-slate-700">{portalMonth.toLocaleDateString('pt-PT', { month: 'short', year: 'numeric' })}</span>
+            <span className="text-xs font-black uppercase text-[var(--ink-mid)]">{portalMonth.toLocaleDateString('pt-PT', { month: 'short', year: 'numeric' })}</span>
           </div>
-          <button onClick={() => setPortalMonth(new Date(portalMonth.getFullYear(), portalMonth.getMonth() + 1, 1))} className="p-1.5 hover:bg-slate-50 rounded-lg transition-all text-slate-400"><ChevronRight size={15} /></button>
+          <button onClick={() => setPortalMonth(new Date(portalMonth.getFullYear(), portalMonth.getMonth() + 1, 1))} className="p-1.5 hover:bg-[var(--surface)] rounded-lg transition-all text-[var(--slate)]"><ChevronRight size={15} /></button>
         </div>
       </div>
 
       {/* Sub-tabs + view toggle */}
       <div className="flex items-center gap-2 mb-4">
-        <div className="grid grid-cols-3 gap-1 bg-slate-100 p-1 rounded-2xl flex-1 max-w-md mx-auto">
+        <div className="grid grid-cols-3 gap-1 bg-[var(--surface-dim)] p-1 rounded-2xl flex-1 max-w-md mx-auto">
         {[
           { id: 'envios', label: 'Envios', icon: Mail },
           { id: 'colaboradores', label: 'Equipa', icon: UserCheck },
@@ -120,7 +120,7 @@ const ValidationPortal = ({
           <button
             key={tab.id}
             onClick={() => setPortalSubTab(tab.id)}
-            className={`flex items-center justify-center gap-1 py-2 rounded-xl text-[10px] font-black uppercase transition-all relative ${portalSubTab === tab.id ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+            className={`flex items-center justify-center gap-1 py-2 rounded-xl text-[10px] font-black uppercase transition-all relative ${portalSubTab === tab.id ? 'bg-white text-indigo-600 shadow-sm' : 'text-[var(--slate-dim)] hover:text-[var(--ink-soft)]'}`}
           >
             <tab.icon size={12} />
             <span className="text-[9px] sm:text-[10px]">{tab.label}</span>
@@ -129,24 +129,24 @@ const ValidationPortal = ({
         ))}
         </div>
         {(portalSubTab === 'envios' || portalSubTab === 'colaboradores') && (
-          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-2xl shrink-0">
-            <button onClick={() => setPortalView('list')} className={`p-1.5 rounded-xl transition-all ${portalView === 'list' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}><LayoutList size={14} /></button>
-            <button onClick={() => setPortalView('grid')} className={`p-1.5 rounded-xl transition-all ${portalView === 'grid' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}><LayoutGrid size={14} /></button>
+          <div className="flex items-center gap-1 bg-[var(--surface-dim)] p-1 rounded-2xl shrink-0">
+            <button onClick={() => setPortalView('list')} className={`p-1.5 rounded-xl transition-all ${portalView === 'list' ? 'bg-white text-indigo-600 shadow-sm' : 'text-[var(--slate)] hover:text-[var(--ink-soft)]'}`}><LayoutList size={14} /></button>
+            <button onClick={() => setPortalView('grid')} className={`p-1.5 rounded-xl transition-all ${portalView === 'grid' ? 'bg-white text-indigo-600 shadow-sm' : 'text-[var(--slate)] hover:text-[var(--ink-soft)]'}`}><LayoutGrid size={14} /></button>
           </div>
         )}
       </div>
 
       {/* Envios Clientes Tab */}
       {portalSubTab === 'envios' && portalView === 'list' && (
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-x-auto animate-in fade-in slide-in-from-bottom-2 duration-300">
+        <div className="bg-white rounded-2xl border border-[var(--border-soft)] shadow-sm overflow-x-auto animate-in fade-in slide-in-from-bottom-2 duration-300">
           <table className="w-full text-sm min-w-[600px]">
-            <thead><tr className="border-b border-slate-100 bg-slate-50">
-              <th className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Cliente</th>
-              <th className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest hidden sm:table-cell">Email</th>
-              <th className="text-right px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Horas</th>
-              <th className="text-center px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Estado</th>
-              <th className="text-center px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Link</th>
-              <th className="text-right px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Ações</th>
+            <thead><tr className="border-b border-[var(--border-soft)] bg-[var(--surface)]">
+              <th className="text-left px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Cliente</th>
+              <th className="text-left px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest hidden sm:table-cell">Email</th>
+              <th className="text-right px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Horas</th>
+              <th className="text-center px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Estado</th>
+              <th className="text-center px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Link</th>
+              <th className="text-right px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Ações</th>
             </tr></thead>
             <tbody>
               {([...clients].map(c => {
@@ -155,9 +155,9 @@ const ValidationPortal = ({
                 const status = approval ? 'validado' : (c.status_email === `enviado_${portalMonthStr}` ? 'enviado' : 'pendente');
                 return { ...c, totalHoras, status };
               })).map(c => (
-                <tr key={c.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
-                  <td className="px-4 py-3 font-bold text-slate-800">{c.name}</td>
-                  <td className="px-4 py-3 text-slate-400 text-xs hidden sm:table-cell">{c.email || '—'}</td>
+                <tr key={c.id} className="border-b border-[var(--border-soft)] hover:bg-[var(--surface)] transition-colors">
+                  <td className="px-4 py-3 font-bold text-[var(--ink)]">{c.name}</td>
+                  <td className="px-4 py-3 text-[var(--slate-dim)] text-xs hidden sm:table-cell">{c.email || '—'}</td>
                   <td className="px-4 py-3 text-right font-black text-indigo-600 tabular-nums">{fmtH(c.totalHoras)}</td>
                   <td className="px-4 py-3 text-center">
                     {c.status === 'validado' && <CheckCircle size={16} className="text-emerald-500 mx-auto" />}
@@ -210,10 +210,10 @@ const ValidationPortal = ({
               ? `https://painelcliente.magneticplace.pt/?token=${encodeURIComponent(c.share_token)}&month=${encodeURIComponent(portalMonthStr)}`
               : null;
             return (
-              <div key={c.id} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-indigo-200 hover:-translate-y-0.5 transition-all duration-200">
+              <div key={c.id} className="bg-white p-5 rounded-2xl border border-[var(--border-soft)] shadow-sm hover:shadow-md hover:border-indigo-200 hover:-translate-y-0.5 transition-all duration-200">
                 {/* Header */}
                 <div className="flex justify-between items-start mb-3">
-                  <div className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase border flex items-center gap-1 ${c.status === 'validado' ? 'text-emerald-600 border-emerald-200 bg-emerald-50' : c.status === 'enviado' ? 'text-blue-600 border-blue-200 bg-blue-50' : 'text-slate-400 border-slate-200 bg-slate-50'}`}>
+                  <div className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase border flex items-center gap-1 ${c.status === 'validado' ? 'text-emerald-600 border-emerald-200 bg-emerald-50' : c.status === 'enviado' ? 'text-blue-600 border-blue-200 bg-blue-50' : 'text-[var(--slate-dim)] border-[var(--border)] bg-[var(--surface)]'}`}>
                     {c.status === 'validado' && <CheckCircle size={10} />}
                     {c.status === 'enviado' && <Mail size={10} />}
                     {c.status === 'validado' ? 'Validado' : c.status === 'enviado' ? 'Enviado' : 'Pendente'}
@@ -221,12 +221,12 @@ const ValidationPortal = ({
                   <span className="text-lg font-black text-indigo-600">{formatHours(c.totalHoras)}h</span>
                 </div>
                 {/* Name */}
-                <h4 className="font-black text-slate-800 text-sm truncate mb-0.5">{c.name}</h4>
-                <p className="text-[10px] text-slate-400 font-bold truncate mb-3">{c.email || 'Sem email'}</p>
+                <h4 className="font-black text-[var(--ink)] text-sm truncate mb-0.5">{c.name}</h4>
+                <p className="text-[10px] text-[var(--slate-dim)] font-bold truncate mb-3">{c.email || 'Sem email'}</p>
                 {/* Link */}
-                <div className="flex items-center gap-1.5 mb-3 bg-slate-50 rounded-xl p-2 border border-slate-100">
-                  <span className="text-[9px] font-mono text-slate-400 truncate flex-1">{linkUnico ? linkUnico.replace(/.*\?/, '?') : 'Sem share_token'}</span>
-                  <button disabled={!linkUnico} onClick={() => linkUnico && navigator.clipboard.writeText(linkUnico)} className="text-slate-300 hover:text-indigo-600 transition-colors shrink-0 disabled:opacity-30"><Copy size={12} /></button>
+                <div className="flex items-center gap-1.5 mb-3 bg-[var(--surface)] rounded-xl p-2 border border-[var(--border-soft)]">
+                  <span className="text-[9px] font-mono text-[var(--slate-dim)] truncate flex-1">{linkUnico ? linkUnico.replace(/.*\?/, '?') : 'Sem share_token'}</span>
+                  <button disabled={!linkUnico} onClick={() => linkUnico && navigator.clipboard.writeText(linkUnico)} className="text-[var(--slate)] hover:text-indigo-600 transition-colors shrink-0 disabled:opacity-30"><Copy size={12} /></button>
                 </div>
                 {/* Actions */}
                 <div className="flex gap-2">
@@ -247,18 +247,18 @@ const ValidationPortal = ({
 
       {/* Validação Equipa Tab */}
       {portalSubTab === 'colaboradores' && portalView === 'list' && (
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-x-auto animate-in fade-in slide-in-from-bottom-2 duration-300">
+        <div className="bg-white rounded-2xl border border-[var(--border-soft)] shadow-sm overflow-x-auto animate-in fade-in slide-in-from-bottom-2 duration-300">
           <table className="w-full text-sm min-w-[400px]">
-            <thead><tr className="border-b border-slate-100 bg-slate-50">
-              <th className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Colaborador</th>
-              <th className="text-right px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Horas</th>
-              <th className="text-center px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Estado</th>
-              <th className="text-right px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Ações</th>
+            <thead><tr className="border-b border-[var(--border-soft)] bg-[var(--surface)]">
+              <th className="text-left px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Colaborador</th>
+              <th className="text-right px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Horas</th>
+              <th className="text-center px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Estado</th>
+              <th className="text-right px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Ações</th>
             </tr></thead>
             <tbody>
               {sortedWorkers.map(w => (
-                <tr key={w.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
-                  <td className="px-4 py-3 font-bold text-slate-800 uppercase">{w.name}</td>
+                <tr key={w.id} className="border-b border-[var(--border-soft)] hover:bg-[var(--surface)] transition-colors">
+                  <td className="px-4 py-3 font-bold text-[var(--ink)] uppercase">{w.name}</td>
                   <td className="px-4 py-3 text-right font-black text-indigo-600 tabular-nums">{fmtH(w.totalHours)}</td>
                   <td className="px-4 py-3 text-center">
                     {w.isApproved ? <CheckCircle size={16} className="text-emerald-500 mx-auto" /> : <span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />}
@@ -282,7 +282,7 @@ const ValidationPortal = ({
       {portalSubTab === 'colaboradores' && portalView === 'grid' && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
           {sortedWorkers.map(w => (
-            <div key={w.id} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-indigo-200 hover:-translate-y-0.5 transition-all duration-200">
+            <div key={w.id} className="bg-white p-5 rounded-2xl border border-[var(--border-soft)] shadow-sm hover:shadow-md hover:border-indigo-200 hover:-translate-y-0.5 transition-all duration-200">
               {/* Header */}
               <div className="flex justify-between items-start mb-3">
                 <div className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase border flex items-center gap-1 ${w.isApproved ? 'text-emerald-600 border-emerald-200 bg-emerald-50' : 'text-amber-500 border-amber-200 bg-amber-50'}`}>
@@ -292,7 +292,7 @@ const ValidationPortal = ({
                 <span className="text-lg font-black text-indigo-600">{formatHours(w.totalHours)}h</span>
               </div>
               {/* Name */}
-              <h4 className="font-black text-slate-800 text-sm uppercase truncate mb-4">{w.name}</h4>
+              <h4 className="font-black text-[var(--ink)] text-sm uppercase truncate mb-4">{w.name}</h4>
               {/* Actions */}
               <div className="flex gap-2">
                 <button

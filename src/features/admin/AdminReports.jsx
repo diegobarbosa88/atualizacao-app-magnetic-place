@@ -124,34 +124,34 @@ export default function AdminReports({ printingReport, setPrintingReport }) {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
-        <div className="bg-white p-3 sm:p-4 md:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col gap-2">
+        <div className="bg-white p-3 sm:p-4 md:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-[var(--border-soft)] flex flex-col gap-2">
           <div className="p-2 sm:p-3 rounded-xl sm:rounded-2xl w-fit" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: FT.slate }}><Users size={18} className="sm:hidden" /><Users size={24} className="hidden sm:block" /></div>
           <div>
-            <p className="text-xl sm:text-3xl font-black text-slate-800">{activeWorkersCount}</p>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Colaboradores com Registos</p>
+            <p className="text-xl sm:text-3xl font-black text-[var(--ink)]">{activeWorkersCount}</p>
+            <p className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Colaboradores com Registos</p>
           </div>
-          <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">no período seleccionado</p>
+          <p className="text-xs font-bold text-[var(--slate-dim)] uppercase tracking-wider">no período seleccionado</p>
         </div>
-        <div className="bg-white p-3 sm:p-4 md:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col gap-2">
+        <div className="bg-white p-3 sm:p-4 md:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-[var(--border-soft)] flex flex-col gap-2">
           <div className="p-2 sm:p-3 rounded-xl sm:rounded-2xl w-fit" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: FT.slate }}><Building2 size={18} className="sm:hidden" /><Building2 size={24} className="hidden sm:block" /></div>
           <div>
-            <p className="text-xl sm:text-3xl font-black text-slate-800">{activeClientsCount}</p>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Clientes Activos</p>
+            <p className="text-xl sm:text-3xl font-black text-[var(--ink)]">{activeClientsCount}</p>
+            <p className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Clientes Activos</p>
           </div>
-          <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">no período seleccionado</p>
+          <p className="text-xs font-bold text-[var(--slate-dim)] uppercase tracking-wider">no período seleccionado</p>
         </div>
-        <div className="bg-white p-3 sm:p-4 md:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col gap-2">
+        <div className="bg-white p-3 sm:p-4 md:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-[var(--border-soft)] flex flex-col gap-2">
           <div className="p-2 sm:p-3 rounded-xl sm:rounded-2xl w-fit" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: FT.slate }}><Activity size={18} className="sm:hidden" /><Activity size={24} className="hidden sm:block" /></div>
           <div>
-            <p className="text-xl sm:text-3xl font-black text-slate-800">{activeReportsCount}</p>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total de Registos</p>
+            <p className="text-xl sm:text-3xl font-black text-[var(--ink)]">{activeReportsCount}</p>
+            <p className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Total de Registos</p>
           </div>
-          <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">no período seleccionado</p>
+          <p className="text-xs font-bold text-[var(--slate-dim)] uppercase tracking-wider">no período seleccionado</p>
         </div>
       </div>
 
       {/* Filtros */}
-      <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100 space-y-4 sm:space-y-6">
+      <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-[var(--border-soft)] space-y-4 sm:space-y-6">
         {/* Toggle de modo de período */}
         <SubTabBar
           tabs={[
@@ -165,15 +165,15 @@ export default function AdminReports({ printingReport, setPrintingReport }) {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Selecione o Cliente</label>
-            <select className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-[var(--navy)] outline-none font-bold" value={reportFilter.clientId} onChange={e => setReportFilter({ ...reportFilter, clientId: e.target.value })}>
+            <label className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest ml-1">Selecione o Cliente</label>
+            <select className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 text-sm focus:ring-2 focus:ring-[var(--navy)] outline-none font-bold" value={reportFilter.clientId} onChange={e => setReportFilter({ ...reportFilter, clientId: e.target.value })}>
               <option value="">-- Escolher Cliente --</option>
               {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Colaborador (Opcional)</label>
-            <select className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-[var(--navy)] outline-none font-bold" value={reportFilter.workerId} onChange={e => setReportFilter({ ...reportFilter, workerId: e.target.value })}>
+            <label className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest ml-1">Colaborador (Opcional)</label>
+            <select className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 text-sm focus:ring-2 focus:ring-[var(--navy)] outline-none font-bold" value={reportFilter.workerId} onChange={e => setReportFilter({ ...reportFilter, workerId: e.target.value })}>
               <option value="">-- Todos os Colaboradores --</option>
               {workers.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
             </select>
@@ -183,17 +183,17 @@ export default function AdminReports({ printingReport, setPrintingReport }) {
           <div className="space-y-2">
             {filterMode === 'month' && (
               <>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Mês</label>
-                <input type="month" className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-[var(--navy)] outline-none font-bold" value={reportFilter.month} onChange={e => setReportFilter({ ...reportFilter, month: e.target.value })} />
+                <label className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest ml-1">Mês</label>
+                <input type="month" className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 text-sm focus:ring-2 focus:ring-[var(--navy)] outline-none font-bold" value={reportFilter.month} onChange={e => setReportFilter({ ...reportFilter, month: e.target.value })} />
               </>
             )}
             {filterMode === 'range' && (
               <>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Intervalo de Dias</label>
+                <label className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest ml-1">Intervalo de Dias</label>
                 <div className="flex gap-2 items-center">
-                  <input type="date" className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-[var(--navy)] outline-none font-bold" value={reportFilter.startDate} onChange={e => setReportFilter({ ...reportFilter, startDate: e.target.value })} />
-                  <span className="text-slate-400 font-black text-xs">→</span>
-                  <input type="date" className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-[var(--navy)] outline-none font-bold" value={reportFilter.endDate} min={reportFilter.startDate} onChange={e => setReportFilter({ ...reportFilter, endDate: e.target.value })} />
+                  <input type="date" className="flex-1 bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 text-sm focus:ring-2 focus:ring-[var(--navy)] outline-none font-bold" value={reportFilter.startDate} onChange={e => setReportFilter({ ...reportFilter, startDate: e.target.value })} />
+                  <span className="text-[var(--slate)] font-black text-xs">→</span>
+                  <input type="date" className="flex-1 bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 text-sm focus:ring-2 focus:ring-[var(--navy)] outline-none font-bold" value={reportFilter.endDate} min={reportFilter.startDate} onChange={e => setReportFilter({ ...reportFilter, endDate: e.target.value })} />
                 </div>
                 {activeDates.length > 0 && (
                   <p className="text-[10px] font-bold ml-1" style={{ color: FT.orange }}>{activeDates.length} dias no intervalo</p>
@@ -202,7 +202,7 @@ export default function AdminReports({ printingReport, setPrintingReport }) {
             )}
             {filterMode === 'dates' && (
               <>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Dias Específicos</label>
+                <label className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest ml-1">Dias Específicos</label>
                 <DateMultiPicker
                   selected={reportFilter.selectedDates}
                   onChange={dates => setReportFilter({ ...reportFilter, selectedDates: dates })}
@@ -214,7 +214,7 @@ export default function AdminReports({ printingReport, setPrintingReport }) {
       </div>
 
       {/* Botões de ação */}
-      <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
+      <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-[var(--border-soft)]">
         <div className="flex flex-col md:flex-row gap-3 md:gap-4">
           <button onClick={handleGenerateClientReport} disabled={!hasValidPeriod || (!reportFilter.clientId && !reportFilter.workerId)} className="flex-1 py-4 rounded-2xl font-black text-sm uppercase tracking-widest shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 active:scale-95 transition-all border-2" style={{ color: 'var(--navy)', borderColor: FT.navy, backgroundColor: 'transparent' }}>
             <FileText size={18} /> Gerar Selecção
@@ -269,36 +269,36 @@ export default function AdminReports({ printingReport, setPrintingReport }) {
       )}
 
       {/* Histórico Recente */}
-      <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
+      <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-[var(--border-soft)]">
         <div className="flex items-center gap-3 mb-5">
           <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: FT.slate }}><History size={20} /></div>
-          <h3 className="font-black text-lg text-slate-800">Histórico Recente</h3>
+          <h3 className="font-black text-lg text-[var(--ink)]">Histórico Recente</h3>
         </div>
         {reportHistory.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-10 text-center">
-            <div className="bg-slate-50 p-4 rounded-2xl mb-3"><FileText size={32} className="text-slate-300" /></div>
-            <p className="text-sm font-bold text-slate-400">Ainda sem relatórios gerados</p>
-            <p className="text-[10px] text-slate-300 mt-1">Gere um relatório para o ver aqui</p>
+            <div className="bg-[var(--surface)] p-4 rounded-2xl mb-3"><FileText size={32} className="text-[var(--slate)]" /></div>
+            <p className="text-sm font-bold text-[var(--slate-dim)]">Ainda sem relatórios gerados</p>
+            <p className="text-[10px] text-[var(--slate-dim)] mt-1">Gere um relatório para o ver aqui</p>
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-2xl border border-slate-100">
-            <table className="min-w-full divide-y divide-slate-200">
-              <thead className="bg-slate-50">
+          <div className="overflow-x-auto rounded-2xl border border-[var(--border-soft)]">
+            <table className="min-w-full divide-y divide-[var(--border)]">
+              <thead className="bg-[var(--surface)]">
                 <tr>
-                  <th className="px-5 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Mês</th>
-                  <th className="px-5 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Cliente</th>
-                  <th className="px-5 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Colaborador</th>
-                  <th className="px-5 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Gerado em</th>
-                  <th className="px-5 py-3 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Ação</th>
+                  <th className="px-5 py-3 text-left text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Mês</th>
+                  <th className="px-5 py-3 text-left text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Cliente</th>
+                  <th className="px-5 py-3 text-left text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Colaborador</th>
+                  <th className="px-5 py-3 text-left text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Gerado em</th>
+                  <th className="px-5 py-3 text-right text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Ação</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-slate-100">
+              <tbody className="bg-white divide-y divide-[var(--border-soft)]">
                 {reportHistory.map(entry => (
-                  <tr key={entry.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-5 py-3 text-sm font-black text-slate-700">{entry.periodLabel || entry.month}</td>
-                    <td className="px-5 py-3 text-sm font-bold text-slate-600">{entry.clientName}</td>
-                    <td className="px-5 py-3 text-sm font-bold text-slate-600">{entry.workerName}</td>
-                    <td className="px-5 py-3 text-xs text-slate-400">{new Date(entry.timestamp).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}</td>
+                  <tr key={entry.id} className="hover:bg-[var(--surface)] transition-colors">
+                    <td className="px-5 py-3 text-sm font-black text-[var(--ink-mid)]">{entry.periodLabel || entry.month}</td>
+                    <td className="px-5 py-3 text-sm font-bold text-[var(--ink-soft)]">{entry.clientName}</td>
+                    <td className="px-5 py-3 text-sm font-bold text-[var(--ink-soft)]">{entry.workerName}</td>
+                    <td className="px-5 py-3 text-xs text-[var(--slate-dim)]">{new Date(entry.timestamp).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}</td>
                     <td className="px-5 py-3 text-right">
                       <button onClick={() => {
                         const clientSelected = entry.clientId ? clients.find(c => c.id === entry.clientId) : null;
@@ -307,7 +307,7 @@ export default function AdminReports({ printingReport, setPrintingReport }) {
                         } else {
                           setPrintingReport({ isGlobal: true, month: entry.month || null, periodLabel: entry.periodLabel });
                         }
-                      }} className="px-4 py-1.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all hover:bg-slate-50" style={{ color: 'var(--slate-dim)' }}>
+                      }} className="px-4 py-1.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all hover:bg-[var(--surface)]" style={{ color: 'var(--slate-dim)' }}>
                         Ver
                       </button>
                     </td>

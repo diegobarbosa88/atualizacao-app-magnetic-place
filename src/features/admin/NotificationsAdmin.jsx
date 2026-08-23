@@ -90,17 +90,17 @@ const NotificationsAdmin = ({ workers, appNotifications, saveToDb, handleDelete,
 
   return (
     <Card className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex items-center gap-3 mb-5 border-b border-slate-50 pb-4">
+      <div className="flex items-center gap-3 mb-5 border-b border-[var(--border-soft)] pb-4">
         <div className="bg-amber-50 p-2 rounded-xl text-amber-600">
           <Megaphone size={20} />
         </div>
-        <h3 className="font-black text-base sm:text-xl text-slate-800 uppercase tracking-tight flex-1">Gestão de Banners de Aviso</h3>
+        <h3 className="font-black text-base sm:text-xl text-[var(--ink)] uppercase tracking-tight flex-1">Gestão de Banners de Aviso</h3>
         {supported && (
           <button
             onClick={subscribe}
             disabled={subscribing || isSubscribed}
             className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
-              isSubscribed ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              isSubscribed ? 'bg-emerald-50 text-emerald-600' : 'bg-[var(--surface-dim)] text-[var(--ink-soft)] hover:bg-[var(--border)]'
             }`}
           >
             {subscribing ? <Loader2 size={13} className="animate-spin" /> : isSubscribed ? <BellRing size={13} /> : permission === 'denied' ? <BellOff size={13} /> : <Bell size={13} />}
@@ -109,22 +109,22 @@ const NotificationsAdmin = ({ workers, appNotifications, saveToDb, handleDelete,
         )}
       </div>
 
-      <div className="bg-slate-50/50 rounded-2xl sm:rounded-[2rem] p-4 sm:p-6 mb-5 border border-slate-100">
-        <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-4 ml-1">Criar Novo Aviso</p>
+      <div className="bg-[var(--surface)] rounded-2xl sm:rounded-[2rem] p-4 sm:p-6 mb-5 border border-[var(--border-soft)]">
+        <p className="text-[10px] font-black uppercase text-[var(--slate-dim)] tracking-widest mb-4 ml-1">Criar Novo Aviso</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div className="space-y-1">
-            <label className="text-[9px] font-bold text-slate-400 ml-2 uppercase">Título do Banner</label>
+            <label className="text-[9px] font-bold text-[var(--slate-dim)] ml-2 uppercase">Título do Banner</label>
             <input
-              className="w-full p-3 rounded-xl border border-slate-200 bg-white text-sm outline-none font-medium"
+              className="w-full p-3 rounded-xl border border-[var(--border)] bg-white text-sm outline-none font-medium"
               placeholder="Ex: Reunião Geral"
               value={title}
               onChange={e => setTitle(e.target.value)}
             />
           </div>
           <div className="space-y-1">
-            <label className="text-[9px] font-bold text-slate-400 ml-2 uppercase">Tipo / Estilo</label>
+            <label className="text-[9px] font-bold text-[var(--slate-dim)] ml-2 uppercase">Tipo / Estilo</label>
             <select
-              className="w-full p-3 rounded-xl border border-slate-200 bg-white text-sm outline-none font-medium"
+              className="w-full p-3 rounded-xl border border-[var(--border)] bg-white text-sm outline-none font-medium"
               value={type}
               onChange={e => setType(e.target.value)}
             >
@@ -134,7 +134,7 @@ const NotificationsAdmin = ({ workers, appNotifications, saveToDb, handleDelete,
               <option value="success">Sucesso (Verde)</option>
             </select>
           </div>
-          <div className="flex items-center gap-3 bg-white p-3 rounded-xl border border-slate-200">
+          <div className="flex items-center gap-3 bg-white p-3 rounded-xl border border-[var(--border)]">
             <input
               type="checkbox"
               id="dismissible"
@@ -142,15 +142,15 @@ const NotificationsAdmin = ({ workers, appNotifications, saveToDb, handleDelete,
               onChange={e => setIsDismissible(e.target.checked)}
               className="w-4 h-4 rounded text-[var(--navy)] cursor-pointer"
             />
-            <label htmlFor="dismissible" className="text-[10px] font-bold text-slate-600 uppercase cursor-pointer">
+            <label htmlFor="dismissible" className="text-[10px] font-bold text-[var(--ink-soft)] uppercase cursor-pointer">
               Permitir que o trabalhador feche este aviso
             </label>
           </div>
         </div>
         <div className="space-y-1 mb-4">
-          <label className="text-[9px] font-bold text-slate-400 ml-2 uppercase">Mensagem</label>
+          <label className="text-[9px] font-bold text-[var(--slate-dim)] ml-2 uppercase">Mensagem</label>
           <textarea
-            className="w-full p-3 rounded-xl border border-slate-200 bg-white text-sm outline-none font-medium h-20"
+            className="w-full p-3 rounded-xl border border-[var(--border)] bg-white text-sm outline-none font-medium h-20"
             placeholder="Escreva aqui o conteúdo do aviso..."
             value={message}
             onChange={e => setMessage(e.target.value)}
@@ -158,9 +158,9 @@ const NotificationsAdmin = ({ workers, appNotifications, saveToDb, handleDelete,
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div className="space-y-1">
-            <label className="text-[9px] font-bold text-slate-400 ml-2 uppercase">Público-Alvo</label>
+            <label className="text-[9px] font-bold text-[var(--slate-dim)] ml-2 uppercase">Público-Alvo</label>
             <select
-              className="w-full p-3 rounded-xl border border-slate-200 bg-white text-sm outline-none font-medium"
+              className="w-full p-3 rounded-xl border border-[var(--border)] bg-white text-sm outline-none font-medium"
               value={targetType}
               onChange={e => setTargetType(e.target.value)}
             >
@@ -170,8 +170,8 @@ const NotificationsAdmin = ({ workers, appNotifications, saveToDb, handleDelete,
           </div>
           {targetType === 'specific' && (
             <div className="space-y-1">
-              <label className="text-[9px] font-bold text-slate-400 ml-2 uppercase">Selecionar Trabalhadores</label>
-              <div className="flex flex-wrap gap-2 p-2 min-h-[42px] rounded-xl border border-slate-200 bg-white">
+              <label className="text-[9px] font-bold text-[var(--slate-dim)] ml-2 uppercase">Selecionar Trabalhadores</label>
+              <div className="flex flex-wrap gap-2 p-2 min-h-[42px] rounded-xl border border-[var(--border)] bg-white">
                 {workers.map(w => (
                   <button
                     key={w.id}
@@ -180,7 +180,7 @@ const NotificationsAdmin = ({ workers, appNotifications, saveToDb, handleDelete,
                         prev.includes(w.id) ? prev.filter(id => id !== w.id) : [...prev, w.id]
                       )
                     }}
-                    className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${selectedWorkers.includes(w.id) ? 'text-white' : 'bg-slate-100 text-slate-400'}`}
+                    className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${selectedWorkers.includes(w.id) ? 'text-white' : 'bg-[var(--surface-dim)] text-[var(--ink-soft)]'}`}
                     style={selectedWorkers.includes(w.id) ? { backgroundColor: FT.navy } : {}}
                   >
                     {w.name}
@@ -201,12 +201,12 @@ const NotificationsAdmin = ({ workers, appNotifications, saveToDb, handleDelete,
       </div>
 
       <div className="space-y-3">
-        <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Avisos Existentes</p>
+        <p className="text-[10px] font-black uppercase text-[var(--slate-dim)] tracking-widest ml-1">Avisos Existentes</p>
         {manualNotifications.length === 0 ? (
-          <p className="text-center py-10 text-slate-400 text-xs font-bold">Nenhum aviso criado.</p>
+          <p className="text-center py-10 text-[var(--slate-dim)] text-xs font-bold">Nenhum aviso criado.</p>
         ) : (
           manualNotifications.map(notif => (
-            <div key={notif.id} className={`p-4 rounded-3xl border flex items-center justify-between gap-3 shadow-sm hover:shadow-md transition-all ${notif.is_active ? 'bg-white border-slate-100' : 'bg-slate-50 border-slate-200 opacity-60'}`}>
+            <div key={notif.id} className={`p-4 rounded-3xl border flex items-center justify-between gap-3 shadow-sm hover:shadow-md transition-all ${notif.is_active ? 'bg-white border-[var(--border-soft)]' : 'bg-[var(--surface)] border-[var(--border)] opacity-60'}`}>
               <div className="flex items-center gap-3 min-w-0 flex-1">
                 <div className={`p-3 rounded-2xl ${notif.type === 'urgent' ? 'bg-rose-50 text-rose-600' :
                   notif.type === 'warning' ? 'bg-amber-50 text-amber-600' :
@@ -216,8 +216,8 @@ const NotificationsAdmin = ({ workers, appNotifications, saveToDb, handleDelete,
                   <Bell size={18} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-black text-slate-800 truncate">{notif.title}</p>
-                  <p className="text-[10px] text-slate-400 truncate">{notif.message}</p>
+                  <p className="text-sm font-black text-[var(--ink)] truncate">{notif.title}</p>
+                  <p className="text-[10px] text-[var(--slate-dim)] truncate">{notif.message}</p>
                   <p className="text-[9px] font-bold uppercase mt-1" style={{ color: 'var(--slate-dim)' }}>
                     🎯 {notif.target_type === 'all' ? 'Todos' : `${notif.target_worker_ids?.length || 0} específicos`} • {notif.is_dismissible ? 'Fechável' : 'Fixo'}
                   </p>
@@ -232,16 +232,16 @@ const NotificationsAdmin = ({ workers, appNotifications, saveToDb, handleDelete,
                         </div>
                       ))}
                       {(notif.viewed_by_ids || []).length > 5 && (
-                        <div className="w-5 h-5 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center text-[7px] font-black text-slate-500">
+                        <div className="w-5 h-5 rounded-full bg-[var(--surface-dim)] border-2 border-white flex items-center justify-center text-[7px] font-black text-[var(--slate-dim)]">
                           +{(notif.viewed_by_ids || []).length - 5}
                         </div>
                       )}
                     </div>
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                    <span className="text-[9px] font-black text-[var(--slate-dim)] uppercase tracking-widest">
                       {(notif.viewed_by_ids || []).length} Viu
                     </span>
                     {notif.is_dismissible && (
-                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-2">
+                      <span className="text-[9px] font-black text-[var(--slate-dim)] uppercase tracking-widest ml-2">
                         • {(notif.dismissed_by_ids || []).length} Fechou
                       </span>
                     )}
@@ -251,7 +251,7 @@ const NotificationsAdmin = ({ workers, appNotifications, saveToDb, handleDelete,
               <div className="flex items-center gap-2 shrink-0">
                 <button
                   onClick={() => toggleStatus(notif)}
-                  className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all ${notif.is_active ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'
+                  className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all ${notif.is_active ? 'bg-emerald-50 text-emerald-600' : 'bg-[var(--surface-dim)] text-[var(--ink-soft)]'
                     }`}
                 >
                   {notif.is_active ? 'Ativo' : 'Pausado'}
@@ -281,7 +281,7 @@ const NotificationsAdmin = ({ workers, appNotifications, saveToDb, handleDelete,
             <div className="p-6">
               <button
                 onClick={() => setShowViewDetails(null)}
-                className="w-full py-4 border rounded-2xl font-black text-xs uppercase tracking-widest transition-all hover:bg-slate-50"
+                className="w-full py-4 border rounded-2xl font-black text-xs uppercase tracking-widest transition-all hover:bg-[var(--surface)]"
                 style={{ borderColor: FT.slate, color: 'var(--ink-soft)' }}
               >
                 Fechar
@@ -290,17 +290,17 @@ const NotificationsAdmin = ({ workers, appNotifications, saveToDb, handleDelete,
           }
         >
           <div className="p-8">
-            <div className="flex items-end gap-1 border-b border-slate-100 mb-4">
+            <div className="flex items-end gap-1 border-b border-[var(--border-soft)] mb-4">
               <button
                 onClick={() => setViewDetailsTab('viewed')}
-                className={`flex-1 py-2 -mb-px border-b-2 text-[10px] font-black uppercase tracking-widest transition-all ${viewDetailsTab === 'viewed' ? 'border-[var(--orange)] text-[var(--navy)]' : 'border-transparent text-slate-400 hover:text-[var(--navy)]'}`}
+                className={`flex-1 py-2 -mb-px border-b-2 text-[10px] font-black uppercase tracking-widest transition-all ${viewDetailsTab === 'viewed' ? 'border-[var(--orange)] text-[var(--navy)]' : 'border-transparent text-[var(--slate-dim)] hover:text-[var(--navy)]'}`}
               >
                 Visualizaram ({(appNotifications.find(n => n.id === showViewDetails)?.viewed_by_ids || []).length})
               </button>
               {appNotifications.find(n => n.id === showViewDetails)?.is_dismissible && (
                 <button
                   onClick={() => setViewDetailsTab('dismissed')}
-                  className={`flex-1 py-2 -mb-px border-b-2 text-[10px] font-black uppercase tracking-widest transition-all ${viewDetailsTab === 'dismissed' ? 'border-[var(--orange)] text-[var(--navy)]' : 'border-transparent text-slate-400 hover:text-[var(--navy)]'}`}
+                  className={`flex-1 py-2 -mb-px border-b-2 text-[10px] font-black uppercase tracking-widest transition-all ${viewDetailsTab === 'dismissed' ? 'border-[var(--orange)] text-[var(--navy)]' : 'border-transparent text-[var(--slate-dim)] hover:text-[var(--navy)]'}`}
                 >
                   Fecharam ({(appNotifications.find(n => n.id === showViewDetails)?.dismissed_by_ids || []).length})
                 </button>
@@ -312,20 +312,20 @@ const NotificationsAdmin = ({ workers, appNotifications, saveToDb, handleDelete,
                 (appNotifications.find(n => n.id === showViewDetails)?.[viewDetailsTab === 'viewed' ? 'viewed_by_ids' : 'dismissed_by_ids'] || []).map(vId => {
                   const worker = workers.find(w => w.id === vId);
                   return (
-                    <div key={vId} className="flex items-center gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                    <div key={vId} className="flex items-center gap-3 p-3 bg-[var(--surface)] rounded-2xl border border-[var(--border-soft)]">
                       <div className="w-8 h-8 rounded-full flex items-center justify-center font-black text-xs uppercase" style={{ backgroundColor: FT.navy, color: FT.orange }}>
                         {worker?.name?.[0] || '?'}
                       </div>
                       <div>
-                        <p className="text-xs font-bold text-slate-800">{worker?.name || 'Desconhecido'}</p>
-                        <p className="text-[9px] font-bold text-slate-400 uppercase">{worker?.profissao || 'Colaborador'}</p>
+                        <p className="text-xs font-bold text-[var(--ink)]">{worker?.name || 'Desconhecido'}</p>
+                        <p className="text-[9px] font-bold text-[var(--slate-dim)] uppercase">{worker?.profissao || 'Colaborador'}</p>
                       </div>
                     </div>
                   );
                 })
               ) : (
                 <div className="text-center py-8">
-                  <p className="text-sm font-bold text-slate-400 italic">Nenhum registo encontrado.</p>
+                  <p className="text-sm font-bold text-[var(--slate-dim)] italic">Nenhum registo encontrado.</p>
                 </div>
               )}
             </div>
