@@ -3,6 +3,7 @@ import { Loader2, RefreshCw, Download, Plus, X, ExternalLink, FileText, AlertTri
 import ImpostoPdfUploadModal from './ImpostoPdfUploadModal';
 import { authFetch } from '../../../utils/authFetch';
 import ModalShell from '../../../components/common/ModalShell';
+import { FT } from '../../../styles/designTokens';
 
 function fmt(val) {
   return new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(val ?? 0);
@@ -285,7 +286,7 @@ export default function FilaAprovacaoTab() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h4 className="text-sm font-black text-slate-800 uppercase tracking-tight flex items-center gap-2">
-            <ListChecks size={16} style={{ color: '#869AAF' }} />
+            <ListChecks size={16} style={{ color: FT.slate }} />
             Fila de Pagamentos
           </h4>
           <p className="text-[10px] font-semibold text-slate-400 mt-0.5">
@@ -322,11 +323,11 @@ export default function FilaAprovacaoTab() {
               className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
                 tab === key ? '' : 'text-slate-400 hover:text-slate-600'
               }`}
-              style={tab === key ? { backgroundColor: 'rgba(235,141,0,0.15)', color: '#1B3A57' } : {}}
+              style={tab === key ? { backgroundColor: 'rgba(235,141,0,0.15)', color: FT.navy } : {}}
             >
               {label}
               {count > 0 && (
-                <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${tab === key ? 'bg-white text-[#1B3A57]' : 'bg-slate-200 text-slate-500'}`}>
+                <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${tab === key ? 'bg-white text-[var(--navy)]' : 'bg-slate-200 text-slate-500'}`}>
                   {count}
                 </span>
               )}
@@ -358,7 +359,7 @@ export default function FilaAprovacaoTab() {
               type="checkbox"
               checked={selecionados.size === pendentes.length && pendentes.length > 0}
               onChange={toggleAll}
-              className="w-4 h-4 accent-[#1B3A57] cursor-pointer"
+              className="w-4 h-4 accent-[var(--navy)] cursor-pointer"
             />
             <span className="text-[11px] font-black text-slate-600">
               {selecionados.size > 0
@@ -371,7 +372,7 @@ export default function FilaAprovacaoTab() {
             onClick={handleExportar}
             disabled={exportando || selecionados.size === 0}
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-black text-white disabled:opacity-40 transition-all shadow-sm hover:opacity-90"
-            style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}
+            style={{ backgroundColor: FT.orange, color: FT.navy }}
           >
             {exportando ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
             {exportando ? 'A gerar...' : 'Gerar SEPA XML'}
@@ -418,7 +419,7 @@ export default function FilaAprovacaoTab() {
                     type="checkbox"
                     checked={isSel}
                     onChange={() => toggleItem(item.key)}
-                    className="w-4 h-4 accent-[#1B3A57] cursor-pointer shrink-0"
+                    className="w-4 h-4 accent-[var(--navy)] cursor-pointer shrink-0"
                   />
                 ) : (
                   <div className="w-4 shrink-0" />
@@ -430,7 +431,7 @@ export default function FilaAprovacaoTab() {
                     ? 'bg-orange-100 text-orange-700'
                     : item.fonte === 'fatura-gmail'
                     ? 'bg-slate-200 text-slate-700'
-                    : 'bg-slate-100 text-[#869AAF]'
+                    : 'bg-slate-100 text-[var(--slate)]'
                 }`}>
                   {item.fonte === 'imposto' ? (item.subtipo || 'Imp.') : item.fonte === 'fatura-gmail' ? 'Gmail' : 'Forn.'}
                 </span>
@@ -470,7 +471,7 @@ export default function FilaAprovacaoTab() {
                 <div className="flex items-center gap-1 shrink-0">
                   {item.url && (
                     <a href={item.url} target="_blank" rel="noopener noreferrer"
-                      className="p-1.5 rounded-lg text-slate-300 hover:text-[#869AAF] hover:bg-slate-100 transition-colors"
+                      className="p-1.5 rounded-lg text-slate-300 hover:text-[var(--slate)] hover:bg-slate-100 transition-colors"
                       title="Ver PDF">
                       <FileText size={13} />
                     </a>

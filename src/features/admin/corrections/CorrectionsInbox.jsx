@@ -4,6 +4,7 @@ import { CheckCircle, AlertCircle, XCircle, Clock, Building2, ChevronDown, Layou
 import { formatDocDate } from '../../../utils/dateUtils';
 import { useApp } from '../../../context/AppContext';
 import { applyCreationRequest, rejectCorrection, applyCorrection, markResolved } from '../../../utils/correctionsApi';
+import { FT } from '../../../styles/designTokens';
 import { calculateDuration } from '../../../utils/formatUtils';
 import CorrectionDetail from './CorrectionDetail';
 import { STATUS_LABEL, TYPE_LABEL } from './correctionsUtils';
@@ -79,7 +80,7 @@ function ClientCorrectionsPanel({ filtered, clients, workers, itemsByCorrection,
           className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors"
         >
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-xs font-black" style={{ backgroundColor: '#1B3A57', color: '#EB8D00' }}>
+            <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-xs font-black" style={{ backgroundColor: FT.navy, color: FT.orange }}>
               {getClientInitials(client?.name || g.clientId)}
             </div>
             <div className="text-left min-w-0">
@@ -234,7 +235,7 @@ function WorkerCorrectionsPanel({ filtered, clients, workers, itemsByCorrection,
           className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors"
         >
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-xs font-black" style={{ backgroundColor: '#1B3A57', color: '#EB8D00' }}>
+            <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-xs font-black" style={{ backgroundColor: FT.navy, color: FT.orange }}>
               {getClientInitials(client?.name || g.clientId)}
             </div>
             <div className="text-left min-w-0">

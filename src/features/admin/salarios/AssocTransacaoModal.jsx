@@ -2,6 +2,7 @@ import React from 'react';
 import { CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { fmtEur } from './salarioUtils';
 import ModalShell from '../../../components/common/ModalShell';
+import { FT } from '../../../styles/designTokens';
 
 export default function AssocTransacaoModal({
   tx,
@@ -41,7 +42,7 @@ export default function AssocTransacaoModal({
             disabled={!pattern.trim() || !worker || saving}
             onClick={onSave}
             className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 hover:opacity-90"
-            style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}
+            style={{ backgroundColor: FT.orange, color: FT.navy }}
           >
             {saving ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle size={13} />} Guardar
           </button>

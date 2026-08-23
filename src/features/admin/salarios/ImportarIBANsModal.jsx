@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Landmark, Upload, CheckCircle2, AlertCircle, HelpCircle } from 'lucide-react';
 import ModalShell from '../../../components/common/ModalShell';
+import { FT } from '../../../styles/designTokens';
 
 function normalizar(str = '') {
   return str
@@ -217,7 +218,7 @@ export default function ImportarIBANsModal({ workers, supabase, onClose, onImpor
                             ? <CheckCircle2 size={15} className="text-emerald-400" />
                             : semMatch
                             ? <HelpCircle size={15} className="text-amber-400" />
-                            : <CheckCircle2 size={15} style={{ color: '#869AAF' }} />
+                            : <CheckCircle2 size={15} style={{ color: FT.slate }} />
                           }
                         </div>
                         <div className="flex-1 min-w-0">

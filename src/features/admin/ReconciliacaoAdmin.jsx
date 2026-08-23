@@ -7,6 +7,7 @@ import RelatorioModal from './RelatorioModal';
 import CsvMappingCard from './CsvMappingCard';
 import TipoBadge from './TipoBadge';
 import AssociacaoManualModal from './reconciliacao/AssociacaoManualModal';
+import { FT } from '../../styles/designTokens';
 import OrfaoBancoModal from './reconciliacao/OrfaoBancoModal';
 import AssocClienteModal from './reconciliacao/AssocClienteModal';
 import ResultadosTabs from './reconciliacao/ResultadosTabs';
@@ -343,7 +344,7 @@ export default function ReconciliacaoAdmin() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
         <h2 className="text-xl sm:text-2xl lg:text-3xl font-black flex items-center gap-2">
-          <Landmark size={24} style={{ color: '#869AAF' }} /> Reconciliação Bancária
+          <Landmark size={24} style={{ color: FT.slate }} /> Reconciliação Bancária
         </h2>
         <div className="flex items-center gap-2 flex-wrap">
           {periodosDisponiveis.length > 0 && (
@@ -361,7 +362,7 @@ export default function ReconciliacaoAdmin() {
           )}
           <button onClick={() => setShowForm(v => !v)}
             className="flex items-center gap-2 px-4 py-2 bg-slate-100 rounded-2xl border border-slate-200 hover:bg-slate-200 transition-all text-[10px] font-black uppercase tracking-widest"
-            style={{ color: '#869AAF' }}>
+            style={{ color: FT.slate }}>
             <Plus size={14} /> Inserir Fatura Manual
           </button>
         </div>
@@ -433,7 +434,7 @@ export default function ReconciliacaoAdmin() {
           <div className="flex gap-2 pt-2">
             <button onClick={guardarFatura} disabled={savingFatura}
               className="flex items-center gap-2 px-4 py-2 text-white rounded-xl transition-all text-[10px] font-black uppercase tracking-widest disabled:opacity-50 hover:opacity-90"
-              style={{ backgroundColor: '#1B3A57' }}>
+              style={{ backgroundColor: FT.navy }}>
               {savingFatura ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle size={12} />} Guardar
             </button>
             <button onClick={() => setShowForm(false)}
@@ -508,22 +509,22 @@ export default function ReconciliacaoAdmin() {
               onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}
               onClick={() => inputRef.current?.click()}
               className={`border-2 border-dashed rounded-2xl p-5 sm:p-8 text-center cursor-pointer transition-all ${
-                dragging ? 'border-[#869AAF] bg-slate-50' : 'border-slate-200 hover:border-[#869AAF] hover:bg-slate-50'
+                dragging ? 'border-[var(--slate)] bg-slate-50' : 'border-slate-200 hover:border-[var(--slate)] hover:bg-slate-50'
               }`}
             >
               <input ref={inputRef} type="file" accept=".csv,.ofx,.qfx,.pdf" multiple className="hidden" onChange={handleFileChange} />
-              <Upload size={32} className="mx-auto mb-3" style={{ color: dragging ? '#869AAF' : '#CBD5E1' }} />
+              <Upload size={32} className="mx-auto mb-3" style={{ color: dragging ? FT.slate : '#CBD5E1' }} />
               {ficheiros.length > 0 ? (
                 <div className="space-y-1.5" onClick={e => e.stopPropagation()}>
                   {ficheiros.map((f, idx) => (
                     <div key={idx} className="flex items-center justify-center gap-2">
-                      <FileText size={14} style={{ color: '#869AAF' }} className="flex-shrink-0" />
+                      <FileText size={14} style={{ color: FT.slate }} className="flex-shrink-0" />
                       <span className="text-sm font-medium text-slate-700 truncate max-w-xs">{f.name}</span>
                       <button onClick={() => setFicheiros(prev => prev.filter((_, i) => i !== idx))}
                         className="text-slate-400 hover:text-rose-500 flex-shrink-0"><X size={13} /></button>
                     </div>
                   ))}
-                  <p className="text-[10px] font-bold uppercase tracking-widest pt-1 cursor-pointer hover:underline" style={{ color: '#869AAF' }}
+                  <p className="text-[10px] font-bold uppercase tracking-widest pt-1 cursor-pointer hover:underline" style={{ color: FT.slate }}
                     onClick={() => inputRef.current?.click()}>
                     + Adicionar mais ficheiros
                   </p>
@@ -554,12 +555,12 @@ export default function ReconciliacaoAdmin() {
             {ficheiros.length > 0 && !previewing && !csvMapping && (
               <button onClick={previsar}
                 className="mt-4 w-full flex items-center justify-center gap-2 text-white rounded-2xl py-3 transition-all text-[10px] font-black uppercase tracking-widest hover:opacity-90"
-                style={{ backgroundColor: '#1B3A57' }}>
+                style={{ backgroundColor: FT.navy }}>
                 <ArrowLeftRight size={14} /> Adicionar {ficheiros.length > 1 ? `${ficheiros.length} Ficheiros` : 'Movimentos'} ao Preview
               </button>
             )}
             {previewing && (
-              <div className="mt-4 flex items-center justify-center gap-2" style={{ color: '#869AAF' }}>
+              <div className="mt-4 flex items-center justify-center gap-2" style={{ color: FT.slate }}>
                 <Loader2 size={18} className="animate-spin" /> A ler ficheiros...
               </div>
             )}
@@ -604,7 +605,7 @@ export default function ReconciliacaoAdmin() {
                 </button>
                 <button onClick={processar} disabled={processando || selTransacoes.size === 0}
                   className="flex items-center gap-2 px-4 py-1.5 text-white rounded-xl transition-all text-[10px] font-black uppercase tracking-widest disabled:opacity-40 hover:opacity-90"
-                  style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}>
+                  style={{ backgroundColor: FT.orange, color: FT.navy }}>
                   {processando ? <Loader2 size={12} className="animate-spin" /> : <ArrowLeftRight size={12} />}
                   Processar Selecionados {selTransacoes.size > 0 ? `(${selTransacoes.size})` : ''}
                 </button>
@@ -640,7 +641,7 @@ export default function ReconciliacaoAdmin() {
                     allVisible.forEach(i => e.target.checked ? s.add(i) : s.delete(i));
                     return s;
                   })}
-                  className="accent-[#1B3A57] w-4 h-4" />
+                  className="accent-[var(--navy)] w-4 h-4" />
                 {allVisibleSelected ? 'Desseleccionar visíveis' : 'Seleccionar visíveis'}
               </label>
             </div>
@@ -654,12 +655,12 @@ export default function ReconciliacaoAdmin() {
                   style={selTransacoes.has(i) ? { backgroundColor: 'rgba(235,141,0,0.08)' } : {}}>
                   <input type="checkbox" checked={selTransacoes.has(i)}
                     onChange={e => setSelTransacoes(prev => { const s = new Set(prev); e.target.checked ? s.add(i) : s.delete(i); return s; })}
-                    className="accent-[#1B3A57] w-4 h-4 flex-shrink-0 cursor-pointer" />
+                    className="accent-[var(--navy)] w-4 h-4 flex-shrink-0 cursor-pointer" />
                   <div className="flex-1 min-w-0">
                     {tx._source && <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 truncate mb-0.5">{tx._source}</p>}
                     {editingTxIdx === i ? (
                       <input autoFocus
-                        className="w-full text-xs text-slate-700 font-medium border-b border-[#1B3A57] bg-transparent outline-none pb-0.5"
+                        className="w-full text-xs text-slate-700 font-medium border-b border-[var(--navy)] bg-transparent outline-none pb-0.5"
                         value={tx.descricao}
                         onChange={e => setPreviewTransacoes(prev => prev.map((t, j) => j === i ? { ...t, descricao: e.target.value } : t))}
                         onBlur={() => setEditingTxIdx(null)}
@@ -671,8 +672,8 @@ export default function ReconciliacaoAdmin() {
                     <p className="text-[10px] text-slate-400">{tx.data}</p>
                   </div>
                   <button onClick={() => setEditingTxIdx(editingTxIdx === i ? null : i)}
-                    className={`flex-shrink-0 transition-all ${editingTxIdx === i ? '' : 'text-slate-300 hover:text-[#869AAF]'}`}
-                    style={editingTxIdx === i ? { color: '#869AAF' } : {}}
+                    className={`flex-shrink-0 transition-all ${editingTxIdx === i ? '' : 'text-slate-300 hover:text-[var(--slate)]'}`}
+                    style={editingTxIdx === i ? { color: FT.slate } : {}}
                     title="Editar descrição"><Pencil size={12} /></button>
                   <div className="text-right flex-shrink-0 flex items-center gap-2">
                     <TipoBadge tipo={tx.tipo} />

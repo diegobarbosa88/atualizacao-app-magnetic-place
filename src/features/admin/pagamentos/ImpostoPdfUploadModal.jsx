@@ -4,6 +4,7 @@ import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { Upload, Sparkles, Loader2, CheckCircle } from 'lucide-react';
 import { authFetch } from '../../../utils/authFetch';
 import ModalShell from '../../../components/common/ModalShell';
+import { FT } from '../../../styles/designTokens';
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl;
 
 const TIPOS = ['IRC', 'IVA', 'IRS', 'SS', 'Outro'];
@@ -143,7 +144,7 @@ export default function ImpostoPdfUploadModal({ onClose, onSaved }) {
             onClick={handleGuardar}
             disabled={guardando}
             className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-xs font-black text-white disabled:opacity-60 transition-all shadow-sm hover:opacity-90"
-            style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}
+            style={{ backgroundColor: FT.orange, color: FT.navy }}
           >
             {guardando ? <Loader2 size={14} className="animate-spin" /> : null}
             {guardando ? 'A guardar...' : 'Adicionar à Fila'}
@@ -157,7 +158,7 @@ export default function ImpostoPdfUploadModal({ onClose, onSaved }) {
             onDrop={handleDrop}
             onDragOver={e => e.preventDefault()}
             className={`border-2 border-dashed rounded-2xl p-5 text-center cursor-pointer transition-colors ${
-              pdfFile ? 'border-emerald-300 bg-emerald-50' : 'border-slate-200 hover:border-[#869AAF] hover:bg-slate-50'
+              pdfFile ? 'border-emerald-300 bg-emerald-50' : 'border-slate-200 hover:border-[var(--slate)] hover:bg-slate-50'
             }`}
             onClick={() => inputRef.current?.click()}
           >
@@ -180,7 +181,7 @@ export default function ImpostoPdfUploadModal({ onClose, onSaved }) {
               onClick={extrairComIA}
               disabled={extraindo}
               className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-black text-white disabled:opacity-60 transition-all hover:opacity-90"
-              style={{ backgroundColor: '#1B3A57' }}
+              style={{ backgroundColor: FT.navy }}
             >
               {extraindo ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
               {extraindo ? 'A extrair...' : extraido ? 'Re-extrair com IA' : 'Extrair campos com IA'}
