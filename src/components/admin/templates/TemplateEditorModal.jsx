@@ -138,7 +138,7 @@ export default function TemplateEditorModal({ template, supabase, onClose, onSav
         <div className="flex justify-end gap-2 px-6 py-4">
           <button onClick={onClose} className="px-4 py-2 text-[var(--ink-soft)] hover:bg-[var(--surface-dim)] rounded-xl">Cancelar</button>
           <button onClick={handleSubmit} disabled={submitting || saving || (!isEditing && !file)}
-            className="flex items-center gap-2 px-6 py-2 text-white font-bold rounded-xl hover:opacity-90 disabled:opacity-50"
+ className="flex items-center gap-2 px-6 py-2 font-bold rounded-xl hover:opacity-90 disabled:opacity-50"
             style={{ backgroundColor: FT.orange, color: FT.navy }}>
             {(submitting || saving) ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
             {isEditing ? 'Guardar Alterações' : 'Criar Template'}

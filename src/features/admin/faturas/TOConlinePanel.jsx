@@ -130,7 +130,7 @@ export default function TOConlinePanel() {
             </button>
           ) : (
             <button onClick={handleLigar} disabled={ligando}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all disabled:opacity-60 text-white hover:opacity-90"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all disabled:opacity-60 text-[var(--navy-solid)] hover:opacity-90"
               style={{ backgroundColor: FT.orange }}>
               {ligando ? <Loader2 size={13} className="animate-spin" /> : <Link2 size={13} />}
               Ligar TOConline
@@ -175,7 +175,7 @@ export default function TOConlinePanel() {
               </div>
             </div>
             <button onClick={handleCarregarRelatorio} disabled={carregandoRel}
-              className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all disabled:opacity-60 w-full sm:w-auto sm:self-end text-white hover:opacity-90"
+              className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all disabled:opacity-60 w-full sm:w-auto sm:self-end text-[var(--navy-solid)] hover:opacity-90"
               style={{ backgroundColor: FT.orange }}>
               {carregandoRel ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
               Carregar

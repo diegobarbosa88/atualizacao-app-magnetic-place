@@ -70,6 +70,15 @@ printf '<button\n  className="px-3 text-[var(--navy-solid)]"\n  style={{ backgro
 d=$(sh scripts/verificar-lote-design.sh src/features/admin 2>/dev/null | grep -F 'laranja com texto branco' | sed 's/.* //')
 verifica "laranja+navy (par correcto) não acusa" "$base" "$d"
 
+
+# ── 8: o `style` inline vence o `className`.
+#    23 dos 34 candidatos da v2 tinham `text-white` no className E
+#    `color: FT.navy` no style — o style ganha, logo já estavam correctos a
+#    4,66:1. Contá-los era mandar corrigir o que não estava partido.
+printf '<button\n  className="px-3 text-white"\n  style={{ backgroundColor: FT.orange, color: FT.navy }}\n/>\n' > "$CASO"
+d=$(sh scripts/verificar-lote-design.sh src/features/admin 2>/dev/null | grep -F 'laranja com texto branco' | sed 's/.* //')
+verifica "text-white morto (style poe navy) nao acusa" "$base" "$d"
+
 rm -f "$CASO"
 
 # ── 8: cobertura do mapa do conversor.

@@ -371,7 +371,7 @@ export default function FilaAprovacaoTab() {
           <button
             onClick={handleExportar}
             disabled={exportando || selecionados.size === 0}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-black text-white disabled:opacity-40 transition-all shadow-sm hover:opacity-90"
+ className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-black disabled:opacity-40 transition-all shadow-sm hover:opacity-90"
             style={{ backgroundColor: FT.orange, color: FT.navy }}
           >
             {exportando ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}

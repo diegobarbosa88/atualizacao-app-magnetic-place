@@ -234,7 +234,7 @@ export default function PagamentosTab() {
             <RefreshCw size={13} /> Atualizar
           </button>
           <button onClick={() => setMostrarModal(true)}
-            className="flex items-center gap-1.5 px-3 py-2 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-sm hover:opacity-90"
+ className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-sm hover:opacity-90"
             style={{ backgroundColor: FT.orange, color: FT.navy }}>
             <Plus size={13} /> Novo Pagamento
           </button>

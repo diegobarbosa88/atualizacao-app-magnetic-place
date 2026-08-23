@@ -1178,7 +1178,7 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
                         Cancelar
                       </button>
                       <button onClick={handleConfirmarEEmitir} disabled={emitindo}
-                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-white rounded-lg transition-all disabled:opacity-60 hover:opacity-90"
+ className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all disabled:opacity-60 hover:opacity-90"
                         style={{ backgroundColor: FT.orange, color: FT.navy }}>
                         {emitindo ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle size={12} />}
                         Confirmar e Emitir
@@ -1195,7 +1195,7 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
                     Voltar
                   </button>
                   <button onClick={handleIniciarEmissao} disabled={emitindo || gateAjudas?.status === 'verificando'}
-                    className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all disabled:opacity-60 shadow-md hover:opacity-90"
+ className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-black uppercase tracking-widest rounded-xl transition-all disabled:opacity-60 shadow-md hover:opacity-90"
                     style={{ backgroundColor: FT.orange, color: FT.navy }}>
                     {(emitindo || gateAjudas?.status === 'verificando') ? <Loader2 size={13} className="animate-spin" /> : <FileText size={13} />}
                     {gateAjudas?.status === 'verificando' ? 'A verificar ajudas...' : `Emitir ${tipoDocumento}`}

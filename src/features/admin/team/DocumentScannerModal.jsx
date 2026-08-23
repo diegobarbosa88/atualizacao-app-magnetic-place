@@ -422,7 +422,7 @@ const DocumentScannerModal = ({ open, onClose }) => {
               <button
                 onClick={handleAnalyze}
                 disabled={!files.length || !systemSettings.geminiApiKey}
-                className="w-full flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed text-white py-3 rounded-xl font-black text-sm uppercase shadow-lg transition-all"
+ className="w-full flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed py-3 rounded-xl font-black text-sm uppercase shadow-lg transition-all"
                 style={{ backgroundColor: FT.orange, color: FT.navy }}
               >
                 <ScanSearch size={16} /> Analisar {files.length > 0 ? `${files.length} ficheiro${files.length !== 1 ? 's' : ''}` : 'com IA'}
@@ -467,7 +467,7 @@ const DocumentScannerModal = ({ open, onClose }) => {
               {matchedCount > 0 && (
                 <button
                   onClick={handleSaveAll}
-                  className="w-full flex items-center justify-center gap-2 text-white py-2.5 rounded-xl font-black text-xs uppercase shadow-lg transition-all hover:opacity-90"
+ className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-black text-xs uppercase shadow-lg transition-all hover:opacity-90"
                   style={{ backgroundColor: FT.orange, color: FT.navy }}
                 >
                   <Save size={14} /> Guardar todos os encontrados ({matchedCount})

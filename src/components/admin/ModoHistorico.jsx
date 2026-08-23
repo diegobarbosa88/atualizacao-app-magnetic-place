@@ -533,7 +533,7 @@ const ModoHistorico = ({ workers, logs = [], saveToDb, systemSettings, saveSyste
             </label>
 
             <button onClick={handleProcessar} disabled={!files.length || processando}
-              className="w-full py-3 text-white rounded-xl text-sm font-black uppercase tracking-widest transition-all shadow-md disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 hover:opacity-90"
+ className="w-full py-3 rounded-xl text-sm font-black uppercase tracking-widest transition-all shadow-md disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 hover:opacity-90"
               style={{ backgroundColor: FT.orange, color: FT.navy }}>
               {processando ? <Loader2 size={16} className="animate-spin" /> : <ReceiptText size={16} />}
               {processando ? 'A processar e guardar...' : files.length > 0 ? `Processar ${files.length} ficheiro${files.length > 1 ? 's' : ''}` : 'Processar'}

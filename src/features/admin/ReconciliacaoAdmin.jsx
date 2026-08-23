@@ -604,7 +604,7 @@ export default function ReconciliacaoAdmin() {
                   <X size={11} className="inline mr-1" />Limpar tudo
                 </button>
                 <button onClick={processar} disabled={processando || selTransacoes.size === 0}
-                  className="flex items-center gap-2 px-4 py-1.5 text-white rounded-xl transition-all text-[10px] font-black uppercase tracking-widest disabled:opacity-40 hover:opacity-90"
+ className="flex items-center gap-2 px-4 py-1.5 rounded-xl transition-all text-[10px] font-black uppercase tracking-widest disabled:opacity-40 hover:opacity-90"
                   style={{ backgroundColor: FT.orange, color: FT.navy }}>
                   {processando ? <Loader2 size={12} className="animate-spin" /> : <ArrowLeftRight size={12} />}
                   Processar Selecionados {selTransacoes.size > 0 ? `(${selTransacoes.size})` : ''}

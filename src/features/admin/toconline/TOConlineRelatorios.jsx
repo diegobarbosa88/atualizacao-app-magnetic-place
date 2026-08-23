@@ -91,7 +91,7 @@ export default function TOConlineRelatorios({ onDesligado }) {
           </div>
 
           <button onClick={handleGerar} disabled={loading}
-            className="flex items-center gap-1.5 px-4 py-2.5 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all disabled:opacity-60 shadow-sm hover:opacity-90"
+ className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all disabled:opacity-60 shadow-sm hover:opacity-90"
             style={{ backgroundColor: FT.orange, color: FT.navy }}>
             {loading ? <Loader2 size={13} className="animate-spin" /> : <BarChart2 size={13} />}
             Carregar

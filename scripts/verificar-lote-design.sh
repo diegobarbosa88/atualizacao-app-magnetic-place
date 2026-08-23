@@ -63,11 +63,16 @@ echo "── regressões globais (admin inteiro) ──"
 
 # Texto branco sobre o laranja da marca dá 2,52:1. O par correcto é navy
 # sobre laranja, 4,66:1.
-# A primeira versão desta verificação procurava `text-white` e a cor laranja
-# NA MESMA LINHA, e por isso dava 0 enquanto havia 34 casos reais: o padrão
-# comum é `className="… text-white"` numa linha e `style={{ backgroundColor:
-# FT.orange }}` na seguinte. Um `grep` de linha única nunca os vê. Agora a
-# janela é de 3 linhas, via perl, que é o que apanha o par separado.
+#
+# Esta verificação já esteve errada nos dois sentidos:
+#   v1  procurava `text-white` e a cor laranja NA MESMA LINHA, e dava 0
+#       quando havia 7 reais — o padrão comum parte a tag por várias linhas.
+#   v2  passou a uma janela de 3 linhas e passou a dar 34, dos quais 27 eram
+#       falsos: 23 tinham `text-white` no className mas `color: FT.navy` no
+#       style inline (que VENCE o className, logo já estavam correctos), e 4
+#       tinham por perto um laranja que não era o fundo daquele elemento.
+#   v3  (esta) reconstrói a tag inteira e só conta quando o fundo laranja
+#       está na MESMA tag e não há `color:` inline a sobrepor-se.
 printf '%-46s %s\n' "laranja com texto branco:" \
   "$(find src/features/admin src/components/admin -name '*.jsx' 2>/dev/null \
      | perl -ne 'chomp; push @f,$_; END{
@@ -76,9 +81,12 @@ printf '%-46s %s\n' "laranja com texto branco:" \
            open my $fh,"<:raw",$file or next; my @l=<$fh>; close $fh;
            for my $i (0..$#l) {
              next unless $l[$i] =~ /text-white/;
-             my $lo = $i-2<0?0:$i-2; my $hi = $i+2>$#l?$#l:$i+2;
-             my $ctx = join "", @l[$lo..$hi];
-             $n++ if $ctx =~ /backgroundColor: *FT\.orange|background: *FT\.orange|bg-\[var\(--orange\)\]|#EB8D00/;
+             my $j=$i; my $tag=$l[$i];
+             while ($j>0 && $tag !~ /<\w/) { $j--; $tag = $l[$j].$tag }
+             my $k=$i;
+             while ($k<$#l && $tag !~ /\/?>\s*$/m) { $k++; $tag .= $l[$k]; last if $k>$i+6 }
+             next if $tag =~ /style=\{\{[^}]*\bcolor:/;
+             $n++ if $tag =~ /back(?:ground|groundColor): *FT\.orange|bg-\[var\(--orange\)\]|bg-\[#EB8D00\]/;
            }
          }
          print $n;

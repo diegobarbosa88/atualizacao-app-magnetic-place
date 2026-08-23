@@ -392,7 +392,7 @@ export default function ContadorEmailsAdmin() {
                       <button
                         onClick={() => gerarRascunho(email.id)}
                         disabled={gerandoId === email.id}
-                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-50 text-white hover:opacity-90"
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-50 text-[var(--navy-solid)] hover:opacity-90"
                         style={{ backgroundColor: FT.orange }}
                       >
                         {gerandoId === email.id ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}

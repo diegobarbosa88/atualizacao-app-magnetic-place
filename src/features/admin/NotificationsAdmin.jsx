@@ -193,7 +193,7 @@ const NotificationsAdmin = ({ workers, appNotifications, saveToDb, handleDelete,
         <button
           onClick={handleAdd}
           disabled={loading}
-          className="w-full py-4 text-white rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-3 shadow-lg active:scale-[0.98] transition-all hover:opacity-90"
+ className="w-full py-4 rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-3 shadow-lg active:scale-[0.98] transition-all hover:opacity-90"
           style={{ backgroundColor: FT.orange, color: FT.navy }}
         >
           {loading ? <Loader2 className="animate-spin" size={18} /> : <Plus size={18} />} Criar Aviso no App

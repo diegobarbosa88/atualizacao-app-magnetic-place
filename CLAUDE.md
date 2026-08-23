@@ -332,6 +332,14 @@ perguntar. E usar sempre a mesma métrica: o script conta **ocorrências**, não
   dá 11,74:1, com o laranja a pertencer a um elemento vizinho. **O lote dos 34 precisa de
   confirmação caso a caso do fundo real, não de conversão em massa** — o script lista candidatos,
   não confirmações. Medir o fundo computado de cada um no browser antes de lhe tocar.
+  **Resolvido, e o número era falso.** Dos 34 candidatos, **7 eram reais**; 23 tinham `text-white`
+  no `className` mas `color: FT.navy` no `style` inline — que vence o className, logo já estavam
+  correctos a 4,66:1 — e 4 tinham por perto um laranja que não era o fundo daquele elemento. Os 7
+  foram corrigidos para `--navy-solid`, os 23 `text-white` mortos foram removidos, e a verificação
+  passou a v3: reconstrói a tag inteira e só conta quando o fundo laranja está na MESMA tag e não
+  há `color:` inline a sobrepor-se. **A regra que fica: uma classe pode estar presente e não ter
+  efeito.** Procurar classes no código diz o que está escrito, não o que se vê — e num ficheiro que
+  mistura `className` com `style` inline, a segunda ganha sempre.
 - **Um teste escrito a partir da mesma premissa do código que testa herda-lhe o ponto cego.** O
   conversor não conhecia a propriedade `placeholder` (o Tailwind antigo escreve
   `placeholder-slate-400`, com hífen, não `placeholder:text-slate-400`) e deixou uma classe por

@@ -143,7 +143,7 @@ export default function ImpostoPdfUploadModal({ onClose, onSaved }) {
           <button
             onClick={handleGuardar}
             disabled={guardando}
-            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-xs font-black text-white disabled:opacity-60 transition-all shadow-sm hover:opacity-90"
+ className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-xs font-black disabled:opacity-60 transition-all shadow-sm hover:opacity-90"
             style={{ backgroundColor: FT.orange, color: FT.navy }}
           >
             {guardando ? <Loader2 size={14} className="animate-spin" /> : null}

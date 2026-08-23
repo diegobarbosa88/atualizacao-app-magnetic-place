@@ -21,7 +21,7 @@ export default function JustificarModal({ entry, text, onTextChange, saving, onS
           <button
             disabled={!text.trim() || saving}
             onClick={onSave}
-            className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 hover:opacity-90"
+ className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 hover:opacity-90"
             style={{ backgroundColor: FT.orange, color: FT.navy }}
           >
             {saving ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle size={13} />} Marcar Ok

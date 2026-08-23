@@ -34,7 +34,7 @@ export default function TemplateGenerateModal({
           <button
             onClick={onSubmit}
             disabled={generating || selectedWorkers.length === 0}
-            className="flex items-center gap-2 px-6 py-2 text-white font-bold rounded-xl hover:opacity-90 disabled:opacity-50"
+ className="flex items-center gap-2 px-6 py-2 font-bold rounded-xl hover:opacity-90 disabled:opacity-50"
             style={{ backgroundColor: FT.orange, color: FT.navy }}
           >
             {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}

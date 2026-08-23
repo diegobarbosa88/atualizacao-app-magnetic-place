@@ -409,7 +409,7 @@ export default function ImportarContratosSSDModal({ workers, onClose, onImportad
               <button
                 onClick={handleGuardar}
                 disabled={salvando || totalAplicar === 0}
-                className="flex items-center gap-2 px-5 py-2.5 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-2xl text-sm font-black uppercase tracking-widest transition-all"
+ className="flex items-center gap-2 px-5 py-2.5 disabled:opacity-40 disabled:cursor-not-allowed rounded-2xl text-sm font-black uppercase tracking-widest transition-all"
                 style={{ backgroundColor: FT.orange, color: FT.navy }}
               >
                 {salvando

@@ -2633,7 +2633,7 @@ ${hdrRow}${bodyRows}${totRow}
               <button
                 onClick={gerarPDF}
                 disabled={mapaRows.length === 0}
-                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-black text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-black text-[var(--navy-solid)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 style={{ background: FT.orange }}
                 onMouseEnter={e => { if (mapaRows.length > 0) e.currentTarget.style.background = '#c97700'; }}
                 onMouseLeave={e => { e.currentTarget.style.background = FT.orange; }}
@@ -2996,7 +2996,7 @@ ${hdrRow}${bodyRows}${totRow}
             {mapaRows.length > 0 && (
               <button
                 onClick={gerarPDF}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-black text-white transition-all"
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-black text-[var(--navy-solid)] transition-all"
                 style={{ background: FT.orange }}
                 onMouseEnter={e => { e.currentTarget.style.background = '#c97700'; }}
                 onMouseLeave={e => { e.currentTarget.style.background = FT.orange; }}

@@ -430,7 +430,7 @@ function CardClientesPorDecidir({ clientes, onIrParaElegibilidade }) {
       </ul>
       <button
         onClick={onIrParaElegibilidade}
-        className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest text-white transition-all hover:opacity-90"
+        className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest text-[var(--navy-solid)] transition-all hover:opacity-90"
         style={{ backgroundColor: FT.orange }}
       >
         Ir para Elegibilidade de Clientes <ArrowRight size={13} />
@@ -763,7 +763,7 @@ function HistoricoTab({ onIrParaElegibilidade }) {
             <button
               onClick={confirmarAtivacao}
               disabled={ativando}
-              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest text-white transition-all hover:opacity-90 disabled:opacity-60"
+ className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all hover:opacity-90 disabled:opacity-60"
               style={{ backgroundColor: FT.orange, color: FT.navy }}
             >
               {ativando ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={13} />}
@@ -1090,7 +1090,7 @@ function EstimativaMensalTab({ onIrParaElegibilidade }) {
             <button
               onClick={simular}
               disabled={simulando}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest text-white transition-all hover:opacity-90 disabled:opacity-60"
+ className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all hover:opacity-90 disabled:opacity-60"
               style={{ backgroundColor: FT.orange, color: FT.navy }}
             >
               {simulando ? <Loader2 size={13} className="animate-spin" /> : <Calculator size={13} />}
@@ -1201,7 +1201,7 @@ function EstimativaMensalTab({ onIrParaElegibilidade }) {
                       {!l.faturaId && l.status === 'calculado' && (
                         <button
                           onClick={() => setDadosFaturar({ clienteId: l.clientId, ajudasValor: l.valorFinal })}
-                          className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-widest text-white rounded-lg transition-all hover:opacity-90"
+ className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all hover:opacity-90"
                           style={{ backgroundColor: FT.orange, color: FT.navy }}>
                           Criar Fatura
                         </button>
@@ -1382,7 +1382,7 @@ function ReconciliacaoTab() {
                 Cancelar
               </button>
               <button onClick={handleConfirmarFecho} disabled={fechando}
-                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-white rounded-lg transition-all disabled:opacity-60 hover:opacity-90"
+ className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all disabled:opacity-60 hover:opacity-90"
                 style={{ backgroundColor: FT.orange, color: FT.navy }}>
                 {fechando ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
                 Confirmar Fecho
