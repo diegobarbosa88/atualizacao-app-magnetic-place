@@ -1,5 +1,35 @@
 # APP MAGNETIC PRODUÇÃO
 
+## Diretrizes de trabalho
+
+Reduzem os erros clássicos. Compromisso assumido: cautela acima de velocidade. Para tarefas triviais,
+usar bom senso.
+
+**1. Pensar antes de codificar.** Não assumir, não esconder confusão, expor tradeoffs. Antes de
+implementar: explicitar as assunções, e perguntar se houver incerteza; se existirem várias
+interpretações, apresentá-las em vez de escolher em silêncio; se existir uma abordagem mais simples,
+dizê-lo e contestar quando fizer sentido; se algo não estiver claro, parar, nomear o que confunde e
+perguntar.
+
+**2. Simplicidade primeiro.** O mínimo de código que resolve o problema, nada especulativo. Sem
+funcionalidades além do pedido, sem abstrações para código de uso único, sem "flexibilidade" ou
+configurabilidade não pedidas, sem tratamento de erros para cenários impossíveis. Se escreveste 200
+linhas e davam 50, reescreve. O teste: um engenheiro sénior diria que isto está complicado de mais?
+
+**3. Alterações cirúrgicas.** Tocar só no necessário, limpar só a própria sujidade. Não "melhorar"
+código, comentários ou formatação adjacentes; não refatorar o que não está partido; seguir o estilo
+existente mesmo que se fizesse de outra forma. **Código morto não relacionado: mencionar, não
+apagar.** Remover apenas os imports/variáveis/funções que as próprias alterações tornaram órfãos. O
+teste: cada linha alterada deve remontar diretamente ao pedido.
+
+**4. Execução orientada a objetivos.** Transformar tarefas em objetivos verificáveis ("adicionar
+validação" → "escrever testes para inputs inválidos e fazê-los passar"). Em tarefas de vários passos,
+enunciar um plano curto com a verificação de cada passo. Critérios de sucesso fortes permitem iterar
+sem supervisão; critérios fracos ("fazer funcionar") obrigam a clarificações constantes.
+
+> Neste repo não há suite de testes, por isso o ponto 4 traduz-se em critérios verificáveis no
+> browser e nos artefactos gerados, não em testes automatizados.
+
 Gestão de RH e operações da Magnetic Place Unipessoal, Lda (cedência de mão-de-obra, sede na Trofa,
 trabalhadores destacados em clientes industriais em PT e ES). ~28 trabalhadores, ~13 clientes.
 
