@@ -217,8 +217,8 @@ novos.
   
   ### Estado da migração (atualizar a cada lote)
 
-Total: 4.197 classes Tailwind → tokens `FT`. Última contagem: **715 de 4.197 em 9 módulos**, mais os
-dois canais de `style` inline fechados (`FT.slate` e `FT.navy`). Restam ~3.161 classes no admin.
+Total: 4.197 classes Tailwind → tokens `FT`. Última contagem: **1.020 de 4.197 em 11 módulos**, mais os
+dois canais de `style` inline fechados (`FT.slate` e `FT.navy`). Restam ~2.856 classes no admin.
 
 Para medir o que falta em qualquer momento, sem contar à mão:
 `sh scripts/verificar-lote-design.sh src/features/admin src/components/admin`
@@ -239,8 +239,9 @@ Para medir o que falta em qualquer momento, sem contar à mão:
 | `documents`               | 155          | ✅ feito                         | `885da84`  |
 | `pagamentos`              | 115          | ✅ feito                         | `48a1620`  |
 | Canal inline (`color: FT.navy`) | 108 (72 convertidos, 36 sobre laranja ficam) | ✅ fechado | `de236ab` |
-| `faturas`                 | 125          | ⏳ próximo                       | —          |
-| `cost-reports`            | 267          | não iniciado                     | —          |
+| `faturas`                 | 125          | ✅ feito                         | `74e4d8a`  |
+| `cost-reports` (8 de 9 ficheiros) | 180  | ✅ feito                         | `e039edc`  |
+| `cost-reports/AjudasCalculadora.jsx` | 104 | ⏳ próximo — lote próprio, dinheiro | —      |
 | `toconline`                | 355          | não iniciado                     | —          |
 | `team`                     | 463          | não iniciado                     | —          |
 | *(restantes módulos ainda não medidos individualmente)* | — | não iniciado | — |
@@ -253,10 +254,24 @@ laranja também é constante JS, não inverte, e o par é estável.
 Nota técnica que tornou isto barato: **`var()` dentro de `style` inline segue o `.dark`** — não é
 preciso mover nada para `className`, basta trocar `FT.navy` por `'var(--navy)'` no mesmo sítio.
 
-**Pendências registadas, sem decisão de convergência:**
-- `reconciliacao-mockup.css` (`--navy`/`--bg`/`--border` locais) não converge para os tokens FT;
-  24 bordas em `reconciliacao` ficam presas a isso.
-- Modo escuro dentro de `.recon-scope` fica parcialmente claro — mesma causa acima.
+**Pendências registadas, sem decisão de convergência.** Todas dependem da mesma decisão — se e
+quando o `reconciliacao-mockup.css` converge para os tokens FT. Ficam aqui com a localização exacta
+para quem um dia a tomar não ter de as redescobrir:
+
+- **`reconciliacao-mockup.css` não converge.** Redefine `--navy`, `--bg`, `--border` e `--text`
+  dentro de `.recon-scope`, e a definição mais próxima vence, por isso nem o bloco `.dark` do
+  `index.css` lhes chega.
+- **24 bordas em `reconciliacao`** por converter: `border-slate-200/300` iria para `--border`, a
+  única variável cujo valor local (#E3E7EC) difere do global (#e5e1d6).
+- **Modo escuro dentro de `.recon-scope` fica claro** — mesma causa. Medido: com o dark ligado,
+  `--bg` resolve para #F5F7FA e `--navy` para #1B3A57 dentro do escopo. Afecta Reconciliação,
+  Custos e o painel de Salários.
+- **13 `color: 'var(--navy)'` presos ao valor local**, todos em faixas de estatísticas dentro de
+  blocos `.recon-scope` do `cost-reports`: `ClientesTab` 99/103/107, `DespesasTab` 78/82,
+  `EquipaTab` 16/21/25, `FaturasTab` 140, `MargemTab` 37. Vieram da passagem do canal inline do
+  navy (`de236ab`) e ali a conversão **não teve efeito** — o `var(--navy)` resolve para o #1B3A57
+  fixo do mockup, não para o global que clareia. Não é regressão nem bug: o mockup fixa fundo *e*
+  texto, e a faixa dá 11,74:1 nos dois modos. É só a mesma ilha clara das outras pendências.
 - Colisão de `#1B3A57` ainda hardcoded em 87 ficheiros, contra 29 usos do token — resolver por
   código, não à mão.
 - `pill de estado` no modal de cliente (`clients.status`: pendente/enviado) e `Badge.jsx` — decisão
