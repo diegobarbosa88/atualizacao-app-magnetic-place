@@ -1,6 +1,7 @@
 import React from 'react';
 import { Search, Plus, X } from 'lucide-react';
 import { CATEGORIAS_RH_ACT } from '../../../constants/rhCategories';
+import { FT } from '../../../styles/designTokens';
 
 // Tabs de estado com contador e o botão "A Expirar" foram substituídos pelo
 // stat strip clicável no cabeçalho de DocumentsAdmin.jsx — evita repetir o
@@ -23,7 +24,7 @@ export default function DocumentsFilters({
         <div className="flex items-center gap-2 mb-3">
           <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">A filtrar por:</span>
           {stateFilter !== 'all' && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-black bg-[#1B3A57]/5 text-[#1B3A57]">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-black bg-[#1B3A57]/5 text-[var(--navy)]">
               {{ pending: 'Pendentes', awaiting_admin: 'Aguarda aprovação', signed: 'Assinados' }[stateFilter] || stateFilter}
             </span>
           )}
@@ -68,7 +69,7 @@ export default function DocumentsFilters({
           <button
             onClick={onShowUpload}
             className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-black text-xs uppercase transition-all shadow-md shrink-0 whitespace-nowrap"
-            style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}
+            style={{ backgroundColor: FT.orange, color: FT.navy }}
             title="Adicionar documento"
           >
             <Plus size={16} /> Adicionar

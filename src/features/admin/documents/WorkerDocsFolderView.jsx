@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useApp } from '../../../context/AppContext';
 import { renderPdfFirstPage, renderPdfToSrcDoc } from '../../../components/common/workerDocuments/useDocumentPreview';
+import { FT } from '../../../styles/designTokens';
 import {
   FileText, Clock,
   FolderOpen, Eye, EyeOff, CheckCircle, AlertTriangle, ChevronDown, ChevronUp, ChevronRight,
@@ -105,7 +106,7 @@ function AvatarRing({ name, total, expirados, urgentes }) {
         <circle cx="22" cy="22" r={r} fill="none" stroke={color} strokeWidth="3" strokeLinecap="round"
           strokeDasharray={`${c * validPct} ${c}`} />
       </svg>
-      <div className="absolute inset-[3px] rounded-full flex items-center justify-center text-[10px] font-black" style={{ backgroundColor: '#1B3A57', color: '#EB8D00' }}>
+      <div className="absolute inset-[3px] rounded-full flex items-center justify-center text-[10px] font-black" style={{ backgroundColor: FT.navy, color: FT.orange }}>
         {getInitials(name)}
       </div>
     </div>
@@ -307,7 +308,7 @@ function DocCardSingle({ d, onOpenDoc, onDelete, confirmDeleteId, setConfirmDele
           </div>
         ) : (
           <div className="flex items-center justify-center gap-6 pt-2.5 border-t border-slate-100">
-            <button onClick={() => onOpenDoc(d)} title="Ver" className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors" style={{ color: '#869AAF' }}><Eye size={16} /></button>
+            <button onClick={() => onOpenDoc(d)} title="Ver" className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors" style={{ color: FT.slate }}><Eye size={16} /></button>
             {d.source === 'manual' && (
               <button
                 onClick={async () => {
@@ -450,7 +451,7 @@ function DocCardPair({ pair, onOpenDoc, onDelete, confirmDeleteId, setConfirmDel
                   </div>
                 ) : (
                   <div className="flex items-center justify-center gap-4">
-                    <button onClick={() => onOpenDoc(doc)} className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors" style={{ color: '#869AAF' }} title="Ver"><Eye size={14} /></button>
+                    <button onClick={() => onOpenDoc(doc)} className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors" style={{ color: FT.slate }} title="Ver"><Eye size={14} /></button>
                     <button onClick={() => setConfirmDeleteId(doc.id)} className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 transition-colors" title="Apagar"><Trash2 size={14} /></button>
                   </div>
                 )}
@@ -590,7 +591,7 @@ export function WorkerPastaView({ worker, docs, onBack, onOpenDoc, onDelete, onA
         <button onClick={onBack} className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors">
           <ArrowLeft size={16} />
         </button>
-        <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-sm font-black" style={{ backgroundColor: '#1B3A57', color: '#EB8D00' }}>{getInitials(worker.workerName)}</div>
+        <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-sm font-black" style={{ backgroundColor: FT.navy, color: FT.orange }}>{getInitials(worker.workerName)}</div>
         <div className="flex-1">
           <h4 className="font-black text-slate-800 text-base">{toSentenceCase(worker.workerName)}</h4>
           <p className="text-[10px] text-slate-400 font-bold">{docs.length} documento{docs.length !== 1 ? 's' : ''}</p>
@@ -604,7 +605,7 @@ export function WorkerPastaView({ worker, docs, onBack, onOpenDoc, onDelete, onA
           <button
             onClick={onScan}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border-2 hover:bg-slate-50 text-xs font-black transition-colors"
-            style={{ borderColor: '#869AAF', color: '#869AAF' }}
+            style={{ borderColor: FT.slate, color: FT.slate }}
           >
             <ScanSearch size={13} /> Scanner
           </button>
@@ -613,7 +614,7 @@ export function WorkerPastaView({ worker, docs, onBack, onOpenDoc, onDelete, onA
           <button
             onClick={onAddDoc}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-black text-xs transition-colors"
-            style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}
+            style={{ backgroundColor: FT.orange, color: FT.navy }}
           >
             <Plus size={13} /> Adicionar
           </button>
@@ -777,7 +778,7 @@ export default function WorkerDocsFolderView({ docs, onPreview, onDeleteManual, 
         <button
           onClick={() => setScannerOpen(true)}
           className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl border-2 hover:bg-slate-50 text-xs font-black transition-colors flex-shrink-0"
-          style={{ borderColor: '#869AAF', color: '#869AAF' }}
+          style={{ borderColor: FT.slate, color: FT.slate }}
         >
           <ScanSearch size={13} /> Scanner
         </button>

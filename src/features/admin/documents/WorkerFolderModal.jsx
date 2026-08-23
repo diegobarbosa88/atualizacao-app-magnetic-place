@@ -3,6 +3,7 @@ import { Plus } from 'lucide-react';
 import ModalShell from '../../../components/common/ModalShell';
 import { useApp } from '../../../context/AppContext';
 import { useDocumentTemplates } from '../../../hooks/useDocumentTemplates';
+import { FT } from '../../../styles/designTokens';
 import { WorkerPastaView, DocumentViewerModal } from './WorkerDocsFolderView';
 import UploadManualModal from './UploadManualModal';
 import { mapManualDoc, mapGeneratedDoc } from './unifyDocuments';
@@ -109,7 +110,7 @@ export default function WorkerFolderModal({ workerId, workerName, onClose }) {
             <button
               onClick={() => setShowUpload(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-black text-xs transition-colors flex-shrink-0"
-              style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}
+              style={{ backgroundColor: FT.orange, color: FT.navy }}
             >
               <Plus size={13} /> Adicionar
             </button>

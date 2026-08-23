@@ -4,11 +4,12 @@ import {
 } from 'lucide-react';
 import { formatDocDate } from '../../../utils/dateUtils';
 import { toSentenceCase, toSentenceCaseFilename } from '../../../utils/textUtils';
+import { FT } from '../../../styles/designTokens';
 import SortableTh from './SortableTh';
 import { getValidadeStatus, getDiasRestantes, CATEGORIAS_RH_ACT, CATEGORIA_CONFIG, CATEGORIA_COLOR_MAP } from '../../../constants/rhCategories';
 
 const ACTION_ICON_CLS = "p-1.5 bg-white rounded-lg border border-slate-200 hover:text-white transition-all shadow-sm";
-const ACTION_ICON_STYLE = { color: '#869AAF' };
+const ACTION_ICON_STYLE = { color: FT.slate };
 
 function StateBadge({ state }) {
   if (state === 'signed') return (
@@ -17,7 +18,7 @@ function StateBadge({ state }) {
     </span>
   );
   if (state === 'awaiting_admin') return (
-    <span title="Aguarda aprovação" className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-black bg-slate-100 text-[#1B3A57]">
+    <span title="Aguarda aprovação" className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-black bg-slate-100 text-[var(--navy)]">
       <FileSignature size={12} /> Aguarda aprovação
     </span>
   );
@@ -189,13 +190,13 @@ export default function DocumentsTable({
                         <>
                           {d.viewUrl && (
                             <a href={d.viewUrl} target="_blank" rel="noreferrer"
-                              className={`${ACTION_ICON_CLS} hover:bg-[#869AAF]`} style={ACTION_ICON_STYLE} title="Visualizar original">
+                              className={`${ACTION_ICON_CLS} hover:bg-[var(--slate)]`} style={ACTION_ICON_STYLE} title="Visualizar original">
                               <Eye size={12} />
                             </a>
                           )}
                           {d.signedPdfUrl && (
                             <a href={d.signedPdfUrl} target="_blank" rel="noreferrer"
-                              className={`${ACTION_ICON_CLS} hover:bg-[#869AAF]`} style={ACTION_ICON_STYLE} title="Visualizar assinado">
+                              className={`${ACTION_ICON_CLS} hover:bg-[var(--slate)]`} style={ACTION_ICON_STYLE} title="Visualizar assinado">
                               <CheckCircle size={12} />
                             </a>
                           )}
@@ -207,18 +208,18 @@ export default function DocumentsTable({
                       ) : (
                         <>
                           <button onClick={() => onPreview(d.raw)}
-                            className={`${ACTION_ICON_CLS} hover:bg-[#869AAF]`} style={ACTION_ICON_STYLE} title="Pré-visualizar">
+                            className={`${ACTION_ICON_CLS} hover:bg-[var(--slate)]`} style={ACTION_ICON_STYLE} title="Pré-visualizar">
                             <Eye size={12} />
                           </button>
                           {d.signedPdfUrl && (
                             <a href={d.signedPdfUrl} target="_blank" rel="noreferrer"
-                              className={`${ACTION_ICON_CLS} hover:bg-[#869AAF]`} style={ACTION_ICON_STYLE} title="Visualizar assinado">
+                              className={`${ACTION_ICON_CLS} hover:bg-[var(--slate)]`} style={ACTION_ICON_STYLE} title="Visualizar assinado">
                               <CheckCircle size={12} />
                             </a>
                           )}
                           {d.state === 'awaiting_admin' && (
                             <button onClick={() => onApprove(d.raw)} disabled={isApproving || saving}
-                              className={`${ACTION_ICON_CLS} hover:bg-[#869AAF] disabled:opacity-50`} style={ACTION_ICON_STYLE} title="Aplicar carimbo">
+                              className={`${ACTION_ICON_CLS} hover:bg-[var(--slate)] disabled:opacity-50`} style={ACTION_ICON_STYLE} title="Aplicar carimbo">
                               {isApproving ? <Loader2 size={12} className="animate-spin" /> : <FileSignature size={12} />}
                             </button>
                           )}
