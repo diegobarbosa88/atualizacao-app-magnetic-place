@@ -506,29 +506,29 @@ export default function SalariosTab({ month }) {
       {loadingSalarios ? (
         <div className="flex flex-col items-center justify-center py-12 gap-3">
           <Loader2 size={24} className="animate-spin" style={{ color: FT.slate }} />
-          <p className="text-[11px] text-slate-400">A analisar pagamentos salariais…</p>
+          <p className="text-[11px] text-[var(--slate-dim)]">A analisar pagamentos salariais…</p>
         </div>
       ) : !salarioResultado ? (
-        <p className="text-center text-slate-400 py-8 text-sm">Sem dados de análise salarial.</p>
+        <p className="text-center text-[var(--slate-dim)] py-8 text-sm">Sem dados de análise salarial.</p>
       ) : (
         <>
           {/* Header: sumário + exportar */}
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
             <div className="grid grid-cols-3 gap-2">
               {[
-                { label: 'Trabalhadores', value: employeesFiltered.length, color: 'text-slate-700', bg: 'bg-slate-50' },
+                { label: 'Trabalhadores', value: employeesFiltered.length, color: 'text-[var(--ink-mid)]', bg: 'bg-[var(--surface)]' },
                 { label: 'Match Exato', value: (salarioResultado?.summary?.total_exact_matches || 0) + justificacoes.length, color: 'text-emerald-700', bg: 'bg-emerald-50' },
                 { label: 'Pendentes', value: pendentesEfectivos, color: 'text-amber-700', bg: 'bg-amber-50' },
               ].map(c => (
                 <div key={c.label} className={`${c.bg} rounded-2xl px-4 py-3 text-center min-w-0`}>
                   <p className={`text-2xl font-black ${c.color}`}>{c.value}</p>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-0.5">{c.label}</p>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] mt-0.5">{c.label}</p>
                 </div>
               ))}
             </div>
 
             <div className="flex flex-row sm:flex-col items-center sm:items-end gap-2 sm:gap-1 self-start sm:flex-shrink-0">
-              <label className="text-[9px] font-black uppercase tracking-widest text-slate-400">Tolerância (€)</label>
+              <label className="text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Tolerância (€)</label>
               <div className="flex items-center gap-1">
                 <input
                   type="number" min="0" step="0.01" value={tolInput}
@@ -541,7 +541,7 @@ export default function SalariosTab({ month }) {
                     localStorage.setItem('salarios_tolerancia', String(rounded));
                     analisarSalarios(undefined, rounded);
                   }}
-                  className="w-20 border border-slate-200 rounded-xl px-2 py-1.5 text-[11px] font-bold text-slate-700 text-right focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30"
+                  className="w-20 border border-[var(--border)] rounded-xl px-2 py-1.5 text-[11px] font-bold text-[var(--ink-mid)] text-right focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30"
                 />
               </div>
             </div>
@@ -551,16 +551,16 @@ export default function SalariosTab({ month }) {
               <div className="relative" ref={exportRef}>
                 <button
                   onClick={() => setShowExportMenu(v => !v)}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-700 rounded-2xl text-xs font-black uppercase tracking-widest transition-all w-full justify-center"
+                  className="flex items-center gap-1.5 px-3 py-2 bg-[var(--surface-dim)] hover:bg-[var(--border)] text-[var(--slate-dim)] hover:text-[var(--ink-mid)] rounded-2xl text-xs font-black uppercase tracking-widest transition-all w-full justify-center"
                 >
                   <Download size={13} /> Exportar
                 </button>
                 {showExportMenu && (
-                  <div className="absolute right-0 top-full mt-1 bg-white rounded-2xl shadow-xl border border-slate-100 py-1 z-20 min-w-[130px]">
-                    <button onClick={handleExportCsv} className="w-full flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors">
+                  <div className="absolute right-0 top-full mt-1 bg-white rounded-2xl shadow-xl border border-[var(--border-soft)] py-1 z-20 min-w-[130px]">
+                    <button onClick={handleExportCsv} className="w-full flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-[var(--ink-mid)] hover:bg-[var(--surface)] transition-colors">
                       <FileText size={13} className="text-emerald-600" /> CSV
                     </button>
-                    <button onClick={handleExportPdf} className="w-full flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors">
+                    <button onClick={handleExportPdf} className="w-full flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-[var(--ink-mid)] hover:bg-[var(--surface)] transition-colors">
                       <FileText size={13} className="text-rose-500" /> PDF
                     </button>
                   </div>
@@ -569,8 +569,8 @@ export default function SalariosTab({ month }) {
               {/* SEPA XML */}
               <button
                 onClick={() => abrirSepaModal('normal')}
-                className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-2xl text-xs font-black uppercase tracking-widest transition-all justify-center"
-                style={{ color: FT.slate }}
+                className="flex items-center gap-1.5 px-3 py-2 bg-[var(--surface-dim)] hover:bg-[var(--border)] rounded-2xl text-xs font-black uppercase tracking-widest transition-all justify-center"
+                style={{ color: FT.slateDim }}
               >
                 <Landmark size={13} /> SEPA XML
               </button>
@@ -584,8 +584,8 @@ export default function SalariosTab({ month }) {
               {/* Descontos Salariais */}
               <button
                 onClick={() => setDescontosModal(true)}
-                className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-2xl text-xs font-black uppercase tracking-widest transition-all justify-center"
-                style={{ color: FT.slate }}
+                className="flex items-center gap-1.5 px-3 py-2 bg-[var(--surface-dim)] hover:bg-[var(--border)] rounded-2xl text-xs font-black uppercase tracking-widest transition-all justify-center"
+                style={{ color: FT.slateDim }}
               >
                 <Scissors size={13} /> Descontos
               </button>
@@ -600,27 +600,27 @@ export default function SalariosTab({ month }) {
           </div>
 
           {salarioResultado.employees.length === 0 ? (
-            <div className="text-center py-8 text-[12px] text-slate-400">
+            <div className="text-center py-8 text-[12px] text-[var(--slate-dim)]">
               Nenhum trabalhador identificado nas transferências.<br />
               Verifique se os nomes constam nas descrições dos movimentos bancários.
             </div>
           ) : (
             <>
-              <div className="flex flex-wrap items-end gap-1 border-b border-slate-100">
+              <div className="flex flex-wrap items-end gap-1 border-b border-[var(--border-soft)]">
                 <button onClick={() => setSelectedMonth(null)}
-                  className={`px-3 py-2 -mb-px border-b-2 text-[10px] font-black uppercase tracking-widest transition-all ${!selectedMonth ? 'border-[var(--orange)] text-[var(--navy)]' : 'border-transparent text-slate-400 hover:text-[var(--navy)]'}`}>
+                  className={`px-3 py-2 -mb-px border-b-2 text-[10px] font-black uppercase tracking-widest transition-all ${!selectedMonth ? 'border-[var(--orange)] text-[var(--navy)]' : 'border-transparent text-[var(--slate-dim)] hover:text-[var(--navy)]'}`}>
                   Todos
                 </button>
                 {monthsAvailable.map(mes => (
                   <button key={mes} onClick={() => setSelectedMonth(mes)}
-                    className={`px-3 py-2 -mb-px border-b-2 text-[10px] font-black uppercase tracking-widest transition-all ${selectedMonth === mes ? 'border-[var(--orange)] text-[var(--navy)]' : 'border-transparent text-slate-400 hover:text-[var(--navy)]'}`}>
+                    className={`px-3 py-2 -mb-px border-b-2 text-[10px] font-black uppercase tracking-widest transition-all ${selectedMonth === mes ? 'border-[var(--orange)] text-[var(--navy)]' : 'border-transparent text-[var(--slate-dim)] hover:text-[var(--navy)]'}`}>
                     {fmtMes(mes)}
                   </button>
                 ))}
               </div>
 
               {employeesFiltered.length === 0 ? (
-                <div className="text-center py-8 text-[12px] text-slate-400">Nenhum dado para o mês seleccionado.</div>
+                <div className="text-center py-8 text-[12px] text-[var(--slate-dim)]">Nenhum dado para o mês seleccionado.</div>
               ) : (
                 employeesFiltered.map(emp => (
                   <SalarioEmployeeCard
@@ -652,7 +652,7 @@ export default function SalariosTab({ month }) {
                         <div className="min-w-0">
                           <p className="text-[10px] font-bold text-sky-800 truncate">{e.name}</p>
                           <p className="text-[9px] text-sky-400">{fmtMes(e.month)}</p>
-                          {e.justification && <p className="text-[9px] text-slate-400 italic truncate" title={e.justification}>"{e.justification}"</p>}
+                          {e.justification && <p className="text-[9px] text-[var(--slate-dim)] italic truncate" title={e.justification}>"{e.justification}"</p>}
                         </div>
                         <span className="text-[10px] font-black text-sky-700 flex-shrink-0">{fmtEur(e.value)}</span>
                       </div>
@@ -670,7 +670,7 @@ export default function SalariosTab({ month }) {
                         <div className="min-w-0">
                           <p className="text-[10px] font-bold text-rose-800 truncate">{e.name}</p>
                           <p className="text-[9px] text-rose-400">{fmtMes(e.month)}</p>
-                          {e.justification && <p className="text-[9px] text-slate-400 italic truncate" title={e.justification}>"{e.justification}"</p>}
+                          {e.justification && <p className="text-[9px] text-[var(--slate-dim)] italic truncate" title={e.justification}>"{e.justification}"</p>}
                         </div>
                         <span className="text-[10px] font-black text-rose-700 flex-shrink-0">{fmtEur(e.value)}</span>
                       </div>
@@ -738,12 +738,12 @@ export default function SalariosTab({ month }) {
                   return (
                     <div key={i} className="flex items-center justify-between bg-rose-50 border border-rose-100 rounded-xl px-3 py-2">
                       <div className="flex-1 min-w-0 mr-3">
-                        <p className="text-[11px] text-slate-600 truncate">{tx.descricao}</p>
-                        <p className="text-[10px] text-slate-400">{tx.date} · {fmtEur(tx.amount)}</p>
+                        <p className="text-[11px] text-[var(--ink-soft)] truncate">{tx.descricao}</p>
+                        <p className="text-[10px] text-[var(--slate-dim)]">{tx.date} · {fmtEur(tx.amount)}</p>
                       </div>
                       <button
                         onClick={() => { setSalarioAssocModal(tx); setSalarioAssocPattern(''); setSalarioAssocWorker(''); }}
-                        className="flex-shrink-0 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-slate-100 hover:bg-slate-200 transition-colors" style={{ color: FT.slate }}
+                        className="flex-shrink-0 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-[var(--surface-dim)] hover:bg-[var(--border)] transition-colors" style={{ color: FT.inkSoft }}
                       >
                         Associar
                       </button>
@@ -756,13 +756,13 @@ export default function SalariosTab({ month }) {
 
           {/* Aliases activos */}
           {salarioAliases.length > 0 && (
-            <div className="mt-3 border-t border-slate-100 pt-3">
-              <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2">Aliases Guardados</p>
+            <div className="mt-3 border-t border-[var(--border-soft)] pt-3">
+              <p className="text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-2">Aliases Guardados</p>
               <div className="flex flex-wrap gap-1.5">
                 {salarioAliases.map(a => (
-                  <div key={a.id} className="flex items-center gap-1 bg-slate-100 rounded-xl px-2 py-1">
-                    <span className="text-[10px] text-slate-600 max-w-[120px] truncate">{a.pattern}</span>
-                    <span className="text-[9px] text-slate-400">→</span>
+                  <div key={a.id} className="flex items-center gap-1 bg-[var(--surface-dim)] rounded-xl px-2 py-1">
+                    <span className="text-[10px] text-[var(--ink-soft)] max-w-[120px] truncate">{a.pattern}</span>
+                    <span className="text-[9px] text-[var(--slate)]">→</span>
                     <span className="text-[10px] font-bold max-w-[100px] truncate" style={{ color: FT.navy }}>{a.worker_name}</span>
                     <button
                       onClick={async () => {
@@ -771,7 +771,7 @@ export default function SalariosTab({ month }) {
                         setSalarioAliases(updated);
                         analisarSalarios(updated);
                       }}
-                      className="ml-1 text-slate-300 hover:text-rose-500 transition-colors"
+                      className="ml-1 text-[var(--slate)] hover:text-rose-500 transition-colors"
                     >
                       <X size={10} />
                     </button>
@@ -851,7 +851,7 @@ export default function SalariosTab({ month }) {
             footer={
               <div className="px-5 py-4 flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Total selecionado</p>
+                  <p className="text-xs font-bold text-[var(--slate-dim)] uppercase tracking-widest">Total selecionado</p>
                   <p className="text-xl font-black" style={{ color: FT.navy }}>{fmtEur(total)}</p>
                 </div>
                 <button
@@ -866,8 +866,8 @@ export default function SalariosTab({ month }) {
               </div>
             }
           >
-              <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Seleccionar todos</span>
+              <div className="px-5 py-3 border-b border-[var(--border-soft)] flex items-center justify-between">
+                <span className="text-xs font-bold text-[var(--slate-dim)] uppercase tracking-widest">Seleccionar todos</span>
                 <input
                   type="checkbox"
                   checked={candidatos.length > 0 && candidatos.every(e => sepaSelecao.has(e.employee_name))}
@@ -876,7 +876,7 @@ export default function SalariosTab({ month }) {
                 />
               </div>
 
-              <div className="divide-y divide-slate-100">
+              <div className="divide-y divide-[var(--border-soft)]">
                 {candidatos.map(emp => {
                   const worker = workers.find(w => norm(w.name) === norm(emp.employee_name));
                   const semIban = !worker?.iban;
@@ -890,7 +890,7 @@ export default function SalariosTab({ month }) {
                     <div key={emp.employee_name} className={semIban ? 'opacity-50' : ''}>
                       {/* Linha principal — clicar expande os ajustes */}
                       <div
-                        className={`flex items-center gap-3 px-4 py-3.5 cursor-pointer transition-colors ${expandido ? '' : 'hover:bg-slate-50'}`}
+                        className={`flex items-center gap-3 px-4 py-3.5 cursor-pointer transition-colors ${expandido ? '' : 'hover:bg-[var(--surface)]'}`}
                         style={expandido ? { backgroundColor: 'rgba(134,154,175,0.1)' } : {}}
                         onClick={() => !semIban && setSepaExpandido(expandido ? null : emp.employee_name)}
                       >
@@ -907,10 +907,10 @@ export default function SalariosTab({ month }) {
                           className="w-4 h-4 accent-[var(--navy)] cursor-pointer disabled:cursor-not-allowed flex-shrink-0"
                         />
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm font-bold text-slate-700 truncate">{emp.employee_name}</p>
+                          <p className="text-sm font-bold text-[var(--ink-mid)] truncate">{emp.employee_name}</p>
                           {semIban
                             ? <p className="text-xs text-rose-500 font-semibold">Sem IBAN</p>
-                            : <p className="text-xs text-slate-400 font-mono">{worker.iban.replace(/\s/g,'').slice(0,8)}…</p>
+                            : <p className="text-xs text-[var(--slate-dim)] font-mono">{worker.iban.replace(/\s/g,'').slice(0,8)}…</p>
                           }
                           {(() => {
                             const nDesc = deducoes.filter(d => norm(d.worker_name) === norm(emp.employee_name) && d.month === mesAlvo).length;
@@ -923,25 +923,25 @@ export default function SalariosTab({ month }) {
                           {temAjuste && (
                             <span className="text-[10px] font-bold bg-amber-100 text-amber-700 rounded-full px-2 py-0.5">ajustado</span>
                           )}
-                          <span className={`text-sm font-black ${temAjuste ? 'text-amber-700' : 'text-slate-700'}`}>
+                          <span className={`text-sm font-black ${temAjuste ? 'text-amber-700' : 'text-[var(--ink-mid)]'}`}>
                             {fmtEur(valorFinal)}
                           </span>
-                          <ChevronDown size={14} className={`text-slate-300 transition-transform ${expandido ? 'rotate-180' : ''}`} />
+                          <ChevronDown size={14} className={`text-[var(--slate)] transition-transform ${expandido ? 'rotate-180' : ''}`} />
                         </div>
                       </div>
 
                       {/* Painel de ajustes — expande ao clicar */}
                       {expandido && (
-                        <div className="px-4 pb-4 pt-1 bg-slate-50 border-t border-slate-200">
-                          <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-3">Ajustar valor</p>
+                        <div className="px-4 pb-4 pt-1 bg-[var(--surface)] border-t border-[var(--border)]">
+                          <p className="text-xs text-[var(--slate-dim)] font-bold uppercase tracking-widest mb-3">Ajustar valor</p>
                           <div className="grid grid-cols-3 gap-3">
                             <div>
-                              <label className="text-xs font-bold text-slate-500 block mb-1.5">Base (€)</label>
+                              <label className="text-xs font-bold text-[var(--slate-dim)] block mb-1.5">Base (€)</label>
                               <input
                                 type="number" min="0" step="0.01"
                                 value={aj.base ?? ''}
                                 onChange={e => setAj(emp.employee_name, 'base', e.target.value)}
-                                className="w-full border border-slate-200 bg-white rounded-xl px-3 py-2 text-sm font-mono text-slate-700 text-right focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30"
+                                className="w-full border border-[var(--border)] bg-white rounded-xl px-3 py-2 text-sm font-mono text-[var(--ink-mid)] text-right focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30"
                               />
                             </div>
                             <div>
@@ -951,7 +951,7 @@ export default function SalariosTab({ month }) {
                                 value={aj.adicionar ?? ''}
                                 placeholder="0,00"
                                 onChange={e => setAj(emp.employee_name, 'adicionar', e.target.value)}
-                                className="w-full border border-emerald-200 bg-white rounded-xl px-3 py-2 text-sm font-mono text-emerald-700 text-right focus:outline-none focus:ring-2 focus:ring-emerald-300 placeholder:text-slate-300"
+                                className="w-full border border-emerald-200 bg-white rounded-xl px-3 py-2 text-sm font-mono text-emerald-700 text-right focus:outline-none focus:ring-2 focus:ring-emerald-300 placeholder:text-[var(--slate)]"
                               />
                             </div>
                             <div>
@@ -961,7 +961,7 @@ export default function SalariosTab({ month }) {
                                 value={aj.abater ?? ''}
                                 placeholder="0,00"
                                 onChange={e => setAj(emp.employee_name, 'abater', e.target.value)}
-                                className="w-full border border-rose-200 bg-white rounded-xl px-3 py-2 text-sm font-mono text-rose-700 text-right focus:outline-none focus:ring-2 focus:ring-rose-300 placeholder:text-slate-300"
+                                className="w-full border border-rose-200 bg-white rounded-xl px-3 py-2 text-sm font-mono text-rose-700 text-right focus:outline-none focus:ring-2 focus:ring-rose-300 placeholder:text-[var(--slate)]"
                               />
                             </div>
                           </div>
@@ -1001,37 +1001,37 @@ export default function SalariosTab({ month }) {
           <div className="px-5 py-4 flex justify-end">
             <button
               onClick={() => { setDescontosModal(false); setDescForm(null); }}
-              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl text-xs font-black uppercase tracking-widest transition-colors"
+              className="px-4 py-2 bg-[var(--surface-dim)] hover:bg-[var(--border)] text-[var(--ink-soft)] rounded-2xl text-xs font-black uppercase tracking-widest transition-colors"
             >
               Fechar
             </button>
           </div>
         }
       >
-          <div className="px-5 py-3 border-b border-slate-100">
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-1.5">Mês</label>
+          <div className="px-5 py-3 border-b border-[var(--border-soft)]">
+            <label className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] block mb-1.5">Mês</label>
             <input
               type="month"
               value={descMes}
               onChange={e => { setDescMes(e.target.value); setDescForm(null); }}
-              className="border border-slate-200 rounded-xl px-3 py-1.5 text-sm font-mono text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30"
+              className="border border-[var(--border)] rounded-xl px-3 py-1.5 text-sm font-mono text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30"
             />
           </div>
 
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-[var(--border-soft)]">
             {(workers || []).filter(w => w.status === 'ativo').map(worker => {
               const descWorker = deducoes.filter(d => norm(d.worker_name) === norm(worker.name) && d.month === descMes);
               const formAberto = descForm?.workerId === worker.id;
               return (
                 <div key={worker.id} className="px-4 py-3">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-bold text-slate-700">{worker.name}</p>
+                    <p className="text-sm font-bold text-[var(--ink-mid)]">{worker.name}</p>
                     <button
                       onClick={() => {
                         setDescForm(formAberto ? null : { workerId: worker.id, workerName: worker.name });
                         setDescFormVal({ motivo: 'adiantamento', amount: '', descricao: '' });
                       }}
-                      className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest bg-slate-100 hover:bg-slate-200 rounded-xl px-2 py-1 transition-colors" style={{ color: FT.slate }}
+                      className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest bg-[var(--surface-dim)] hover:bg-[var(--border)] rounded-xl px-2 py-1 transition-colors" style={{ color: FT.inkSoft }}
                     >
                       {formAberto ? <X size={11} /> : '+'} {formAberto ? 'Cancelar' : 'Adicionar'}
                     </button>
@@ -1058,37 +1058,37 @@ export default function SalariosTab({ month }) {
                   )}
 
                   {formAberto && (
-                    <div className="mt-3 bg-slate-50 rounded-2xl p-3 flex flex-col gap-2">
+                    <div className="mt-3 bg-[var(--surface)] rounded-2xl p-3 flex flex-col gap-2">
                       <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Motivo</label>
+                          <label className="text-[10px] font-bold text-[var(--slate-dim)] uppercase tracking-widest block mb-1">Motivo</label>
                           <select
                             value={descFormVal.motivo}
                             onChange={e => setDescFormVal(p => ({ ...p, motivo: e.target.value }))}
-                            className="w-full border border-slate-200 bg-white rounded-xl px-2.5 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30"
+                            className="w-full border border-[var(--border)] bg-white rounded-xl px-2.5 py-1.5 text-sm text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30"
                           >
                             {MOTIVOS_DESCONTO.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
                           </select>
                         </div>
                         <div>
-                          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Valor (€)</label>
+                          <label className="text-[10px] font-bold text-[var(--slate-dim)] uppercase tracking-widest block mb-1">Valor (€)</label>
                           <input
                             type="number" min="0.01" step="0.01"
                             value={descFormVal.amount}
                             onChange={e => setDescFormVal(p => ({ ...p, amount: e.target.value }))}
                             placeholder="0,00"
-                            className="w-full border border-slate-200 bg-white rounded-xl px-2.5 py-1.5 text-sm font-mono text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30"
+                            className="w-full border border-[var(--border)] bg-white rounded-xl px-2.5 py-1.5 text-sm font-mono text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30"
                           />
                         </div>
                       </div>
                       <div>
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Nota (opcional)</label>
+                        <label className="text-[10px] font-bold text-[var(--slate-dim)] uppercase tracking-widest block mb-1">Nota (opcional)</label>
                         <input
                           type="text"
                           value={descFormVal.descricao}
                           onChange={e => setDescFormVal(p => ({ ...p, descricao: e.target.value }))}
                           placeholder="Ex: adiantamento de 10 jan"
-                          className="w-full border border-slate-200 bg-white rounded-xl px-2.5 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30"
+                          className="w-full border border-[var(--border)] bg-white rounded-xl px-2.5 py-1.5 text-sm text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30"
                         />
                       </div>
                       <div className="flex justify-end">
