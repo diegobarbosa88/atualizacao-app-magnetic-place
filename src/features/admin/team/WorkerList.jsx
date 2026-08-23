@@ -412,7 +412,7 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
             <div className="flex items-center gap-2 mb-2">
               <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-[10px] font-black" style={{ backgroundColor: FT.navy, color: FT.orange }}>{getInitials(w.name)}</div>
               <div className="min-w-0">
-                <h4 className="text-[0.95rem] font-bold leading-[1.15] text-[#28323c] truncate" style={{ fontFamily: FONT_TITLE }} title={w.name}>{w.name}</h4>
+                <h4 className="text-[0.95rem] font-bold leading-[1.15] text-[var(--ink-mid)] truncate" style={{ fontFamily: FONT_TITLE }} title={w.name}>{w.name}</h4>
                 <p className="text-[9.5px] text-slate-400 font-semibold truncate" style={{ fontFamily: FONT_MONO }}>{w.profissao || 'Staff'}</p>
               </div>
             </div>

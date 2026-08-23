@@ -314,12 +314,12 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
                   </div>
                 </div>
 
-                <p className="text-[1.05rem] font-bold leading-[1.15] text-[#28323c] truncate" style={{ fontFamily: FONT_TITLE }} title={c.name}>{c.name}</p>
+                <p className="text-[1.05rem] font-bold leading-[1.15] text-[var(--ink-mid)] truncate" style={{ fontFamily: FONT_TITLE }} title={c.name}>{c.name}</p>
                 <p className="text-[10px] font-semibold text-[var(--slate-dim)]" style={{ fontFamily: FONT_MONO }}>
                   {c.nif ? `NIF ${c.nif}` : 'Sem NIF'}
                 </p>
 
-                <div className="flex items-center gap-1.5 mt-[0.55rem] text-[11px] font-semibold text-[#5c6a76]">
+                <div className="flex items-center gap-1.5 mt-[0.55rem] text-[11px] font-semibold text-[var(--ink-soft)]">
                   <MapPin size={12} className="shrink-0" style={{ color: FT.slate }} />
                   <span className="truncate" title={c.morada || undefined}>{c.morada || 'Sem morada registada'}</span>
                 </div>
@@ -340,7 +340,7 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
                     {c.valorHora ? Number(c.valorHora).toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
                     <span className="text-[10px] font-semibold text-[var(--slate-dim)] ml-0.5">€/h</span>
                   </span>
-                  <span className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[9.5px] font-bold text-[#5C7086]" style={{ fontFamily: FONT_MONO, background: '#F4F2EC' }}>
+                  <span className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[9.5px] font-bold text-[var(--slate-dim)]" style={{ fontFamily: FONT_MONO, background: '#F4F2EC' }}>
                     <Clock size={10} /> {nHorarios} horário{nHorarios !== 1 ? 's' : ''}
                   </span>
                 </div>

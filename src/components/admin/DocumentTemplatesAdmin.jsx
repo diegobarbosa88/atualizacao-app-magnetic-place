@@ -122,8 +122,8 @@ export default function DocumentTemplatesAdmin({
                 <div className="w-[38px] h-[38px] rounded-[11px] flex items-center justify-center mb-[0.7rem]" style={{ backgroundColor: '#f4f0fd', color: '#6743c2' }}>
                   <FileText size={17} />
                 </div>
-                <p className="text-[1.05rem] font-bold leading-[1.15] text-[#28323c] truncate" style={{ fontFamily: FONT_TITLE }} title={t.name}>{t.name}</p>
-                <p className="text-[11px] font-semibold text-[#5c6a76] mt-1 mb-3 line-clamp-2 min-h-[2rem]">
+                <p className="text-[1.05rem] font-bold leading-[1.15] text-[var(--ink-mid)] truncate" style={{ fontFamily: FONT_TITLE }} title={t.name}>{t.name}</p>
+                <p className="text-[11px] font-semibold text-[var(--ink-soft)] mt-1 mb-3 line-clamp-2 min-h-[2rem]">
                   {t.description || <span className="italic text-[var(--slate-dim)]">Sem descrição</span>}
                 </p>
                 <div className="flex items-center gap-1.5 pt-[0.7rem] border-t border-[#F1EFE8]">
