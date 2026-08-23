@@ -463,7 +463,7 @@ export default function NovaAcaoForm({ onCriada }) {
       <button
         type="submit"
         disabled={busy}
-        className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl font-black text-xs uppercase tracking-widest text-[var(--navy-solid)] bg-[var(--orange)] hover:bg-[var(--orange-deep)] transition-all disabled:opacity-50"
+        className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl font-black text-xs uppercase tracking-widest text-[var(--navy-solid)] bg-[var(--orange)] hover:bg-[var(--orange-hover)] transition-all disabled:opacity-50"
       >
         {busy ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Registar Ação
       </button>

@@ -18,6 +18,18 @@
   --navy-soft: rgba(27, 58, 87, 0.08);
   --orange: #eb8d00;
   --orange-deep: #c97600;
+
+  /* Hover do botão primário. NÃO reaproveita o --orange-deep: com texto navy
+     por cima, escurecer o fundo APROXIMA as duas cores em vez de as afastar —
+     o navy já é escuro, e a convenção "hover escurece" pressupõe texto branco.
+     O --orange-deep dava 3,39:1 no hover contra 4,66:1 em repouso: o botão
+     ficava MENOS legível exactamente quando o rato estava em cima dele.
+     Token próprio, e não um valor novo para o --orange-deep, porque esse serve
+     outros 20 sítios no papel de TINTA (ícones, texto, gradientes) onde clarear
+     piora — como texto sobre branco cairia de 3,46:1 para 2,19:1.
+     #F59B1C dá 5,36:1 com --navy-solid. Não é redefinido no bloco .dark pela
+     mesma razão que o --orange: o fundo do botão não inverte. */
+  --orange-hover: #f59b1c;
   --slate: #869aaf;
 
   /* Tons de estado — espelham FT.ok/warn/bad em designTokens.js. Existem como

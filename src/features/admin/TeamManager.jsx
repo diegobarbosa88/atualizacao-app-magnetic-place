@@ -371,7 +371,7 @@ const TeamManagerContent = ({ onLogin }) => {
                   <button
                     onClick={sendInviteEmail}
                     disabled={inviteEmailSent}
-                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-black uppercase transition-all ${inviteEmailSent ? 'bg-emerald-100 text-emerald-700' : 'bg-[var(--orange)] text-[var(--navy-solid)] hover:bg-[var(--orange-deep)]'} disabled:opacity-60`}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-black uppercase transition-all ${inviteEmailSent ? 'bg-emerald-100 text-emerald-700' : 'bg-[var(--orange)] text-[var(--navy-solid)] hover:bg-[var(--orange-hover)]'} disabled:opacity-60`}
                   >
                     {inviteEmailSent ? <Check size={13} /> : <Mail size={13} />}
                     {inviteEmailSent ? 'Enviado' : 'Enviar email'}

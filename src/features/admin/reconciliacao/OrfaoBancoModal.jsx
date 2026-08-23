@@ -61,7 +61,7 @@ export default function OrfaoBancoModal({ indices, tags: initialTags, onCreateTa
           <button
             onClick={handleConfirmar}
             disabled={!selectedTag && !orphanObs.trim()}
-            className="flex items-center gap-2 px-4 py-2 bg-[var(--orange)] text-[var(--navy-solid)] rounded-xl hover:bg-[var(--orange-deep)] transition-all text-[10px] font-black uppercase tracking-widest disabled:opacity-40 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-4 py-2 bg-[var(--orange)] text-[var(--navy-solid)] rounded-xl hover:bg-[var(--orange-hover)] transition-all text-[10px] font-black uppercase tracking-widest disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <CheckCircle size={12} /> Confirmar
           </button>
@@ -130,7 +130,7 @@ export default function OrfaoBancoModal({ indices, tags: initialTags, onCreateTa
                 <button
                   onClick={criarTag}
                   disabled={!novaTagNome.trim() || savingTag}
-                  className="flex items-center gap-1 px-3 py-1.5 bg-[var(--orange)] text-[var(--navy-solid)] rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-40 hover:bg-[var(--orange-deep)] transition-all"
+                  className="flex items-center gap-1 px-3 py-1.5 bg-[var(--orange)] text-[var(--navy-solid)] rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-40 hover:bg-[var(--orange-hover)] transition-all"
                 >
                   {savingTag ? <Loader2 size={10} className="animate-spin" /> : <CheckCircle size={10} />} Criar
                 </button>

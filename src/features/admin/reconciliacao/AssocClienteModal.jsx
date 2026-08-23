@@ -30,7 +30,7 @@ export default function AssocClienteModal({ modal, clients, onClose, onSave }) {
           <button
             onClick={handleSave}
             disabled={!clienteId || !periodo || saving}
-            className="flex-1 flex items-center justify-center gap-2 bg-[var(--orange)] text-[var(--navy-solid)] rounded-xl py-2.5 text-[10px] font-black uppercase tracking-widest hover:bg-[var(--orange-deep)] transition-all disabled:opacity-50"
+            className="flex-1 flex items-center justify-center gap-2 bg-[var(--orange)] text-[var(--navy-solid)] rounded-xl py-2.5 text-[10px] font-black uppercase tracking-widest hover:bg-[var(--orange-hover)] transition-all disabled:opacity-50"
           >
             {saving ? <Loader2 size={12} className="animate-spin" /> : <Link2 size={12} />}
             Associar

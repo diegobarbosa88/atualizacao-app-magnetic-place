@@ -477,7 +477,7 @@ export default function ElearningAcoesTab({ refreshKey }) {
             <button
               onClick={submeterAtribuicao}
               disabled={atribuirBusy || idsSelecionados.length === 0}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-[var(--orange)] text-[var(--navy-solid)] rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-[var(--orange-deep)] transition-all disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-2 py-3 bg-[var(--orange)] text-[var(--navy-solid)] rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-[var(--orange-hover)] transition-all disabled:opacity-50"
             >
               {atribuirBusy ? <Loader2 size={14} className="animate-spin" /> : <UserPlus size={14} />}
               Atribuir {idsSelecionados.length > 0 ? `(${idsSelecionados.length})` : ''}

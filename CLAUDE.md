@@ -222,6 +222,26 @@ perguntar. E usar sempre a mesma métrica: o script conta **ocorrências**, não
 - Varrimento de contraste no ecrã real, **nos dois modos (claro e escuro)**, não só claro — o modo
   escuro pode ficar diferente do esperado se houver regras `.dark` legadas com `!important` presas a
   classes em vez de tokens.
+- **Os varrimentos de contraste medem só o estado normal; `hover`/`focus`/`active` não são cobertos
+  automaticamente — verificar à mão quando um lote toca em `hover:bg-*`.** Foi assim que passou
+  despercebido, durante 18 lotes, um hover que tornava o botão *menos* legível ao passar o rato:
+  nenhum varrimento o via, porque em repouso o botão estava correcto.
+  Duas lições que valem para além deste caso:
+  - **Com texto escuro, o hover tem de clarear, não escurecer.** A convenção "hover escurece"
+    pressupõe texto branco. Nos botões primários (navy sobre laranja) escurecer aproxima as duas
+    cores: `--orange-deep` dava 3,39:1 contra os 4,66:1 do repouso. Daí o token `--orange-hover`
+    (#F59B1C, 5,36:1), separado do `--orange-deep` — que se mantém porque serve outros 20 sítios no
+    papel de tinta, onde clarear é que pioraria (3,46:1 → 2,19:1 como texto sobre branco).
+  - **Antes de mudar o valor de um token, contar em que papéis ele é usado.** Um token com nome de
+    superfície pode estar a servir de tinta noutro sítio; nesse caso a correcção é um token novo,
+    não um valor novo.
+- **O varrimento "regressões globais" do script não é global — olha só para `src/features/admin` e
+  `src/components/admin`.** Está a zero ali, mas há 6 botões laranja com texto branco (2,52:1) fora
+  desse alcance, em `components/common/EntryForm.jsx`, `components/common/WorkerDocuments.jsx`,
+  `worker-dashboard/GeoSuggestionCard.jsx` (2), `worker-dashboard/WorkerCalendar.jsx` e
+  `worker-dashboard/WorkerScheduleTab.jsx`. Ficaram de fora do lote do `--orange-hover` de propósito:
+  têm o defeito ao contrário — com texto branco, escurecer é que ajuda, e clarear o hover pioraria.
+  Tratar quando a migração chegar ao dashboard do trabalhador.
 - **Navegar por URL, não por cliques.** O admin usa react-router e `setActiveTab` é literalmente
   `navigate('/admin/' + tab)`, por isso `http://localhost:4179/admin/<seccao>` abre qualquer ecrã
   directamente. Clicar na barra lateral com refs do browser é frágil: os refs desalinham quando os
