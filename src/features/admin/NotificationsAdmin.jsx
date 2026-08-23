@@ -4,6 +4,7 @@ import { useApp } from '../../context/AppContext';
 import { usePushSubscription } from '../../hooks/usePushSubscription';
 import Card from '../../components/common/Card';
 import ModalShell from '../../components/common/ModalShell';
+import { FT } from '../../styles/designTokens';
 
 const SYSTEM_PATTERNS = [
   'Pedido de Correção',
@@ -139,7 +140,7 @@ const NotificationsAdmin = ({ workers, appNotifications, saveToDb, handleDelete,
               id="dismissible"
               checked={isDismissible}
               onChange={e => setIsDismissible(e.target.checked)}
-              className="w-4 h-4 rounded text-[#1B3A57] cursor-pointer"
+              className="w-4 h-4 rounded text-[var(--navy)] cursor-pointer"
             />
             <label htmlFor="dismissible" className="text-[10px] font-bold text-slate-600 uppercase cursor-pointer">
               Permitir que o trabalhador feche este aviso
@@ -180,7 +181,7 @@ const NotificationsAdmin = ({ workers, appNotifications, saveToDb, handleDelete,
                       )
                     }}
                     className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${selectedWorkers.includes(w.id) ? 'text-white' : 'bg-slate-100 text-slate-400'}`}
-                    style={selectedWorkers.includes(w.id) ? { backgroundColor: '#1B3A57' } : {}}
+                    style={selectedWorkers.includes(w.id) ? { backgroundColor: FT.navy } : {}}
                   >
                     {w.name}
                   </button>
@@ -193,7 +194,7 @@ const NotificationsAdmin = ({ workers, appNotifications, saveToDb, handleDelete,
           onClick={handleAdd}
           disabled={loading}
           className="w-full py-4 text-white rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-3 shadow-lg active:scale-[0.98] transition-all hover:opacity-90"
-          style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}
+          style={{ backgroundColor: FT.orange, color: FT.navy }}
         >
           {loading ? <Loader2 className="animate-spin" size={18} /> : <Plus size={18} />} Criar Aviso no App
         </button>
@@ -217,7 +218,7 @@ const NotificationsAdmin = ({ workers, appNotifications, saveToDb, handleDelete,
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-black text-slate-800 truncate">{notif.title}</p>
                   <p className="text-[10px] text-slate-400 truncate">{notif.message}</p>
-                  <p className="text-[9px] font-bold uppercase mt-1" style={{ color: '#869AAF' }}>
+                  <p className="text-[9px] font-bold uppercase mt-1" style={{ color: FT.slate }}>
                     🎯 {notif.target_type === 'all' ? 'Todos' : `${notif.target_worker_ids?.length || 0} específicos`} • {notif.is_dismissible ? 'Fechável' : 'Fixo'}
                   </p>
                   <div
@@ -226,7 +227,7 @@ const NotificationsAdmin = ({ workers, appNotifications, saveToDb, handleDelete,
                   >
                     <div className="flex -space-x-2">
                       {(notif.viewed_by_ids || []).slice(0, 5).map(vId => (
-                        <div key={vId} title={workers.find(w => w.id === vId)?.name} className="w-5 h-5 rounded-full border-2 border-white flex items-center justify-center text-[8px] font-black uppercase" style={{ backgroundColor: '#1B3A57', color: '#EB8D00' }}>
+                        <div key={vId} title={workers.find(w => w.id === vId)?.name} className="w-5 h-5 rounded-full border-2 border-white flex items-center justify-center text-[8px] font-black uppercase" style={{ backgroundColor: FT.navy, color: FT.orange }}>
                           {workers.find(w => w.id === vId)?.name?.[0] || '?'}
                         </div>
                       ))}
@@ -281,7 +282,7 @@ const NotificationsAdmin = ({ workers, appNotifications, saveToDb, handleDelete,
               <button
                 onClick={() => setShowViewDetails(null)}
                 className="w-full py-4 border rounded-2xl font-black text-xs uppercase tracking-widest transition-all hover:bg-slate-50"
-                style={{ borderColor: '#869AAF', color: '#869AAF' }}
+                style={{ borderColor: FT.slate, color: FT.slate }}
               >
                 Fechar
               </button>
@@ -292,14 +293,14 @@ const NotificationsAdmin = ({ workers, appNotifications, saveToDb, handleDelete,
             <div className="flex items-end gap-1 border-b border-slate-100 mb-4">
               <button
                 onClick={() => setViewDetailsTab('viewed')}
-                className={`flex-1 py-2 -mb-px border-b-2 text-[10px] font-black uppercase tracking-widest transition-all ${viewDetailsTab === 'viewed' ? 'border-[#EB8D00] text-[#1B3A57]' : 'border-transparent text-slate-400 hover:text-[#1B3A57]'}`}
+                className={`flex-1 py-2 -mb-px border-b-2 text-[10px] font-black uppercase tracking-widest transition-all ${viewDetailsTab === 'viewed' ? 'border-[var(--orange)] text-[var(--navy)]' : 'border-transparent text-slate-400 hover:text-[var(--navy)]'}`}
               >
                 Visualizaram ({(appNotifications.find(n => n.id === showViewDetails)?.viewed_by_ids || []).length})
               </button>
               {appNotifications.find(n => n.id === showViewDetails)?.is_dismissible && (
                 <button
                   onClick={() => setViewDetailsTab('dismissed')}
-                  className={`flex-1 py-2 -mb-px border-b-2 text-[10px] font-black uppercase tracking-widest transition-all ${viewDetailsTab === 'dismissed' ? 'border-[#EB8D00] text-[#1B3A57]' : 'border-transparent text-slate-400 hover:text-[#1B3A57]'}`}
+                  className={`flex-1 py-2 -mb-px border-b-2 text-[10px] font-black uppercase tracking-widest transition-all ${viewDetailsTab === 'dismissed' ? 'border-[var(--orange)] text-[var(--navy)]' : 'border-transparent text-slate-400 hover:text-[var(--navy)]'}`}
                 >
                   Fecharam ({(appNotifications.find(n => n.id === showViewDetails)?.dismissed_by_ids || []).length})
                 </button>
@@ -312,7 +313,7 @@ const NotificationsAdmin = ({ workers, appNotifications, saveToDb, handleDelete,
                   const worker = workers.find(w => w.id === vId);
                   return (
                     <div key={vId} className="flex items-center gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-100">
-                      <div className="w-8 h-8 rounded-full flex items-center justify-center font-black text-xs uppercase" style={{ backgroundColor: '#1B3A57', color: '#EB8D00' }}>
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center font-black text-xs uppercase" style={{ backgroundColor: FT.navy, color: FT.orange }}>
                         {worker?.name?.[0] || '?'}
                       </div>
                       <div>

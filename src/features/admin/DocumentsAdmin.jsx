@@ -6,6 +6,7 @@ import DocxPreviewModal from '../../components/common/DocxPreviewModal';
 import { getValidadeStatus } from '../../constants/rhCategories';
 import SectionHeaderShell from '../../components/common/SectionHeaderShell';
 import Card from "../../components/common/Card";
+import { FT } from '../../styles/designTokens';
 
 import DocumentsFilters from './documents/DocumentsFilters';
 import DocumentsTable from './documents/DocumentsTable';
@@ -58,7 +59,7 @@ export default function DocumentsAdmin() {
           },
           {
             label: 'Aguarda aprovação', value: a.counts.awaiting_admin || 0,
-            colorText: '#516375', dotColor: '#869AAF',
+            colorText: '#516375', dotColor: FT.slate,
             active: activeSection === 'documentos' && a.docMode === 'category' && a.stateFilter === 'awaiting_admin',
             onClick: () => goStat({ stateFilter: 'awaiting_admin' }),
           },

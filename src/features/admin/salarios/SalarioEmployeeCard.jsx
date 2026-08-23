@@ -2,6 +2,7 @@ import React from 'react';
 import { CheckCircle, AlertCircle, ChevronDown, ChevronUp, X, Undo2, MessageSquare } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
 import { fmtEur, MESES_PT_SAL } from './salarioUtils';
+import { FT } from '../../../styles/designTokens';
 
 export default function SalarioEmployeeCard({
   employee,
@@ -81,7 +82,7 @@ export default function SalarioEmployeeCard({
                   {!isMatch && !isJustified && (
                     <button
                       onClick={() => onJustificar({ employee_name: employee.employee_name, month: m.month, balance: m.balance })}
-                      className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-slate-100 hover:bg-slate-200 transition-colors flex-shrink-0" style={{ color: '#869AAF' }}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-slate-100 hover:bg-slate-200 transition-colors flex-shrink-0" style={{ color: FT.slate }}
                     >
                       <MessageSquare size={10} /> Justificar
                     </button>

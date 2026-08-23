@@ -107,7 +107,7 @@ function DocRow({ doc, openDoc }) {
           href={doc.pdfAssinadoUrl || doc.signed_pdf_url || doc.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="shrink-0 p-2 text-slate-300 hover:bg-[#1B3A57]/10 hover:text-[#1B3A57] rounded-xl transition-all"
+          className="shrink-0 p-2 text-slate-300 hover:bg-[#1B3A57]/10 hover:text-[var(--navy)] rounded-xl transition-all"
         >
           <Download size={15} />
         </a>

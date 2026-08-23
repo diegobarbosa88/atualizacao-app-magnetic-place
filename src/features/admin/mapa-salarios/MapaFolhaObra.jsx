@@ -1,6 +1,7 @@
 import React from 'react';
 import { CheckCircle, AlertTriangle, Info } from 'lucide-react';
 import { NAVY, ORANGE, SLATE_A, BORDER, VAL_NEUT, n2 } from './mapaUtils.js';
+import { FT } from '../../../styles/designTokens';
 
 const MONO = "'Roboto Mono', 'Courier New', monospace";
 const INK  = '#1F2420';
@@ -65,7 +66,7 @@ function StatusCell({ row }) {
   if (row.fonte === 'sem-dados') {
     return (
       <span title="Sem registo de horário nem recibo processado para este mês"
-        style={{ fontSize: 8, background: '#F1F3F5', color: '#869AAF', borderRadius: 5, padding: '2px 6px', fontWeight: 700, textTransform: 'uppercase' }}>
+        style={{ fontSize: 8, background: '#F1F3F5', color: FT.slate, borderRadius: 5, padding: '2px 6px', fontWeight: 700, textTransform: 'uppercase' }}>
         Sem dados
       </span>
     );

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Wallet, ChevronDown } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import { formatCurrency } from '../../../utils/formatUtils';
+import { FT } from '../../../styles/designTokens';
 
 // Tons dentro da família emerald/rose já usada nos badges de tendência do Dashboard Geral
 // (AdminOverview.jsx) — não os tons genéricos green-500/red-500 do Tailwind.
@@ -41,7 +42,7 @@ export default function FinancialSummaryPanel({ badgeTotals, badgeDetails, ytdTo
   return (
     <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
       <div className="flex items-center gap-3 mb-6">
-        <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: '#869AAF' }}><Wallet size={20} /></div>
+        <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: FT.slate }}><Wallet size={20} /></div>
         <h3 className="font-black text-lg text-slate-800">Resumo Financeiro</h3>
       </div>
 

@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Loader2, ArrowRightLeft } from 'lucide-react';
 import { authFetch } from '../../../utils/authFetch';
 import ModalShell from '../../../components/common/ModalShell';
+import { FT } from '../../../styles/designTokens';
 
 function AutocompleteFornecedor({ value, onChange }) {
   const [q, setQ] = useState(value?.nome || '');
@@ -173,7 +174,7 @@ export default function NovoPagamentoModal({ onClose, onCriado }) {
             </button>
             <button type="submit" disabled={criando}
               className="flex-1 px-4 py-2.5 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all disabled:opacity-60 flex items-center justify-center gap-1.5 hover:opacity-90"
-              style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}>
+              style={{ backgroundColor: FT.orange, color: FT.navy }}>
               {criando ? <Loader2 size={13} className="animate-spin" /> : <ArrowRightLeft size={13} />}
               {criando ? 'A guardar...' : 'Guardar'}
             </button>

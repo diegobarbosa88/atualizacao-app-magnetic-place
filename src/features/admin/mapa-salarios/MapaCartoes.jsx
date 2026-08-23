@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { NAVY, ORANGE, SLATE_A, BORDER, VAL_NEUT, MONO, n2 } from './mapaUtils.js';
+import { FT } from '../../../styles/designTokens';
 
 const INK      = '#152232';
 const INK_SOFT = '#69798B';
@@ -110,7 +111,7 @@ function WorkerCard({ row }) {
         )}
         {row.fonte === 'sem-dados' && (
           <span title="Sem registo de horário nem recibo processado para este mês"
-            style={{ flexShrink: 0, background: '#F1F3F5', color: '#869AAF', borderRadius: 5, padding: '3px 7px', fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.3px' }}>
+            style={{ flexShrink: 0, background: '#F1F3F5', color: FT.slate, borderRadius: 5, padding: '3px 7px', fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.3px' }}>
             Sem dados
           </span>
         )}

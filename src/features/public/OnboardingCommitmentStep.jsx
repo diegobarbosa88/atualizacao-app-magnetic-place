@@ -3,6 +3,7 @@ import React, {
   forwardRef, useImperativeHandle,
 } from 'react';
 import { AlertCircle, Check } from 'lucide-react';
+import { FT } from '../../styles/designTokens';
 
 // Ao alterar este texto, incrementar LEGAL_TEXT_VERSION e atualizar o texto
 // equivalente em supabase/functions/submit-onboarding-commitment/pdfGenerator.ts.
@@ -189,7 +190,7 @@ const OnboardingCommitmentStep = forwardRef(function OnboardingCommitmentStep(
       ctx.lineWidth   = 2.5;
       ctx.lineCap     = 'round';
       ctx.lineJoin    = 'round';
-      ctx.strokeStyle = '#1B3A57';
+      ctx.strokeStyle = FT.navy;
     };
     setup();
     window.addEventListener('resize', setup);
@@ -246,7 +247,7 @@ const OnboardingCommitmentStep = forwardRef(function OnboardingCommitmentStep(
     const ratio = window.devicePixelRatio || 1;
     ctx.scale(ratio, ratio);
     ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    ctx.strokeStyle = '#1B3A57';
+    ctx.strokeStyle = FT.navy;
     setHasInk(false);
   };
 

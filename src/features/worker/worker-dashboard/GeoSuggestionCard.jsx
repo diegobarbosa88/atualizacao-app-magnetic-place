@@ -68,7 +68,7 @@ export default function GeoSuggestionCard({ geoSuggestion, geoSuggestionDismisse
             </div>
             <button
               onClick={() => onCompleteLog(blockedLog)}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-black text-xs uppercase tracking-wide text-white transition-all active:scale-95 bg-[#EB8D00] hover:bg-[#C97600]"
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-black text-xs uppercase tracking-wide text-white transition-all active:scale-95 bg-[var(--orange)] hover:bg-[var(--orange-deep)]"
             >
               <Edit2 size={14} /> Completar Registo Anterior
             </button>
@@ -77,7 +77,7 @@ export default function GeoSuggestionCard({ geoSuggestion, geoSuggestionDismisse
           <button
             onClick={handleConfirmGeoSuggestion}
             disabled={geoActionLoading}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-black text-xs uppercase tracking-wide transition-all active:scale-95 disabled:opacity-50 text-white bg-[#EB8D00] hover:bg-[#C97600]"
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-black text-xs uppercase tracking-wide transition-all active:scale-95 disabled:opacity-50 text-white bg-[var(--orange)] hover:bg-[var(--orange-deep)]"
             style={isEntry && !geoActionLoading ? { animation: 'pulse-slow 2.5s ease-in-out infinite' } : {}}
           >
             {geoActionLoading ? <Loader2 size={14} className="animate-spin" /> : isEntry ? <LogIn size={14} /> : <LogOut size={14} />}
