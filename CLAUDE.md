@@ -239,6 +239,14 @@ perguntar. E usar sempre a mesma métrica: o script conta **ocorrências**, não
   no ramo anterior do ternário) em vez do contentor. Foi preciso ler a estrutura para separar pai de
   irmão. É a mesma armadilha da proximidade que já apareceu no varrimento por fundo e no par chip:
   **linhas próximas no código não são elementos aninhados no ecrã.**
+  **Ferramenta:** `perl scripts/fundo-do-ancestral.pl <ficheiro> <linha>` responde à pergunta "que
+  fundo está por baixo desta linha?" usando a **indentação** para separar pai de irmão, em vez da
+  proximidade. Nos três casos que a proximidade errou — a caixa de ícone irmã, o `<select>`
+  seguinte, o `<iframe>` de outro ramo do ternário — acerta. Onde não encontra ancestral com fundo
+  (por exemplo quando o fundo vem de uma função helper, como o `FT.panel` do `FormacaoElearningFlow`)
+  devolve `?` em vez de apontar o vizinho: **falhar em silêncio é pior do que dizer "não sei"**.
+  Não substitui a medição no browser, que é onde a cascata está resolvida de facto — serve para
+  triar sem renderizar.
 - **Sobre os fundos navy da marca, use-se `--on-navy` (#A9B8C7).** Os fundos navy — `--navy-solid`,
   `background: FT.navy` — não invertem, e a escala de tinta não tem tom que sirva ali: o
   `--slate-dim` inverte e cai para 2,30:1 no modo claro; o `--slate` não inverte mas fica a 4,05:1,
