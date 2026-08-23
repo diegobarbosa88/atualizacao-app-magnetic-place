@@ -258,7 +258,7 @@ export default function ClientForm() {
               <button
                 onClick={handleGeocodeMorada}
                 disabled={geocodeLoading}
-                className="mt-2 w-full flex items-center justify-center gap-2 bg-white disabled:opacity-50 px-4 py-2.5 rounded-xl font-bold text-[10.5px] uppercase tracking-wide shadow-sm transition-all border-[1.5px] border-dashed hover:bg-slate-50"
+                className="mt-2 w-full flex items-center justify-center gap-2 bg-white disabled:opacity-50 px-4 py-2.5 rounded-xl font-bold text-[10.5px] uppercase tracking-wide shadow-sm transition-all border-[1.5px] border-dashed hover:bg-[var(--surface)]"
                 style={{ fontFamily: FONT_MONO, borderColor: '#a8b5c1', color: '#5C7086' }}
               >
                 {geocodeLoading ? <Loader2 size={13} className="animate-spin" /> : <MapPin size={13} />}
@@ -283,7 +283,7 @@ export default function ClientForm() {
             </div>
             <div className="flex flex-wrap gap-2 max-h-[170px] overflow-y-auto pr-0.5 custom-scrollbar">
               {schedules.length === 0 && (
-                <p className="text-[10px] text-slate-400 font-bold px-1">Sem horários criados.</p>
+                <p className="text-[10px] text-[var(--slate-dim)] font-bold px-1">Sem horários criados.</p>
               )}
               {[...schedules].sort((a, b) => a.name.localeCompare(b.name)).map(s => {
                 const isAssigned = !!(clientForm.assignedSchedules || []).includes(s.id);

@@ -158,19 +158,19 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
       {clientSubTab === 'list' && (<>
       <div className="flex flex-wrap justify-between items-center gap-3 mb-5">
         <div className="relative">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--slate)] pointer-events-none" />
           <input
             type="text"
             placeholder="Pesquisar cliente..."
             value={clientsSearch}
             onChange={e => setClientsSearch(e.target.value)}
-            className="pl-8 pr-3 py-2 text-xs border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[var(--navy)] w-48 sm:w-64"
+            className="pl-8 pr-3 py-2 text-xs border border-[var(--border)] rounded-xl bg-[var(--surface)] focus:outline-none focus:ring-2 focus:ring-[var(--navy)] w-48 sm:w-64"
           />
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl p-1">
-            <button onClick={() => setClientsView('grid')} className={`p-2 rounded-lg transition-all ${clientsView === 'grid' ? 'text-white' : 'text-slate-400 hover:text-slate-600'}`} style={clientsView === 'grid' ? { backgroundColor: FT.navy } : {}} title="Vista em Grade"><LayoutGrid size={18} /></button>
-            <button onClick={() => setClientsView('list')} className={`p-2 rounded-lg transition-all ${clientsView === 'list' ? 'text-white' : 'text-slate-400 hover:text-slate-600'}`} style={clientsView === 'list' ? { backgroundColor: FT.navy } : {}} title="Vista em Lista"><List size={18} /></button>
+          <div className="flex items-center bg-[var(--surface)] border border-[var(--border)] rounded-xl p-1">
+            <button onClick={() => setClientsView('grid')} className={`p-2 rounded-lg transition-all ${clientsView === 'grid' ? 'text-white' : 'text-[var(--slate)] hover:text-[var(--ink-soft)]'}`} style={clientsView === 'grid' ? { backgroundColor: FT.navy } : {}} title="Vista em Grade"><LayoutGrid size={18} /></button>
+            <button onClick={() => setClientsView('list')} className={`p-2 rounded-lg transition-all ${clientsView === 'list' ? 'text-white' : 'text-[var(--slate)] hover:text-[var(--ink-soft)]'}`} style={clientsView === 'list' ? { backgroundColor: FT.navy } : {}} title="Vista em Lista"><List size={18} /></button>
           </div>
           <button onClick={() => { setClientForm({ id: null, name: '', morada: '', nif: '', valorHora: '', email: '', dataAlteracao: new Date().toISOString().split('T')[0] }); setIsAddingInTab(true); }} className="px-3 sm:px-5 py-2 rounded-xl font-black text-xs uppercase shadow-lg transition-all whitespace-nowrap text-white" style={{ backgroundColor: FT.orange }}>Novo</button>
         </div>
@@ -188,7 +188,7 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
           <div className="flex items-center justify-end gap-2.5 px-[2rem] pt-[1.1rem] pb-[1.3rem]">
             <button
               onClick={() => setIsAddingInTab(false)}
-              className="px-5 py-3 rounded-2xl border-[1.5px] border-slate-200 bg-white text-[11px] font-black uppercase tracking-wide text-slate-500 hover:bg-slate-50 transition-all"
+              className="px-5 py-3 rounded-2xl border-[1.5px] border-[var(--border)] bg-white text-[11px] font-black uppercase tracking-wide text-[var(--slate-dim)] hover:bg-[var(--surface)] transition-all"
             >
               Cancelar
             </button>
@@ -206,7 +206,7 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
       </ModalShell>
 
       {clientsView === 'list' ? (
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-x-auto">
+        <div className="bg-white rounded-2xl border border-[var(--border-soft)] shadow-sm overflow-x-auto">
           <table className="min-w-[480px] w-full text-sm table-fixed">
             <colgroup>
               <col className="w-[38%]" />
@@ -215,31 +215,31 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
               <col className="w-[12%]" />
             </colgroup>
             <thead>
-              <tr className="border-b border-slate-100 bg-slate-50">
-                <th onClick={() => setClientsSort(prev => ({ key: 'name', direction: prev.key === 'name' && prev.direction === 'asc' ? 'desc' : 'asc' }))} className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-slate-700 transition-colors">
+              <tr className="border-b border-[var(--border-soft)] bg-[var(--surface)]">
+                <th onClick={() => setClientsSort(prev => ({ key: 'name', direction: prev.key === 'name' && prev.direction === 'asc' ? 'desc' : 'asc' }))} className="text-left px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest cursor-pointer hover:text-[var(--ink-mid)] transition-colors">
                   Cliente {clientsSort.key === 'name' ? (clientsSort.direction === 'asc' ? '↑' : '↓') : ''}
                 </th>
-                <th className="hidden sm:table-cell text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Morada</th>
-                <th onClick={() => setClientsSort(prev => ({ key: 'value', direction: prev.key === 'value' && prev.direction === 'asc' ? 'desc' : 'asc' }))} className="text-right px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-slate-700 transition-colors">
+                <th className="hidden sm:table-cell text-left px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Morada</th>
+                <th onClick={() => setClientsSort(prev => ({ key: 'value', direction: prev.key === 'value' && prev.direction === 'asc' ? 'desc' : 'asc' }))} className="text-right px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest cursor-pointer hover:text-[var(--ink-mid)] transition-colors">
                   Valor {clientsSort.key === 'value' ? (clientsSort.direction === 'asc' ? '↑' : '↓') : ''}
                 </th>
-                <th className="text-right px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Ações</th>
+                <th className="text-right px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Ações</th>
               </tr>
             </thead>
             <tbody>
               {sortedClients.map(c => (
-                <tr key={c.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                <tr key={c.id} className="border-b border-[var(--border-soft)] hover:bg-[var(--surface)] transition-colors">
                   <td className="px-4 py-3">
-                    <p className="font-black text-slate-800 text-sm uppercase truncate">{c.name}</p>
-                    <p className="text-xs text-slate-400 truncate">NIF: {c.nif || 'N/A'}</p>
+                    <p className="font-black text-[var(--ink)] text-sm uppercase truncate">{c.name}</p>
+                    <p className="text-xs text-[var(--slate-dim)] truncate">NIF: {c.nif || 'N/A'}</p>
                   </td>
-                  <td className="hidden sm:table-cell px-4 py-3 text-sm font-bold text-slate-500 truncate">{c.morada || 'N/A'}</td>
+                  <td className="hidden sm:table-cell px-4 py-3 text-sm font-bold text-[var(--slate-dim)] truncate">{c.morada || 'N/A'}</td>
                   <td className="px-4 py-3 text-right text-sm font-bold whitespace-nowrap" style={{ color: FT.navy }}>{c.valorHora ? `${c.valorHora}€` : 'N/A'}</td>
                   <td className="px-3 py-3 text-right">
                     <div className="relative inline-block">
                       <button
                         onClick={() => setOpenMenuId(openMenuId === c.id ? null : c.id)}
-                        className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all"
+                        className="p-1.5 text-[var(--slate)] hover:text-[var(--ink-soft)] hover:bg-[var(--surface-dim)] rounded-lg transition-all"
                         title="Mais ações"
                       >
                         <MoreVertical size={15} />
@@ -247,28 +247,28 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
                       {openMenuId === c.id && (
                         <>
                           <div className="fixed inset-0 z-10" onClick={() => setOpenMenuId(null)} />
-                          <div className="absolute right-0 top-full mt-1.5 z-20 bg-white border border-slate-200/80 rounded-2xl shadow-xl ring-1 ring-black/5 py-1.5 min-w-[190px]">
+                          <div className="absolute right-0 top-full mt-1.5 z-20 bg-white border border-[var(--border)] rounded-2xl shadow-xl ring-1 ring-black/5 py-1.5 min-w-[190px]">
                             <button
                               onClick={() => { openEditClient(c); setOpenMenuId(null); }}
-                              className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-slate-50 group transition-colors"
+                              className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-[var(--surface)] group transition-colors"
                             >
-                              <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-slate-100 group-hover:bg-slate-200 transition-colors shrink-0" style={{ color: FT.slate }}><Edit2 size={13} /></span>
-                              <span className="text-xs font-semibold text-slate-700">Editar</span>
+                              <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-[var(--surface-dim)] group-hover:bg-[var(--border)] transition-colors shrink-0" style={{ color: FT.slate }}><Edit2 size={13} /></span>
+                              <span className="text-xs font-semibold text-[var(--ink-mid)]">Editar</span>
                             </button>
                             <button
                               onClick={() => { loadClientValorHoraHistory(c.id, c.name); setOpenMenuId(null); }}
-                              className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-slate-50 group transition-colors"
+                              className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-[var(--surface)] group transition-colors"
                             >
-                              <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-slate-100 group-hover:bg-slate-200 transition-colors shrink-0 text-base leading-none">📊</span>
-                              <span className="text-xs font-semibold text-slate-700">Histórico de Valor</span>
+                              <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-[var(--surface-dim)] group-hover:bg-[var(--border)] transition-colors shrink-0 text-base leading-none">📊</span>
+                              <span className="text-xs font-semibold text-[var(--ink-mid)]">Histórico de Valor</span>
                             </button>
-                            <div className="mx-3 my-1 border-t border-slate-100" />
+                            <div className="mx-3 my-1 border-t border-[var(--border-soft)]" />
                             {confirmDeleteClientId === c.id ? (
                               <div className="mx-2 mb-1.5 p-2.5 bg-rose-50 rounded-xl border border-rose-100">
                                 <p className="text-[10px] font-black text-rose-500 uppercase tracking-wider mb-2">Confirmar apagar?</p>
                                 <div className="flex gap-1.5">
                                   <button onClick={() => { handleDeleteClient(c.id); setConfirmDeleteClientId(null); setOpenMenuId(null); }} className="flex-1 py-1.5 bg-rose-600 text-white text-[10px] font-black rounded-lg hover:bg-rose-700 transition-colors">Sim</button>
-                                  <button onClick={() => setConfirmDeleteClientId(null)} className="flex-1 py-1.5 bg-white border border-slate-200 text-slate-600 text-[10px] font-black rounded-lg hover:bg-slate-50 transition-colors">Não</button>
+                                  <button onClick={() => setConfirmDeleteClientId(null)} className="flex-1 py-1.5 bg-white border border-[var(--border)] text-[var(--ink-soft)] text-[10px] font-black rounded-lg hover:bg-[var(--surface)] transition-colors">Não</button>
                                 </div>
                               </div>
                             ) : (
@@ -301,21 +301,21 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
                     <Briefcase size={17} />
                   </div>
                   <div className="flex items-center gap-1">
-                    <button onClick={() => loadClientValorHoraHistory(c.id, c.name)} className="w-[26px] h-[26px] rounded-lg border border-[#E5E1D6] bg-white text-slate-400 hover:text-slate-600 flex items-center justify-center transition-all text-[11px]" title="Histórico de valor">📊</button>
-                    <button onClick={() => openEditClient(c)} className="w-[26px] h-[26px] rounded-lg border border-[#E5E1D6] bg-white text-slate-400 hover:text-[var(--navy)] flex items-center justify-center transition-all" title="Editar"><Edit2 size={12} /></button>
+                    <button onClick={() => loadClientValorHoraHistory(c.id, c.name)} className="w-[26px] h-[26px] rounded-lg border border-[#E5E1D6] bg-white text-[var(--slate)] hover:text-[var(--ink-soft)] flex items-center justify-center transition-all text-[11px]" title="Histórico de valor">📊</button>
+                    <button onClick={() => openEditClient(c)} className="w-[26px] h-[26px] rounded-lg border border-[#E5E1D6] bg-white text-[var(--slate)] hover:text-[var(--navy)] flex items-center justify-center transition-all" title="Editar"><Edit2 size={12} /></button>
                     {confirmDeleteClientId === c.id ? (
                       <>
                         <button onClick={() => { handleDeleteClient(c.id); setConfirmDeleteClientId(null); }} className="px-2 h-[26px] bg-rose-600 text-white text-[10px] font-black rounded-lg">Sim</button>
-                        <button onClick={() => setConfirmDeleteClientId(null)} className="px-2 h-[26px] bg-slate-100 text-slate-600 text-[10px] font-black rounded-lg">Não</button>
+                        <button onClick={() => setConfirmDeleteClientId(null)} className="px-2 h-[26px] bg-[var(--surface-dim)] text-[var(--ink-soft)] text-[10px] font-black rounded-lg">Não</button>
                       </>
                     ) : (
-                      <button onClick={() => setConfirmDeleteClientId(c.id)} className="w-[26px] h-[26px] rounded-lg border border-[#E5E1D6] bg-white text-slate-300 hover:text-rose-500 hover:border-rose-200 flex items-center justify-center transition-all" title="Apagar"><Trash2 size={12} /></button>
+                      <button onClick={() => setConfirmDeleteClientId(c.id)} className="w-[26px] h-[26px] rounded-lg border border-[#E5E1D6] bg-white text-[var(--slate)] hover:text-rose-500 hover:border-rose-200 flex items-center justify-center transition-all" title="Apagar"><Trash2 size={12} /></button>
                     )}
                   </div>
                 </div>
 
                 <p className="text-[1.05rem] font-bold leading-[1.15] text-[#28323c] truncate" style={{ fontFamily: FONT_TITLE }} title={c.name}>{c.name}</p>
-                <p className="text-[10px] font-semibold text-slate-400" style={{ fontFamily: FONT_MONO }}>
+                <p className="text-[10px] font-semibold text-[var(--slate-dim)]" style={{ fontFamily: FONT_MONO }}>
                   {c.nif ? `NIF ${c.nif}` : 'Sem NIF'}
                 </p>
 
@@ -338,7 +338,7 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
                 <div className="flex items-center justify-between mt-[0.85rem] pt-[0.7rem] border-t border-[#F1EFE8]">
                   <span className="text-[1.15rem] font-bold leading-none text-[var(--navy)]" style={{ fontFamily: FONT_TITLE }}>
                     {c.valorHora ? Number(c.valorHora).toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
-                    <span className="text-[10px] font-semibold text-slate-400 ml-0.5">€/h</span>
+                    <span className="text-[10px] font-semibold text-[var(--slate-dim)] ml-0.5">€/h</span>
                   </span>
                   <span className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[9.5px] font-bold text-[#5C7086]" style={{ fontFamily: FONT_MONO, background: '#F4F2EC' }}>
                     <Clock size={10} /> {nHorarios} horário{nHorarios !== 1 ? 's' : ''}
@@ -361,39 +361,39 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
         >
           <div className="p-6">
             {clientValorHoraHistory.length === 0 ? (
-              <p className="text-sm text-slate-400 text-center py-4">Sem histórico disponível</p>
+              <p className="text-sm text-[var(--slate-dim)] text-center py-4">Sem histórico disponível</p>
             ) : (
               <div className="space-y-3 max-h-80 overflow-y-auto">
                 {clientValorHoraHistory.map(h => (
                   <div key={h.id}>
                     {editingHistoryId === h.id ? (
-                      <div className="flex flex-wrap items-center gap-2 p-3 bg-slate-50 rounded-xl border border-slate-200">
-                        <input type="number" step="0.01" value={editingHistoryDraft.valor_anterior || ''} onChange={e => setEditingHistoryDraft(d => ({ ...d, valor_anterior: e.target.value }))} className="w-16 border border-slate-300 rounded-lg p-1 text-xs font-bold" placeholder="Ant." />
-                        <span className="text-slate-400 text-xs">→</span>
-                        <input type="number" step="0.01" value={editingHistoryDraft.valor_novo || ''} onChange={e => setEditingHistoryDraft(d => ({ ...d, valor_novo: e.target.value }))} className="w-16 border border-slate-300 rounded-lg p-1 text-xs font-bold" placeholder="Novo" />
-                        <input type="date" value={editingHistoryDraft.data_alteracao ? editingHistoryDraft.data_alteracao.split('T')[0] : ''} onChange={e => setEditingHistoryDraft(d => ({ ...d, data_alteracao: e.target.value }))} className="border border-slate-300 rounded-lg p-1 text-xs font-bold flex-1 min-w-0" />
+                      <div className="flex flex-wrap items-center gap-2 p-3 bg-[var(--surface)] rounded-xl border border-[var(--border)]">
+                        <input type="number" step="0.01" value={editingHistoryDraft.valor_anterior || ''} onChange={e => setEditingHistoryDraft(d => ({ ...d, valor_anterior: e.target.value }))} className="w-16 border border-[var(--border)] rounded-lg p-1 text-xs font-bold" placeholder="Ant." />
+                        <span className="text-[var(--slate)] text-xs">→</span>
+                        <input type="number" step="0.01" value={editingHistoryDraft.valor_novo || ''} onChange={e => setEditingHistoryDraft(d => ({ ...d, valor_novo: e.target.value }))} className="w-16 border border-[var(--border)] rounded-lg p-1 text-xs font-bold" placeholder="Novo" />
+                        <input type="date" value={editingHistoryDraft.data_alteracao ? editingHistoryDraft.data_alteracao.split('T')[0] : ''} onChange={e => setEditingHistoryDraft(d => ({ ...d, data_alteracao: e.target.value }))} className="border border-[var(--border)] rounded-lg p-1 text-xs font-bold flex-1 min-w-0" />
                         <button onClick={() => handleSaveClientHistory(h)} className="p-1 text-green-600 hover:bg-green-50 rounded-lg"><Check size={14} /></button>
-                        <button onClick={() => setEditingHistoryId(null)} className="p-1 text-slate-400 hover:bg-slate-100 rounded-lg"><X size={14} /></button>
+                        <button onClick={() => setEditingHistoryId(null)} className="p-1 text-[var(--slate)] hover:bg-[var(--surface-dim)] rounded-lg"><X size={14} /></button>
                       </div>
                     ) : confirmDeleteHistoryId === h.id ? (
                       <div className="flex items-center justify-between p-3 bg-red-50 rounded-xl border border-red-200">
                         <span className="text-xs font-bold text-red-600">Apagar este registo?</span>
                         <div className="flex gap-2">
                           <button onClick={() => handleDeleteClientHistory(h.id)} className="px-2 py-1 bg-red-600 text-white text-xs font-bold rounded-lg">Sim</button>
-                          <button onClick={() => setConfirmDeleteHistoryId(null)} className="px-2 py-1 bg-slate-200 text-slate-600 text-xs font-bold rounded-lg">Não</button>
+                          <button onClick={() => setConfirmDeleteHistoryId(null)} className="px-2 py-1 bg-[var(--border)] text-[var(--ink-soft)] text-xs font-bold rounded-lg">Não</button>
                         </div>
                       </div>
                     ) : (
-                      <div className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
+                      <div className="flex justify-between items-center p-3 bg-[var(--surface)] rounded-xl">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold text-slate-600">{h.valor_anterior || 'N/A'}€</span>
-                          <span className="text-slate-400">→</span>
+                          <span className="text-sm font-bold text-[var(--ink-soft)]">{h.valor_anterior || 'N/A'}€</span>
+                          <span className="text-[var(--slate)]">→</span>
                           <span className="text-sm font-bold" style={{ color: FT.navy }}>{h.valor_novo}€</span>
                         </div>
                         <div className="flex items-center gap-3">
-                          <span className="text-xs text-slate-400">{new Date(h.data_alteracao).toLocaleDateString('pt-PT')}</span>
-                          <button onClick={() => { setEditingHistoryId(h.id); setEditingHistoryDraft(h); }} className="p-1 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg"><Edit2 size={12} /></button>
-                          <button onClick={() => setConfirmDeleteHistoryId(h.id)} className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={12} /></button>
+                          <span className="text-xs text-[var(--slate-dim)]">{new Date(h.data_alteracao).toLocaleDateString('pt-PT')}</span>
+                          <button onClick={() => { setEditingHistoryId(h.id); setEditingHistoryDraft(h); }} className="p-1 text-[var(--slate)] hover:text-amber-600 hover:bg-amber-50 rounded-lg"><Edit2 size={12} /></button>
+                          <button onClick={() => setConfirmDeleteHistoryId(h.id)} className="p-1 text-[var(--slate)] hover:text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={12} /></button>
                         </div>
                       </div>
                     )}
