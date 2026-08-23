@@ -2,7 +2,6 @@ export { default as AdminDashboard } from './AdminDashboard';
 export { default as TeamManager } from './TeamManager';
 export { default as ClientManager } from './ClientManager';
 export { default as ScheduleManager } from './ScheduleManager';
-export { default as ExpenseManager } from './ExpenseManager';
 export { default as ValidationPortal } from './ValidationPortal';
 export { default as FinancialReportOverlay } from './FinancialReportOverlay';
 export { default as DocumentsAdmin } from './DocumentsAdmin';
