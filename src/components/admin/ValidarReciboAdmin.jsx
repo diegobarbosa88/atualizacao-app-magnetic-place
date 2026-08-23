@@ -21,7 +21,7 @@ const ValidarReciboAdmin = ({ workers = [] }) => {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center gap-1 border-b border-slate-100">
+      <div className="flex items-center gap-1 border-b border-[var(--border-soft)]">
         {[
           { id: 'recibos',    icon: ReceiptText, label: 'Recibos'    },
           { id: 'burst',      icon: Scissors,    label: 'Burst'      },
@@ -29,7 +29,7 @@ const ValidarReciboAdmin = ({ workers = [] }) => {
           { id: 'reextracao', icon: FileSearch,  label: 'Reextração' },
         ].map(({ id, icon: Icon, label }) => (
           <button key={id} onClick={() => setModo(id)}
-            className={`flex items-center gap-1.5 px-3 pb-2.5 pt-1 text-[11px] font-black uppercase tracking-wider transition-all border-b-2 -mb-px ${modo === id ? 'border-[var(--orange)] text-[var(--navy)]' : 'border-transparent text-slate-400 hover:text-[var(--navy)]'}`}>
+            className={`flex items-center gap-1.5 px-3 pb-2.5 pt-1 text-[11px] font-black uppercase tracking-wider transition-all border-b-2 -mb-px ${modo === id ? 'border-[var(--orange)] text-[var(--navy)]' : 'border-transparent text-[var(--slate-dim)] hover:text-[var(--navy)]'}`}>
             <Icon size={13} /> {label}
           </button>
         ))}

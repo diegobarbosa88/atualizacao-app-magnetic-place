@@ -218,19 +218,19 @@ const ModoReextracao = ({ workers, logs, systemSettings, workerRateHistory = [] 
       )}
 
       {existentes && (
-        <p className="text-[10px] text-slate-500 font-medium">
+        <p className="text-[10px] text-[var(--slate-dim)] font-medium">
           {existentes.length} linha{existentes.length !== 1 ? 's' : ''} em receipt_validations no âmbito (mes {MES_MIN} a {MES_MAX}, estado='valido').
         </p>
       )}
 
-      <label className="flex flex-col items-center justify-center gap-2 p-8 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition-all">
-        <FileSearch size={28} className="text-slate-300" />
-        <span className="text-sm font-bold text-slate-500">
+      <label className="flex flex-col items-center justify-center gap-2 p-8 bg-[var(--surface)] border-2 border-dashed border-[var(--border)] rounded-2xl cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition-all">
+        <FileSearch size={28} className="text-[var(--slate)]" />
+        <span className="text-sm font-bold text-[var(--slate-dim)]">
           {files.length > 0
             ? `${files.length} ficheiro${files.length > 1 ? 's' : ''} selecionado${files.length > 1 ? 's' : ''}`
             : 'Clique para selecionar os PDF(s) originais'}
         </span>
-        <span className="text-[10px] text-slate-400">1 PDF com todos os recibos, ou vários PDFs separados</span>
+        <span className="text-[10px] text-[var(--slate-dim)]">1 PDF com todos os recibos, ou vários PDFs separados</span>
         <input type="file" accept=".pdf" multiple className="hidden" onChange={handleFiles} />
       </label>
 
@@ -270,23 +270,23 @@ const ModoReextracao = ({ workers, logs, systemSettings, workerRateHistory = [] 
 
           {/* Tabela worker_id | mes | campo | valor_antigo | valor_novo — só linhas que mudam */}
           {relatorio.nMudam > 0 && (
-            <div className="rounded-2xl border border-slate-100 overflow-hidden">
+            <div className="rounded-2xl border border-[var(--border-soft)] overflow-hidden">
               <table className="w-full text-xs">
-                <thead className="bg-slate-50 border-b border-slate-100">
+                <thead className="bg-[var(--surface)] border-b border-[var(--border-soft)]">
                   <tr>
                     {['Worker', 'Mês', 'Campo', 'Valor antigo', 'Valor novo'].map(h => (
-                      <th key={h} className="px-4 py-2.5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">{h}</th>
+                      <th key={h} className="px-4 py-2.5 text-left text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">{h}</th>
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-50">
+                <tbody className="divide-y divide-[var(--border-soft)]">
                   {relatorio.linhas.filter(l => l.tipo === 'mudou').flatMap(l =>
                     l.campos.map((c, i) => (
-                      <tr key={`${l.worker.id}-${l.mes}-${c.campo}`} className={i === 0 ? 'border-t-2 border-slate-200' : ''}>
-                        <td className="px-4 py-2 font-bold text-slate-700">{i === 0 ? l.worker.name : ''}</td>
-                        <td className="px-4 py-2 text-slate-500">{i === 0 ? formatarMes(l.mes) : ''}</td>
-                        <td className="px-4 py-2 text-slate-600">{c.campo}</td>
-                        <td className="px-4 py-2 text-slate-500">{fmt(c.antigo)}</td>
+                      <tr key={`${l.worker.id}-${l.mes}-${c.campo}`} className={i === 0 ? 'border-t-2 border-[var(--border)]' : ''}>
+                        <td className="px-4 py-2 font-bold text-[var(--ink-mid)]">{i === 0 ? l.worker.name : ''}</td>
+                        <td className="px-4 py-2 text-[var(--slate-dim)]">{i === 0 ? formatarMes(l.mes) : ''}</td>
+                        <td className="px-4 py-2 text-[var(--ink-soft)]">{c.campo}</td>
+                        <td className="px-4 py-2 text-[var(--slate-dim)]">{fmt(c.antigo)}</td>
                         <td className="px-4 py-2 font-bold text-amber-600">{fmt(c.novo)}</td>
                       </tr>
                     ))
@@ -325,10 +325,10 @@ const ModoReextracao = ({ workers, logs, systemSettings, workerRateHistory = [] 
           )}
 
           {relatorio.nSemAmbito > 0 && (
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 space-y-1">
-              <p className="text-[10px] font-black text-slate-500 tracking-widest mb-1">FORA DE ÂMBITO (mês fora de Jan-Mai 2026, ou trabalhador não reconhecido)</p>
+            <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 space-y-1">
+              <p className="text-[10px] font-black text-[var(--slate-dim)] tracking-widest mb-1">FORA DE ÂMBITO (mês fora de Jan-Mai 2026, ou trabalhador não reconhecido)</p>
               {relatorio.linhas.filter(l => l.tipo === 'sem-ambito').map((l, i) => (
-                <p key={i} className="text-[10px] text-slate-500">{l.origem}: {l.worker?.name ?? l.nomeExtraido ?? '—'} · {l.mes ?? '—'}</p>
+                <p key={i} className="text-[10px] text-[var(--slate-dim)]">{l.origem}: {l.worker?.name ?? l.nomeExtraido ?? '—'} · {l.mes ?? '—'}</p>
               ))}
             </div>
           )}

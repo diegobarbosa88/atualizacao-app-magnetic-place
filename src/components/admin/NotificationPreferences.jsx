@@ -67,7 +67,7 @@ export default function NotificationPreferences({ isOpen, onClose, preferences, 
         <div className="p-6 flex gap-3">
           <button
             onClick={handleRestore}
-            className="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-xl font-black text-xs uppercase hover:bg-slate-200 transition-colors"
+            className="px-4 py-2.5 bg-[var(--surface-dim)] text-[var(--ink-soft)] rounded-xl font-black text-xs uppercase hover:bg-[var(--border)] transition-colors"
           >
             Restaurar Defaults
           </button>
@@ -90,11 +90,11 @@ export default function NotificationPreferences({ isOpen, onClose, preferences, 
         {/* Content */}
         <div className="p-6 space-y-4">
           {NOTIFICATION_TYPES.map(({ key, label, desc }) => (
-            <div key={key} className="bg-slate-50 rounded-2xl p-4">
+            <div key={key} className="bg-[var(--surface)] rounded-2xl p-4">
               <div className="flex items-start justify-between mb-3">
                 <div>
-                  <p className="font-black text-sm text-slate-800">{label}</p>
-                  <p className="text-xs text-slate-400 mt-0.5">{desc}</p>
+                  <p className="font-black text-sm text-[var(--ink)]">{label}</p>
+                  <p className="text-xs text-[var(--slate-dim)] mt-0.5">{desc}</p>
                 </div>
               </div>
               <div className="flex gap-3">
@@ -103,7 +103,7 @@ export default function NotificationPreferences({ isOpen, onClose, preferences, 
                   className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-black text-xs uppercase transition-all ${
                     localPrefs[key]?.db
                       ? 'bg-emerald-600 text-white'
-                      : 'bg-white border border-slate-200 text-slate-400 hover:border-emerald-300'
+                      : 'bg-white border border-[var(--border)] text-[var(--slate-dim)] hover:border-emerald-300'
                   }`}
                 >
                   <Bell size={14} />
@@ -114,7 +114,7 @@ export default function NotificationPreferences({ isOpen, onClose, preferences, 
                   className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-black text-xs uppercase transition-all ${
                     localPrefs[key]?.email
                       ? 'bg-emerald-600 text-white'
-                      : 'bg-white border border-slate-200 text-slate-400 hover:border-emerald-300'
+                      : 'bg-white border border-[var(--border)] text-[var(--slate-dim)] hover:border-emerald-300'
                   }`}
                 >
                   <Mail size={14} />

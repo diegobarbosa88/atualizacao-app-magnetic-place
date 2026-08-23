@@ -7,7 +7,7 @@ export default function FieldBadge({ name }) {
     <span
       className={`px-2 py-0.5 rounded-md font-mono text-[10px] font-bold tracking-tight ${
         known
-          ? 'bg-slate-100 text-[var(--navy)] border border-slate-200'
+          ? 'bg-[var(--surface-dim)] text-[var(--navy)] border border-[var(--border)]'
           : 'bg-amber-50 text-amber-700 border border-amber-100'
       }`}
       title={known ? 'Variável reconhecida' : 'Variável não reconhecida — não será preenchida automaticamente'}
