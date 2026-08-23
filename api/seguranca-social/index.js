@@ -83,6 +83,10 @@ export default async function handler(req, res) {
   }
 
   // ── GET consultas PSI (só leitura) ──────────────────────────────────────────
+  // Estas consultas NÃO gravam em ss_comunicacoes. Essa tabela é a prova do que
+  // foi comunicado ao Estado — só lá entra escrita (admissão/cessação). Quando
+  // as leituras também lá entravam, 1083 das 1087 linhas eram consultas e
+  // afogavam os 4 registos que a tabela existe para guardar.
 
   if (req.method === 'GET' && action === 'comprovativos') {
     if (!credenciaisConfiguradas()) return res.status(400).json({ erro: 'Token PSI não configurado.' });
@@ -94,11 +98,6 @@ export default async function handler(req, res) {
       if (r.semRegistos) return res.status(200).json({ semRegistos: true, dados: [] });
       if (!r.ok) return res.status(422).json({ erro: r.erro });
       const dados = Array.isArray(r.json) ? r.json : (r.json?.comprovativos || r.json?.resultado || []);
-      await supabaseAdmin().from('ss_comunicacoes').insert({
-        worker_id: null, tipo: 'consulta', status: 'sucesso',
-        payload_xml: url, resposta_ss: JSON.stringify(r.json),
-        ambiente: getAmbiente(),
-      });
       return res.status(200).json({ semRegistos: dados.length === 0, dados, ambiente: getAmbiente() });
     } catch (e) { return res.status(502).json({ erro: e.message }); }
   }
@@ -112,11 +111,6 @@ export default async function handler(req, res) {
       if (r.semRegistos) return res.status(200).json({ semRegistos: true, dados: [] });
       if (!r.ok) return res.status(422).json({ erro: r.erro });
       const dados = Array.isArray(r.json) ? r.json : (r.json?.documentos || r.json?.resultado || []);
-      await supabaseAdmin().from('ss_comunicacoes').insert({
-        worker_id: null, tipo: 'consulta', status: 'sucesso',
-        payload_xml: url, resposta_ss: JSON.stringify(r.json),
-        ambiente: getAmbiente(),
-      });
       return res.status(200).json({ semRegistos: dados.length === 0, dados, ambiente: getAmbiente() });
     } catch (e) { return res.status(502).json({ erro: e.message }); }
   }
@@ -136,12 +130,6 @@ export default async function handler(req, res) {
       );
       const resultado = parseObterComunicacoesResponse(xmlResposta);
       if (!resultado.sucesso) return res.status(422).json({ erro: resultado.mensagemErro });
-
-      await supabaseAdmin().from('ss_comunicacoes').insert({
-        worker_id: null, tipo: 'consulta', status: 'sucesso',
-        payload_xml: soapBody, resposta_ss: xmlResposta,
-        ambiente: getAmbiente(),
-      });
 
       return res.status(200).json({
         comunicacoes: resultado.comunicacoes,
@@ -173,11 +161,6 @@ export default async function handler(req, res) {
       if (r.semRegistos) return res.status(200).json({ semRegistos: true, dados: [] });
       if (!r.ok) return res.status(422).json({ erro: r.erro });
       const dados = Array.isArray(r.json) ? r.json : (r.json?.remuneracoes || r.json?.resultado || []);
-      await supabaseAdmin().from('ss_comunicacoes').insert({
-        worker_id: null, tipo: 'consulta', status: 'sucesso',
-        payload_xml: JSON.stringify(bodyPSI), resposta_ss: JSON.stringify(r.json),
-        ambiente: getAmbiente(),
-      });
       return res.status(200).json({ semRegistos: dados.length === 0, dados, ambiente: getAmbiente() });
     } catch (e) { return res.status(502).json({ erro: e.message }); }
   }
