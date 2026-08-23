@@ -220,7 +220,7 @@ export default function TemplateEditorModal({ template, supabase, onClose, onSav
                 return (
                   <button type="button" key={f.name} onClick={copy} title={`Copiar ${tag}`}
                     className={`flex items-center gap-2 text-xs text-left px-2 py-1 rounded-md border transition-all ${isCopied ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-[var(--border)] hover:border-[var(--slate)] hover:bg-[var(--surface)]'}`}>
-                    <code className={isCopied ? 'font-mono text-emerald-700' : 'font-mono'} style={isCopied ? {} : { color: FT.slateDim }}>{tag}</code>
+                    <code className={isCopied ? 'font-mono text-emerald-700' : 'font-mono'} style={isCopied ? {} : { color: 'var(--slate-dim)' }}>{tag}</code>
                     <span className="text-[var(--slate-dim)] truncate flex-1">{f.label}</span>
                     <span className={`text-[10px] font-black uppercase tracking-widest ${isCopied ? 'text-emerald-600' : 'text-[var(--slate-dim)]'}`}>
                       {isCopied ? 'Copiado' : 'Copiar'}

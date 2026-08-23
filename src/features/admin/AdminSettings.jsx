@@ -271,7 +271,7 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
                         <p className="text-[10px] text-slate-400 font-mono">{username}</p>
                       </div>
                       <div className="flex gap-1">
-                        <button onClick={() => handleEditAdmin(w)} className="text-xs font-bold hover:bg-slate-100 px-3 py-1.5 rounded-xl transition-all" style={{ color: FT.slateDim }}>Editar</button>
+                        <button onClick={() => handleEditAdmin(w)} className="text-xs font-bold hover:bg-slate-100 px-3 py-1.5 rounded-xl transition-all" style={{ color: 'var(--slate-dim)' }}>Editar</button>
                         <button onClick={() => handleRevokeAdmin(w)} className="flex items-center gap-1 text-xs font-bold text-rose-500 hover:bg-rose-50 px-3 py-1.5 rounded-xl transition-all"><ShieldOff size={12} /> Revogar</button>
                       </div>
                     </div>

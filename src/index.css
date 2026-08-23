@@ -50,6 +50,13 @@
   --ink: #1a1d21;
   --ink-mid: #363e48;
   --ink-soft: #51606e;      /* mesmo valor que --text, que é o nome antigo */
+
+  /* A superfície do cartão/painel. Existe no :root — e não só no bloco .dark,
+     como estava — porque um token definido em apenas um dos modos não resolve
+     no outro: `var(--panel)` no modo claro devolvia vazio. Hoje ninguém o usa
+     (os painéis ainda são `bg-white`), mas fica correcto para o lote que
+     converter esses `bg-white`. Espelha FT.panel. */
+  --panel: #ffffff;
   --surface: #f7f6f3;
   --surface-dim: #efede7;   /* = FT.bg */
   --border-soft: #eae7df;
@@ -126,9 +133,16 @@
    acabar: cobrem as ~3900 classes `slate-*` que ainda não foram tocadas.
    Quando a última for convertida, esse bloco sai inteiro. */
 .dark {
-  /* Superfícies — derivadas do navy da marca, não do slate genérico. */
+  /* Superfícies — derivadas do navy da marca, não do slate genérico. Ao
+     contrário do modo claro, aqui a escala CLAREIA da moldura para a frente:
+     --bg é o fundo da app e cada camada por cima sobe um degrau.
+     O --panel esteve a #16202c, o mesmo valor do --surface. Não dava erro
+     porque ninguém usava var(--panel), mas assim que um lote convertesse os
+     `bg-white` para ele, os 226 usos do --surface — 90 deles hovers de linha —
+     passavam a ter exactamente a cor do painel por baixo e desapareciam sem
+     aviso. Separado antes desse lote, não depois. */
   --bg: #0e1621;
-  --panel: #16202c;
+  --panel: #131d28;
   --surface: #16202c;
   --surface-dim: #1c2733;
   --border: #2a3746;

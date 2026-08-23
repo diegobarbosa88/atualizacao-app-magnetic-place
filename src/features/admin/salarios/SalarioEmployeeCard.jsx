@@ -82,7 +82,7 @@ export default function SalarioEmployeeCard({
                   {!isMatch && !isJustified && (
                     <button
                       onClick={() => onJustificar({ employee_name: employee.employee_name, month: m.month, balance: m.balance })}
-                      className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-[var(--surface-dim)] hover:bg-[var(--border)] transition-colors flex-shrink-0" style={{ color: FT.slateDim }}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-[var(--surface-dim)] hover:bg-[var(--border)] transition-colors flex-shrink-0" style={{ color: 'var(--slate-dim)' }}
                     >
                       <MessageSquare size={10} /> Justificar
                     </button>

@@ -212,7 +212,7 @@ export default function FornecedorList() {
 
               {/* Card footer */}
               <div className="border-t border-[var(--border-soft)] px-4 py-2 flex items-center justify-end gap-1">
-                <button onClick={() => editarFornecedor(f)} className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-black uppercase hover:bg-[var(--surface-dim)] rounded-lg transition-colors" style={{ color: FT.slateDim }}>
+                <button onClick={() => editarFornecedor(f)} className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-black uppercase hover:bg-[var(--surface-dim)] rounded-lg transition-colors" style={{ color: 'var(--slate-dim)' }}>
                   <Edit2 size={11} /> Editar
                 </button>
                 {confirmDeleteId === f.id ? (

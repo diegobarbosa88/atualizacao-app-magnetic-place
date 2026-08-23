@@ -355,7 +355,7 @@ export default function ImportarContratosSSDModal({ workers, onClose, onImportad
     }
     if (alt.acao === 'atualizar') {
       return (
-        <span className="flex items-center gap-1 font-bold text-[10px]" style={{ color: FT.slateDim }}>
+        <span className="flex items-center gap-1 font-bold text-[10px]" style={{ color: 'var(--slate-dim)' }}>
           <ArrowRight size={11} /> Atualizar
         </span>
       );

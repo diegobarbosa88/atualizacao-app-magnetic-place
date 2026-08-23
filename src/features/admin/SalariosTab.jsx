@@ -570,7 +570,7 @@ export default function SalariosTab({ month }) {
               <button
                 onClick={() => abrirSepaModal('normal')}
                 className="flex items-center gap-1.5 px-3 py-2 bg-[var(--surface-dim)] hover:bg-[var(--border)] rounded-2xl text-xs font-black uppercase tracking-widest transition-all justify-center"
-                style={{ color: FT.slateDim }}
+                style={{ color: 'var(--slate-dim)' }}
               >
                 <Landmark size={13} /> SEPA XML
               </button>
@@ -585,7 +585,7 @@ export default function SalariosTab({ month }) {
               <button
                 onClick={() => setDescontosModal(true)}
                 className="flex items-center gap-1.5 px-3 py-2 bg-[var(--surface-dim)] hover:bg-[var(--border)] rounded-2xl text-xs font-black uppercase tracking-widest transition-all justify-center"
-                style={{ color: FT.slateDim }}
+                style={{ color: 'var(--slate-dim)' }}
               >
                 <Scissors size={13} /> Descontos
               </button>

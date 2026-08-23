@@ -95,7 +95,7 @@ const ScheduleManagerContent = () => {
                     <div className="flex flex-nowrap gap-1 overflow-x-auto">
                       {[{ v: 1, l: '2ª' }, { v: 2, l: '3ª' }, { v: 3, l: '4ª' }, { v: 4, l: '5ª' }, { v: 5, l: '6ª' }, { v: 6, l: 'Sáb' }, { v: 0, l: 'Dom' }].map(d => {
                         const isActive = s.isAdvanced ? (s.dailyConfigs?.[d.v]?.isActive) : (s.weekdays || [1, 2, 3, 4, 5]).includes(d.v);
-                        return isActive ? <span key={d.v} className="px-2 py-1 rounded text-[10px] font-black uppercase whitespace-nowrap" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: FT.slateDim }}>{d.l}</span> : null;
+                        return isActive ? <span key={d.v} className="px-2 py-1 rounded text-[10px] font-black uppercase whitespace-nowrap" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: 'var(--slate-dim)' }}>{d.l}</span> : null;
                       })}
                     </div>
                   </td>
@@ -121,7 +121,7 @@ const ScheduleManagerContent = () => {
             <div key={s.id} className="bg-white p-5 rounded-2xl border border-[var(--border-soft)] shadow-sm hover:shadow-md hover:border-[var(--border)] hover:-translate-y-0.5 transition-all duration-200">
               {/* Header */}
               <div className="flex justify-between items-start mb-3">
-                <div className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase border flex items-center gap-1" style={{ color: FT.slateDim, borderColor: 'rgba(134,154,175,0.4)', backgroundColor: 'rgba(134,154,175,0.1)' }}>
+                <div className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase border flex items-center gap-1" style={{ color: 'var(--slate-dim)', borderColor: 'rgba(134,154,175,0.4)', backgroundColor: 'rgba(134,154,175,0.1)' }}>
                   <Timer size={10} /> Turno
                 </div>
                 <div className="flex items-center gap-1">
@@ -141,7 +141,7 @@ const ScheduleManagerContent = () => {
                 <div className="flex flex-wrap gap-1">
                   {[{ v: 1, l: '2ª' }, { v: 2, l: '3ª' }, { v: 3, l: '4ª' }, { v: 4, l: '5ª' }, { v: 5, l: '6ª' }, { v: 6, l: 'Sáb' }, { v: 0, l: 'Dom' }].map(d => {
                     const isActive = s.isAdvanced ? (s.dailyConfigs?.[d.v]?.isActive) : (s.weekdays || [1, 2, 3, 4, 5]).includes(d.v);
-                    return isActive ? <span key={d.v} className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: FT.slateDim }}>{d.l}</span> : null;
+                    return isActive ? <span key={d.v} className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: 'var(--slate-dim)' }}>{d.l}</span> : null;
                   })}
                 </div>
                 <div className="flex items-center gap-1.5"><Coffee size={10} /> {s.isAdvanced ? 'Variável' : `${s.breakStart || '--:--'}-${s.breakEnd || '--:--'}`}</div>

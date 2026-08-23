@@ -235,19 +235,32 @@ perguntar. E usar sempre a mesma métrica: o script conta **ocorrências**, não
   - **Antes de mudar o valor de um token, contar em que papéis ele é usado.** Um token com nome de
     superfície pode estar a servir de tinta noutro sítio; nesse caso a correcção é um token novo,
     não um valor novo.
-- **`--panel` e `--surface` têm o mesmo valor no bloco `.dark` (#16202c).** Hoje é inofensivo porque
-  `var(--panel)` não é usado em lado nenhum — os painéis ainda são `bg-white` e o modo escuro
-  chega-lhes pela regra-ponte do `App.css` (#1e293b), que é distinta do `--surface`, por isso os 90
-  `hover:bg-[var(--surface)]` continuam visíveis. Mas assim que um lote converter `bg-white` para
-  `bg-[var(--panel)]`, painel e hover passam a ser a mesma cor no escuro e o hover desaparece sem dar
-  erro nenhum. Separar os dois valores **antes** desse lote, não depois.
-- **O fundo global do painel admin é um hex fixo:** `bg-[#EEF2F5]` em `AdminDashboard.jsx:585`. Não
-  inverte no modo escuro, por isso qualquer texto que assente directamente nele — sem painel próprio
-  por baixo — fica claro-sobre-claro. Já estava partido antes da migração (a regra-ponte punha o
-  texto a #F1F5F9, 1,03:1); converter para tokens não piorou (1,08:1) mas também não resolve, porque
-  o problema é o fundo. Passá-lo a `--surface-dim` resolve (12,48:1 no escuro) e no claro é quase
-  neutro (15,02 → 14,45). É a mudança visual de maior alcance que falta — muda o fundo de todos os
-  ecrãs do admin de cinzento-azulado para o bege da marca.
+- **O fundo global do admin e a colisão `--panel`/`--surface` estão resolvidos** (lote 21B), mas as
+  duas lições ficam. O fundo era `bg-[#EEF2F5]` fixo em `AdminDashboard.jsx`, hoje `--surface-dim`;
+  o `--panel` valia o mesmo que o `--surface` no `.dark` e hoje é `#131d28`. O que interessa reter:
+  - **Dois erros podem cancelar-se e parecer que está tudo bem.** Havia 66 `color: FT.slateDim/
+    inkSoft/ink` inline que não invertiam, e um fundo global que também não invertia. Cada um
+    isolado dava mau contraste; juntos davam bom. Corrigir só o fundo teria exposto os 66 de uma
+    vez. Por isso os dois foram no mesmo lote. Antes de corrigir um token de fundo, verificar
+    sempre o que assenta nele.
+  - **Texto que assenta DIRECTAMENTE no fundo global precisa de `--ink-soft`, não `--slate-dim`.**
+    Sobre `--surface-dim` o slate-dim dá 4,36:1 e falha; o ink-soft dá 5,52:1 no claro e 6,12:1 no
+    escuro. Já apanhou o botão "Scanner" e o "Mostrar inativos". O `--slate-dim` continua certo
+    dentro de painéis brancos (5,10:1).
+  - **Medir contraste durante uma transição CSS dá o valor errado.** Elementos com `transition-*`
+    devolvem a cor a meio da interpolação, e `getComputedStyle` lê-a sem avisar — deu duas leituras
+    falsas seguidas (o hover do botão laranja e o Scanner "por resolver" quando já estava). Injectar
+    `*{transition:none!important}` antes de qualquer varrimento.
+- **34 botões laranja com texto branco (2,52:1) que o script dava como zero.** A verificação
+  procurava `text-white` e a cor laranja na MESMA linha; o padrão real é `className="… text-white"`
+  numa linha e `style={{ backgroundColor: FT.orange }}` na seguinte. Corrigido para janela de 3
+  linhas — passou de 0 para 34 sem nada ter mudado no código. Vale como regra geral: **quando uma
+  verificação dá zero num defeito que já apareceu antes, desconfiar do instrumento antes de assumir
+  que está limpo.** Os 34 ficam por tratar, em lote próprio.
+- **`constants/rhCategories.js:139`** — a entrada `amberCustom` usa `text-[#854F0B]` sobre
+  `bg-[rgba(235,141,0,0.15)]`: 1,73:1 no modo escuro, porque nenhum dos dois hex inverte. É um mapa
+  de cor-à-escolha (categorias de documentos), por isso não se converte às cegas — fica com as
+  outras pendências de cor-como-dado.
 - **O varrimento "regressões globais" do script não é global — olha só para `src/features/admin` e
   `src/components/admin`.** Está a zero ali, mas há 6 botões laranja com texto branco (2,52:1) fora
   desse alcance, em `components/common/EntryForm.jsx`, `components/common/WorkerDocuments.jsx`,

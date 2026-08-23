@@ -218,7 +218,7 @@ const NotificationsAdmin = ({ workers, appNotifications, saveToDb, handleDelete,
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-black text-slate-800 truncate">{notif.title}</p>
                   <p className="text-[10px] text-slate-400 truncate">{notif.message}</p>
-                  <p className="text-[9px] font-bold uppercase mt-1" style={{ color: FT.slateDim }}>
+                  <p className="text-[9px] font-bold uppercase mt-1" style={{ color: 'var(--slate-dim)' }}>
                     🎯 {notif.target_type === 'all' ? 'Todos' : `${notif.target_worker_ids?.length || 0} específicos`} • {notif.is_dismissible ? 'Fechável' : 'Fixo'}
                   </p>
                   <div
@@ -282,7 +282,7 @@ const NotificationsAdmin = ({ workers, appNotifications, saveToDb, handleDelete,
               <button
                 onClick={() => setShowViewDetails(null)}
                 className="w-full py-4 border rounded-2xl font-black text-xs uppercase tracking-widest transition-all hover:bg-slate-50"
-                style={{ borderColor: FT.slate, color: FT.slateDim }}
+                style={{ borderColor: FT.slate, color: 'var(--ink-soft)' }}
               >
                 Fechar
               </button>

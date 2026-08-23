@@ -63,9 +63,26 @@ echo "── regressões globais (admin inteiro) ──"
 
 # Texto branco sobre o laranja da marca dá 2,52:1. O par correcto é navy
 # sobre laranja, 4,66:1.
+# A primeira versão desta verificação procurava `text-white` e a cor laranja
+# NA MESMA LINHA, e por isso dava 0 enquanto havia 34 casos reais: o padrão
+# comum é `className="… text-white"` numa linha e `style={{ backgroundColor:
+# FT.orange }}` na seguinte. Um `grep` de linha única nunca os vê. Agora a
+# janela é de 3 linhas, via perl, que é o que apanha o par separado.
 printf '%-46s %s\n' "laranja com texto branco:" \
-  "$(grep -rn 'text-white' src/features/admin src/components/admin --include=*.jsx 2>/dev/null \
-     | grep -cE 'FT\.orange|#EB8D00|var\(--orange\)')"
+  "$(find src/features/admin src/components/admin -name '*.jsx' 2>/dev/null \
+     | perl -ne 'chomp; push @f,$_; END{
+         my $n=0;
+         for my $file (@f) {
+           open my $fh,"<:raw",$file or next; my @l=<$fh>; close $fh;
+           for my $i (0..$#l) {
+             next unless $l[$i] =~ /text-white/;
+             my $lo = $i-2<0?0:$i-2; my $hi = $i+2>$#l?$#l:$i+2;
+             my $ctx = join "", @l[$lo..$hi];
+             $n++ if $ctx =~ /backgroundColor: *FT\.orange|background: *FT\.orange|bg-\[var\(--orange\)\]|#EB8D00/;
+           }
+         }
+         print $n;
+       }')"
 
 # Botão de acção primária ainda em indigo do template do Vite. Exclui os
 # hovers e os ternários de selecção, que não são botões.

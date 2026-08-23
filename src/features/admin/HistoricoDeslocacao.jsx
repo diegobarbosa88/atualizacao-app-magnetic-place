@@ -297,7 +297,7 @@ export default function HistoricoDeslocacao({ supabase, workers, mesStr, setMapa
     <div className="mb-4">
       <p
         className="uppercase font-black mb-2"
-        style={{ fontSize: 10, color: FT.slateDim, letterSpacing: '0.06em' }}
+        style={{ fontSize: 10, color: 'var(--slate-dim)', letterSpacing: '0.06em' }}
       >
         Histórico de deslocação
       </p>

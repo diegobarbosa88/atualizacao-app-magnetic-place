@@ -111,7 +111,7 @@ function WorkerCard({ row }) {
         )}
         {row.fonte === 'sem-dados' && (
           <span title="Sem registo de horário nem recibo processado para este mês"
-            style={{ flexShrink: 0, background: '#F1F3F5', color: FT.slateDim, borderRadius: 5, padding: '3px 7px', fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.3px' }}>
+            style={{ flexShrink: 0, background: '#F1F3F5', color: 'var(--slate-dim)', borderRadius: 5, padding: '3px 7px', fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.3px' }}>
             Sem dados
           </span>
         )}

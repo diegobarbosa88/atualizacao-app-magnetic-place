@@ -2502,7 +2502,7 @@ ${hdrRow}${bodyRows}${totRow}
               </span>
               <div>
                 <p className="font-black text-white text-sm leading-tight">{inputs.nome || '—'}</p>
-                <p className="text-xs font-bold" style={{ color: FT.slateDim }}>{MESES_PT[parseInt(inputs.mes, 10)] || ''} {inputs.ano}</p>
+                <p className="text-xs font-bold" style={{ color: 'var(--slate-dim)' }}>{MESES_PT[parseInt(inputs.mes, 10)] || ''} {inputs.ano}</p>
               </div>
             </div>
             <button
@@ -2520,7 +2520,7 @@ ${hdrRow}${bodyRows}${totRow}
           <div className="grid sm:grid-cols-2 gap-5 items-start">
             {/* ── Recibo ── */}
             <div className="bg-white rounded-2xl border border-slate-200 p-5" style={{ borderTop: `4px solid ${FT.navy}` }}>
-              <p className="text-[10px] font-black uppercase tracking-wider mb-3" style={{ color: FT.slateDim }}>Recibo de Vencimento</p>
+              <p className="text-[10px] font-black uppercase tracking-wider mb-3" style={{ color: 'var(--slate-dim)' }}>Recibo de Vencimento</p>
               {r ? (
                 <>
                   <div className="space-y-2 text-sm mb-4">
@@ -2562,7 +2562,7 @@ ${hdrRow}${bodyRows}${totRow}
                     </div>
                   </div>
                   <div className="rounded-xl px-4 py-3 mb-4" style={{ background: '#EEF1F5' }}>
-                    <p className="text-[9px] font-black uppercase tracking-wider mb-0.5" style={{ color: FT.slateDim }}>Líquido a receber</p>
+                    <p className="text-[9px] font-black uppercase tracking-wider mb-0.5" style={{ color: 'var(--slate-dim)' }}>Líquido a receber</p>
                     <p className="text-xl font-black" style={{ color: 'var(--navy)' }}>{eur(liquidoDisplay)}</p>
                   </div>
                 </>
@@ -2583,7 +2583,7 @@ ${hdrRow}${bodyRows}${totRow}
 
             {/* ── Mapa de Ajudas ── */}
             <div className="bg-white rounded-2xl border border-slate-200 p-5" style={{ borderTop: `4px solid ${FT.orange}` }}>
-              <p className="text-[10px] font-black uppercase tracking-wider mb-3" style={{ color: FT.slateDim }}>Mapa de Ajudas de Custo</p>
+              <p className="text-[10px] font-black uppercase tracking-wider mb-3" style={{ color: 'var(--slate-dim)' }}>Mapa de Ajudas de Custo</p>
               {mapaRows.length > 0 ? (
                 <>
                   <div className="space-y-2 text-sm mb-4">
@@ -2988,7 +2988,7 @@ ${hdrRow}${bodyRows}${totRow}
             <button
               onClick={gerarMapasAjudasPDF}
               className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-black hover:bg-slate-100 transition-all"
-              style={{ color: FT.slateDim }}
+              style={{ color: 'var(--slate-dim)' }}
               title="PDF com todos os trabalhadores"
             >
               <Download size={12} /> Todos

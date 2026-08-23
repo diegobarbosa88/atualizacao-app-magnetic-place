@@ -212,7 +212,7 @@ const TeamManagerContent = ({ onLogin }) => {
         </div>
         <div className="flex items-center gap-2">
           {inactiveCount > 0 && (
-            <label className="flex items-center gap-2 text-xs font-bold text-[var(--slate-dim)] cursor-pointer">
+            <label className="flex items-center gap-2 text-xs font-bold text-[var(--ink-soft)] cursor-pointer">
               <input type="checkbox" checked={showInactive} onChange={e => setShowInactive(e.target.checked)} className="rounded border-[var(--border)]" />
               Mostrar inativos ({inactiveCount})
             </label>
@@ -224,7 +224,7 @@ const TeamManagerContent = ({ onLogin }) => {
           <button
             onClick={() => { setInviteEmail(''); setGeneratedLink(''); setInviteModal(true); }}
             className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl font-black text-xs uppercase transition-all whitespace-nowrap border-2 hover:bg-[var(--surface)]"
-            style={{ borderColor: FT.slate, color: FT.slateDim }}
+            style={{ borderColor: FT.slate, color: 'var(--ink-soft)' }}
             title="Convidar novo colaborador via link de onboarding"
           >
             <UserPlus size={14} /> Convidar
@@ -232,7 +232,7 @@ const TeamManagerContent = ({ onLogin }) => {
           <button
             onClick={() => setScannerOpen(true)}
             className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl font-black text-xs uppercase transition-all whitespace-nowrap border-2 hover:bg-[var(--surface)]"
-            style={{ borderColor: FT.slate, color: FT.slateDim }}
+            style={{ borderColor: FT.slate, color: 'var(--ink-soft)' }}
             title="Scanner de Documentos com IA"
           >
             <ScanSearch size={14} /> Scanner

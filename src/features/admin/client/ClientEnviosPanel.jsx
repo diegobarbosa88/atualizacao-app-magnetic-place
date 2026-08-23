@@ -130,7 +130,7 @@ export default function ClientEnviosPanel({
                       {c.status === 'validado' ? (
                         <>
                           <button onClick={() => handleAnularValidacao(c)} className="p-1.5 text-rose-400 hover:bg-rose-50 rounded-lg transition-all" title="Anular"><RotateCcw size={13} /></button>
-                          <button onClick={() => setPrintingReport({ client: c, logs, workers, clients, month: portalMonthStr, clientApprovals })} className="p-1.5 rounded-lg hover:bg-[var(--surface-dim)] transition-all" style={{ color: FT.slateDim }} title="Relatório"><Download size={13} /></button>
+                          <button onClick={() => setPrintingReport({ client: c, logs, workers, clients, month: portalMonthStr, clientApprovals })} className="p-1.5 rounded-lg hover:bg-[var(--surface-dim)] transition-all" style={{ color: 'var(--slate-dim)' }} title="Relatório"><Download size={13} /></button>
                         </>
                       ) : (
                         <button onClick={() => { setClienteSelecionado(c); setModalEmailAberto(true); }} className="p-1.5 rounded-lg hover:bg-[var(--surface-dim)] transition-all" style={{ color: 'var(--navy)' }} title="Enviar Email"><Mail size={13} /></button>

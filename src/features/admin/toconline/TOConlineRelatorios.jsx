@@ -142,7 +142,7 @@ export default function TOConlineRelatorios({ onDesligado }) {
               </div>
               <button onClick={() => setMostrarFiltros(v => !v)}
                 className={`flex items-center gap-1.5 px-4 py-2.5 rounded-2xl border text-xs font-black uppercase tracking-widest transition-all ${mostrarFiltros || filtrosAtivos ? '' : 'bg-white border-[var(--border)] text-[var(--slate-dim)] hover:text-[var(--slate)] hover:border-[var(--slate)]'}`}
-                style={mostrarFiltros || filtrosAtivos ? { backgroundColor: 'rgba(134,154,175,0.1)', borderColor: FT.slate, color: FT.slateDim } : {}}>
+                style={mostrarFiltros || filtrosAtivos ? { backgroundColor: 'rgba(134,154,175,0.1)', borderColor: FT.slate, color: 'var(--ink-soft)' } : {}}>
                 {mostrarFiltros ? <ChevronUp size={13} /> : <ChevronDown size={13} />} Filtros
                 {filtrosAtivos && <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: FT.slate }} />}
               </button>
@@ -186,7 +186,7 @@ export default function TOConlineRelatorios({ onDesligado }) {
           {docsFiltrados.length === 0 ? (
             <div className="text-center py-12 text-[var(--slate-dim)] text-sm font-semibold">
               Nenhum documento corresponde aos filtros.
-              <button onClick={limparFiltros} className="ml-2 hover:underline" style={{ color: FT.slateDim }}>Limpar filtros</button>
+              <button onClick={limparFiltros} className="ml-2 hover:underline" style={{ color: 'var(--slate-dim)' }}>Limpar filtros</button>
             </div>
           ) : (
             <div className="bg-white rounded-[2rem] border border-[var(--border-soft)] shadow-sm overflow-hidden">

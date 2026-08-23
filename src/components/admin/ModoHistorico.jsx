@@ -45,10 +45,10 @@ function ExportModal({ show, onClose, onExportPdf, onExportCsv, exportFilters, s
       closeOnOverlay={false}
       footer={
         <div className="flex gap-2 p-6">
-          <button onClick={onExportPdf} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 border rounded-xl text-xs font-bold hover:bg-[var(--surface)] transition-colors" style={{ borderColor: FT.slate, color: FT.slateDim }}>
+          <button onClick={onExportPdf} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 border rounded-xl text-xs font-bold hover:bg-[var(--surface)] transition-colors" style={{ borderColor: FT.slate, color: 'var(--ink-soft)' }}>
             <FileDown size={14} /> PDF
           </button>
-          <button onClick={onExportCsv} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 border rounded-xl text-xs font-bold hover:bg-[var(--surface)] transition-colors" style={{ borderColor: FT.slate, color: FT.slateDim }}>
+          <button onClick={onExportCsv} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 border rounded-xl text-xs font-bold hover:bg-[var(--surface)] transition-colors" style={{ borderColor: FT.slate, color: 'var(--ink-soft)' }}>
             <FileDown size={14} /> CSV
           </button>
           <button onClick={onClose} className="px-4 py-2.5 bg-[var(--surface-dim)] text-[var(--ink-soft)] rounded-xl text-xs font-bold hover:bg-[var(--border)] transition-colors">

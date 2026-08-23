@@ -582,7 +582,7 @@ function AdminDashboard(props) {
 
   return (
     <div
-      className={`bg-[#EEF2F5] font-sans text-slate-900 ${navMode === 'topbar' ? 'min-h-screen' : 'h-screen overflow-hidden flex flex-col'}`}
+      className={`bg-[var(--surface-dim)] font-sans text-[var(--ink)] ${navMode === 'topbar' ? 'min-h-screen' : 'h-screen overflow-hidden flex flex-col'}`}
     >
       {navMode === 'topbar' ? (
         <>

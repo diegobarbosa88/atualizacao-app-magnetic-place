@@ -276,7 +276,7 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                               onClick={() => { verPortal(w); setOpenMenuId(null); }}
                               className="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-slate-50 group transition-colors"
                             >
-                              <span className="flex items-center justify-center w-6 h-6 rounded-md bg-slate-100 group-hover:bg-slate-200 transition-colors shrink-0" style={{ color: FT.slateDim }}><Search size={11} /></span>
+                              <span className="flex items-center justify-center w-6 h-6 rounded-md bg-slate-100 group-hover:bg-slate-200 transition-colors shrink-0" style={{ color: 'var(--slate-dim)' }}><Search size={11} /></span>
                               <span className="text-[11px] font-semibold text-slate-700 group-hover:text-slate-800">Ver Portal</span>
                             </button>
                             <button
@@ -390,7 +390,7 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                 {w.status === 'inativo' ? 'Inativo' : 'Ativo'}
               </div>
               <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
-                <button onClick={() => verPortal(w)} className="p-1 hover:bg-slate-50 rounded-md transition-all border border-slate-100" style={{ color: FT.slateDim }} title="Ver Portal"><Search size={10} /></button>
+                <button onClick={() => verPortal(w)} className="p-1 hover:bg-slate-50 rounded-md transition-all border border-slate-100" style={{ color: 'var(--slate-dim)' }} title="Ver Portal"><Search size={10} /></button>
                 <button onClick={() => onEdit(w)} className="p-1 text-amber-600 hover:bg-amber-50 rounded-md transition-all border border-amber-100" title="Editar"><Edit2 size={10} /></button>
                 <button onClick={() => onVerPasta?.(w.id)} className="p-1 text-emerald-600 hover:bg-emerald-50 rounded-md transition-all border border-emerald-100" title="Ver Pasta de Documentos"><FolderOpen size={10} /></button>
                 {w.status === 'ativo' && !w.ss_admissao_comunicada_em && (
