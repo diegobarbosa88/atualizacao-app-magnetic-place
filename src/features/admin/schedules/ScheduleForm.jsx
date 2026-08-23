@@ -60,15 +60,17 @@ export default function ScheduleForm() {
   };
 
   return (
-    <div className="p-4 sm:p-6">
+    <div className="@container p-4 sm:p-6">
       {/* Os botões Cancelar/Salvar viviam aqui no topo; passaram para o rodapé
           fixo do ModalShell, em ScheduleManager.jsx. */}
       {/* Em modo "horários por dia" a configuração tem 7 cartões com quatro
           campos de hora cada, e a atribuição é só uma lista — por isso passam
           a metade/metade em vez de 1/3 e 2/3. */}
-      <div className={`grid grid-cols-1 ${scheduleForm.isAdvanced ? 'lg:grid-cols-2' : 'lg:grid-cols-3'} gap-4 sm:gap-6`}>
+      {/* @lg mede este @container (a largura do modal), não a viewport — é o
+          mesmo bug já corrigido nos cartões por dia, mais abaixo. */}
+      <div className={`grid grid-cols-1 ${scheduleForm.isAdvanced ? '@lg:grid-cols-2' : '@lg:grid-cols-3'} gap-4 sm:gap-6`}>
         {/* COLUNA 1: Configuração do Horário */}
-        <div className="lg:col-span-1 space-y-6">
+        <div className="@lg:col-span-1 space-y-6">
           <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 space-y-6">
             <div className="flex items-center gap-3 mb-2">
               <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: '#869AAF' }}><Clock size={18} /></div>
@@ -219,14 +221,14 @@ export default function ScheduleForm() {
         </div>
 
         {/* Atribuição de Trabalhadores — ocupa o resto da grelha */}
-        <div className={`${scheduleForm.isAdvanced ? 'lg:col-span-1' : 'lg:col-span-2'} space-y-6`}>
+        <div className={`${scheduleForm.isAdvanced ? '@lg:col-span-1' : '@lg:col-span-2'} space-y-6`}>
           <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 space-y-6">
             <div className="flex items-center gap-3 mb-2">
               <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: '#869AAF' }}><Users size={18} /></div>
               <h4 className="font-black text-slate-700 text-lg uppercase tracking-tight">Atribuição</h4>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 @lg:grid-cols-2 gap-6">
               {/* Lista de trabalhadores */}
               <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2">
                 <div className="relative mb-4">

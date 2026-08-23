@@ -145,7 +145,11 @@ export default function ModalShell({
           {isBrand && <div className="h-[3px]" style={{ background: `linear-gradient(90deg, ${FT.orange}, #ffb444)` }} />}
         </div>
 
-        <div className="flex-1 overflow-y-auto overscroll-contain min-h-0">
+        {/* @container: os breakpoints do Tailwind (lg:/md:) medem a viewport,
+            não este cartão de largura fixa — quem precisar de grelhas
+            responsivas dentro do modal deve usar @lg:/@md: em vez de lg:/md:,
+            que passam a resolver contra esta caixa. */}
+        <div className="@container flex-1 overflow-y-auto overscroll-contain min-h-0">
           {children}
         </div>
 

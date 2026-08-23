@@ -66,7 +66,7 @@ const FinancialReportOverlay = ({ logs, workers, clients, expenses, finFilter, s
       layer="viewer"
       closeOnOverlay={false}
     >
-      <div className="font-sans text-slate-900">
+      <div className="@container font-sans text-slate-900">
         {/* Filtro de período — vinha no cabeçalho feito à mão */}
         <div className="p-4 sm:p-6 border-b border-slate-100 bg-slate-50/80">
           <div className="flex items-center gap-2 bg-white p-2 sm:p-3 rounded-2xl border border-slate-200 shadow-sm">
@@ -94,7 +94,7 @@ const FinancialReportOverlay = ({ logs, workers, clients, expenses, finFilter, s
           {activeTab === 'resumo' && (
             <>
               {/* All Cards in One Grid */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+              <div className="grid grid-cols-2 @lg:grid-cols-4 gap-3 sm:gap-6">
                 <div className="p-3 sm:p-6 rounded-2xl sm:rounded-3xl bg-indigo-50 border border-indigo-100">
                   <div className="flex items-center gap-1.5 sm:gap-2 text-indigo-600 mb-1 font-black uppercase text-[8px] sm:text-[10px] tracking-widest"><BrainCircuit size={12} sm:size={16} /> Faturação</div>
                   <p className="text-xl sm:text-3xl font-black text-indigo-700">{formatCurrency(stats.revenue)}</p>
