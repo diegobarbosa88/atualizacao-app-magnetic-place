@@ -154,6 +154,17 @@ novos.
 - Classificar cada ocorrência por função, não por classe: **ícone/decorativo → `FT.slate`; texto a
   ler (rótulos, `<th>`, chips, NIF, datas) → `FT.slateDim`.** Uppercase pequeno (10px) não é
   automaticamente decorativo — se o utilizador tem de o ler para agir, é texto.
+- **Mas "ícone ou texto?" não é a pergunta de base — é um atalho que só funciona quando o token em si
+  é estável nos dois modos.** A pergunta correta é sempre **"o que está por baixo muda de tom no
+  modo escuro?"**. Com o `FT.slate` (#869AAF, que serve claro e escuro) as duas perguntas dão a mesma
+  resposta, e por isso o atalho passou despercebido. Com o `FT.navy` não: o navy é escuro e fica
+  ilegível sobre fundo escuro, seja ícone ou texto — ali o critério teve de ser o fundo, e foi o que
+  separou os 72 a converter dos 36 que assentam em laranja sólido e ficam.
+- **Atalho técnico para canais inline:** `style={{ color: 'var(--token)' }}` segue o `.dark`
+  normalmente — a variável resolve no contexto do elemento. Quando só a **fonte do valor** precisa de
+  mudar (uma constante JS que não inverte → um token que inverte), preferir isto a mover o valor para
+  `className`: é uma substituição no mesmo sítio, sem tocar na estrutura do JSX. Foi assim que os 72
+  `color: FT.navy` foram corrigidos sem reescrever um único componente.
 - **Contraste depende do fundo, não só da cor do texto.** Medir sempre in-place; um chip sobre
   `--surface-dim` pode precisar de `--ink-soft` mesmo com a mesma cor de texto que passa noutro sítio.
 - **Regra de fundo escuro:** sobre fundo claro o texto desce na escala de tinta (mais escuro); sobre
