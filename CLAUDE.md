@@ -337,9 +337,24 @@ perguntar. E usar sempre a mesma métrica: o script conta **ocorrências**, não
   
   ### Estado da migração (atualizar a cada lote)
 
-Total: 4.197 classes Tailwind → tokens `FT`. **Restam 1.193 em `src/features/admin` +
-`src/components/admin`** — número corrido com o script, não somado à mão (ver a regra das contagens
-acima). Estão fechados **três** canais de `style` inline: `FT.slate`, `FT.navy` e o terceiro
+Total: 4.197 classes Tailwind → tokens `FT`. **Restam 614 em `src/features/admin` +
+`src/components/admin`, mas só 542 são trabalho** — e são exactamente os quatro ficheiros de
+dinheiro, isolados de propósito para o fim: `AjudasCustoAdmin` (234), `RecibosCalculadora` (197),
+`ReconciliacaoSalarialAdmin` (56) e `EntradasTab` (55). Todo o resto do admin está convertido.
+
+As outras 72 estão fora do âmbito, cada uma com razão registada:
+
+| onde | n | porquê |
+|---|--:|---|
+| `team/SSComunicacaoModal.jsx` | 29 | excluído por decisão (comunica à Segurança Social) |
+| `ReconciliacaoAdmin.jsx` | 18 | o `.recon-scope` envolve todo o render (abre na linha 343) |
+| `reconciliacao/` (3 ficheiros) | 17 | colidem com o `.recon-scope` |
+| `TagBadge.jsx` | 4 | mapa de cor-à-escolha: a cor é dado, não estado |
+| `adminOverview/KpiCard.jsx` | 2 | `/20` sobre classe Tailwind — legítimo, convertê-lo dá color-mix |
+| `AdminSidebar.jsx` | 1 | backdrop `/50`, mesma razão |
+| `ModoLote.jsx` | 1 | não é classe: é `// slate-800` a comentar um `setTextColor` do jsPDF |
+
+Estão fechados **três** canais de `style` inline: `FT.slate`, `FT.navy` e o terceiro
 (`FT.slateDim`/`inkSoft`/`ink`, 42 dos 49 do admin; 7 ficam por estarem em `.recon-scope`).
 
 Para medir o que falta em qualquer momento, sem contar à mão:
@@ -366,8 +381,8 @@ Para medir o que falta em qualquer momento, sem contar à mão:
 | `cost-reports/AjudasCalculadora.jsx` | 104 | ✅ feito — lote próprio, dinheiro | `f336916` |
 | `toconline`                | 355          | ✅ feito (lotes 12 e 13)          | `6f0ab78` / `c8cb698` |
 | `team`                     | 463 (434 + 29 fora) | ✅ feito em 2 lotes            | `4f4cb1b` / — |
-| raiz de `features/admin`   | 1.028        | a seguir                         | —          |
-| `components/admin`         | 117          | a seguir, com a raiz             | —          |
+| raiz de `features/admin`   | 1.028        | ✅ feito, menos os 4 de dinheiro  | `48af8a1` … `936f8f8` |
+| `components/admin`         | 117          | ✅ feito                         | `48af8a1` / `5eccd92` |
 
 **Ambos os canais de `style` inline estão fechados.** Critério, que difere entre eles: no `FT.slate`
 a pergunta foi *ícone ou texto?* (o slate serve os dois modos, só o contraste variava); no `FT.navy`
