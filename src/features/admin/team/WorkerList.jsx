@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../../../context/AppContext';
 import { authFetch } from '../../../utils/authFetch';
+import { consultarComunicacoesPendentes, invalidarComunicacoesPendentes } from './ssComunicacoesPendentes';
 import { impersonarTrabalhador } from '../../../utils/impersonateWorker';
 import { Search, Edit2, Trash2, CheckCircle, ShieldCheck, ShieldOff, MoreVertical, FolderOpen, SendHorizonal, AlertTriangle, Shield } from 'lucide-react';
 import SSComunicacaoModal from './SSComunicacaoModal';
@@ -142,8 +143,7 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
   // síncrono ter parecido OK). Mapeado por NISS, que é a única chave comum
   // devolvida pela SS.
   useEffect(() => {
-    authFetch('/api/seguranca-social?action=comunicacoes-pendentes')
-      .then(r => r.json())
+    consultarComunicacoesPendentes()
       .then(d => {
         const map = {};
         (d.naoAceites || []).forEach(c => { map[c.nissTrabalhador] = { prioridade: 'rejeitada', motivo: c.motivo, dataComunicacao: c.dataComunicacao }; });
@@ -158,6 +158,7 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
   }, []);
 
   function handleSsSuccess(data, workerIdOverride, tipoOverride) {
+    invalidarComunicacoesPendentes(); // o que está pendente na SS acabou de mudar
     const workerId = workerIdOverride || ssModal?.worker?.id;
     const tipo = tipoOverride || ssModal?.tipo;
     if (workerId && tipo) {

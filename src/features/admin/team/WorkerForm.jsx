@@ -10,6 +10,7 @@ import {
 import SelectProfissaoEmpresa from '../../../components/SelectProfissaoEmpresa';
 import { findProfissaoByCodigo } from '../../../data/profissoesEmpresa';
 import { authFetch } from '../../../utils/authFetch';
+import { consultarComunicacoesPendentes, invalidarComunicacoesPendentes } from './ssComunicacoesPendentes';
 import SSComunicacaoModal from './SSComunicacaoModal';
 import { FT } from '../../../styles/designTokens';
 
@@ -199,12 +200,14 @@ const WorkerForm = () => {
 
   // Consulta real ao serviço obterComunicacoes da PSI — pode contradizer o
   // que a app achava resolvido (admissão rejeitada ou presa a processar há
-  // vários dias). Só precisa de correr quando este trabalhador tem NIS.
+  // vários dias). O NIS é um input de texto livre: sem o teste dos 11 dígitos,
+  // escrever um NISS disparava um pedido SOAP ao Estado por cada tecla.
   useEffect(() => {
-    if (!workerForm.nis) { setSsFlag(null); return; }
-    authFetch('/api/seguranca-social?action=comunicacoes-pendentes')
-      .then(r => r.json())
+    if (String(workerForm.nis || '').replace(/\D/g, '').length !== 11) { setSsFlag(null); return undefined; }
+    let cancelado = false;
+    consultarComunicacoesPendentes()
       .then(d => {
+        if (cancelado) return;
         const rejeitada = (d.naoAceites || []).find(c => c.nissTrabalhador === workerForm.nis);
         if (rejeitada) { setSsFlag({ prioridade: 'rejeitada', motivo: rejeitada.motivo, dataComunicacao: rejeitada.dataComunicacao }); return; }
         const presa = (d.aProcessar || []).find(c => {
@@ -214,10 +217,12 @@ const WorkerForm = () => {
         });
         setSsFlag(presa ? { prioridade: 'presa', dataComunicacao: presa.dataComunicacao } : null);
       })
-      .catch(() => setSsFlag(null));
+      .catch(() => { if (!cancelado) setSsFlag(null); });
+    return () => { cancelado = true; };
   }, [workerForm.nis]);
 
   const handleSsSuccess = (data, tipo) => {
+    invalidarComunicacoesPendentes(); // o que está pendente na SS acabou de mudar
     const campo = tipo === 'admissao'
       ? { ss_admissao_comunicada_em: data.dataHora || new Date().toISOString(), ss_admissao_num_registo: data.numRegisto || null }
       : { ss_cessacao_comunicada_em: data.dataHora || new Date().toISOString(), ss_cessacao_num_registo: data.numRegisto || null };
