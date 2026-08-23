@@ -182,6 +182,13 @@ perguntar. E usar sempre a mesma métrica: o script conta **ocorrências**, não
 
 ### Antes de cada lote
 
+- **Onde há `style` inline, ele é a fonte de verdade visual — não a `className`.** Vale para
+  qualquer verificação baseada em grep de classe: procurar `text-white` diz o que está escrito, não
+  o que se vê, e num elemento que tem `style={{ color: ... }}` a classe pode estar lá sem efeito
+  nenhum. Nos 34 candidatos a laranja+branco, 23 eram exactamente isso — classe morta que fazia o
+  script acusar botões já correctos. **Antes de agir sobre uma classe encontrada por grep, verificar
+  se o mesmo elemento tem `style` inline a sobrepor-se-lhe**; e, na dúvida, medir a cor computada no
+  browser, que é o único sítio onde a cascata já está resolvida.
 - **`grep` conta ocorrências da string, não trabalho.** Já enganou de quatro maneiras diferentes:
   contando comentários, ignorando CRLF, tratando `/NN` como parte da cor e lendo `oklab` como RGB.
   O caso mais recente: `ModoLote.jsx` aparecia com 1 classe por converter, e era
@@ -221,6 +228,17 @@ perguntar. E usar sempre a mesma métrica: o script conta **ocorrências**, não
 - **Regra de fundo escuro:** sobre fundo claro o texto desce na escala de tinta (mais escuro); sobre
   fundo escuro sobe (mais claro). Não aplicar a mesma direção às cegas — foi o erro que escureceu
   "Unipessoal, Lda" no topbar navy — hoje resolvido com o --on-navy (ver abaixo).
+- **O canal inline fora do admin: 5 convertidos, 12 mantidos de propósito.** A pergunta de sempre —
+  *o fundo por baixo inverte?* — deu a resposta inversa da esperada: no dashboard do trabalhador a
+  maioria dos textos assenta em fundos que **não** invertem (`background: FT.panel`, `FT.warnBg`,
+  `FT.okBg`, `'#F4F2EC'`, `'#F5F3EE'`), e ali a constante JS é o par correcto. Só 5 estavam dentro
+  de `bg-white`, que inverte pela regra-ponte, e esses passaram a `var(--…)`:
+  `WorkerDocuments` 342/350/359 e `WorkerScheduleTab` 89/91.
+  **A heurística do "fundo mais próximo para trás" errou em três dos cinco** — apanhava o
+  `background` de um elemento IRMÃO (a caixa do ícone ao lado, o `<select>` a seguir, um `<iframe>`
+  no ramo anterior do ternário) em vez do contentor. Foi preciso ler a estrutura para separar pai de
+  irmão. É a mesma armadilha da proximidade que já apareceu no varrimento por fundo e no par chip:
+  **linhas próximas no código não são elementos aninhados no ecrã.**
 - **Sobre os fundos navy da marca, use-se `--on-navy` (#A9B8C7).** Os fundos navy — `--navy-solid`,
   `background: FT.navy` — não invertem, e a escala de tinta não tem tom que sirva ali: o
   `--slate-dim` inverte e cai para 2,30:1 no modo claro; o `--slate` não inverte mas fica a 4,05:1,
@@ -503,6 +521,8 @@ para quem um dia a tomar não ter de as redescobrir:
     já classificados como funcionais.
   - **chips do `pagamentos` com fundo no pai → verificar o par completo** (repouso *e* hover) antes
     de escolher o destino, como no lote do par chip.
+- **`bg-emerald-600` com `text-white` dá 3,77:1** (`corrections/ItemRow.jsx:103`, o botão "aceitar"). O
+  irmão `bg-rose-600` passa (4,70:1). Cor semântica, fora dos lotes de neutros.
 - **A regra-ponte do `App.css` não cobre as variantes com opacidade.** `.dark .bg-amber-50` apanha
   `bg-amber-50`, mas não `bg-amber-50/50` — que o Tailwind compila para outra classe. São 12 casos
   (`bg-indigo-50/50`, `bg-amber-50/40`, `bg-rose-50/30`…) onde o fundo fica creme claro no modo

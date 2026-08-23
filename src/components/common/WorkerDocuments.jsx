@@ -339,7 +339,7 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb, pendingOnly = false
       {!pendingOnly && activeTab === 'historico' && showFilters && (
         <div className="bg-white rounded-2xl px-4 py-3 flex flex-wrap gap-3 items-center" style={{ border: `1px solid ${FT.border}` }}>
           <div className="flex items-center gap-2">
-            <label className="text-[9px] font-black uppercase" style={{ fontFamily: FONT_MONO, color: FT.slateDim }}>Tipo</label>
+            <label className="text-[9px] font-black uppercase" style={{ fontFamily: FONT_MONO, color: 'var(--slate-dim)' }}>Tipo</label>
             <select value={filterType} onChange={e => setFilterType(e.target.value)}
               className="px-2 py-1 rounded-lg text-xs font-bold outline-none" style={{ background: '#F4F2EC', border: `1px solid ${FT.border}` }}>
               <option value="all">Todos</option>
@@ -347,7 +347,7 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb, pendingOnly = false
             </select>
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-[9px] font-black uppercase" style={{ fontFamily: FONT_MONO, color: FT.slateDim }}>Ordenar</label>
+            <label className="text-[9px] font-black uppercase" style={{ fontFamily: FONT_MONO, color: 'var(--slate-dim)' }}>Ordenar</label>
             <select value={sortBy} onChange={e => setSortBy(e.target.value)}
               className="px-2 py-1 rounded-lg text-xs font-bold outline-none" style={{ background: '#F4F2EC', border: `1px solid ${FT.border}` }}>
               <option value="date_desc">Mais Recentes</option>
@@ -356,7 +356,7 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb, pendingOnly = false
               <option value="name_desc">Nome (Z-A)</option>
             </select>
           </div>
-          <span className="text-[9px] ml-auto" style={{ color: FT.slateDim }}>{docList.length} doc(s)</span>
+          <span className="text-[9px] ml-auto" style={{ color: 'var(--slate-dim)' }}>{docList.length} doc(s)</span>
         </div>
       )}
 

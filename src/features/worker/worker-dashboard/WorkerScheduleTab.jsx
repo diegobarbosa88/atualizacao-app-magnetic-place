@@ -86,9 +86,9 @@ function ScheduleCard({ s, isDefault, setDefaultSchedule }) {
           <Timer size={15} style={{ color: isDefault ? '#fff' : FT.slate }} />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-bold leading-tight truncate" style={{ color: FT.ink }}>{s.name}</p>
+          <p className="text-sm font-bold leading-tight truncate" style={{ color: 'var(--ink)' }}>{s.name}</p>
           {headerSubtitle && (
-            <p className="text-[10px] font-bold mt-0.5" style={{ fontFamily: FONT_MONO, color: FT.inkSoft }}>{headerSubtitle}</p>
+            <p className="text-[10px] font-bold mt-0.5" style={{ fontFamily: FONT_MONO, color: 'var(--ink-soft)' }}>{headerSubtitle}</p>
           )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
