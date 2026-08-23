@@ -34,11 +34,11 @@ const LinkFaturaModal = ({
       <div className="p-6 sm:p-8 space-y-5">
         {fatLink && (
           <div className="space-y-2">
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Movimento Associado</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Movimento Associado</p>
             <div className="flex items-center justify-between bg-emerald-50 rounded-2xl px-4 py-3">
               <div>
                 <p className="text-sm font-bold text-emerald-800">{formatCurrency(Number(fatLink.tx_key?.split('|')[2] || 0))}</p>
-                <p className="text-[10px] text-slate-500">
+                <p className="text-[10px] text-[var(--slate-dim)]">
                   {fatLink.tx_key?.split('|')[0]} · {(fatLink.tx_key?.split('|')[1] || '').slice(0, 50)}
                 </p>
                 {fatLink.auto_matched && (
@@ -57,16 +57,16 @@ const LinkFaturaModal = ({
 
         {!fatLink && (
           <div className="space-y-2">
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Adicionar pagamento de extrato</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Adicionar pagamento de extrato</p>
             {runsLoading ? (
-              <div className="flex items-center gap-2 text-slate-400 text-sm">
+              <div className="flex items-center gap-2 text-[var(--slate-dim)] text-sm">
                 <Loader2 size={14} className="animate-spin" /> A carregar extratos...
               </div>
             ) : (
               <select
                 value={selectedRun?.id || ''}
                 onChange={e => selecionarRun(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold outline-none"
+                className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-3 py-2.5 text-sm font-bold outline-none"
               >
                 <option value="">Selecionar extrato bancário...</option>
                 {runsLista.map(r => (
@@ -80,29 +80,29 @@ const LinkFaturaModal = ({
         )}
 
         {!fatLink && runLoading && (
-          <div className="flex items-center gap-2 text-slate-400 text-sm">
+          <div className="flex items-center gap-2 text-[var(--slate-dim)] text-sm">
             <Loader2 size={14} className="animate-spin" /> A carregar movimentos...
           </div>
         )}
 
         {!fatLink && selectedRun && !runLoading && (
           <div className="space-y-2">
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+            <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">
               Entradas disponíveis ({creditosDisponiveisFatura.length})
             </p>
             {creditosDisponiveisFatura.length === 0 && (
-              <p className="text-xs text-slate-400 italic">Sem créditos disponíveis neste extrato.</p>
+              <p className="text-xs text-[var(--slate-dim)] italic">Sem créditos disponíveis neste extrato.</p>
             )}
             {creditosDisponiveisFatura.map(({ section, index, tx }) => (
               <button
                 key={`${section}_${index}`}
                 onClick={() => associarPagamentoFatura(section, index, tx)}
                 disabled={linkSaving}
-                className="w-full flex items-center justify-between bg-slate-50 hover:bg-slate-100 border border-slate-100 hover:border-[var(--slate)] rounded-2xl px-4 py-3 transition-all text-left disabled:opacity-50"
+                className="w-full flex items-center justify-between bg-[var(--surface)] hover:bg-[var(--surface-dim)] border border-[var(--border-soft)] hover:border-[var(--slate)] rounded-2xl px-4 py-3 transition-all text-left disabled:opacity-50"
               >
                 <div>
-                  <p className="text-sm font-bold text-slate-800">{formatCurrency(Number(tx.valor))}</p>
-                  <p className="text-[10px] text-slate-500">{tx.data} · {(tx.descricao || '').slice(0, 55)}</p>
+                  <p className="text-sm font-bold text-[var(--ink)]">{formatCurrency(Number(tx.valor))}</p>
+                  <p className="text-[10px] text-[var(--slate-dim)]">{tx.data} · {(tx.descricao || '').slice(0, 55)}</p>
                 </div>
                 {linkSaving
                   ? <Loader2 size={13} className="animate-spin" style={{ color: 'var(--navy)' }} />
@@ -114,7 +114,7 @@ const LinkFaturaModal = ({
         )}
 
         {fatLink && (
-          <p className="text-[10px] text-slate-400 text-center">
+          <p className="text-[10px] text-[var(--slate-dim)] text-center">
             Para substituir o movimento, primeiro remova o atual.
           </p>
         )}

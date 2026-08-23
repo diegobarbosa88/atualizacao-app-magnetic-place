@@ -144,9 +144,9 @@ const CostReports = () => {
     if (activeTab === 'ajudas') {
       return (
         <div>
-          <div className="flex items-start gap-2.5 bg-white border border-slate-200 rounded-2xl px-4 py-3 mb-5 text-xs text-slate-500" style={{ borderLeftWidth: '3px', borderLeftColor: FT.slate }}>
+          <div className="flex items-start gap-2.5 bg-white border border-[var(--border)] rounded-2xl px-4 py-3 mb-5 text-xs text-[var(--slate-dim)]" style={{ borderLeftWidth: '3px', borderLeftColor: FT.slate }}>
             <span className="shrink-0">🎫</span>
-            <p>Valor extraído dos recibos do mês (<strong className="text-slate-700 font-black">ajudas de custo</strong>) por trabalhador, a faturar aos clientes. O <strong className="text-slate-700 font-black">saldo de meses anteriores</strong> (sub- ou sobre-faturado face ao recibo real) é compensado automaticamente na previsão do mês seguinte.</p>
+            <p>Valor extraído dos recibos do mês (<strong className="text-[var(--ink-mid)] font-black">ajudas de custo</strong>) por trabalhador, a faturar aos clientes. O <strong className="text-[var(--ink-mid)] font-black">saldo de meses anteriores</strong> (sub- ou sobre-faturado face ao recibo real) é compensado automaticamente na previsão do mês seguinte.</p>
           </div>
           <AjudasCalculadora logs={logs} clients={clients} selectedMonth={selectedMonth} />
         </div>
@@ -168,23 +168,23 @@ const CostReports = () => {
               <Download size={13} /> Exportar
             </button>
             <div className="relative" ref={relatorioMenuRef}>
-              <button onClick={() => setShowRelatorioMenu(v => !v)} className="flex items-center gap-1.5 px-3 py-2 rounded-xl font-black text-xs uppercase shadow-sm transition-all border-2 hover:bg-slate-50 bg-white" style={{ borderColor: FT.slate, color: 'var(--navy)' }}>
+              <button onClick={() => setShowRelatorioMenu(v => !v)} className="flex items-center gap-1.5 px-3 py-2 rounded-xl font-black text-xs uppercase shadow-sm transition-all border-2 hover:bg-[var(--surface)] bg-white" style={{ borderColor: FT.slate, color: 'var(--navy)' }}>
                 <BookOpen size={13} /> Geral <ChevronDown size={11} />
               </button>
               {showRelatorioMenu && (
-                <div className="absolute right-0 top-full mt-1 z-20 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden min-w-[160px]">
-                  <button onClick={() => { setShowRelatorioMenu(false); exportRelatorioGeralPDF(exportArgs); }} className="w-full flex items-center gap-2 px-4 py-3 text-xs font-black uppercase text-slate-700 hover:bg-slate-50 hover:text-slate-700 transition-all">
+                <div className="absolute right-0 top-full mt-1 z-20 bg-white border border-[var(--border)] rounded-2xl shadow-xl overflow-hidden min-w-[160px]">
+                  <button onClick={() => { setShowRelatorioMenu(false); exportRelatorioGeralPDF(exportArgs); }} className="w-full flex items-center gap-2 px-4 py-3 text-xs font-black uppercase text-[var(--ink-mid)] hover:bg-[var(--surface)] hover:text-[var(--ink-mid)] transition-all">
                     <FileText size={13} /> PDF
                   </button>
-                  <button onClick={() => { setShowRelatorioMenu(false); exportRelatorioGeralXLS(exportArgs); }} className="w-full flex items-center gap-2 px-4 py-3 text-xs font-black uppercase text-slate-700 hover:bg-slate-50 hover:text-slate-700 transition-all border-t border-slate-100">
+                  <button onClick={() => { setShowRelatorioMenu(false); exportRelatorioGeralXLS(exportArgs); }} className="w-full flex items-center gap-2 px-4 py-3 text-xs font-black uppercase text-[var(--ink-mid)] hover:bg-[var(--surface)] hover:text-[var(--ink-mid)] transition-all border-t border-[var(--border-soft)]">
                     <Download size={13} /> Excel / XLS
                   </button>
                 </div>
               )}
             </div>
-            <div className="flex items-center gap-1.5 bg-white px-3 py-2 rounded-xl shadow-sm border border-slate-200 flex-1 sm:flex-none">
-              <CalendarRange size={13} className="text-slate-400 shrink-0" />
-              <select value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} className="bg-transparent border-none outline-none text-xs font-bold text-slate-700 cursor-pointer w-full">
+            <div className="flex items-center gap-1.5 bg-white px-3 py-2 rounded-xl shadow-sm border border-[var(--border)] flex-1 sm:flex-none">
+              <CalendarRange size={13} className="text-[var(--slate)] shrink-0" />
+              <select value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} className="bg-transparent border-none outline-none text-xs font-bold text-[var(--ink-mid)] cursor-pointer w-full">
                 {monthOptions.map((opt, idx) => (
                   <option key={`${opt.val}-${idx}`} value={opt.val}>{opt.label}</option>
                 ))}
@@ -194,7 +194,7 @@ const CostReports = () => {
         )}
       />
 
-      <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-xl border border-slate-200">
+      <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-xl border border-[var(--border)]">
         <div className="recon-scope">
           <div className="recon-tabs mb-6 overflow-x-auto">
             {[
