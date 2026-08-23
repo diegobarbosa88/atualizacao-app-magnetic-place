@@ -94,7 +94,12 @@ const FinancialReportOverlay = ({ logs, workers, clients, expenses, finFilter, s
           {activeTab === 'resumo' && (
             <>
               {/* All Cards in One Grid */}
-              <div className="grid grid-cols-2 @lg:grid-cols-4 gap-3 sm:gap-6">
+              {/* @5xl e não @lg: os quatro cartões mostram valores como
+                  "24 381,50 €", que ocupam 204px de texto. Com @lg (512px de
+                  container) as colunas caíam para 135px e o "€" ficava cortado
+                  fora do cartão. Medido no browser: 4 colunas precisam de
+                  ~1024px de container. */}
+              <div className="grid grid-cols-2 @5xl:grid-cols-4 gap-3 sm:gap-6">
                 <div className="p-3 sm:p-6 rounded-2xl sm:rounded-3xl bg-indigo-50 border border-indigo-100">
                   <div className="flex items-center gap-1.5 sm:gap-2 text-indigo-600 mb-1 font-black uppercase text-[8px] sm:text-[10px] tracking-widest"><BrainCircuit size={12} sm:size={16} /> Faturação</div>
                   <p className="text-xl sm:text-3xl font-black text-indigo-700">{formatCurrency(stats.revenue)}</p>

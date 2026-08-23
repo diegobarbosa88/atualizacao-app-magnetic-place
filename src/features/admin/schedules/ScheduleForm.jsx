@@ -67,9 +67,12 @@ export default function ScheduleForm() {
       {/* Em modo "horários por dia" a configuração tem 7 cartões com quatro
           campos de hora cada, e a atribuição é só uma lista — por isso passam
           a metade/metade em vez de 1/3 e 2/3. */}
-      {/* @lg mede este @container (a largura do modal), não a viewport — é o
-          mesmo bug já corrigido nos cartões por dia, mais abaixo. */}
-      <div className={`grid grid-cols-1 ${scheduleForm.isAdvanced ? '@lg:grid-cols-2' : '@lg:grid-cols-3'} gap-4 sm:gap-6`}>
+      {/* Estas queries medem este @container (a largura do modal), não a
+          viewport. O limiar não é @lg em ambos os casos: com um container de
+          670px (viewport ~700) as 3 colunas ficavam a 193px cada e o campo de
+          hora cortava o "--:--" a meio. Medido no browser: 3 colunas só cabem
+          a partir de ~768px de container (@3xl); 2 colunas bastam-se com @lg. */}
+      <div className={`grid grid-cols-1 ${scheduleForm.isAdvanced ? '@lg:grid-cols-2' : '@lg:grid-cols-2 @3xl:grid-cols-3'} gap-4 sm:gap-6`}>
         {/* COLUNA 1: Configuração do Horário */}
         <div className="@lg:col-span-1 space-y-6">
           <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 space-y-6">
@@ -222,7 +225,7 @@ export default function ScheduleForm() {
         </div>
 
         {/* Atribuição de Trabalhadores — ocupa o resto da grelha */}
-        <div className={`${scheduleForm.isAdvanced ? '@lg:col-span-1' : '@lg:col-span-2'} space-y-6`}>
+        <div className={`${scheduleForm.isAdvanced ? '@lg:col-span-1' : '@3xl:col-span-2'} space-y-6`}>
           <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 space-y-6">
             <div className="flex items-center gap-3 mb-2">
               <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: FT.slate }}><Users size={18} /></div>
