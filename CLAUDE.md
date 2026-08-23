@@ -510,20 +510,33 @@ preciso mover nada para `className`, basta trocar `FT.navy` por `'var(--navy)'` 
 quando o `reconciliacao-mockup.css` converge para os tokens FT. Ficam aqui com a localização exacta
 para quem um dia a tomar não ter de as redescobrir:
 
-- **`reconciliacao-mockup.css` não converge.** Redefine `--navy`, `--bg`, `--border` e `--text`
-  dentro de `.recon-scope`, e a definição mais próxima vence, por isso nem o bloco `.dark` do
-  `index.css` lhes chega.
-- **24 bordas em `reconciliacao`** por converter: `border-slate-200/300` iria para `--border`, a
-  única variável cujo valor local (#E3E7EC) difere do global (#e5e1d6).
-- **Modo escuro dentro de `.recon-scope` fica claro** — mesma causa. Medido: com o dark ligado,
-  `--bg` resolve para #F5F7FA e `--navy` para #1B3A57 dentro do escopo. Afecta Reconciliação,
-  Custos e o painel de Salários.
-- **13 `color: 'var(--navy)'` presos ao valor local**, todos em faixas de estatísticas dentro de
-  blocos `.recon-scope` do `cost-reports`: `ClientesTab` 99/103/107, `DespesasTab` 78/82,
-  `EquipaTab` 16/21/25, `FaturasTab` 140, `MargemTab` 37. Vieram da passagem do canal inline do
-  navy (`de236ab`) e ali a conversão **não teve efeito** — o `var(--navy)` resolve para o #1B3A57
-  fixo do mockup, não para o global que clareia. Não é regressão nem bug: o mockup fixa fundo *e*
-  texto, e a faixa dá 11,74:1 nos dois modos. É só a mesma ilha clara das outras pendências.
+- **`reconciliacao-mockup.css` mantém identidade própria, por decisão — mas agora reage ao `.dark`.**
+  Redefine `--navy`, `--bg`, `--border`, `--text` e as cores de estado dentro de `.recon-scope`,
+  deliberadamente distintas dos tokens globais (`--bg` #F5F7FA vs #FFFFFF, `--border` #E3E7EC vs
+  #E5E1D6) — comparado ao vivo com um ecrã já convergido, o navy da marca é idêntico e só os
+  neutros mudam. **Confirmado como intenção, não resíduo: fica sem convergir.**
+  O que era resíduo de facto — o escopo nunca ter reagido ao modo escuro, por os dois sistemas de
+  tokens serem independentes — está corrigido num bloco `.dark .recon-scope` próprio, que reaproveita
+  os mesmos tons escuros já usados no resto da app (`index.css` `.dark`) em vez de inventar uma
+  segunda paleta. Precisou de separar `--navy` (texto, inverte) de um `--navy-solid` novo (fundo do
+  botão activo do segmented e do contador de tab, não inverte) — o mesmo desdobramento que o resto
+  da app já tem, e pela mesma razão: uma só variável não serve os dois papéis em modo escuro.
+  Medido antes e depois: o rótulo "RECONCILIADOS" subiu de 2,54:1 para 6,48:1; o botão TOConline
+  activo mantém-se em 11,74:1 (branco sobre `--navy-solid`, que não muda). Verificado nos três
+  consumidores (`ReconciliacaoAdmin`, `CostReports`, `SalariosTab`).
+  **Descoberta ao verificar: os 2,54:1 já existiam no modo CLARO, sem ligação ao dark.** `--text-faint`
+  (#9CA3AF) sobre `--card` (#FFFFFF) falha AA nos dois modos porque nenhum dos dois muda com o tema —
+  não foi o meu lote nem o modo escuro que partiu isto, nasceu assim, portado literalmente do mockup
+  aprovado. É o único dos seis tokens de texto do mockup que falha (os outros cinco passam, entre
+  4,33:1 e 14,68:1) — usado em 7 sítios. **Fica por decidir**: mudar `--text-faint` muda o mockup
+  aprovado mesmo em modo claro, não é conversão de tema.
+- **Os 13 `color: 'var(--navy)'` que ficavam presos ao valor local ficaram resolvidos como efeito
+  colateral do bloco `.dark .recon-scope` acima — não foram tocados directamente.** Vivem em
+  `.recon-stat-value`, cujo fundo é `.recon-stat { background: var(--card) }` — a mesma variável que
+  o bloco `.dark` agora inverte. Quando `--card` passou a escurecer, o texto `var(--navy)` por cima
+  (que já invertia) passou a compor sobre o fundo certo. Medido em `ClientesTab`: 11,74:1 nos dois
+  modos → 6,36:1 no escuro, correcto e a inverter. Ficheiros afectados: `ClientesTab` 99/103/107,
+  `DespesasTab` 78/82, `EquipaTab` 16/21/25, `FaturasTab` 140, `MargemTab` 37.
 - **O par chip: `--slate-dim` sobre `--surface-dim` dá 4,36:1 e falha AA.** São **60 elementos em 35
   ficheiros** — chips de estado, tabs inactivas, botões secundários. **Não é regressão da migração**:
   o original `bg-slate-100 text-slate-500` já dava 4,34:1, e onde era `text-slate-400` dava 2,34:1,

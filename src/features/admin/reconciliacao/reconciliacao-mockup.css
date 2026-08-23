@@ -11,6 +11,12 @@
 
 .recon-scope {
   --navy: #1B3A57;
+  /* Navy no papel de FUNDO SOLIDO (botao activo do segmented, contador de
+     tab, checkbox marcado) - nao inverte no escuro. E o --navy de cima que
+     inverte, porque serve de TEXTO nesses mesmos componentes noutros sitios
+     (.recon-stat-value, .recon-group-title). Mesma separacao que o resto da
+     app ja tem entre --navy e --navy-solid. */
+  --navy-solid: #1B3A57;
   --navy-light: #2A4E70;
   --orange: #EB8D00;
   --slate: #869AAF;
@@ -81,7 +87,7 @@
   font-family: var(--recon-sans);
   transition: background-color 0.15s ease, color 0.15s ease;
 }
-.recon-segmented button.active { background: var(--navy); color: white; }
+.recon-segmented button.active { background: var(--navy-solid); color: white; }
 
 /* ===== Tabs ===== */
 .recon-tabs {
@@ -113,7 +119,7 @@
   border-radius: 10px;
 }
 .recon-tab.active { color: var(--navy); border-bottom-color: var(--orange); }
-.recon-tab.active .recon-tab-count { background: var(--navy); color: white; }
+.recon-tab.active .recon-tab-count { background: var(--navy-solid); color: white; }
 
 /* ===== Group card (transferências internas / lote) ===== */
 .recon-group-card {
@@ -206,8 +212,8 @@
   background: var(--card);
 }
 .recon-checkbox:checked {
-  background: var(--navy);
-  border-color: var(--navy);
+  background: var(--navy-solid);
+  border-color: var(--navy-solid);
 }
 .recon-checkbox:checked::after {
   content: '';
@@ -246,3 +252,36 @@
 
 /* ===== Container ===== */
 .recon-container { max-width: 1180px; margin: 0 auto; }
+
+/* ── Modo escuro do mockup ──────────────────────────────────────────────
+   O .recon-scope não reage ao .dark do resto da app porque tem o seu
+   próprio sistema de variáveis, isolado de propósito (ver CLAUDE.md). Sem
+   este bloco, o `.dark` global escurece a página à volta e este scope fica
+   preso ao claro — não por decisão de ninguém, só porque os dois sistemas
+   nunca se falaram.
+
+   A identidade PRÓPRIA do mockup no modo claro fica intocada: estes valores
+   só entram quando `.dark` está activo. Reaproveitam-se os mesmos tons
+   escuros já usados no resto da app (index.css `.dark`) em vez de inventar
+   uma segunda paleta escura — o navy da marca já é idêntico nos dois
+   sistemas, por isso a escala escura também pode ser.
+
+   --navy-solid, --orange e --slate NÃO são redefinidos: são fundos/tons que
+   já não invertem ou já servem os dois modos, tal como no resto da app.
+   --text-faint também fica: falha a 2,54:1 já no modo claro (nasceu assim,
+   portado do mockup aprovado), e mudá-lo aqui só corrigiria o escuro sem
+   tocar no problema real. Fica registado à parte, para decisão do Diego. */
+.dark .recon-scope {
+  --bg: #0e1621;
+  --card: #16202c;
+  --border: #2a3746;
+  --text: #ece9e1;
+  --text-muted: #9aa6b4;
+  --navy: #7fa5c8;
+  --green: #5fbe8a;
+  --green-bg: rgba(46, 125, 79, 0.22);
+  --amber: #e8a85a;
+  --amber-bg: rgba(217, 138, 43, 0.22);
+  --red: #e08872;
+  --red-bg: rgba(180, 67, 47, 0.25);
+}
