@@ -1,11 +1,12 @@
 import React from 'react';
+import { FT } from '../../../styles/designTokens';
 
 export default function KpiCard({ icon, iconBg, iconColor, iconStyle = {}, value, subtitle, label, trend, invertTrend = false, dark = false, neutralBadge = false }) {
   const trendGood = invertTrend ? trend <= 0 : trend >= 0;
   const base = dark
     ? 'shadow-xl text-white'
     : 'bg-white shadow-sm border border-slate-100';
-  const darkBg = dark ? { backgroundColor: '#1B3A57' } : {};
+  const darkBg = dark ? { backgroundColor: FT.navy } : {};
 
   const badgeClass = neutralBadge
     ? (dark ? 'bg-slate-500/20 text-slate-400' : 'bg-slate-100 text-slate-500')

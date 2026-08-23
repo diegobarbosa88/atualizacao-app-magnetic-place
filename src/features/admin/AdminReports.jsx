@@ -7,6 +7,7 @@ import SubTabBar from '../../components/common/SubTabBar';
 import { FileText, History, Users, Building2, Activity, Zap, Calendar, CalendarRange, CalendarDays } from 'lucide-react';
 import ModalShell from '../../components/common/ModalShell';
 import { toISODateLocal } from '../../utils/dateUtils';
+import { FT } from '../../styles/designTokens';
 
 export default function AdminReports({ printingReport, setPrintingReport }) {
   const { workers, clients, logs, clientApprovals } = useApp();
@@ -124,7 +125,7 @@ export default function AdminReports({ printingReport, setPrintingReport }) {
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
         <div className="bg-white p-3 sm:p-4 md:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col gap-2">
-          <div className="p-2 sm:p-3 rounded-xl sm:rounded-2xl w-fit" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: '#869AAF' }}><Users size={18} className="sm:hidden" /><Users size={24} className="hidden sm:block" /></div>
+          <div className="p-2 sm:p-3 rounded-xl sm:rounded-2xl w-fit" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: FT.slate }}><Users size={18} className="sm:hidden" /><Users size={24} className="hidden sm:block" /></div>
           <div>
             <p className="text-xl sm:text-3xl font-black text-slate-800">{activeWorkersCount}</p>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Colaboradores com Registos</p>
@@ -132,7 +133,7 @@ export default function AdminReports({ printingReport, setPrintingReport }) {
           <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">no período seleccionado</p>
         </div>
         <div className="bg-white p-3 sm:p-4 md:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col gap-2">
-          <div className="p-2 sm:p-3 rounded-xl sm:rounded-2xl w-fit" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: '#869AAF' }}><Building2 size={18} className="sm:hidden" /><Building2 size={24} className="hidden sm:block" /></div>
+          <div className="p-2 sm:p-3 rounded-xl sm:rounded-2xl w-fit" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: FT.slate }}><Building2 size={18} className="sm:hidden" /><Building2 size={24} className="hidden sm:block" /></div>
           <div>
             <p className="text-xl sm:text-3xl font-black text-slate-800">{activeClientsCount}</p>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Clientes Activos</p>
@@ -140,7 +141,7 @@ export default function AdminReports({ printingReport, setPrintingReport }) {
           <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">no período seleccionado</p>
         </div>
         <div className="bg-white p-3 sm:p-4 md:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col gap-2">
-          <div className="p-2 sm:p-3 rounded-xl sm:rounded-2xl w-fit" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: '#869AAF' }}><Activity size={18} className="sm:hidden" /><Activity size={24} className="hidden sm:block" /></div>
+          <div className="p-2 sm:p-3 rounded-xl sm:rounded-2xl w-fit" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: FT.slate }}><Activity size={18} className="sm:hidden" /><Activity size={24} className="hidden sm:block" /></div>
           <div>
             <p className="text-xl sm:text-3xl font-black text-slate-800">{activeReportsCount}</p>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total de Registos</p>
@@ -165,14 +166,14 @@ export default function AdminReports({ printingReport, setPrintingReport }) {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Selecione o Cliente</label>
-            <select className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-[#1B3A57] outline-none font-bold" value={reportFilter.clientId} onChange={e => setReportFilter({ ...reportFilter, clientId: e.target.value })}>
+            <select className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-[var(--navy)] outline-none font-bold" value={reportFilter.clientId} onChange={e => setReportFilter({ ...reportFilter, clientId: e.target.value })}>
               <option value="">-- Escolher Cliente --</option>
               {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Colaborador (Opcional)</label>
-            <select className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-[#1B3A57] outline-none font-bold" value={reportFilter.workerId} onChange={e => setReportFilter({ ...reportFilter, workerId: e.target.value })}>
+            <select className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-[var(--navy)] outline-none font-bold" value={reportFilter.workerId} onChange={e => setReportFilter({ ...reportFilter, workerId: e.target.value })}>
               <option value="">-- Todos os Colaboradores --</option>
               {workers.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
             </select>
@@ -183,19 +184,19 @@ export default function AdminReports({ printingReport, setPrintingReport }) {
             {filterMode === 'month' && (
               <>
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Mês</label>
-                <input type="month" className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-[#1B3A57] outline-none font-bold" value={reportFilter.month} onChange={e => setReportFilter({ ...reportFilter, month: e.target.value })} />
+                <input type="month" className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-[var(--navy)] outline-none font-bold" value={reportFilter.month} onChange={e => setReportFilter({ ...reportFilter, month: e.target.value })} />
               </>
             )}
             {filterMode === 'range' && (
               <>
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Intervalo de Dias</label>
                 <div className="flex gap-2 items-center">
-                  <input type="date" className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-[#1B3A57] outline-none font-bold" value={reportFilter.startDate} onChange={e => setReportFilter({ ...reportFilter, startDate: e.target.value })} />
+                  <input type="date" className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-[var(--navy)] outline-none font-bold" value={reportFilter.startDate} onChange={e => setReportFilter({ ...reportFilter, startDate: e.target.value })} />
                   <span className="text-slate-400 font-black text-xs">→</span>
-                  <input type="date" className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-[#1B3A57] outline-none font-bold" value={reportFilter.endDate} min={reportFilter.startDate} onChange={e => setReportFilter({ ...reportFilter, endDate: e.target.value })} />
+                  <input type="date" className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-[var(--navy)] outline-none font-bold" value={reportFilter.endDate} min={reportFilter.startDate} onChange={e => setReportFilter({ ...reportFilter, endDate: e.target.value })} />
                 </div>
                 {activeDates.length > 0 && (
-                  <p className="text-[10px] font-bold ml-1" style={{ color: '#EB8D00' }}>{activeDates.length} dias no intervalo</p>
+                  <p className="text-[10px] font-bold ml-1" style={{ color: FT.orange }}>{activeDates.length} dias no intervalo</p>
                 )}
               </>
             )}
@@ -215,7 +216,7 @@ export default function AdminReports({ printingReport, setPrintingReport }) {
       {/* Botões de ação */}
       <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
         <div className="flex flex-col md:flex-row gap-3 md:gap-4">
-          <button onClick={handleGenerateClientReport} disabled={!hasValidPeriod || (!reportFilter.clientId && !reportFilter.workerId)} className="flex-1 py-4 rounded-2xl font-black text-sm uppercase tracking-widest shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 active:scale-95 transition-all border-2" style={{ color: '#1B3A57', borderColor: '#1B3A57', backgroundColor: 'transparent' }}>
+          <button onClick={handleGenerateClientReport} disabled={!hasValidPeriod || (!reportFilter.clientId && !reportFilter.workerId)} className="flex-1 py-4 rounded-2xl font-black text-sm uppercase tracking-widest shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 active:scale-95 transition-all border-2" style={{ color: FT.navy, borderColor: FT.navy, backgroundColor: 'transparent' }}>
             <FileText size={18} /> Gerar Selecção
           </button>
           <button onClick={() => {
@@ -238,7 +239,7 @@ export default function AdminReports({ printingReport, setPrintingReport }) {
               dates: filterMode !== 'month' ? activeDates : null,
               periodLabel,
             });
-          }} disabled={!hasValidPeriod} className="px-8 py-4 text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 active:scale-95 transition-all" style={{ backgroundColor: '#EB8D00' }}>
+          }} disabled={!hasValidPeriod} className="px-8 py-4 text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 active:scale-95 transition-all" style={{ backgroundColor: FT.orange }}>
             <Zap size={18} className="text-amber-400" /> Gerar Tudo do Período
           </button>
         </div>
@@ -270,7 +271,7 @@ export default function AdminReports({ printingReport, setPrintingReport }) {
       {/* Histórico Recente */}
       <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
         <div className="flex items-center gap-3 mb-5">
-          <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: '#869AAF' }}><History size={20} /></div>
+          <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: FT.slate }}><History size={20} /></div>
           <h3 className="font-black text-lg text-slate-800">Histórico Recente</h3>
         </div>
         {reportHistory.length === 0 ? (
@@ -306,7 +307,7 @@ export default function AdminReports({ printingReport, setPrintingReport }) {
                         } else {
                           setPrintingReport({ isGlobal: true, month: entry.month || null, periodLabel: entry.periodLabel });
                         }
-                      }} className="px-4 py-1.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all hover:bg-slate-50" style={{ color: '#869AAF' }}>
+                      }} className="px-4 py-1.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all hover:bg-slate-50" style={{ color: FT.slate }}>
                         Ver
                       </button>
                     </td>

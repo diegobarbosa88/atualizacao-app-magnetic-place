@@ -4,15 +4,18 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { LogOut, X, ChevronRight, ChevronDown, ChevronLeft, Users } from 'lucide-react';
 import CompanyLogo from '../../components/common/CompanyLogo';
 import { ADMIN_SECTIONS, resolveBadge } from './adminNavConfig';
+import { FT } from '../../styles/designTokens';
 
-// Paleta de marca
+// Paleta de marca — navy/orange/slate vêm de designTokens.js; os restantes
+// são variantes rgba só usadas aqui (fundos/realces com transparência), sem
+// token equivalente.
 const B = {
-  navy: '#1B3A57',
-  orange: '#EB8D00',
+  navy: FT.navy,
+  orange: FT.orange,
   activeItemBg: 'rgba(235,141,0,0.18)',
-  sectionLabel: '#869AAF',
+  sectionLabel: FT.slate,
   inactiveText: '#B9C6D4',
-  inactiveIcon: '#869AAF',
+  inactiveIcon: FT.slate,
   divider: 'rgba(255,255,255,0.15)',
   navBorder: 'rgba(255,255,255,0.08)',
   hoverBg: 'rgba(255,255,255,0.07)',

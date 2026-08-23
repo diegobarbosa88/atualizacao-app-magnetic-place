@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Lock, Loader2 } from 'lucide-react';
 import ModalShell from '../../components/common/ModalShell';
+import { FT } from '../../styles/designTokens';
 
 // Modal genérico para pedir a password de admin antes de uma ação sensível
 // que precisa de validação server-side (nunca envia a password para mais
@@ -54,7 +55,7 @@ export default function AdminPasswordModal({ open, title, onConfirm, onClose, lo
             type="submit"
             disabled={loading || !password.trim()}
             className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-white text-xs font-black uppercase tracking-widest transition-all disabled:opacity-50"
-            style={{ backgroundColor: '#1B3A57' }}
+            style={{ backgroundColor: FT.navy }}
           >
             {loading ? <Loader2 size={13} className="animate-spin" /> : 'Confirmar'}
           </button>

@@ -4,6 +4,7 @@ import { useApp } from '../../context/AppContext';
 import EntryForm from '../../components/common/EntryForm';
 import ClientTimesheetReport from '../../components/common/ClientTimesheetReport';
 import { parseDeviceLabel } from '../../utils/deviceUtils';
+import { FT } from '../../styles/designTokens';
 import {
   Settings2, CheckCircle, Users, X, Zap, Plus, Trash2, Unlock,
   Settings, FileText, Sparkles, Bell, Pencil, FileDown, CalendarX,
@@ -74,7 +75,7 @@ function BrandBar({ unreadCount, onToggleNotifDropdown, onOpenFinReport, onLogou
       className="flex items-center px-2.5 sm:px-6 gap-1.5 sm:gap-4 shrink-0"
       style={{
         height: '104px',
-        backgroundColor: '#1B3A57',
+        backgroundColor: FT.navy,
         borderBottom: '2px solid rgba(235,141,0,0.35)',
         boxShadow: '0 4px 16px rgba(0,0,0,0.22)',
         zIndex: 40,
@@ -99,14 +100,14 @@ function BrandBar({ unreadCount, onToggleNotifDropdown, onOpenFinReport, onLogou
       >
         <div className="w-12 h-12 sm:w-[68px] sm:h-[68px] shrink-0" style={{
           borderRadius: '50%',
-          overflow: 'hidden', backgroundColor: '#EB8D00',
+          overflow: 'hidden', backgroundColor: FT.orange,
         }}>
           <CompanyLogo className="w-full h-full object-cover" />
         </div>
         <div className="text-left min-w-0">
           <p className="text-sm sm:text-2xl truncate" style={{ fontWeight: 800, color: 'white', lineHeight: 1.2, letterSpacing: 'normal', textTransform: 'uppercase' }}>Magnetic Place</p>
-          <p className="text-[10px] sm:text-[13px] truncate" style={{ fontWeight: 500, color: '#869AAF', lineHeight: 1.3, marginTop: '2px' }}>Unipessoal, Lda</p>
-          <p className="text-[9px] sm:text-xs truncate" style={{ fontWeight: 500, color: '#EB8D00', textTransform: 'uppercase', letterSpacing: '0.08em', lineHeight: 1.3 }}>Gestão</p>
+          <p className="text-[10px] sm:text-[13px] truncate" style={{ fontWeight: 500, color: FT.slate, lineHeight: 1.3, marginTop: '2px' }}>Unipessoal, Lda</p>
+          <p className="text-[9px] sm:text-xs truncate" style={{ fontWeight: 500, color: FT.orange, textTransform: 'uppercase', letterSpacing: '0.08em', lineHeight: 1.3 }}>Gestão</p>
         </div>
       </button>
 
@@ -648,7 +649,7 @@ function AdminDashboard(props) {
               style={{
                 width: '20px',
                 height: '56px',
-                backgroundColor: '#1B3A57',
+                backgroundColor: FT.navy,
                 borderTopRightRadius: '10px',
                 borderBottomRightRadius: '10px',
                 borderTop: '1px solid rgba(235,141,0,0.5)',
@@ -657,7 +658,7 @@ function AdminDashboard(props) {
                 boxShadow: '2px 0 10px rgba(0,0,0,0.25)',
               }}
             >
-              <ChevronRight size={13} style={{ color: '#EB8D00' }} />
+              <ChevronRight size={13} style={{ color: FT.orange }} />
             </button>
           )}
         </>
@@ -827,7 +828,7 @@ function AdminDashboard(props) {
                 }
                 return (
                   <div key={n.id} className="px-4 py-3 hover:bg-slate-50 transition-colors flex items-start gap-3">
-                    <div className="p-2 rounded-xl shrink-0 mt-0.5" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: '#869AAF' }}><Bell size={14} /></div>
+                    <div className="p-2 rounded-xl shrink-0 mt-0.5" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: FT.slate }}><Bell size={14} /></div>
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-black text-slate-800">{n.title || 'Notificação'}</p>
                       {(n.message || n.body) && <p className="text-[10px] text-slate-500 mt-0.5 truncate">{n.message || n.body}</p>}
@@ -842,7 +843,7 @@ function AdminDashboard(props) {
               <div className="px-4 py-8 text-center text-slate-400 text-xs font-bold">Sem notificações novas</div>
             )}
           </div>
-          <button onClick={() => { setActiveTab('notificacoes'); setShowNotifDropdown(false); }} className="w-full text-center text-[10px] font-black uppercase tracking-widest py-1.5 hover:bg-slate-50 rounded-xl transition-colors" style={{ color: '#1B3A57' }}>
+          <button onClick={() => { setActiveTab('notificacoes'); setShowNotifDropdown(false); }} className="w-full text-center text-[10px] font-black uppercase tracking-widest py-1.5 hover:bg-slate-50 rounded-xl transition-colors" style={{ color: FT.navy }}>
             Ver Todas as Notificações
           </button>
         </div>

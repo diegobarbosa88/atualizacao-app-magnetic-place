@@ -17,6 +17,7 @@ import {
 import ModalShell from '../../components/common/ModalShell';
 import { calculateDuration } from '../../utils/formatUtils';
 import { roundTimeToIntervalTimeUp, roundTimeToIntervalTimeDown } from '../../utils/timeUtils';
+import { FT } from '../../styles/designTokens';
 
 export default function AdminSettings() {
   const {
@@ -126,7 +127,7 @@ function NavModePicker({ value, onChange }) {
         preview={
           <svg viewBox="0 0 80 50" className="w-full h-12">
             <rect x="2" y="2" width="22" height="46" rx="3" fill="#eef2ff" stroke="#c7d2fe" />
-            <rect x="6" y="7" width="14" height="3.5" rx="1" fill="#1B3A57" />
+            <rect x="6" y="7" width="14" height="3.5" rx="1" fill={FT.navy} />
             <rect x="6" y="14" width="14" height="3.5" rx="1" fill="#cbd5e1" />
             <rect x="6" y="21" width="14" height="3.5" rx="1" fill="#cbd5e1" />
             <rect x="6" y="28" width="14" height="3.5" rx="1" fill="#cbd5e1" />
@@ -147,7 +148,7 @@ function NavModePicker({ value, onChange }) {
         preview={
           <svg viewBox="0 0 80 50" className="w-full h-12">
             <rect x="2" y="2" width="76" height="10" rx="2" fill="#f8fafc" stroke="#e2e8f0" />
-            <rect x="5" y="4.5" width="14" height="5" rx="1" fill="#1B3A57" />
+            <rect x="5" y="4.5" width="14" height="5" rx="1" fill={FT.navy} />
             <rect x="21" y="4.5" width="14" height="5" rx="1" fill="#cbd5e1" />
             <rect x="37" y="4.5" width="14" height="5" rx="1" fill="#cbd5e1" />
             <rect x="53" y="4.5" width="14" height="5" rx="1" fill="#cbd5e1" />
@@ -174,10 +175,10 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
           ? 'shadow-sm'
           : 'border-slate-200 bg-white hover:border-slate-300'
       }`}
-      style={selected ? { borderColor: '#EB8D00', backgroundColor: 'rgba(235,141,0,0.06)' } : {}}
+      style={selected ? { borderColor: FT.orange, backgroundColor: 'rgba(235,141,0,0.06)' } : {}}
     >
       {selected && (
-        <CheckCircle size={16} className="absolute top-2 right-2" style={{ color: '#EB8D00' }} />
+        <CheckCircle size={16} className="absolute top-2 right-2" style={{ color: FT.orange }} />
       )}
       <div className="mb-2">{preview}</div>
       <p className="text-xs font-black text-slate-700">{title}</p>
@@ -236,10 +237,10 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
         <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100 lg:col-span-2">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: '#869AAF' }}><ShieldCheck size={20} /></div>
+              <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: FT.slate }}><ShieldCheck size={20} /></div>
               <h3 className="font-black text-lg text-slate-800">Administradores</h3>
             </div>
-            <button onClick={handleOpenAddAdmin} className="flex items-center gap-2 text-white px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all" style={{ backgroundColor: '#EB8D00' }}>
+            <button onClick={handleOpenAddAdmin} className="flex items-center gap-2 text-white px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all" style={{ backgroundColor: FT.orange }}>
               <UserPlus size={14} /> Adicionar
             </button>
           </div>
@@ -256,10 +257,10 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
                 <div key={w.id} className={`p-3 bg-slate-50 rounded-2xl border transition-all ${isEditing ? 'border-indigo-200 bg-indigo-50/30' : 'border-slate-100'}`}>
                   {isEditing ? (
                     <div className="space-y-2">
-                      <input type="text" value={adminForm.name} onChange={e => setAdminForm(p => ({ ...p, name: e.target.value }))} placeholder="Nome completo" className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-sm outline-none focus:ring-2 focus:ring-[#1B3A57]" />
-                      <input type="text" value={adminForm.nif} onChange={e => setAdminForm(p => ({ ...p, nif: e.target.value }))} placeholder="Senha (NIF)" className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-sm outline-none focus:ring-2 focus:ring-[#1B3A57]" />
+                      <input type="text" value={adminForm.name} onChange={e => setAdminForm(p => ({ ...p, name: e.target.value }))} placeholder="Nome completo" className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-sm outline-none focus:ring-2 focus:ring-[var(--navy)]" />
+                      <input type="text" value={adminForm.nif} onChange={e => setAdminForm(p => ({ ...p, nif: e.target.value }))} placeholder="Senha (NIF)" className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-sm outline-none focus:ring-2 focus:ring-[var(--navy)]" />
                       <div className="flex gap-2 pt-1">
-                        <button onClick={handleSaveAdmin} className="flex-1 text-white py-2 rounded-xl font-black text-xs uppercase tracking-wider transition-all" style={{ backgroundColor: '#1B3A57' }}>Guardar</button>
+                        <button onClick={handleSaveAdmin} className="flex-1 text-white py-2 rounded-xl font-black text-xs uppercase tracking-wider transition-all" style={{ backgroundColor: FT.navy }}>Guardar</button>
                         <button onClick={() => setAdminFormMode(null)} className="px-4 py-2 rounded-xl font-black text-xs text-slate-500 hover:bg-slate-100 transition-all">Cancelar</button>
                       </div>
                     </div>
@@ -270,7 +271,7 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
                         <p className="text-[10px] text-slate-400 font-mono">{username}</p>
                       </div>
                       <div className="flex gap-1">
-                        <button onClick={() => handleEditAdmin(w)} className="text-xs font-bold hover:bg-slate-100 px-3 py-1.5 rounded-xl transition-all" style={{ color: '#869AAF' }}>Editar</button>
+                        <button onClick={() => handleEditAdmin(w)} className="text-xs font-bold hover:bg-slate-100 px-3 py-1.5 rounded-xl transition-all" style={{ color: FT.slate }}>Editar</button>
                         <button onClick={() => handleRevokeAdmin(w)} className="flex items-center gap-1 text-xs font-bold text-rose-500 hover:bg-rose-50 px-3 py-1.5 rounded-xl transition-all"><ShieldOff size={12} /> Revogar</button>
                       </div>
                     </div>
@@ -287,16 +288,16 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
                 <select
                   value={adminForm.selectedWorkerId}
                   onChange={e => handleSelectExistingWorker(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-[#1B3A57]"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-[var(--navy)]"
                 >
                   <option value="">— Selecionar trabalhador existente —</option>
                   {nonAdminWorkers.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
                 </select>
               )}
-              <input type="text" placeholder="Nome completo" value={adminForm.name} onChange={e => setAdminForm(p => ({ ...p, name: e.target.value }))} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-[#1B3A57]" />
-              <input type="text" placeholder="Senha (NIF)" value={adminForm.nif} onChange={e => setAdminForm(p => ({ ...p, nif: e.target.value }))} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-[#1B3A57]" />
+              <input type="text" placeholder="Nome completo" value={adminForm.name} onChange={e => setAdminForm(p => ({ ...p, name: e.target.value }))} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-[var(--navy)]" />
+              <input type="text" placeholder="Senha (NIF)" value={adminForm.nif} onChange={e => setAdminForm(p => ({ ...p, nif: e.target.value }))} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-[var(--navy)]" />
               <div className="flex gap-2">
-                <button onClick={handleSaveAdmin} className="flex-1 text-white py-3 rounded-xl font-black text-xs uppercase tracking-wider transition-all" style={{ backgroundColor: '#EB8D00' }}>Criar</button>
+                <button onClick={handleSaveAdmin} className="flex-1 text-white py-3 rounded-xl font-black text-xs uppercase tracking-wider transition-all" style={{ backgroundColor: FT.orange }}>Criar</button>
                 <button onClick={() => { setAdminFormMode(null); setAdminForm({ id: null, name: '', nif: '', selectedWorkerId: '' }); }} className="px-4 py-3 rounded-xl font-black text-xs text-slate-500 hover:bg-slate-100 transition-all">Cancelar</button>
               </div>
             </div>
@@ -313,7 +314,7 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
             <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">Alterar Senha Administrador</p>
             <div className="flex gap-2">
               <input type="password" placeholder="Nova Senha" className="flex-1 bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none" id="new-admin-pass" />
-              <button onClick={() => { const passEl = document.getElementById('new-admin-pass'); if (!passEl) return; const newPass = passEl.value; if (!newPass) return; updateSetting('adminPassword', newPass); alert('Senha alterada com sucesso! A nova senha será necessária no próximo login.'); passEl.value = ''; }} className="text-white px-6 py-2 rounded-xl font-bold text-xs uppercase transition-all hover:opacity-90" style={{ backgroundColor: '#1B3A57' }}>Atualizar</button>
+              <button onClick={() => { const passEl = document.getElementById('new-admin-pass'); if (!passEl) return; const newPass = passEl.value; if (!newPass) return; updateSetting('adminPassword', newPass); alert('Senha alterada com sucesso! A nova senha será necessária no próximo login.'); passEl.value = ''; }} className="text-white px-6 py-2 rounded-xl font-bold text-xs uppercase transition-all hover:opacity-90" style={{ backgroundColor: FT.navy }}>Atualizar</button>
             </div>
           </div>
         </div>
@@ -325,7 +326,7 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
         {/* Segurança Social — Comunicações PSI */}
         <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
           <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: '#869AAF' }}><Globe size={20} /></div>
+            <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: FT.slate }}><Globe size={20} /></div>
             <div>
               <h3 className="font-black text-lg text-slate-800">Segurança Social — Comunicações</h3>
               <p className="text-xs text-slate-400 font-medium">Plataforma de Serviços de Interoperabilidade (PSI)</p>
@@ -360,7 +361,7 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
                 <button
                   onClick={handleSsPing}
                   disabled={ssPingLoading}
-                  className="flex items-center gap-2 px-4 py-2 text-white rounded-xl text-xs font-black transition-colors disabled:opacity-60" style={{ backgroundColor: '#1B3A57' }}
+                  className="flex items-center gap-2 px-4 py-2 text-white rounded-xl text-xs font-black transition-colors disabled:opacity-60" style={{ backgroundColor: FT.navy }}
                 >
                   {ssPingLoading ? <Loader2 size={13} className="animate-spin" /> : <Globe size={13} />}
                   Testar Ligação ao Webservice
@@ -428,7 +429,7 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
         {ssStatus?.configurado && (
           <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
             <div className="flex items-center gap-3 mb-5">
-              <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: '#869AAF' }}><Globe size={20} /></div>
+              <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: FT.slate }}><Globe size={20} /></div>
               <div>
                 <h3 className="font-black text-lg text-slate-800">Segurança Social — Consultas</h3>
                 <p className="text-xs text-slate-400 font-medium">Comprovativos · Documentos · Remunerações Permanentes</p>
@@ -442,7 +443,7 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
         <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl shrink-0" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: '#869AAF' }}><FileSpreadsheet size={20} /></div>
+              <div className="p-2 rounded-xl shrink-0" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: FT.slate }}><FileSpreadsheet size={20} /></div>
               <div>
                 <h3 className="font-black text-lg text-slate-800">Importar Contratos da SS Direta</h3>
                 <p className="text-xs text-slate-400 font-medium mt-0.5">Sincronizar vínculos exportados da Segurança Social Direta com os perfis dos trabalhadores</p>
@@ -450,7 +451,7 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
             </div>
             <button
               onClick={() => setShowImportarContratos(true)}
-              className="shrink-0 flex items-center gap-2 px-4 py-2.5 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all" style={{ backgroundColor: '#1B3A57' }}
+              className="shrink-0 flex items-center gap-2 px-4 py-2.5 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all" style={{ backgroundColor: FT.navy }}
             >
               <Upload size={13} /> Importar CSV
             </button>
@@ -476,7 +477,7 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
             <p className="text-[10px] text-slate-400">Obtenha a sua chave em <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" className="text-indigo-500 underline">aistudio.google.com</a></p>
             <div className="flex gap-2">
               <input type="password" placeholder="AIza..." value={geminiKeyInput} onChange={e => setGeminiKeyInput(e.target.value)} className="flex-1 bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none font-mono" />
-              <button onClick={() => { const key = geminiKeyInput.trim(); updateSetting('geminiApiKey', key); alert(key ? 'Chave API guardada! A IA está agora activa.' : 'Chave API removida.'); }} className="text-white px-6 py-2 rounded-xl font-bold text-xs uppercase transition-all whitespace-nowrap" style={{ backgroundColor: '#1B3A57' }}>Guardar</button>
+              <button onClick={() => { const key = geminiKeyInput.trim(); updateSetting('geminiApiKey', key); alert(key ? 'Chave API guardada! A IA está agora activa.' : 'Chave API removida.'); }} className="text-white px-6 py-2 rounded-xl font-bold text-xs uppercase transition-all whitespace-nowrap" style={{ backgroundColor: FT.navy }}>Guardar</button>
             </div>
             {systemSettings.geminiApiKey ? (
               <p className="text-[10px] text-emerald-600 font-bold flex items-center gap-1"><span>•</span> IA activa</p>
@@ -491,7 +492,7 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
         {/* Identidade Visual */}
         <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
           <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: '#869AAF' }}><Building2 size={20} /></div>
+            <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: FT.slate }}><Building2 size={20} /></div>
             <h3 className="font-black text-lg text-slate-800">Identidade da Empresa</h3>
           </div>
           <div className="space-y-4">
@@ -501,7 +502,7 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
               value={systemSettings.companyName}
               onChange={(e) => setSystemSettings(prev => ({ ...prev, companyName: e.target.value }))}
               onBlur={(e) => updateSetting('companyName', e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-[#1B3A57] outline-none font-bold"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-[var(--navy)] outline-none font-bold"
             />
             <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">Morada</p>
             <input
@@ -510,7 +511,7 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
               onChange={(e) => setSystemSettings(prev => ({ ...prev, companyAddress: e.target.value }))}
               onBlur={(e) => updateSetting('companyAddress', e.target.value)}
               placeholder="Rua, nº, código postal, localidade"
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-[#1B3A57] outline-none font-bold"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-[var(--navy)] outline-none font-bold"
             />
             <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">NIF</p>
             <input
@@ -519,7 +520,7 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
               onChange={(e) => setSystemSettings(prev => ({ ...prev, companyNif: e.target.value }))}
               onBlur={(e) => updateSetting('companyNif', e.target.value)}
               placeholder="Nº de Identificação Fiscal"
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-[#1B3A57] outline-none font-bold"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-[var(--navy)] outline-none font-bold"
             />
           </div>
         </div>
@@ -564,7 +565,7 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
                 }}
                 onMouseUp={(e) => updateSetting('appWidth', e.target.value)}
                 onTouchEnd={(e) => updateSetting('appWidth', e.target.value)}
-                className="w-32 accent-[#EB8D00]"
+                className="w-32 accent-[var(--orange)]"
               />
             </div>
             <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
@@ -575,7 +576,7 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
               <button
                 onClick={() => updateSetting('darkMode', !systemSettings.darkMode)}
                 className={`w-14 h-8 rounded-full transition-all flex items-center px-1 ${systemSettings.darkMode ? '' : 'bg-slate-300'}`}
-                style={systemSettings.darkMode ? { backgroundColor: '#1B3A57' } : {}}
+                style={systemSettings.darkMode ? { backgroundColor: FT.navy } : {}}
               >
                 <div className={`w-6 h-6 bg-white rounded-full shadow-md transition-all ${systemSettings.darkMode ? 'translate-x-6' : 'translate-x-0'}`} />
               </button>
@@ -677,7 +678,7 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
                     setNewReason('');
                   }}
                   className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all hover:opacity-90"
-                  style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}
+                  style={{ backgroundColor: FT.orange, color: FT.navy }}
                 >
                   <Plus size={13} /> Adicionar
                 </button>
@@ -687,7 +688,7 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
         </div>
 
         {/* Destaque Informativo */}
-        <div className="p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-xl text-white relative overflow-hidden flex flex-col justify-center" style={{ background: 'linear-gradient(135deg, #1B3A57 0%, #0d2236 100%)' }}>
+        <div className="p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-xl text-white relative overflow-hidden flex flex-col justify-center" style={{ background: `linear-gradient(135deg, ${FT.navy} 0%, #0d2236 100%)` }}>
           <div className="absolute top-0 right-0 p-6 opacity-10"><Sparkles size={80} /></div>
           <h3 className="text-xl font-black uppercase tracking-tighter mb-2">Magnetic Place Pro</h3>
           <p className="text-sm font-medium opacity-80 leading-relaxed mb-6">Utilize o painel de configurações para moldar a experiência do dashboard conforme as necessidades da sua empresa.</p>
@@ -721,7 +722,7 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
                   </button>
                 </>
               ) : (
-                <button onClick={() => { setShowRecalcModal(false); setRecalcProgress({ current: 0, total: 0, done: false }); }} className="flex-1 px-4 py-2.5 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-colors" style={{ backgroundColor: '#1B3A57' }}>
+                <button onClick={() => { setShowRecalcModal(false); setRecalcProgress({ current: 0, total: 0, done: false }); }} className="flex-1 px-4 py-2.5 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-colors" style={{ backgroundColor: FT.navy }}>
                   Fechar
                 </button>
               )}

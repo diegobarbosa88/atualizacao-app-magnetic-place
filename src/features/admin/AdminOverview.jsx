@@ -10,6 +10,7 @@ import { formatHours, formatCurrency, calculateDuration } from '../../utils/form
 import { useReconciliationBadges } from './adminOverview/useReconciliationBadges';
 import KpiCard from './adminOverview/KpiCard';
 import FinancialSummaryPanel from './adminOverview/FinancialSummaryPanel';
+import { FT } from '../../styles/designTokens';
 import SectionHeaderShell from '../../components/common/SectionHeaderShell';
 
 export default function AdminOverview({ currentMonth, setCurrentMonth }) {
@@ -173,11 +174,11 @@ export default function AdminOverview({ currentMonth, setCurrentMonth }) {
         title="Dashboard Geral"
         rightSlot={
           <div className="flex items-center gap-1 bg-slate-100 rounded-xl p-1">
-            <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))} className="p-1.5 hover:bg-white rounded-lg text-slate-400 hover:text-[#1B3A57] transition-colors"><ChevronLeft size={15} /></button>
-            <span className="font-bold text-xs min-w-[110px] text-center text-[#1B3A57]">
+            <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))} className="p-1.5 hover:bg-white rounded-lg text-slate-400 hover:text-[var(--navy)] transition-colors"><ChevronLeft size={15} /></button>
+            <span className="font-bold text-xs min-w-[110px] text-center text-[var(--navy)]">
               {currentMonth.toLocaleDateString('pt-PT', { month: 'short', year: 'numeric' })}
             </span>
-            <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))} className="p-1.5 hover:bg-white rounded-lg text-slate-400 hover:text-[#1B3A57] transition-colors"><ChevronRight size={15} /></button>
+            <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))} className="p-1.5 hover:bg-white rounded-lg text-slate-400 hover:text-[var(--navy)] transition-colors"><ChevronRight size={15} /></button>
           </div>
         }
       />
@@ -186,25 +187,25 @@ export default function AdminOverview({ currentMonth, setCurrentMonth }) {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
         <KpiCard
           icon={<Clock size={24} />} iconBg="" iconColor=""
-          iconStyle={{ backgroundColor: 'rgba(27,58,87,0.1)', color: '#869AAF' }}
+          iconStyle={{ backgroundColor: 'rgba(27,58,87,0.1)', color: FT.slate }}
           value={formatHours(adminStats.totalHours)} subtitle={`${formatHours(aggregatedTrend.expected)} Esperadas`}
           label="Horas Totais" trend={vsLastMonth.hours} neutralBadge
         />
         <KpiCard
           icon={<TrendingUp size={24} />} iconBg="" iconColor=""
-          iconStyle={{ backgroundColor: 'rgba(235,141,0,0.12)', color: '#EB8D00' }}
+          iconStyle={{ backgroundColor: 'rgba(235,141,0,0.12)', color: FT.orange }}
           value={formatCurrency(adminStats.expectedRevenue)} subtitle="Estimada"
           label="Faturação" trend={vsLastMonth.revenue}
         />
         <KpiCard
           icon={<TrendingDown size={24} />} iconBg="" iconColor=""
-          iconStyle={{ backgroundColor: 'rgba(27,58,87,0.08)', color: '#869AAF' }}
+          iconStyle={{ backgroundColor: 'rgba(27,58,87,0.08)', color: FT.slate }}
           value={formatCurrency(adminStats.expectedCosts + adminStats.monthlyExpenses)} subtitle="Operacionais + Fixos"
           label="Custos Globais" trend={vsLastMonth.costs} invertTrend
         />
         <KpiCard
           icon={<Wallet size={24} />} iconBg="" iconColor=""
-          iconStyle={{ backgroundColor: 'rgba(235,141,0,0.2)', color: '#EB8D00' }}
+          iconStyle={{ backgroundColor: 'rgba(235,141,0,0.2)', color: FT.orange }}
           value={formatCurrency(adminStats.netProfit)} subtitle="Líquido"
           label="Resultado" trend={vsLastMonth.profit} dark
         />
@@ -215,7 +216,7 @@ export default function AdminOverview({ currentMonth, setCurrentMonth }) {
         {/* Area Chart */}
         <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
           <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(235,141,0,0.12)', color: '#EB8D00' }}><TrendingUp size={20} /></div>
+            <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(235,141,0,0.12)', color: FT.orange }}><TrendingUp size={20} /></div>
             <h3 className="font-medium text-base text-slate-700">Fluxo de Faturamento Diário</h3>
           </div>
           {areaData.length > 0 ? (
@@ -223,8 +224,8 @@ export default function AdminOverview({ currentMonth, setCurrentMonth }) {
               <AreaChart data={areaData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorValor" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#EB8D00" stopOpacity={0.25} />
-                    <stop offset="95%" stopColor="#EB8D00" stopOpacity={0} />
+                    <stop offset="5%" stopColor={FT.orange} stopOpacity={0.25} />
+                    <stop offset="95%" stopColor={FT.orange} stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
@@ -234,7 +235,7 @@ export default function AdminOverview({ currentMonth, setCurrentMonth }) {
                   contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                   formatter={(value) => [`€${value}`, 'Faturamento']}
                 />
-                <Area type="monotone" dataKey="valor" stroke="#EB8D00" strokeWidth={2} fill="url(#colorValor)" />
+                <Area type="monotone" dataKey="valor" stroke={FT.orange} strokeWidth={2} fill="url(#colorValor)" />
               </AreaChart>
             </ResponsiveContainer>
           ) : (
@@ -257,7 +258,7 @@ export default function AdminOverview({ currentMonth, setCurrentMonth }) {
         {/* Worker Comparison */}
         <div className="flex flex-col h-full bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
           <div className="flex items-center gap-3 mb-6 shrink-0">
-            <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(235,141,0,0.12)', color: '#EB8D00' }}><Activity size={20} /></div>
+            <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(235,141,0,0.12)', color: FT.orange }}><Activity size={20} /></div>
             <h3 className="font-medium text-base text-slate-700">Comparativo por Trabalhador</h3>
           </div>
           <div className="scroll-marca overflow-y-auto flex-1 min-h-0 space-y-3">
@@ -280,7 +281,7 @@ export default function AdminOverview({ currentMonth, setCurrentMonth }) {
                   <div className="w-full bg-slate-100 rounded-full h-2">
                     <div
                       className="h-2 rounded-full transition-all duration-500"
-                      style={{ width: `${Math.min(100, w.ratioPct || 0)}%`, backgroundColor: '#EB8D00' }}
+                      style={{ width: `${Math.min(100, w.ratioPct || 0)}%`, backgroundColor: FT.orange }}
                     />
                   </div>
                 </div>
@@ -295,7 +296,7 @@ export default function AdminOverview({ currentMonth, setCurrentMonth }) {
         <div className="space-y-4 sm:space-y-6 lg:space-y-8">
           <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
             <div className="flex items-center gap-3 mb-6">
-              <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(27,58,87,0.1)', color: '#1B3A57' }}><Trophy size={20} /></div>
+              <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(27,58,87,0.1)', color: FT.navy }}><Trophy size={20} /></div>
               <h3 className="font-medium text-base text-slate-700">Top Unidades (Horas)</h3>
             </div>
             <div className="space-y-4">
@@ -310,11 +311,11 @@ export default function AdminOverview({ currentMonth, setCurrentMonth }) {
                             {c.pct >= 0 ? '▲' : '▼'} {Math.abs(c.pct)}%
                           </span>
                         )}
-                        <span className="text-xs font-black" style={{ color: '#1B3A57' }}>{formatHours(c.hours)}</span>
+                        <span className="text-xs font-black" style={{ color: FT.navy }}>{formatHours(c.hours)}</span>
                       </div>
                     </div>
                     <div className="w-full bg-slate-50 rounded-full h-2">
-                      <div className="h-2 rounded-full transition-all duration-1000" style={{ width: `${Math.min(100, (c.hours / c.totalCurr) * 100)}%`, backgroundColor: '#1B3A57' }} />
+                      <div className="h-2 rounded-full transition-all duration-1000" style={{ width: `${Math.min(100, (c.hours / c.totalCurr) * 100)}%`, backgroundColor: FT.navy }} />
                     </div>
                   </div>
                 </div>
@@ -324,7 +325,7 @@ export default function AdminOverview({ currentMonth, setCurrentMonth }) {
 
           <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
             <div className="flex items-center gap-3 mb-6">
-              <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: '#869AAF' }}><History size={20} /></div>
+              <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: FT.slate }}><History size={20} /></div>
               <h3 className="font-medium text-base text-slate-700">Atividade Recente</h3>
             </div>
             <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
@@ -339,7 +340,7 @@ export default function AdminOverview({ currentMonth, setCurrentMonth }) {
                       <p className="text-xs font-bold text-slate-700 truncate">{workers.find(w => w.id === log.workerId)?.name || 'Colaborador'}</p>
                       <p className="text-[10px] text-slate-400 uppercase tracking-widest">{clients.find(c => c.id === log.clientId)?.name} • {formatLogDate(log.date)}</p>
                     </div>
-                    <div className="text-xs font-black px-2 py-1 rounded-lg shrink-0" style={{ color: '#1B3A57', backgroundColor: 'rgba(27,58,87,0.08)' }}>
+                    <div className="text-xs font-black px-2 py-1 rounded-lg shrink-0" style={{ color: FT.navy, backgroundColor: 'rgba(27,58,87,0.08)' }}>
                       {formatHours(Number(log.hours) || 0)}
                     </div>
                   </div>
@@ -350,7 +351,7 @@ export default function AdminOverview({ currentMonth, setCurrentMonth }) {
               <button
                 onClick={() => setShowAllActivity(!showAllActivity)}
                 className="mt-4 w-full py-3 text-xs font-black uppercase tracking-widest rounded-2xl transition-colors hover:bg-amber-50"
-                style={{ color: '#EB8D00' }}
+                style={{ color: FT.orange }}
               >
                 {showAllActivity ? 'Mostrar Menos' : 'Ver Tudo →'}
               </button>
