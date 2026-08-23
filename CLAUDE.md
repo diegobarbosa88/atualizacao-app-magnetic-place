@@ -331,6 +331,15 @@ perguntar. E usar sempre a mesma métrica: o script conta **ocorrências**, não
   equipa"`, que só existe nesse ficheiro, deu *ausente* e confirmou o diagnóstico. Escolher sempre
   uma frase que não possa aparecer noutro sítio, e confirmar isso com um grep ao `src/` antes de a
   usar como prova.
+  **E confirmar a sonda com um controlo positivo.** Ausência no bundle só prova morte se o método
+  souber detectar vida. Ao verificar o `ReconciliacaoSalarialAdmin`, as duas sondas únicas davam
+  `dist=0` — mas isso, sozinho, também seria o resultado se o `dist/` estivesse desactualizado ou o
+  grep estivesse a falhar por encoding. Correr a mesma busca com uma string de um ficheiro que se
+  sabe estar vivo (ali foi `"Reconciliação Bancária"`, `dist=1`) mostra que o método distingue os
+  dois casos. Sem esse contraste, um `dist=0` não vale como prova.
+  A armadilha da sonda não-única repetiu-se nesse mesmo ficheiro: `reconciliacao_salarial_` aparecia
+  no bundle, mas existe em **dois** ficheiros do `src` e o que lá estava era o `SalariosTab`, vivo.
+  Contar em quantos ficheiros do `src` a sonda existe **antes** de a usar, não depois.
 - Ordem de lotes: do módulo mais pequeno para o maior, um commit por módulo, checkpoint no browser
   antes de avançar para o seguinte.
 
@@ -344,11 +353,13 @@ perguntar. E usar sempre a mesma métrica: o script conta **ocorrências**, não
   
   ### Estado da migração (atualizar a cada lote)
 
-Total: 4.197 classes Tailwind → tokens `FT`. **Restam 559 em `src/features/admin` +
-`src/components/admin`, mas só 487 são trabalho** — e são exactamente os três ficheiros de
-dinheiro, isolados de propósito para o fim: `AjudasCustoAdmin` (234), `RecibosCalculadora` (197)
-e `ReconciliacaoSalarialAdmin` (56). Todo o resto do admin está convertido. O `EntradasTab` (55)
-foi apagado: nunca chegou a ser importado desde que nasceu, em 2026-05-24.
+Total: 4.197 classes Tailwind → tokens `FT`. **Restam 503 em `src/features/admin` +
+`src/components/admin`, mas só 431 são trabalho** — e são exactamente os dois ficheiros de
+dinheiro, isolados de propósito para o fim: `AjudasCustoAdmin` (234) e `RecibosCalculadora` (197).
+Todo o resto do admin está convertido. Dois ficheiros que estavam nesta lista foram apagados em vez
+de convertidos, por serem código morto: o `EntradasTab` (55), que nunca chegou a ser importado desde
+que nasceu em 2026-05-24, e o `ReconciliacaoSalarialAdmin` (56), desligado por decisão explícita no
+commit `a56e8b9` quando a análise salarial foi fundida na Reconciliação.
 
 As outras 72 estão fora do âmbito, cada uma com razão registada:
 
