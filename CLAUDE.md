@@ -171,6 +171,13 @@ novos.
   - `bg-[var(--ink)]` no botão "gerar relatório" (documents) → 16,9:1 no claro, **1,2:1 no escuro**;
   - `bg-[var(--ink-mid)]` no botão "marcar resolvido" (corrections), introduzido por um lote anterior
     e só apanhado dois lotes depois, porque a verificação de então corria só em modo claro.
+
+  **A lista de tokens do detetor tem de acompanhar o bloco `.dark`:** só entra token que lá esteja
+  redefinido. O `--slate` está de fora de propósito — serve os dois modos (5,68:1 sobre `--surface`
+  no escuro, 2,9:1 sobre branco no claro), por isso os `hover:bg-[var(--slate)]` que existem são
+  legítimos e a primeira versão do detetor dava-lhes falso positivo. Se um dia se acrescentar ou
+  retirar um token do `.dark`, actualizar a lista no script — senão o mesmo falso positivo volta,
+  ou pior, um token que passou a inverter deixa de ser vigiado.
 - Nunca `/NN` (opacidade) sobre `var(--token)` — compila para `color-mix` com fallback a 100%,
   visualmente diferente do esperado. Criar variável dedicada com o alpha embutido (ex.
   `--orange-shadow`) em vez disso.
@@ -199,8 +206,11 @@ novos.
   
   ### Estado da migração (atualizar a cada lote)
 
-Total: 4.197 classes Tailwind → tokens `FT`. Última contagem: **445 de 4.197 (6 módulos), mais o
-canal `style` inline fechado.**
+Total: 4.197 classes Tailwind → tokens `FT`. Última contagem: **715 de 4.197 em 9 módulos**, mais os
+dois canais de `style` inline fechados (`FT.slate` e `FT.navy`). Restam ~3.161 classes no admin.
+
+Para medir o que falta em qualquer momento, sem contar à mão:
+`sh scripts/verificar-lote-design.sh src/features/admin src/components/admin`
 
 | Módulo / lote            | Classes      | Estado                          | Commit     |
 |---------------------------|:------------:|----------------------------------|:----------:|
@@ -214,14 +224,23 @@ canal `style` inline fechado.**
 | Modo escuro — correção de raiz | 23 regras `.dark` → tokens | ✅ feito | `4a4db23` |
 | Fix `color-mix` + scrollbar indigo | — | ✅ feito | `c5faeec` |
 | `reconciliacao`           | 156 (132 convertidas, 24 bordas fora — `.recon-scope`) | ✅ feito | `c1d075e` |
-| `movimentacoes`           | 152          | ❌ código morto — a apagar, não conta para o total | — |
-| `documents`               | 155          | ⏳ próximo                       | —          |
+| `movimentacoes`           | 152          | ❌ código morto — **apagado** (2.915 linhas), não conta | `79eefa3` |
+| `documents`               | 155          | ✅ feito                         | `885da84`  |
+| `pagamentos`              | 115          | ✅ feito                         | `48a1620`  |
+| Canal inline (`color: FT.navy`) | 108 (72 convertidos, 36 sobre laranja ficam) | ✅ fechado | `de236ab` |
+| `faturas`                 | 125          | ⏳ próximo                       | —          |
+| `cost-reports`            | 267          | não iniciado                     | —          |
 | `toconline`                | 355          | não iniciado                     | —          |
 | `team`                     | 463          | não iniciado                     | —          |
 | *(restantes módulos ainda não medidos individualmente)* | — | não iniciado | — |
 
-**Canal `style` inline do navy (`color: FT.navy`, 126 usos)** — pendente, passagem própria ainda
-por agendar (mesma lógica do `FT.slate`: separar ícone/texto, medir contraste fundo-a-fundo).
+**Ambos os canais de `style` inline estão fechados.** Critério, que difere entre eles: no `FT.slate`
+a pergunta foi *ícone ou texto?* (o slate serve os dois modos, só o contraste variava); no `FT.navy`
+a pergunta foi *o fundo por baixo inverte?* — o navy é escuro e fica ilegível sobre fundo escuro seja
+ícone ou texto. Os 36 casos sobre `backgroundColor: FT.orange` mantêm `FT.navy` de propósito: o
+laranja também é constante JS, não inverte, e o par é estável.
+Nota técnica que tornou isto barato: **`var()` dentro de `style` inline segue o `.dark`** — não é
+preciso mover nada para `className`, basta trocar `FT.navy` por `'var(--navy)'` no mesmo sítio.
 
 **Pendências registadas, sem decisão de convergência:**
 - `reconciliacao-mockup.css` (`--navy`/`--bg`/`--border` locais) não converge para os tokens FT;
