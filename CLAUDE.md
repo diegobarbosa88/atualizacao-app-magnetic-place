@@ -433,8 +433,10 @@ para quem um dia a tomar não ter de as redescobrir:
   ficheiros** — chips de estado, tabs inactivas, botões secundários. **Não é regressão da migração**:
   o original `bg-slate-100 text-slate-500` já dava 4,34:1, e onde era `text-slate-400` dava 2,34:1,
   por isso a conversão manteve ou melhorou. Mas ficou uniforme, e por isso corrigível de uma vez:
-  `--ink-soft` sobre `--surface-dim` dá 5,52:1 no claro e 6,12:1 no escuro. **Lote próprio**, à
-  espera de decisão — é o mesmo calibre do `--orange-hover`, muda o aspecto de todos os chips.
+  `--ink-soft` sobre `--surface-dim` dá 5,52:1 no claro e 6,12:1 no escuro.
+  **Lote próprio, e só depois do `RecibosCalculadora`** — decisão do Diego: não abrir uma frente
+  espalhada por 35 ficheiros enquanto o último ficheiro grande ainda está em curso. É o mesmo
+  calibre do `--orange-hover`: muda o aspecto de todos os chips do admin.
   Os varrimentos por lote não o apanharam porque nunca estiveram os 60 visíveis no mesmo ecrã; só
   apareceu ao procurar o padrão no código, não no que estava renderizado.
 - **A regra-ponte do `App.css` não cobre as variantes com opacidade.** `.dark .bg-amber-50` apanha
