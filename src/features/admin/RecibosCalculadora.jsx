@@ -7,6 +7,7 @@ import { AlertTriangle, CheckCircle, ChevronDown, ChevronLeft, ChevronRight, Dow
 import { useApp } from '../../context/AppContext';
 import SectionHeaderShell from '../../components/common/SectionHeaderShell';
 import SubTabBar from '../../components/common/SubTabBar';
+import { FT } from '../../styles/designTokens';
 import { getRateAtDate } from './cost-reports/useCostReportsData.js';
 import {
   IRS_TABELAS,
@@ -95,7 +96,7 @@ function LabelInput({ label, children, hint, badge }) {
     <div className="flex flex-col gap-1">
       <div className="flex items-center gap-1 ml-1">
         <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{label}</label>
-        {badge && <span className="text-[8px] font-black uppercase tracking-wide text-[#869AAF] bg-[#EEF1F5] px-1.5 py-0.5 rounded">{badge}</span>}
+        {badge && <span className="text-[8px] font-black uppercase tracking-wide text-[var(--slate)] bg-[#EEF1F5] px-1.5 py-0.5 rounded">{badge}</span>}
       </div>
       {children}
       {hint && <span className="text-[10px] text-slate-400 ml-1">{hint}</span>}
@@ -111,7 +112,7 @@ function TextInput({ value, onChange, type = 'text', readOnly, step, min, max, c
         type={type} value={value} onChange={onChange} readOnly={readOnly}
         step={step} min={min} max={max} placeholder={placeholder}
         className={`w-full bg-transparent border-0 border-b border-slate-200 rounded-none pl-0 py-1.5 text-sm font-bold outline-none transition-all
-          ${readOnly ? 'text-slate-400 cursor-default' : 'focus:border-[#1B3A57]'}
+          ${readOnly ? 'text-slate-400 cursor-default' : 'focus:border-[var(--navy)]'}
           ${className}`}
       />
     );
@@ -121,7 +122,7 @@ function TextInput({ value, onChange, type = 'text', readOnly, step, min, max, c
       type={type} value={value} onChange={onChange} readOnly={readOnly}
       step={step} min={min} max={max} placeholder={placeholder}
       className={`w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold outline-none shadow-sm transition-all
-        ${readOnly ? 'bg-slate-50 text-slate-400 cursor-default' : 'focus:border-[#1B3A57] focus:ring-2 focus:ring-[#1B3A57]/10'}
+        ${readOnly ? 'bg-slate-50 text-slate-400 cursor-default' : 'focus:border-[var(--navy)] focus:ring-2 focus:ring-[#1B3A57]/10'}
         ${className}`}
     />
   );
@@ -133,7 +134,7 @@ function SelectInput({ value, onChange, children }) {
     return (
       <select
         value={value} onChange={onChange}
-        className="w-full bg-transparent border-0 border-b border-slate-200 rounded-none px-0 py-1.5 text-sm font-bold outline-none transition-all focus:border-[#1B3A57] lowercase"
+        className="w-full bg-transparent border-0 border-b border-slate-200 rounded-none px-0 py-1.5 text-sm font-bold outline-none transition-all focus:border-[var(--navy)] lowercase"
       >
         {children}
       </select>
@@ -143,7 +144,7 @@ function SelectInput({ value, onChange, children }) {
     <select
       value={value}
       onChange={onChange}
-      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold outline-none shadow-sm focus:border-[#1B3A57] focus:ring-2 focus:ring-[#1B3A57]/10 transition-all lowercase"
+      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold outline-none shadow-sm focus:border-[var(--navy)] focus:ring-2 focus:ring-[#1B3A57]/10 transition-all lowercase"
     >
       {children}
     </select>
@@ -161,8 +162,8 @@ function Card({ children, className = '' }) {
 function SectionHeader({ n: num, label }) {
   return (
     <div className="flex items-center gap-2.5 mb-4">
-      <span className="w-5 h-5 rounded-full text-white text-[10px] font-black flex items-center justify-center shrink-0" style={{ background: '#1B3A57' }}>{num}</span>
-      <h3 className="text-[11px] font-black uppercase tracking-widest" style={{ color: '#1B3A57' }}>{label}</h3>
+      <span className="w-5 h-5 rounded-full text-white text-[10px] font-black flex items-center justify-center shrink-0" style={{ background: FT.navy }}>{num}</span>
+      <h3 className="text-[11px] font-black uppercase tracking-widest" style={{ color: FT.navy }}>{label}</h3>
     </div>
   );
 }
@@ -173,7 +174,7 @@ function MobileMapaCard({ row, vdl, updateRow, removeRow }) {
   const limite = row.territorio === 'Nacional' ? LIMITES.ajudaNacional : n(vdl);
   const valor  = limite * (row.pct / 100);
   const tipoBg    = row.tipo === 'Partida' ? '#dce6f0' : row.tipo === 'Chegada' ? '#fef0d5' : '#edf0f3';
-  const tipoColor = row.tipo === 'Partida' ? '#1B3A57' : row.tipo === 'Chegada' ? '#c57800' : '#6B7A8D';
+  const tipoColor = row.tipo === 'Partida' ? FT.navy : row.tipo === 'Chegada' ? '#c57800' : '#6B7A8D';
   return (
     <div className="border border-slate-200 rounded-xl overflow-hidden bg-white">
       {/* Cabeçalho — sempre visível, clicável */}
@@ -193,7 +194,7 @@ function MobileMapaCard({ row, vdl, updateRow, removeRow }) {
           </span>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <span className="text-sm font-black text-[#1B3A57] tabular-nums">{eur(valor)}</span>
+          <span className="text-sm font-black text-[var(--navy)] tabular-nums">{eur(valor)}</span>
           <ChevronDown size={14} className="text-slate-400 transition-transform" style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }} />
         </div>
       </div>
@@ -210,7 +211,7 @@ function MobileMapaCard({ row, vdl, updateRow, removeRow }) {
               <input
                 type="text" value={row[field]}
                 onChange={e => updateRow(row.id, field, e.target.value)}
-                className="w-full border-b border-slate-200 py-1 text-sm font-bold outline-none focus:border-[#1B3A57] bg-transparent"
+                className="w-full border-b border-slate-200 py-1 text-sm font-bold outline-none focus:border-[var(--navy)] bg-transparent"
                 style={{ overflowWrap: 'break-word', wordBreak: 'break-word' }}
               />
             </div>
@@ -219,7 +220,7 @@ function MobileMapaCard({ row, vdl, updateRow, removeRow }) {
             <div>
               <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Território</div>
               <select value={row.territorio} onChange={e => updateRow(row.id, 'territorio', e.target.value)}
-                className="w-full border-b border-slate-200 py-1 text-sm font-bold outline-none focus:border-[#1B3A57] bg-transparent">
+                className="w-full border-b border-slate-200 py-1 text-sm font-bold outline-none focus:border-[var(--navy)] bg-transparent">
                 <option value="Internacional">Internacional</option>
                 <option value="Nacional">Nacional</option>
               </select>
@@ -227,7 +228,7 @@ function MobileMapaCard({ row, vdl, updateRow, removeRow }) {
             <div>
               <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Tipo</div>
               <select value={row.tipo} onChange={e => updateRow(row.id, 'tipo', e.target.value)}
-                className="w-full border-b border-slate-200 py-1 text-sm font-bold outline-none focus:border-[#1B3A57] bg-transparent">
+                className="w-full border-b border-slate-200 py-1 text-sm font-bold outline-none focus:border-[var(--navy)] bg-transparent">
                 <option value="Partida">Partida</option>
                 <option value="Consecutivo">Consecutivo</option>
                 <option value="Chegada">Chegada</option>
@@ -238,13 +239,13 @@ function MobileMapaCard({ row, vdl, updateRow, removeRow }) {
             <div>
               <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Hora</div>
               <input type="time" value={row.hora} onChange={e => updateRow(row.id, 'hora', e.target.value)}
-                className="w-full border-b border-slate-200 py-1 text-sm font-bold outline-none focus:border-[#1B3A57] bg-transparent" />
+                className="w-full border-b border-slate-200 py-1 text-sm font-bold outline-none focus:border-[var(--navy)] bg-transparent" />
             </div>
             <div>
               <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">% Ajuda</div>
               <input type="number" value={row.pct} min="0" max="100" step="5"
                 onChange={e => updateRow(row.id, 'pct', parseFloat(e.target.value) || 0)}
-                className="w-full border-b border-slate-200 py-1 text-sm font-bold outline-none focus:border-[#1B3A57] bg-transparent" />
+                className="w-full border-b border-slate-200 py-1 text-sm font-bold outline-none focus:border-[var(--navy)] bg-transparent" />
             </div>
           </div>
           <button onClick={() => removeRow(row.id)}
@@ -2362,7 +2363,7 @@ ${hdrRow}${bodyRows}${totRow}
                   <button onClick={() => navMes(-1)} className="p-1.5 rounded-lg hover:bg-white transition-colors">
                     <ChevronLeft size={15} className="text-slate-400" />
                   </button>
-                  <span className="px-3 py-1 text-xs font-black min-w-[130px] text-center text-[#1B3A57]">
+                  <span className="px-3 py-1 text-xs font-black min-w-[130px] text-center text-[var(--navy)]">
                     {MESES_PT[parseInt(inputs.mes, 10)] || ''} {inputs.ano}
                   </span>
                   <button onClick={() => navMes(1)} className="p-1.5 rounded-lg hover:bg-white transition-colors">
@@ -2374,7 +2375,7 @@ ${hdrRow}${bodyRows}${totRow}
                   <button
                     onClick={gerarRecibosBatchPDF}
                     className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider border border-slate-200 bg-white hover:bg-slate-50 transition-colors"
-                    style={{ color: '#1B3A57' }}
+                    style={{ color: FT.navy }}
                     title="PDF dos recibos de vencimento — todos os trabalhadores"
                   >
                     <FileText size={13} /> Recibos PDF
@@ -2382,7 +2383,7 @@ ${hdrRow}${bodyRows}${totRow}
                   <button
                     onClick={exportRecibosBatchXLS}
                     className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider border border-slate-200 bg-white hover:bg-slate-50 transition-colors"
-                    style={{ color: '#1B3A57' }}
+                    style={{ color: FT.navy }}
                     title="Excel dos recibos de vencimento — todos os trabalhadores"
                   >
                     <FileSpreadsheet size={13} /> Recibos XLS
@@ -2390,7 +2391,7 @@ ${hdrRow}${bodyRows}${totRow}
                   <button
                     onClick={gerarMapasAjudasPDF}
                     className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider border border-slate-200 bg-white hover:bg-slate-50 transition-colors"
-                    style={{ color: '#1B3A57' }}
+                    style={{ color: FT.navy }}
                     title="PDF dos mapas de ajudas de custo — todos os trabalhadores"
                   >
                     <Download size={13} /> Mapas AC
@@ -2423,7 +2424,7 @@ ${hdrRow}${bodyRows}${totRow}
               <span className="text-[8px] font-black uppercase tracking-wide px-2 py-0.5 rounded"
                 style={isValidado
                   ? { background: '#d1fae5', color: '#065f46' }
-                  : { background: '#dce6f0', color: '#1B3A57' }}>
+                  : { background: '#dce6f0', color: FT.navy }}>
                 {isValidado ? 'Validado' : 'Em elaboração'}
               </span>
             )}
@@ -2464,9 +2465,9 @@ ${hdrRow}${bodyRows}${totRow}
               <button
                 onClick={toggleValidado}
                 className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-[11px] font-black uppercase text-white transition-colors"
-                style={{ background: isValidado ? '#869AAF' : '#1B3A57' }}
+                style={{ background: isValidado ? FT.slate : FT.navy }}
                 onMouseEnter={e => { e.currentTarget.style.background = isValidado ? '#6b7f91' : '#142d45'; }}
-                onMouseLeave={e => { e.currentTarget.style.background = isValidado ? '#869AAF' : '#1B3A57'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = isValidado ? FT.slate : FT.navy; }}
                 title={isValidado ? 'Recibo validado — clique para remover validação' : 'Marcar recibo deste mês como validado'}
               >
                 <CheckCircle size={12} />
@@ -2494,14 +2495,14 @@ ${hdrRow}${bodyRows}${totRow}
       {subTab === 'calculadora' && (isValidado && selectedWorkerId ? (
         <div className="space-y-5">
           {/* Barra de estado validado */}
-          <div className="flex items-center justify-between px-5 py-4 rounded-2xl" style={{ background: '#1B3A57' }}>
+          <div className="flex items-center justify-between px-5 py-4 rounded-2xl" style={{ background: FT.navy }}>
             <div className="flex items-center gap-3">
-              <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-black" style={{ background: '#EB8D00', color: '#fff' }}>
+              <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-black" style={{ background: FT.orange, color: '#fff' }}>
                 <CheckCircle size={12} /> Validado
               </span>
               <div>
                 <p className="font-black text-white text-sm leading-tight">{inputs.nome || '—'}</p>
-                <p className="text-xs font-bold" style={{ color: '#869AAF' }}>{MESES_PT[parseInt(inputs.mes, 10)] || ''} {inputs.ano}</p>
+                <p className="text-xs font-bold" style={{ color: FT.slate }}>{MESES_PT[parseInt(inputs.mes, 10)] || ''} {inputs.ano}</p>
               </div>
             </div>
             <button
@@ -2518,8 +2519,8 @@ ${hdrRow}${bodyRows}${totRow}
           {/* Documentos */}
           <div className="grid sm:grid-cols-2 gap-5 items-start">
             {/* ── Recibo ── */}
-            <div className="bg-white rounded-2xl border border-slate-200 p-5" style={{ borderTop: '4px solid #1B3A57' }}>
-              <p className="text-[10px] font-black uppercase tracking-wider mb-3" style={{ color: '#869AAF' }}>Recibo de Vencimento</p>
+            <div className="bg-white rounded-2xl border border-slate-200 p-5" style={{ borderTop: `4px solid ${FT.navy}` }}>
+              <p className="text-[10px] font-black uppercase tracking-wider mb-3" style={{ color: FT.slate }}>Recibo de Vencimento</p>
               {r ? (
                 <>
                   <div className="space-y-2 text-sm mb-4">
@@ -2561,8 +2562,8 @@ ${hdrRow}${bodyRows}${totRow}
                     </div>
                   </div>
                   <div className="rounded-xl px-4 py-3 mb-4" style={{ background: '#EEF1F5' }}>
-                    <p className="text-[9px] font-black uppercase tracking-wider mb-0.5" style={{ color: '#869AAF' }}>Líquido a receber</p>
-                    <p className="text-xl font-black" style={{ color: '#1B3A57' }}>{eur(liquidoDisplay)}</p>
+                    <p className="text-[9px] font-black uppercase tracking-wider mb-0.5" style={{ color: FT.slate }}>Líquido a receber</p>
+                    <p className="text-xl font-black" style={{ color: FT.navy }}>{eur(liquidoDisplay)}</p>
                   </div>
                 </>
               ) : (
@@ -2572,17 +2573,17 @@ ${hdrRow}${bodyRows}${totRow}
                 onClick={gerarReciboPDF}
                 disabled={!r}
                 className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-black text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                style={{ background: '#1B3A57' }}
+                style={{ background: FT.navy }}
                 onMouseEnter={e => { if (r) e.currentTarget.style.background = '#142d45'; }}
-                onMouseLeave={e => { e.currentTarget.style.background = '#1B3A57'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = FT.navy; }}
               >
                 <Download size={14} /> Download Recibo PDF
               </button>
             </div>
 
             {/* ── Mapa de Ajudas ── */}
-            <div className="bg-white rounded-2xl border border-slate-200 p-5" style={{ borderTop: '4px solid #EB8D00' }}>
-              <p className="text-[10px] font-black uppercase tracking-wider mb-3" style={{ color: '#869AAF' }}>Mapa de Ajudas de Custo</p>
+            <div className="bg-white rounded-2xl border border-slate-200 p-5" style={{ borderTop: `4px solid ${FT.orange}` }}>
+              <p className="text-[10px] font-black uppercase tracking-wider mb-3" style={{ color: FT.slate }}>Mapa de Ajudas de Custo</p>
               {mapaRows.length > 0 ? (
                 <>
                   <div className="space-y-2 text-sm mb-4">
@@ -2622,8 +2623,8 @@ ${hdrRow}${bodyRows}${totRow}
                     )}
                   </div>
                   <div className="rounded-xl px-4 py-3 mb-4" style={{ background: '#FDF1E0' }}>
-                    <p className="text-[9px] font-black uppercase tracking-wider mb-0.5" style={{ color: '#EB8D00' }}>Total A082 (recibo)</p>
-                    <p className="text-xl font-black" style={{ color: '#EB8D00' }}>{eur(mapaLiqLive ?? mapaTotal)}</p>
+                    <p className="text-[9px] font-black uppercase tracking-wider mb-0.5" style={{ color: FT.orange }}>Total A082 (recibo)</p>
+                    <p className="text-xl font-black" style={{ color: FT.orange }}>{eur(mapaLiqLive ?? mapaTotal)}</p>
                   </div>
                 </>
               ) : (
@@ -2633,9 +2634,9 @@ ${hdrRow}${bodyRows}${totRow}
                 onClick={gerarPDF}
                 disabled={mapaRows.length === 0}
                 className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-black text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                style={{ background: '#EB8D00' }}
+                style={{ background: FT.orange }}
                 onMouseEnter={e => { if (mapaRows.length > 0) e.currentTarget.style.background = '#c97700'; }}
-                onMouseLeave={e => { e.currentTarget.style.background = '#EB8D00'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = FT.orange; }}
               >
                 <Download size={14} /> Download Mapa PDF
               </button>
@@ -2716,11 +2717,11 @@ ${hdrRow}${bodyRows}${totRow}
               </div>
               <div className="flex flex-col gap-2 mb-4">
                 <label className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer">
-                  <input type="checkbox" checked={inputs.incluirFerias} onChange={e => set('incluirFerias', e.target.checked)} className="w-4 h-4 accent-[#1B3A57]" />
+                  <input type="checkbox" checked={inputs.incluirFerias} onChange={e => set('incluirFerias', e.target.checked)} className="w-4 h-4 accent-[var(--navy)]" />
                   Incluir Subsídio de Férias
                 </label>
                 <label className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer">
-                  <input type="checkbox" checked={inputs.incluirNatal} onChange={e => set('incluirNatal', e.target.checked)} className="w-4 h-4 accent-[#1B3A57]" />
+                  <input type="checkbox" checked={inputs.incluirNatal} onChange={e => set('incluirNatal', e.target.checked)} className="w-4 h-4 accent-[var(--navy)]" />
                   Incluir Subsídio de Natal
                 </label>
                 {(inputs.incluirFerias || inputs.incluirNatal) && (
@@ -2736,7 +2737,7 @@ ${hdrRow}${bodyRows}${totRow}
                       </SelectInput>
                     </div>
                     {camposAuto.subsidiosMetodo && (
-                      <span className="text-[10px] font-bold text-[#1B3A57] bg-[#EEF1F5] px-2 py-0.5 rounded-full shrink-0">auto</span>
+                      <span className="text-[10px] font-bold text-[var(--navy)] bg-[#EEF1F5] px-2 py-0.5 rounded-full shrink-0">auto</span>
                     )}
                   </div>
                 )}
@@ -2857,7 +2858,7 @@ ${hdrRow}${bodyRows}${totRow}
         {/* ── COLUNA PREVIEW ── */}
         <div>
           {r ? (
-            <div className="bg-white rounded-2xl border border-slate-200 p-5" style={{ borderTop: '4px solid #1B3A57' }}>
+            <div className="bg-white rounded-2xl border border-slate-200 p-5" style={{ borderTop: `4px solid ${FT.navy}` }}>
               {/* Cabeçalho do recibo */}
               <div className="flex justify-between items-start border-b-2 border-slate-800 pb-3 mb-4 gap-3">
                 <div className="flex-1 min-w-0">
@@ -2955,7 +2956,7 @@ ${hdrRow}${bodyRows}${totRow}
               </div>
             </div>
           ) : (
-            <div className="bg-white rounded-2xl border border-slate-200 p-10 flex flex-col items-center justify-center text-center gap-3 min-h-[200px]" style={{ borderTop: '4px solid #1B3A57' }}>
+            <div className="bg-white rounded-2xl border border-slate-200 p-10 flex flex-col items-center justify-center text-center gap-3 min-h-[200px]" style={{ borderTop: `4px solid ${FT.navy}` }}>
               <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center">
                 <RefreshCw size={22} className="text-slate-400" />
               </div>
@@ -2967,9 +2968,9 @@ ${hdrRow}${bodyRows}${totRow}
       </div>
 
       {/* ── MAPA DE AJUDAS DE CUSTO ── */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-5" style={{ borderTop: '4px solid #EB8D00' }}>
+      <div className="bg-white rounded-2xl border border-slate-200 p-5" style={{ borderTop: `4px solid ${FT.orange}` }}>
         <div className="flex items-center justify-between mb-5">
-          <p className="text-[10px] font-black uppercase tracking-wider" style={{ color: '#EB8D00' }}>Mapa de Ajudas de Custo</p>
+          <p className="text-[10px] font-black uppercase tracking-wider" style={{ color: FT.orange }}>Mapa de Ajudas de Custo</p>
           <div className="flex items-center gap-1">
             <button
               onClick={() => { setMapaRows([]); setAutoFillInfo(null); }}
@@ -2987,7 +2988,7 @@ ${hdrRow}${bodyRows}${totRow}
             <button
               onClick={gerarMapasAjudasPDF}
               className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-black hover:bg-slate-100 transition-all"
-              style={{ color: '#869AAF' }}
+              style={{ color: FT.slate }}
               title="PDF com todos os trabalhadores"
             >
               <Download size={12} /> Todos
@@ -2996,9 +2997,9 @@ ${hdrRow}${bodyRows}${totRow}
               <button
                 onClick={gerarPDF}
                 className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-black text-white transition-all"
-                style={{ background: '#EB8D00' }}
+                style={{ background: FT.orange }}
                 onMouseEnter={e => { e.currentTarget.style.background = '#c97700'; }}
-                onMouseLeave={e => { e.currentTarget.style.background = '#EB8D00'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = FT.orange; }}
               >
                 <Download size={12} /> PDF
               </button>
@@ -3023,7 +3024,7 @@ ${hdrRow}${bodyRows}${totRow}
               type="date"
               value={mapa.dataInicio}
               onChange={e => setMapa(p => ({ ...p, dataInicio: e.target.value }))}
-              className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-[#1B3A57] focus:ring-2 focus:ring-[#1B3A57]/10 lowercase"
+              className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-[var(--navy)] focus:ring-2 focus:ring-[#1B3A57]/10 lowercase"
             />
           </LabelInput>
           <LabelInput label="Hora partida">
@@ -3031,7 +3032,7 @@ ${hdrRow}${bodyRows}${totRow}
               type="time"
               value={mapa.horaPartida}
               onChange={e => setMapa(p => ({ ...p, horaPartida: e.target.value }))}
-              className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-[#1B3A57] focus:ring-2 focus:ring-[#1B3A57]/10 lowercase"
+              className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-[var(--navy)] focus:ring-2 focus:ring-[#1B3A57]/10 lowercase"
             />
           </LabelInput>
           <LabelInput label="Hora chegada">
@@ -3039,7 +3040,7 @@ ${hdrRow}${bodyRows}${totRow}
               type="time"
               value={mapa.horaChegada}
               onChange={e => setMapa(p => ({ ...p, horaChegada: e.target.value }))}
-              className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-[#1B3A57] focus:ring-2 focus:ring-[#1B3A57]/10 lowercase"
+              className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-[var(--navy)] focus:ring-2 focus:ring-[#1B3A57]/10 lowercase"
             />
           </LabelInput>
           <LabelInput label="Complementar via">
@@ -3057,9 +3058,9 @@ ${hdrRow}${bodyRows}${totRow}
             onClick={autoFill}
             disabled={!r || r.ajudaCustoNecessaria <= 0 || n(inputs.vdl) <= 0}
             className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-[11px] font-black text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-            style={{ background: '#1B3A57' }}
+            style={{ background: FT.navy }}
             onMouseEnter={e => { if (!e.currentTarget.disabled) e.currentTarget.style.background = '#142d45'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = '#1B3A57'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = FT.navy; }}
           >
             <RefreshCw size={12} /> Preencher automaticamente
           </button>
@@ -3086,7 +3087,7 @@ ${hdrRow}${bodyRows}${totRow}
               <thead>
                 <tr className="bg-[#EEF1F5] border-b border-[#E3E7EC]">
                   {['Dia', 'Serviço', 'Cliente', 'Localidade', 'Território', 'Tipo', 'Hora', '%', 'Valor', ''].map(h => (
-                    <th key={h} className="px-2 py-2 text-left text-[10px] font-black uppercase tracking-wider text-[#869AAF] first:rounded-tl-xl last:rounded-tr-xl">{h}</th>
+                    <th key={h} className="px-2 py-2 text-left text-[10px] font-black uppercase tracking-wider text-[var(--slate)] first:rounded-tl-xl last:rounded-tr-xl">{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -3098,23 +3099,23 @@ ${hdrRow}${bodyRows}${totRow}
                     <tr key={row.id} className="hover:bg-slate-50 transition-colors">
                       <td className="px-1 py-1">
                         <input type="date" value={row.dia} onChange={e => updateRow(row.id, 'dia', e.target.value)}
-                          className="w-full border border-transparent rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none hover:border-slate-200 focus:border-[#1B3A57]" />
+                          className="w-full border border-transparent rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none hover:border-slate-200 focus:border-[var(--navy)]" />
                       </td>
                       <td className="px-1 py-1">
                         <input type="text" value={row.servico} onChange={e => updateRow(row.id, 'servico', e.target.value)}
-                          className="w-full border border-transparent rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none hover:border-slate-200 focus:border-[#1B3A57]" />
+                          className="w-full border border-transparent rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none hover:border-slate-200 focus:border-[var(--navy)]" />
                       </td>
                       <td className="px-1 py-1">
                         <input type="text" value={row.cliente} onChange={e => updateRow(row.id, 'cliente', e.target.value)}
-                          className="w-full border border-transparent rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none hover:border-slate-200 focus:border-[#1B3A57]" />
+                          className="w-full border border-transparent rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none hover:border-slate-200 focus:border-[var(--navy)]" />
                       </td>
                       <td className="px-1 py-1">
                         <input type="text" value={row.localidade} onChange={e => updateRow(row.id, 'localidade', e.target.value)}
-                          className="w-full border border-transparent rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none hover:border-slate-200 focus:border-[#1B3A57]" />
+                          className="w-full border border-transparent rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none hover:border-slate-200 focus:border-[var(--navy)]" />
                       </td>
                       <td className="px-1 py-1">
                         <select value={row.territorio} onChange={e => updateRow(row.id, 'territorio', e.target.value)}
-                          className="w-full border border-transparent rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none hover:border-slate-200 focus:border-[#1B3A57]">
+                          className="w-full border border-transparent rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none hover:border-slate-200 focus:border-[var(--navy)]">
                           <option value="Internacional">Internacional</option>
                           <option value="Nacional">Nacional</option>
                         </select>
@@ -3128,7 +3129,7 @@ ${hdrRow}${bodyRows}${totRow}
                             padding: '3px 10px',
                             fontSize: 10, fontWeight: 900, textTransform: 'uppercase',
                             letterSpacing: '.04em', cursor: 'pointer', appearance: 'none',
-                            ...(row.tipo === 'Partida'    ? { background: '#dce6f0', color: '#1B3A57' }
+                            ...(row.tipo === 'Partida'    ? { background: '#dce6f0', color: FT.navy }
                               : row.tipo === 'Chegada'    ? { background: '#fef0d5', color: '#c57800' }
                               :                            { background: '#edf0f3', color: '#6B7A8D' })
                           }}
@@ -3140,14 +3141,14 @@ ${hdrRow}${bodyRows}${totRow}
                       </td>
                       <td className="px-1 py-1">
                         <input type="time" value={row.hora} onChange={e => updateRow(row.id, 'hora', e.target.value)}
-                          className="w-full border border-transparent rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none hover:border-slate-200 focus:border-[#1B3A57]" />
+                          className="w-full border border-transparent rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none hover:border-slate-200 focus:border-[var(--navy)]" />
                       </td>
                       <td className="px-1 py-1">
                         <input type="number" value={row.pct} min="0" max="100" step="5"
                           onChange={e => updateRow(row.id, 'pct', parseFloat(e.target.value) || 0)}
-                          className="w-16 border border-transparent rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none hover:border-slate-200 focus:border-[#1B3A57]" />
+                          className="w-16 border border-transparent rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none hover:border-slate-200 focus:border-[var(--navy)]" />
                       </td>
-                      <td className="px-2 py-1 text-right font-black text-[#1B3A57] tabular-nums">{eur(valor)}</td>
+                      <td className="px-2 py-1 text-right font-black text-[var(--navy)] tabular-nums">{eur(valor)}</td>
                       <td className="px-1 py-1 text-center">
                         <button onClick={() => removeRow(row.id)} className="p-1 text-slate-300 hover:text-red-400 hover:bg-red-50 rounded-lg transition-all">
                           <X size={13} />
@@ -3752,7 +3753,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                   <div className="flex gap-2">
                     <button
                       onClick={() => setSelectedWorkers(new Set())}
-                      className="text-[10px] font-black text-[#1B3A57] hover:opacity-70 uppercase tracking-wide"
+                      className="text-[10px] font-black text-[var(--navy)] hover:opacity-70 uppercase tracking-wide"
                     >
                       Todos
                     </button>
@@ -3802,8 +3803,8 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
           <div className="relative">
             <button
               onClick={() => { setShowColPicker(p => !p); setShowWorkerPicker(false); }}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black uppercase transition-all border shadow-sm ${showColPicker ? 'text-white' : 'bg-white text-slate-600 border-slate-200 hover:border-[#869AAF] hover:text-[#1B3A57]'}`}
-              style={showColPicker ? { backgroundColor: '#1B3A57', borderColor: '#1B3A57' } : {}}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black uppercase transition-all border shadow-sm ${showColPicker ? 'text-white' : 'bg-white text-slate-600 border-slate-200 hover:border-[var(--slate)] hover:text-[var(--navy)]'}`}
+              style={showColPicker ? { backgroundColor: FT.navy, borderColor: FT.navy } : {}}
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
@@ -3822,7 +3823,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                   <div className="flex gap-2">
                     <button
                       onClick={() => setVisibleCols(new Set(RESUMO_COLS.map((_, i) => i)))}
-                      className="text-[10px] font-black text-[#1B3A57] hover:opacity-70 uppercase tracking-wide"
+                      className="text-[10px] font-black text-[var(--navy)] hover:opacity-70 uppercase tracking-wide"
                     >
                       Todas
                     </button>
@@ -3846,7 +3847,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                         checked={visibleCols.has(ci)}
                         onChange={() => toggleCol(ci)}
                         disabled={ci === 0}
-                        className="w-3.5 h-3.5 accent-[#1B3A57] shrink-0"
+                        className="w-3.5 h-3.5 accent-[var(--navy)] shrink-0"
                       />
                       <span className={`text-[11px] font-bold truncate ${col.highlight ? 'text-emerald-700' : 'text-slate-600'}`}>
                         {col.label}
@@ -4049,7 +4050,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                       key={ci}
                       className={`px-2 py-2.5 text-[11px] font-black whitespace-nowrap text-center ${col.highlight ? hlFoot(col.highlight) : 'bg-slate-100'}`}
                       style={{
-                        ...(col.highlight ? {} : { color: '#1B3A57' }),
+                        ...(col.highlight ? {} : { color: FT.navy }),
                         ...(ai === 0 ? { position: 'sticky', left: 0, zIndex: 5, background: '#eef2ff', color: '#4338ca' } : {}),
                         ...(col.key === 'completo' ? { position: 'sticky', right: 0, zIndex: 5, background: '#eef2ff' } : {}),
                         ...(isLastInGroup && def.border ? { borderRight: `2px solid ${def.border}` } : {}),
