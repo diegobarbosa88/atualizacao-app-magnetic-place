@@ -235,7 +235,7 @@ const ModoReextracao = ({ workers, logs, systemSettings, workerRateHistory = [] 
       </label>
 
       <button onClick={handleProcessar} disabled={!files.length || !existentes || processando}
-        className="w-full py-3 bg-indigo-600 text-white rounded-xl text-sm font-black uppercase tracking-widest hover:bg-slate-900 transition-all shadow-md shadow-indigo-200 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+        className="w-full py-3 bg-[var(--orange)] text-[var(--navy)] rounded-xl text-sm font-black uppercase tracking-widest hover:bg-slate-900 transition-all shadow-md shadow-[var(--orange)]/30 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
         {processando ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
         {processando ? 'A reextrair e comparar...' : 'Reextrair e comparar (dry-run)'}
       </button>

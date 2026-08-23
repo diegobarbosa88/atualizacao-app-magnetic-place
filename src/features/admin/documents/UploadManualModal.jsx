@@ -47,7 +47,7 @@ export default function UploadManualModal({
           <button
             onClick={onUpload}
             disabled={uploading || (!hideWorkerSelect && !selWorker) || !selFile}
-            className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-black uppercase text-xs tracking-widest flex items-center gap-2 disabled:opacity-50 transition-all hover:bg-indigo-700 shadow-lg shadow-indigo-200"
+            className="px-6 py-2.5 bg-[var(--orange)] text-[var(--navy)] rounded-xl font-black uppercase text-xs tracking-widest flex items-center gap-2 disabled:opacity-50 transition-all hover:bg-[var(--orange-deep)] shadow-lg shadow-[var(--orange)]/30"
           >
             {uploading ? <Loader2 className="animate-spin" size={16} /> : <Upload size={16} />}
             {uploading ? 'A Enviar...' : 'Submeter'}

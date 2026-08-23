@@ -95,14 +95,14 @@ export default function ItemRow({ item, supabase, disabled, setCorrectionItems }
         <div className="mt-3 flex items-center gap-2 flex-wrap">
           {editing ? (
             <>
-              <button onClick={onSaveEdit} disabled={busy} className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest">Guardar Edição</button>
+              <button onClick={onSaveEdit} disabled={busy} className="px-3 py-1.5 bg-[var(--orange)] text-[var(--navy)] rounded-lg text-[10px] font-black uppercase tracking-widest">Guardar Edição</button>
               <button onClick={() => setEditing(false)} className="px-3 py-1.5 text-slate-500 text-[10px] font-black uppercase tracking-widest">Cancelar</button>
             </>
           ) : item.item_status === 'pending' ? (
             <>
               <button onClick={onAccept} disabled={busy} className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-1"><CheckCircle size={12} /> {acceptLabel}</button>
               {kind !== 'remove' && (
-                <button onClick={() => setEditing(true)} className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-1"><Edit2 size={12} /> Editar</button>
+                <button onClick={() => setEditing(true)} className="px-3 py-1.5 bg-[var(--orange)] text-[var(--navy)] rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-1"><Edit2 size={12} /> Editar</button>
               )}
               <button onClick={onReject} disabled={busy} className="px-3 py-1.5 bg-rose-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-1"><XCircle size={12} /> {rejectLabel}</button>
               <input type="text" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Nota interna (opcional)" className="flex-1 min-w-[160px] border border-slate-100 rounded-lg px-3 py-1.5 text-xs" />

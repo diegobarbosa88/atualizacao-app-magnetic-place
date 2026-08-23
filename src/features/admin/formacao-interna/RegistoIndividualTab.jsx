@@ -142,7 +142,7 @@ export default function RegistoIndividualTab() {
           <button
             onClick={handleExportar}
             disabled={exportando}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest text-white bg-indigo-600 hover:bg-indigo-700 transition-all disabled:opacity-50"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest text-[var(--navy)] bg-[var(--orange)] hover:bg-[var(--orange-deep)] transition-all disabled:opacity-50"
           >
             {exportando ? <Loader2 size={14} className="animate-spin" /> : <FileDown size={14} />}
             Exportar PDF

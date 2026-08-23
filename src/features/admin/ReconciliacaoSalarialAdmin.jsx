@@ -363,7 +363,7 @@ export default function ReconciliacaoSalarialAdmin() {
         <button
           onClick={handleReconciliar}
           disabled={!canRun || processando || loadingTx}
-          className="flex items-center gap-2 px-6 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
+          className="flex items-center gap-2 px-6 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all bg-[var(--orange)] text-[var(--navy)] hover:bg-[var(--orange-deep)] disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
         >
           {processando ? <Loader2 size={14} className="animate-spin" /> : <TrendingUp size={14} />}
           Reconciliar

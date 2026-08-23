@@ -357,7 +357,7 @@ export default function RelatorioModal({ displayData, filename, dataRun, onClose
       footer={
         <div className="p-6 sm:p-8">
           <button onClick={formato === 'csv' ? handleDownloadCsv : handleDownloadPdf}
-            className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all">
+            className="w-full flex items-center justify-center gap-2 py-3 bg-[var(--orange)] hover:bg-[var(--orange-deep)] text-[var(--navy)] rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all">
             <Download size={14} /> Download {formato.toUpperCase()}
           </button>
         </div>

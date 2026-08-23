@@ -73,7 +73,7 @@ export default function NotificationPreferences({ isOpen, onClose, preferences, 
           </button>
           <button
             onClick={handleSave}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-indigo-600 text-white rounded-xl font-black text-xs uppercase hover:bg-indigo-700 transition-colors"
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-[var(--orange)] text-[var(--navy)] rounded-xl font-black text-xs uppercase hover:bg-[var(--orange-deep)] transition-colors"
           >
             {saved ? (
               <>
