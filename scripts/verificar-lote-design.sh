@@ -27,6 +27,24 @@ printf '%-46s %s\n' "slate-* por converter no alvo:" \
 printf '%-46s %s\n' "/NN sobre var() (color-mix):" \
   "$(grep -rhoE 'var\(--[a-z-]+\)\]/[0-9]+' "$@" --include=*.jsx 2>/dev/null | wc -l)"
 
+# Mapas de cor-à-escolha: um objecto cuja CHAVE é o nome de uma cor e cujo
+# valor usa classes dessa mesma cor — `slate: { bg: 'bg-slate-100', … }`, a
+# par de blue/rose/amber. Ali a cor é um DADO que o utilizador escolheu, não
+# um tom semântico, e converter uma das linhas para tokens deixa a paleta
+# incoerente: uma entrada em var() e as outras em Tailwind.
+# Nenhuma heurística de contexto apanha isto (já escapou duas vezes: os
+# cartões de métrica do FinancialReportOverlay e a paleta de tags do
+# OrfaoBancoModal), por isso é uma verificação própria: NÃO é um erro, é uma
+# lista para olhar antes de converter.
+mapas=$(grep -rnE "^[[:space:]]*(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose):[[:space:]]*\{" "$@" --include=*.jsx 2>/dev/null \
+  | grep -E "(bg|text|ring|border|from|to)-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-[0-9]")
+if [ -n "$mapas" ]; then
+  echo "── ⚠ mapas de cor-à-escolha no alvo (rever à mão, não converter às cegas) ──"
+  echo "$mapas" | sed -E 's/^([^:]+):([0-9]+):.*/  \1:\2/' | sort -u
+else
+  printf '%-46s %s\n' "mapas de cor-à-escolha no alvo:" "nenhum"
+fi
+
 echo "── regressões globais (admin inteiro) ──"
 
 # Texto branco sobre o laranja da marca dá 2,52:1. O par correcto é navy
