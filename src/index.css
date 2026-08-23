@@ -24,6 +24,24 @@
      variáveis porque o Tailwind precisa de classes estáticas; TONES (mesmo
      ficheiro) usa-as para deixar de ter valores de verde/amarelo/vermelho
      diferentes dos que já estão em uso real no dashboard do trabalhador. */
+  /* Escala de neutros da marca — espelha FT.* em designTokens.js. Existem
+     como variáveis (e não só como tokens JS) porque o scanner de classes do
+     Tailwind não vê strings interpoladas: `text-[${FT.inkMid}]` nunca gera
+     CSS, `text-[var(--ink-mid)]` gera.
+
+     ⚠ Nomes deliberadamente distintos dos `--bg`/`--border` mais abaixo, que
+     são anteriores e querem dizer outra coisa: `--bg` é o fundo do body e
+     está a #fff, enquanto FT.bg é o bege #efede7 da marca. Colidir os nomes
+     daria branco onde se esperava bege. Se um dia o body passar ao bege do
+     protótipo, é aí que os dois se reconciliam — é uma decisão à parte. */
+  --slate-dim: #5c7086;
+  --ink: #1a1d21;
+  --ink-mid: #363e48;
+  --ink-soft: #51606e;      /* mesmo valor que --text, que é o nome antigo */
+  --surface: #f7f6f3;
+  --surface-dim: #efede7;   /* = FT.bg */
+  --border-soft: #eae7df;
+
   --ok: #2e7d4f;
   --ok-bg: #e7f3eb;
   --ok-border: rgba(46, 125, 79, 0.3);

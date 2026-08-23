@@ -15,6 +15,26 @@ export const FT = {
   panel: '#FFFFFF',
   ink: '#1A1D21',
   inkSoft: '#51606E',
+
+  // Três degraus acrescentados para a migração do painel admin. O admin usa
+  // oito níveis de neutro com papéis distintos (4197 classes `slate-*`) e os
+  // seis tokens acima só cobrem cinco deles — sem estes, 1076 desses usos não
+  // teriam destino. Não são cores novas: cada um é uma interpolação entre dois
+  // tokens que já existiam, para encaixarem na paleta em vez de se somarem a
+  // ela.
+  //
+  //   surface    = ponto médio exato de panel↔bg      (destino de bg-slate-50)
+  //   inkMid     = ponto médio exato de inkSoft↔ink   (destino de text-slate-700)
+  //   borderSoft = 40% de bg→border                   (destino de border-slate-100)
+  //
+  // O borderSoft não é ponto médio de propósito: a 50% o separador ficava tão
+  // ténue que desaparecia sobre branco. A 40% o salto até `border` é igual ao
+  // que o Tailwind dá entre slate-100 e slate-200, que é o que se está a
+  // substituir. Com os três, a escala de superfície fica monotónica:
+  // panel → surface → bg → borderSoft → border.
+  surface: '#F7F6F3',
+  inkMid: '#363E48',
+  borderSoft: '#EAE7DF',
   ok: '#2E7D4F',
   okBg: '#E7F3EB',
   bad: '#B4432F',
