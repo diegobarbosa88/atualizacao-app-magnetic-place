@@ -226,7 +226,7 @@ const WorkerProfile = ({ worker, changeRequests, documents = [] }) => {
                     href={doc.signed_pdf_url || doc.pdfAssinadoUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="p-1.5 text-slate-300 hover:bg-[#1B3A57]/10 hover:text-[#1B3A57] rounded-lg transition-all shrink-0"
+                    className="p-1.5 text-slate-300 hover:bg-[#1B3A57]/10 hover:text-[var(--navy)] rounded-lg transition-all shrink-0"
                   >
                     <Download size={13} />
                   </a>

@@ -49,11 +49,11 @@ export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, act
   return (
     <>
       {currentUser?.isAdminImpersonating && (
-        <div className="bg-[#1B3A57] text-white p-2 text-center text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-4 shadow-lg sticky top-0 z-[100]">
+        <div className="bg-[var(--navy)] text-white p-2 text-center text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-4 shadow-lg sticky top-0 z-[100]">
           <span>Modo Visualização Admin (Impersonando: {currentUser.name})</span>
           <button
             onClick={() => onLogin('admin')}
-            className="bg-white text-[#1B3A57] px-3 py-1 rounded-full hover:bg-[#EFEDE7] transition-all shadow-sm"
+            className="bg-white text-[var(--navy)] px-3 py-1 rounded-full hover:bg-[#EFEDE7] transition-all shadow-sm"
           >
             Voltar ao Painel Admin
           </button>
@@ -83,7 +83,7 @@ export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, act
           {totalBellCount > 0 && (
             <button
               onClick={handleBellClick}
-              className="relative p-2 bg-[#1B3A57]/10 text-[#1B3A57] hover:bg-[#1B3A57] hover:text-white rounded-xl transition-all shadow-sm"
+              className="relative p-2 bg-[#1B3A57]/10 text-[var(--navy)] hover:bg-[var(--navy)] hover:text-white rounded-xl transition-all shadow-sm"
               title={alertCount > 0 ? 'Avisos pendentes' : 'Notificações'}
             >
               <Bell size={18} />
@@ -97,7 +97,7 @@ export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, act
           <div className="hidden sm:flex items-center gap-2">
             <button
               onClick={() => setWorkerTab(t => t === 'horarios' ? 'home' : 'horarios')}
-              className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-black shadow-sm transition-all ${workerTab === 'horarios' ? 'bg-[#1B3A57] text-white' : 'bg-[#1B3A57]/10 text-[#1B3A57] hover:bg-[#1B3A57]/20'}`}
+              className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-black shadow-sm transition-all ${workerTab === 'horarios' ? 'bg-[var(--navy)] text-white' : 'bg-[#1B3A57]/10 text-[var(--navy)] hover:bg-[#1B3A57]/20'}`}
             >
               {activeWorkerSchedule && (
                 <span className="text-[9px] opacity-70 border-r border-current/20 pr-2 mr-1 leading-tight text-right uppercase">
@@ -159,7 +159,7 @@ export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, act
 
             <button
               onClick={() => setWorkerTab(t => t === 'perfil' ? 'home' : 'perfil')}
-              className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-black shadow-sm transition-all relative ${workerTab === 'perfil' ? 'bg-[#1B3A57] text-white' : 'bg-[#1B3A57]/10 text-[#1B3A57] hover:bg-[#1B3A57]/20'}`}
+              className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-black shadow-sm transition-all relative ${workerTab === 'perfil' ? 'bg-[var(--navy)] text-white' : 'bg-[#1B3A57]/10 text-[var(--navy)] hover:bg-[#1B3A57]/20'}`}
               title="Meu Perfil"
             >
               <UserCircle size={15} />
@@ -172,7 +172,7 @@ export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, act
             </button>
 
             {currentUser?.isAdmin && !currentUser?.isAdminImpersonating && (
-              <button onClick={() => onLogin('admin', currentUser)} className="flex items-center gap-2 px-3 py-2 bg-[#1B3A57] text-white rounded-xl shadow-sm hover:bg-[#122741] transition-all text-xs font-black">
+              <button onClick={() => onLogin('admin', currentUser)} className="flex items-center gap-2 px-3 py-2 bg-[var(--navy)] text-white rounded-xl shadow-sm hover:bg-[var(--navy-deep)] transition-all text-xs font-black">
                 <Users size={15} />
                 <span>Admin</span>
               </button>

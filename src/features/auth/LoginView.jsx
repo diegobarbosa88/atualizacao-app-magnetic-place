@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { UserCircle, Lock, Download, AlertCircle, ExternalLink, X } from 'lucide-react';
 import CompanyLogo from '../../components/common/CompanyLogo';
 import './LoginView.css';
+import { FT } from '../../styles/designTokens';
 
 const PAGE_BG = { background: 'linear-gradient(160deg, #0F1F3D 0%, #1a3460 100%)' };
 const CARD_STYLE = {
@@ -14,7 +15,7 @@ const INPUT_STYLE = {
   border: '1.5px solid rgba(255,255,255,0.10)',
   color: 'white',
 };
-const INPUT_FOCUS_CLASS = 'outline-none transition-all focus:border-[#EB8D00]';
+const INPUT_FOCUS_CLASS = 'outline-none transition-all focus:border-[var(--orange)]';
 
 const LoginView = ({ onLogin }) => {
   const [user, setUser] = useState('');
@@ -113,7 +114,7 @@ const LoginView = ({ onLogin }) => {
             <button
               onClick={() => onLogin('admin', { ...pendingAdminWorker, role: 'admin' }, pendingToken)}
               className="w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest active:scale-95 transition-all text-white"
-              style={{ background: '#EB8D00', boxShadow: '0 4px 16px rgba(235,141,0,0.3)' }}
+              style={{ background: FT.orange, boxShadow: '0 4px 16px rgba(235,141,0,0.3)' }}
             >
               Painel Admin
             </button>
@@ -192,9 +193,9 @@ const LoginView = ({ onLogin }) => {
             type="submit"
             disabled={submitting}
             className="w-full py-5 rounded-2xl font-black text-sm uppercase tracking-widest active:scale-95 transition-all text-white disabled:opacity-60 disabled:cursor-not-allowed"
-            style={{ backgroundColor: '#1B3A57', border: '1px solid rgba(255,255,255,0.15)' }}
+            style={{ backgroundColor: FT.navy, border: '1px solid rgba(255,255,255,0.15)' }}
             onMouseEnter={e => e.currentTarget.style.backgroundColor = '#234d74'}
-            onMouseLeave={e => e.currentTarget.style.backgroundColor = '#1B3A57'}
+            onMouseLeave={e => e.currentTarget.style.backgroundColor = FT.navy}
           >
             {submitting ? 'A entrar…' : 'Entrar'}
           </button>

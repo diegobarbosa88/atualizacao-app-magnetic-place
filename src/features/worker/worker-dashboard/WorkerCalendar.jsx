@@ -157,7 +157,7 @@ export default function WorkerCalendar({
                 {new Date(selectedDay + 'T00:00:00').toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' })}
               </p>
               {selectedDayTotal > 0 && (
-                <p className="text-[10px] font-bold text-[#1B3A57] mt-0.5">{formatHours(selectedDayTotal)} registadas</p>
+                <p className="text-[10px] font-bold text-[var(--navy)] mt-0.5">{formatHours(selectedDayTotal)} registadas</p>
               )}
             </div>
             {!myApproval && !selectedDayBeforeStart && (
@@ -173,7 +173,7 @@ export default function WorkerCalendar({
                 )}
                 <button
                   onClick={() => onAddEntry(selectedDay)}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-[#EB8D00] text-white rounded-xl text-[11px] font-black uppercase tracking-wide hover:bg-[#C97600] transition-all active:scale-95"
+                  className="flex items-center gap-1.5 px-3 py-2 bg-[var(--orange)] text-white rounded-xl text-[11px] font-black uppercase tracking-wide hover:bg-[var(--orange-deep)] transition-all active:scale-95"
                 >
                   <Plus size={13} /> Adicionar
                 </button>
@@ -190,7 +190,7 @@ export default function WorkerCalendar({
                   className="bg-white px-3 py-2.5 rounded-2xl border border-slate-100 flex items-center justify-between gap-2 shadow-sm cursor-pointer hover:bg-[#1B3A57]/5 transition-all"
                 >
                   <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <span className="text-[9px] font-black bg-[#1B3A57]/10 text-[#1B3A57] px-2 py-1 rounded-lg border border-[#1B3A57]/15 uppercase shrink-0 max-w-[90px] truncate">
+                    <span className="text-[9px] font-black bg-[#1B3A57]/10 text-[var(--navy)] px-2 py-1 rounded-lg border border-[#1B3A57]/15 uppercase shrink-0 max-w-[90px] truncate">
                       {clients.find(c => c.id === log.clientId)?.name || 'Cliente'}
                     </span>
                     <div className="text-xs font-bold font-mono text-slate-600 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100 shrink-0">
@@ -203,7 +203,7 @@ export default function WorkerCalendar({
                     )}
                   </div>
                   <div className="flex items-center gap-2 shrink-0 border-l border-slate-100 pl-3">
-                    <span className="text-sm font-black text-[#1B3A57]">{formatHours(log.hours || 0)}</span>
+                    <span className="text-sm font-black text-[var(--navy)]">{formatHours(log.hours || 0)}</span>
                     {!myApproval && !isLimitedWorker && (
                       <button
                         onClick={(e) => { e.stopPropagation(); onDeleteLog(log); }}
