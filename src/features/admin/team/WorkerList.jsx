@@ -35,7 +35,7 @@ function MiniTimeline({ w, ssFlag }) {
     : state === 'rejected' ? 'bg-rose-500'
     : state === 'stuck' ? 'bg-orange-500'
     : state === 'now' ? '' // usa style inline navy
-    : 'bg-slate-200';
+    : 'bg-[var(--border)]';
 
   let admissaoState = admissaoFeita ? 'done' : 'pending';
   const cessacaoState = !temFim ? 'na' : cessacaoFeita ? 'done' : 'pending';
@@ -59,9 +59,9 @@ function MiniTimeline({ w, ssFlag }) {
   return (
     <div className="flex items-center gap-1" title={label}>
       <span className={`w-[7px] h-[7px] rounded-full shrink-0 ${dotCls(admissaoState)}`} />
-      <span className={`w-3 h-[2px] shrink-0 ${admissaoState === 'done' ? 'bg-emerald-500' : 'bg-slate-200'}`} />
+      <span className={`w-3 h-[2px] shrink-0 ${admissaoState === 'done' ? 'bg-emerald-500' : 'bg-[var(--border)]'}`} />
       <span className="w-[7px] h-[7px] rounded-full shrink-0" style={{ backgroundColor: FT.navy }} />
-      <span className={`w-3 h-[2px] shrink-0 ${cessacaoState === 'done' ? 'bg-emerald-500' : 'bg-slate-200'}`} />
+      <span className={`w-3 h-[2px] shrink-0 ${cessacaoState === 'done' ? 'bg-emerald-500' : 'bg-[var(--border)]'}`} />
       <span className={`w-[7px] h-[7px] rounded-full shrink-0 ${dotCls(cessacaoState)}`} />
       <span className={`text-[9px] font-black uppercase tracking-wide ml-1 truncate ${labelCls}`}>{label}</span>
     </div>
@@ -86,7 +86,7 @@ function apoliceBadge(w, apoliceMap) {
   }
   if (status === 'excluido') {
     return (
-      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-black bg-slate-100 border border-slate-200 text-slate-500">
+      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-black bg-[var(--surface-dim)] border border-[var(--border)] text-[var(--slate-dim)]">
         <ShieldOff size={8} /> Apólice Excluída
       </span>
     );
@@ -175,7 +175,7 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
   if (workersView === 'list') {
     return (
       <>
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-x-auto">
+      <div className="bg-white rounded-2xl border border-[var(--border-soft)] shadow-sm overflow-x-auto">
         <table className="min-w-[480px] w-full text-sm table-fixed">
           <colgroup>
             <col className="w-[42%]" />
@@ -184,23 +184,23 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
             <col className="w-[8%]" />
           </colgroup>
           <thead>
-            <tr className="border-b border-slate-100 bg-slate-50">
+            <tr className="border-b border-[var(--border-soft)] bg-[var(--surface)]">
               <th
                 onClick={() => setWorkersSort(prev => ({ key: 'name', direction: prev.key === 'name' && prev.direction === 'asc' ? 'desc' : 'asc' }))}
-                className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-slate-700 transition-colors"
+                className="text-left px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest cursor-pointer hover:text-[var(--ink-mid)] transition-colors"
               >
                 Colaborador {workersSort.key === 'name' ? (workersSort.direction === 'asc' ? '↑' : '↓') : ''}
               </th>
               <th
                 onClick={() => setWorkersSort(prev => ({ key: 'schedule', direction: prev.key === 'schedule' && prev.direction === 'asc' ? 'desc' : 'asc' }))}
-                className="hidden sm:table-cell text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-slate-700 transition-colors"
+                className="hidden sm:table-cell text-left px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest cursor-pointer hover:text-[var(--ink-mid)] transition-colors"
               >
                 Horário · Unidade {workersSort.key === 'schedule' ? (workersSort.direction === 'asc' ? '↑' : '↓') : ''}
               </th>
-              <th className="text-left px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+              <th className="text-left px-3 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">
                 Estado
               </th>
-              <th className="text-right px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+              <th className="text-right px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">
                 Ações
               </th>
             </tr>
@@ -210,25 +210,25 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
               const schedule = schedules.find(s => s.id === w.defaultScheduleId);
               const client = clients.find(c => c.id === w.defaultClientId);
               return (
-                <tr key={w.id} onClick={() => onEdit(w)} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors cursor-pointer">
+                <tr key={w.id} onClick={() => onEdit(w)} className="border-b border-[var(--border-soft)] hover:bg-[var(--surface)] transition-colors cursor-pointer">
                   {/* Colaborador */}
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-black" style={{ backgroundColor: FT.navy, color: FT.orange }}>{getInitials(w.name)}</div>
                       <div className="min-w-0">
-                        <p className="font-black text-slate-800 text-sm truncate">{w.name}</p>
-                        <p className="text-xs text-slate-400 truncate">{w.profissao || 'Staff'}</p>
+                        <p className="font-black text-[var(--ink)] text-sm truncate">{w.name}</p>
+                        <p className="text-xs text-[var(--slate-dim)] truncate">{w.profissao || 'Staff'}</p>
                         <div className="mt-1"><MiniTimeline w={w} ssFlag={ssComunicacoesMap[w.nis]} /></div>
                         <div className="mt-1">{apoliceBadge(w, apoliceMap)}</div>
-                        {w.valorHora && <p className="text-[10px] text-slate-300 font-bold mt-0.5">{w.valorHora}€/h</p>}
+                        {w.valorHora && <p className="text-[10px] text-[var(--slate-dim)] font-bold mt-0.5">{w.valorHora}€/h</p>}
                       </div>
                     </div>
                   </td>
 
                   {/* Horário · Unidade (oculto em mobile) */}
                   <td className="hidden sm:table-cell px-4 py-3">
-                    <p className="text-xs font-bold text-slate-500 truncate">{schedule?.name || 'N/A'}</p>
-                    <p className="text-[10px] text-slate-400 truncate">{client?.name || 'N/A'}</p>
+                    <p className="text-xs font-bold text-[var(--slate-dim)] truncate">{schedule?.name || 'N/A'}</p>
+                    <p className="text-[10px] text-[var(--slate-dim)] truncate">{client?.name || 'N/A'}</p>
                   </td>
 
                   {/* Estado — dois toggles compactos */}
@@ -244,7 +244,7 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                       <button
                         onClick={() => saveToDb('workers', w.id, { ...w, limited_entry_mode: !w.limited_entry_mode })}
                         title={w.limited_entry_mode ? 'Modo limitado ativo — clique para desativar' : 'Modo livre — clique para ativar modo limitado'}
-                        className={`p-1.5 rounded-lg transition-all ${w.limited_entry_mode ? 'text-amber-500 hover:bg-amber-50' : 'text-slate-300 hover:bg-slate-100'}`}
+                        className={`p-1.5 rounded-lg transition-all ${w.limited_entry_mode ? 'text-amber-500 hover:bg-amber-50' : 'text-[var(--slate)] hover:bg-[var(--surface-dim)]'}`}
                       >
                         {w.limited_entry_mode ? <ShieldOff size={15} /> : <CheckCircle size={15} />}
                       </button>
@@ -256,7 +256,7 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                     <div className="relative inline-block">
                       <button
                         onClick={() => setOpenMenuId(openMenuId === w.id ? null : w.id)}
-                        className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all"
+                        className="p-1.5 text-[var(--slate)] hover:text-[var(--ink-soft)] hover:bg-[var(--surface-dim)] rounded-lg transition-all"
                         title="Mais ações"
                       >
                         <MoreVertical size={15} />
@@ -264,54 +264,54 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                       {openMenuId === w.id && (
                         <>
                           <div className="fixed inset-0 z-10" onClick={() => setOpenMenuId(null)} />
-                          <div className="absolute right-0 top-full mt-1 z-20 bg-white border border-slate-200/80 rounded-xl shadow-xl ring-1 ring-black/5 py-1 min-w-[170px]">
+                          <div className="absolute right-0 top-full mt-1 z-20 bg-white border border-[var(--border)] rounded-xl shadow-xl ring-1 ring-black/5 py-1 min-w-[170px]">
                             <button
                               onClick={() => { onEdit(w); setOpenMenuId(null); }}
                               className="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-amber-50 group transition-colors"
                             >
                               <span className="flex items-center justify-center w-6 h-6 rounded-md bg-amber-100 text-amber-500 group-hover:bg-amber-200 transition-colors shrink-0"><Edit2 size={11} /></span>
-                              <span className="text-[11px] font-semibold text-slate-700 group-hover:text-amber-700">Editar</span>
+                              <span className="text-[11px] font-semibold text-[var(--ink-mid)] group-hover:text-amber-700">Editar</span>
                             </button>
                             <button
                               onClick={() => { verPortal(w); setOpenMenuId(null); }}
-                              className="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-slate-50 group transition-colors"
+                              className="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-[var(--surface)] group transition-colors"
                             >
-                              <span className="flex items-center justify-center w-6 h-6 rounded-md bg-slate-100 group-hover:bg-slate-200 transition-colors shrink-0" style={{ color: 'var(--slate-dim)' }}><Search size={11} /></span>
-                              <span className="text-[11px] font-semibold text-slate-700 group-hover:text-slate-800">Ver Portal</span>
+                              <span className="flex items-center justify-center w-6 h-6 rounded-md bg-[var(--surface-dim)] group-hover:bg-[var(--border)] transition-colors shrink-0" style={{ color: 'var(--slate-dim)' }}><Search size={11} /></span>
+                              <span className="text-[11px] font-semibold text-[var(--ink-mid)] group-hover:text-[var(--ink)]">Ver Portal</span>
                             </button>
                             <button
                               onClick={() => { onVerPasta?.(w.id); setOpenMenuId(null); }}
                               className="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-emerald-50 group transition-colors"
                             >
                               <span className="flex items-center justify-center w-6 h-6 rounded-md bg-emerald-100 text-emerald-500 group-hover:bg-emerald-200 transition-colors shrink-0"><FolderOpen size={11} /></span>
-                              <span className="text-[11px] font-semibold text-slate-700 group-hover:text-emerald-700">Ver Pasta</span>
+                              <span className="text-[11px] font-semibold text-[var(--ink-mid)] group-hover:text-emerald-700">Ver Pasta</span>
                             </button>
-                            <div className="mx-3 my-1 border-t border-slate-100" />
+                            <div className="mx-3 my-1 border-t border-[var(--border-soft)]" />
                             <button
                               onClick={() => { onOpenEmpHistory(w.id, w.name); setOpenMenuId(null); }}
-                              className="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-slate-50 group transition-colors"
+                              className="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-[var(--surface)] group transition-colors"
                             >
-                              <span className="flex items-center justify-center w-6 h-6 rounded-md bg-slate-100 group-hover:bg-slate-200 transition-colors shrink-0 text-[11px] leading-none">📅</span>
-                              <span className="text-[11px] font-semibold text-slate-700">Períodos</span>
+                              <span className="flex items-center justify-center w-6 h-6 rounded-md bg-[var(--surface-dim)] group-hover:bg-[var(--border)] transition-colors shrink-0 text-[11px] leading-none">📅</span>
+                              <span className="text-[11px] font-semibold text-[var(--ink-mid)]">Períodos</span>
                             </button>
                             <button
                               onClick={() => { onOpenVHHistory(w.id, w.name); setOpenMenuId(null); }}
-                              className="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-slate-50 group transition-colors"
+                              className="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-[var(--surface)] group transition-colors"
                             >
-                              <span className="flex items-center justify-center w-6 h-6 rounded-md bg-slate-100 group-hover:bg-slate-200 transition-colors shrink-0 text-[11px] leading-none">📊</span>
-                              <span className="text-[11px] font-semibold text-slate-700">Valor/hora</span>
+                              <span className="flex items-center justify-center w-6 h-6 rounded-md bg-[var(--surface-dim)] group-hover:bg-[var(--border)] transition-colors shrink-0 text-[11px] leading-none">📊</span>
+                              <span className="text-[11px] font-semibold text-[var(--ink-mid)]">Valor/hora</span>
                             </button>
                             {/* Segurança Social */}
                             {(w.status === 'ativo' && !w.ss_admissao_comunicada_em) && (
                               <>
-                                <div className="mx-3 my-1 border-t border-slate-100" />
+                                <div className="mx-3 my-1 border-t border-[var(--border-soft)]" />
                                 <button
                                   onClick={() => { setSsModal({ worker: w, tipo: 'admissao' }); setOpenMenuId(null); }}
                                   className="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-amber-50 group transition-colors"
                                 >
                                   <span className="flex items-center justify-center w-6 h-6 rounded-md bg-amber-100 text-amber-600 group-hover:bg-amber-200 transition-colors shrink-0"><SendHorizonal size={11} /></span>
                                   <div className="text-left">
-                                    <span className="text-[11px] font-semibold text-slate-700 group-hover:text-amber-700">Comunicar Admissão</span>
+                                    <span className="text-[11px] font-semibold text-[var(--ink-mid)] group-hover:text-amber-700">Comunicar Admissão</span>
                                     {ssAmbiente === 'teste' && <p className="text-[8px] text-orange-500 font-bold leading-none">TESTE</p>}
                                   </div>
                                 </button>
@@ -319,26 +319,26 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                             )}
                             {(w.dataFim && !w.ss_cessacao_comunicada_em) && (
                               <>
-                                {!(w.status === 'ativo' && !w.ss_admissao_comunicada_em) && <div className="mx-3 my-1 border-t border-slate-100" />}
+                                {!(w.status === 'ativo' && !w.ss_admissao_comunicada_em) && <div className="mx-3 my-1 border-t border-[var(--border-soft)]" />}
                                 <button
                                   onClick={() => { setSsModal({ worker: w, tipo: 'cessacao' }); setOpenMenuId(null); }}
                                   className="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-amber-50 group transition-colors"
                                 >
                                   <span className="flex items-center justify-center w-6 h-6 rounded-md bg-amber-100 text-amber-600 group-hover:bg-amber-200 transition-colors shrink-0"><SendHorizonal size={11} /></span>
                                   <div className="text-left">
-                                    <span className="text-[11px] font-semibold text-slate-700 group-hover:text-amber-700">Comunicar Cessação</span>
+                                    <span className="text-[11px] font-semibold text-[var(--ink-mid)] group-hover:text-amber-700">Comunicar Cessação</span>
                                     {ssAmbiente === 'teste' && <p className="text-[8px] text-orange-500 font-bold leading-none">TESTE</p>}
                                   </div>
                                 </button>
                               </>
                             )}
-                            <div className="mx-3 my-1 border-t border-slate-100" />
+                            <div className="mx-3 my-1 border-t border-[var(--border-soft)]" />
                             {confirmDeleteWorkerId === w.id ? (
                               <div className="mx-2 mb-1 p-2 bg-rose-50 rounded-lg border border-rose-100">
                                 <p className="text-[9px] font-black text-rose-500 uppercase tracking-wider mb-1.5">Confirmar apagar?</p>
                                 <div className="flex gap-1">
                                   <button onClick={() => { handleDelete(w.id); setConfirmDeleteWorkerId(null); setOpenMenuId(null); }} className="flex-1 py-1 bg-rose-600 text-white text-[9px] font-black rounded-md hover:bg-rose-700 transition-colors">Sim</button>
-                                  <button onClick={() => setConfirmDeleteWorkerId(null)} className="flex-1 py-1 bg-white border border-slate-200 text-slate-600 text-[9px] font-black rounded-md hover:bg-slate-50 transition-colors">Não</button>
+                                  <button onClick={() => setConfirmDeleteWorkerId(null)} className="flex-1 py-1 bg-white border border-[var(--border)] text-[var(--ink-soft)] text-[9px] font-black rounded-md hover:bg-[var(--surface)] transition-colors">Não</button>
                                 </div>
                               </div>
                             ) : (
@@ -390,7 +390,7 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                 {w.status === 'inativo' ? 'Inativo' : 'Ativo'}
               </div>
               <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
-                <button onClick={() => verPortal(w)} className="p-1 hover:bg-slate-50 rounded-md transition-all border border-slate-100" style={{ color: 'var(--slate-dim)' }} title="Ver Portal"><Search size={10} /></button>
+                <button onClick={() => verPortal(w)} className="p-1 hover:bg-[var(--surface)] rounded-md transition-all border border-[var(--border-soft)]" style={{ color: 'var(--slate-dim)' }} title="Ver Portal"><Search size={10} /></button>
                 <button onClick={() => onEdit(w)} className="p-1 text-amber-600 hover:bg-amber-50 rounded-md transition-all border border-amber-100" title="Editar"><Edit2 size={10} /></button>
                 <button onClick={() => onVerPasta?.(w.id)} className="p-1 text-emerald-600 hover:bg-emerald-50 rounded-md transition-all border border-emerald-100" title="Ver Pasta de Documentos"><FolderOpen size={10} /></button>
                 {w.status === 'ativo' && !w.ss_admissao_comunicada_em && (
@@ -402,10 +402,10 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                 {confirmDeleteWorkerId === w.id ? (
                   <div className="flex items-center gap-1">
                     <button onClick={() => { handleDelete(w.id); setConfirmDeleteWorkerId(null); }} className="px-1.5 py-0.5 bg-red-600 text-white text-[10px] font-bold rounded-md">Sim</button>
-                    <button onClick={() => setConfirmDeleteWorkerId(null)} className="px-1.5 py-0.5 bg-slate-200 text-slate-600 text-[10px] font-bold rounded-md">Não</button>
+                    <button onClick={() => setConfirmDeleteWorkerId(null)} className="px-1.5 py-0.5 bg-[var(--border)] text-[var(--ink-soft)] text-[10px] font-bold rounded-md">Não</button>
                   </div>
                 ) : (
-                  <button onClick={() => setConfirmDeleteWorkerId(w.id)} className="p-1 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-md transition-all border border-slate-100"><Trash2 size={10} /></button>
+                  <button onClick={() => setConfirmDeleteWorkerId(w.id)} className="p-1 text-[var(--slate)] hover:text-rose-500 hover:bg-rose-50 rounded-md transition-all border border-[var(--border-soft)]"><Trash2 size={10} /></button>
                 )}
               </div>
             </div>
@@ -413,12 +413,12 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
               <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-[10px] font-black" style={{ backgroundColor: FT.navy, color: FT.orange }}>{getInitials(w.name)}</div>
               <div className="min-w-0">
                 <h4 className="text-[0.95rem] font-bold leading-[1.15] text-[var(--ink-mid)] truncate" style={{ fontFamily: FONT_TITLE }} title={w.name}>{w.name}</h4>
-                <p className="text-[9.5px] text-slate-400 font-semibold truncate" style={{ fontFamily: FONT_MONO }}>{w.profissao || 'Staff'}</p>
+                <p className="text-[9.5px] text-[var(--slate-dim)] font-semibold truncate" style={{ fontFamily: FONT_MONO }}>{w.profissao || 'Staff'}</p>
               </div>
             </div>
             <div className="mb-1.5 overflow-hidden"><MiniTimeline w={w} ssFlag={ssComunicacoesMap[w.nis]} /></div>
             <div className="mb-2">{apoliceBadge(w, apoliceMap)}</div>
-            <div className="text-[9px] text-slate-400 font-bold space-y-0.5 border-t border-slate-50 pt-1.5">
+            <div className="text-[9px] text-[var(--slate-dim)] font-bold space-y-0.5 border-t border-[var(--border-soft)] pt-1.5">
               <div className="flex items-center gap-1 truncate">
                 <span>⏱</span> <span className="truncate">{schedules.find(s => s.id === w.defaultScheduleId)?.name || 'N/A'}</span>
               </div>

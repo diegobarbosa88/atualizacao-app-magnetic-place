@@ -251,6 +251,26 @@ perguntar. E usar sempre a mesma métrica: o script conta **ocorrências**, não
     devolvem a cor a meio da interpolação, e `getComputedStyle` lê-a sem avisar — deu duas leituras
     falsas seguidas (o hover do botão laranja e o Scanner "por resolver" quando já estava). Injectar
     `*{transition:none!important}` antes de qualquer varrimento.
+- **O conversor tem de tratar o `/NN` que fica órfão.** Um `bg-slate-50/60` convertido pela regex de
+  cor deixa `bg-[var(--surface)]/60`, que é precisamente o `color-mix` proibido. Aconteceu nos dois
+  lotes do `team` (4 casos + 8 casos) porque a regex substitui a cor e não olha para o que vem a
+  seguir. Correr sempre o script depois de converter — é ele que os apanha — e limpar a opacidade:
+  o `--surface` já é por construção subtil, não precisa de a diluir.
+- **O varredor de contraste tem de entender `oklab()`/`oklch()`.** O Tailwind v4 serve as paletas
+  nesses espaços, e um parser que faça `match(/[\d.]+/g)` lê o `0.973` de
+  `oklab(0.973 … / 0.6)` como se fosse um canal 0-255 — trata um branco quase puro como preto. Isso
+  produziu 11 falsos positivos a 1,12:1 no WorkerForm, todos em texto que na realidade estava a
+  ~5:1 sobre `bg-white`. Converter oklab→sRGB antes de medir (a fórmula está no histórico do lote
+  21C), e validar o parser contra um caso conhecido antes de confiar no resultado.
+  **É a terceira vez nesta migração que o instrumento engana, não o código:** a transição CSS a
+  meio, o `grep` de linha única, e agora o parser de cor. Sempre que um varrimento acusar um número
+  invulgarmente alto ou invulgarmente baixo, validar o instrumento antes de agir sobre o resultado.
+- **Distinguir a origem da cor é o que torna o varrimento accionável.** No fim de um lote interessa
+  saber quantos dos casos são *do lote*, e para isso classifica-se a cor computada: se é um dos
+  tokens no valor do modo activo, é meu; se é `#94A3B8` ou `#F1F5F9`, veio da regra-ponte do
+  `App.css` e o elemento ainda está por converter; se está em `oklab`/`oklch`, é Tailwind puro.
+  No sub-lote B isso deu `meusTokens: []` nos dois modos — prova de que os 14 casos restantes no
+  ecrã eram todos anteriores.
 - **34 botões laranja com texto branco (2,52:1) que o script dava como zero.** A verificação
   procurava `text-white` e a cor laranja na MESMA linha; o padrão real é `className="… text-white"`
   numa linha e `style={{ backgroundColor: FT.orange }}` na seguinte. Corrigido para janela de 3
@@ -299,10 +319,10 @@ perguntar. E usar sempre a mesma métrica: o script conta **ocorrências**, não
   
   ### Estado da migração (atualizar a cada lote)
 
-Total: 4.197 classes Tailwind → tokens `FT`. Última contagem: **1.293 convertidas em 12 módulos**
-(4.197 no início, 2.752 por converter, menos 152 que saíram com o módulo `movimentacoes` apagado),
-mais os
-dois canais de `style` inline fechados (`FT.slate` e `FT.navy`). Restam ~2.752 classes no admin.
+Total: 4.197 classes Tailwind → tokens `FT`. **Restam 1.193 em `src/features/admin` +
+`src/components/admin`** — número corrido com o script, não somado à mão (ver a regra das contagens
+acima). Estão fechados **três** canais de `style` inline: `FT.slate`, `FT.navy` e o terceiro
+(`FT.slateDim`/`inkSoft`/`ink`, 42 dos 49 do admin; 7 ficam por estarem em `.recon-scope`).
 
 Para medir o que falta em qualquer momento, sem contar à mão:
 `sh scripts/verificar-lote-design.sh src/features/admin src/components/admin`
@@ -327,7 +347,7 @@ Para medir o que falta em qualquer momento, sem contar à mão:
 | `cost-reports` (8 de 9 ficheiros) | 180  | ✅ feito                         | `e039edc`  |
 | `cost-reports/AjudasCalculadora.jsx` | 104 | ✅ feito — lote próprio, dinheiro | `f336916` |
 | `toconline`                | 355          | não iniciado                     | —          |
-| `team`                     | 463          | não iniciado                     | —          |
+| `team`                     | 463 (434 + 29 fora) | ✅ feito em 2 lotes            | `4f4cb1b` / — |
 | *(restantes módulos ainda não medidos individualmente)* | — | não iniciado | — |
 
 **Ambos os canais de `style` inline estão fechados.** Critério, que difere entre eles: no `FT.slate`

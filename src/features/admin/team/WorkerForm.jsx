@@ -19,9 +19,9 @@ const fmtTs = iso => {
   return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
 };
 
-const inp = 'w-full bg-white border border-slate-200 rounded-lg py-[3px] px-2.5 text-sm font-semibold outline-none focus:border-[var(--navy)] focus:ring-2 focus:ring-[#1B3A57]/10 transition-all';
+const inp = 'w-full bg-white border border-[var(--border)] rounded-lg py-[3px] px-2.5 text-sm font-semibold outline-none focus:border-[var(--navy)] focus:ring-2 focus:ring-[#1B3A57]/10 transition-all';
 const fmtDate = iso => { if (!iso) return 'atual'; const p = iso.split('T')[0].split('-'); return `${p[2]}/${p[1]}/${p[0].slice(2)}`; };
-const lbl = 'block text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1';
+const lbl = 'block text-[10px] font-bold uppercase tracking-wide text-[var(--slate-dim)] mb-1';
 
 const TABS = [
   { key: 'pessoal',   label: 'Pessoal',        Icon: User },
@@ -50,8 +50,8 @@ function VinculoTimeline({ workerForm, apoliceSeguro, onAbrirSS, ssFlag }) {
   })();
 
   return (
-    <div className="border-t border-b border-slate-100 -mx-4 sm:-mx-5 px-4 sm:px-5 py-4 bg-slate-50/60">
-      <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-3">Ciclo de Vida do Vínculo</p>
+    <div className="border-t border-b border-[var(--border-soft)] -mx-4 sm:-mx-5 px-4 sm:px-5 py-4 bg-[var(--surface)]">
+      <p className="text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-3">Ciclo de Vida do Vínculo</p>
       <div className="flex items-start">
 
         {/* Admissão */}
@@ -61,15 +61,15 @@ function VinculoTimeline({ workerForm, apoliceSeguro, onAbrirSS, ssFlag }) {
               ssFlag?.prioridade === 'rejeitada' ? 'bg-rose-500 border-rose-500 text-white'
               : ssFlag?.prioridade === 'presa' ? 'bg-orange-500 border-orange-500 text-white'
               : admissaoFeita ? 'bg-emerald-500 border-emerald-500 text-white'
-              : temInicio ? 'text-white' : 'bg-white border-slate-200 text-slate-300'
+              : temInicio ? 'text-white' : 'bg-white border-[var(--border)] text-[var(--slate)]'
             }`} style={!admissaoFeita && temInicio && !ssFlag ? { backgroundColor: FT.navy, borderColor: FT.navy } : {}}>
               {ssFlag?.prioridade === 'rejeitada' ? <AlertTriangle size={12} /> : admissaoFeita ? <Check size={13} /> : <Circle size={11} fill="currentColor" />}
             </div>
             <div className="h-[2.5px] flex-1" style={{ background: temInicio ? '#10b981' : undefined, backgroundImage: !temInicio ? 'repeating-linear-gradient(90deg, #e2e8f0 0 6px, transparent 6px 11px)' : undefined }} />
           </div>
           <div className="mt-2">
-            <p className="text-[9px] font-black uppercase tracking-wide text-slate-400">Admissão</p>
-            <p className="text-xs font-black text-slate-700 my-0.5">{temInicio ? fmtDate(workerForm.dataInicio) : '— sem data'}</p>
+            <p className="text-[9px] font-black uppercase tracking-wide text-[var(--slate-dim)]">Admissão</p>
+            <p className="text-xs font-black text-[var(--ink-mid)] my-0.5">{temInicio ? fmtDate(workerForm.dataInicio) : '— sem data'}</p>
             {temInicio ? (
               ssFlag?.prioridade === 'rejeitada' ? (
                 <button
@@ -96,7 +96,7 @@ function VinculoTimeline({ workerForm, apoliceSeguro, onAbrirSS, ssFlag }) {
                 </button>
               )
             ) : (
-              <span className="inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-400">sem data</span>
+              <span className="inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded-full bg-[var(--surface-dim)] border border-[var(--border)] text-[var(--ink-soft)]">sem data</span>
             )}
           </div>
         </div>
@@ -110,11 +110,11 @@ function VinculoTimeline({ workerForm, apoliceSeguro, onAbrirSS, ssFlag }) {
             <div className="h-[2.5px] flex-1" style={{ backgroundImage: 'repeating-linear-gradient(90deg, #e2e8f0 0 6px, transparent 6px 11px)' }} />
           </div>
           <div className="mt-2">
-            <p className="text-[9px] font-black uppercase tracking-wide text-slate-400">Hoje</p>
-            <p className="text-xs font-black text-slate-700 my-0.5">
+            <p className="text-[9px] font-black uppercase tracking-wide text-[var(--slate-dim)]">Hoje</p>
+            <p className="text-xs font-black text-[var(--ink-mid)] my-0.5">
               {temFim ? 'Período fechado' : diasAtivo !== null ? `Ativo — ${diasAtivo}d` : 'Sem período aberto'}
             </p>
-            <span className="inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-400">
+            <span className="inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded-full bg-[var(--surface-dim)] border border-[var(--border)] text-[var(--ink-soft)]">
               {temFim ? 'encerrado' : temInicio ? 'em curso' : 'n/a'}
             </span>
           </div>
@@ -130,8 +130,8 @@ function VinculoTimeline({ workerForm, apoliceSeguro, onAbrirSS, ssFlag }) {
             {cessacaoFeita ? <Check size={13} /> : <Circle size={11} fill="currentColor" />}
           </div>
           <div className="mt-2">
-            <p className="text-[9px] font-black uppercase tracking-wide text-slate-400">Cessação</p>
-            <p className="text-xs font-black text-slate-700 my-0.5">{temFim ? fmtDate(workerForm.dataFim) : 'sem data'}</p>
+            <p className="text-[9px] font-black uppercase tracking-wide text-[var(--slate-dim)]">Cessação</p>
+            <p className="text-xs font-black text-[var(--ink-mid)] my-0.5">{temFim ? fmtDate(workerForm.dataFim) : 'sem data'}</p>
             {temFim ? (
               cessacaoFeita ? (
                 <span className="inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700">✓ SS comunicada</span>
@@ -145,18 +145,18 @@ function VinculoTimeline({ workerForm, apoliceSeguro, onAbrirSS, ssFlag }) {
                 </button>
               )
             ) : (
-              <span className="inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-400">n/a</span>
+              <span className="inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded-full bg-[var(--surface-dim)] border border-[var(--border)] text-[var(--ink-soft)]">n/a</span>
             )}
           </div>
         </div>
       </div>
 
       {apoliceSeguro?.status && (
-        <div className="mt-3 pt-3 border-t border-slate-200/70 flex items-center gap-1.5">
+        <div className="mt-3 pt-3 border-t border-[var(--border)] flex items-center gap-1.5">
           {apoliceSeguro.status === 'ativo'
             ? <ShieldCheck size={11} className="text-emerald-600 shrink-0" />
             : <AlertTriangle size={11} className="text-amber-500 shrink-0" />}
-          <span className="text-[10px] font-bold text-slate-500">
+          <span className="text-[10px] font-bold text-[var(--slate-dim)]">
             Apólice de Seguro: <span className={apoliceSeguro.status === 'ativo' ? 'text-emerald-600' : 'text-amber-600'}>{apoliceSeguro.status[0].toUpperCase()}{apoliceSeguro.status.slice(1)}</span>
           </span>
         </div>
@@ -255,14 +255,14 @@ const WorkerForm = () => {
       )}
 
       {/* ── Abas por assunto ── */}
-      <div className="flex items-center gap-1 border-b border-slate-100 mt-4 mb-4 overflow-x-auto">
+      <div className="flex items-center gap-1 border-b border-[var(--border-soft)] mt-4 mb-4 overflow-x-auto">
         {TABS.map(({ key, label, Icon }) => (
           <button
             key={key}
             type="button"
             onClick={() => setActiveTab(key)}
             className={`flex items-center gap-2 px-3.5 py-3 -mb-px whitespace-nowrap transition-all ${
-              activeTab === key ? 'text-[var(--navy)]' : 'text-slate-400 hover:text-[var(--navy)]'
+              activeTab === key ? 'text-[var(--navy)]' : 'text-[var(--slate-dim)] hover:text-[var(--navy)]'
             }`}
             style={{
               fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.01em',
@@ -279,7 +279,7 @@ const WorkerForm = () => {
           {/* Pessoal */}
           {activeTab === 'pessoal' && (
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5 mb-3">
+              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] flex items-center gap-1.5 mb-3">
                 <User size={10} /> Dados do Colaborador
               </p>
               <div className="grid grid-cols-2 gap-3">
@@ -328,7 +328,7 @@ const WorkerForm = () => {
                 </div>
                 <div>
                   <label className={lbl}>Admin</label>
-                  <button type="button" onClick={tog('isAdmin')} className={`w-full flex items-center justify-between p-2.5 rounded-lg border text-xs font-semibold transition-all ${workerForm.isAdmin ? '' : 'bg-white border-slate-200 text-slate-500'}`} style={workerForm.isAdmin ? { backgroundColor: 'rgba(27,58,87,0.06)', borderColor: 'rgba(27,58,87,0.25)', color: 'var(--navy)' } : {}}>
+                  <button type="button" onClick={tog('isAdmin')} className={`w-full flex items-center justify-between p-2.5 rounded-lg border text-xs font-semibold transition-all ${workerForm.isAdmin ? '' : 'bg-white border-[var(--border)] text-[var(--slate-dim)]'}`} style={workerForm.isAdmin ? { backgroundColor: 'rgba(27,58,87,0.06)', borderColor: 'rgba(27,58,87,0.25)', color: 'var(--navy)' } : {}}>
                     <span>Admin</span>
                     <div className="w-8 h-4 rounded-full relative transition-all" style={{ backgroundColor: workerForm.isAdmin ? FT.navy : '#E2E8F0' }}>
                       <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full shadow transition-all ${workerForm.isAdmin ? 'left-4' : 'left-0.5'}`} />
@@ -337,9 +337,9 @@ const WorkerForm = () => {
                 </div>
                 <div>
                   <label className="block text-[10px] font-bold uppercase tracking-wide text-amber-500 mb-1">Modo Limitado</label>
-                  <button type="button" onClick={tog('limited_entry_mode')} className={`w-full flex items-center justify-between p-2.5 rounded-lg border text-xs font-semibold transition-all ${workerForm.limited_entry_mode ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-white border-slate-200 text-slate-500'}`}>
+                  <button type="button" onClick={tog('limited_entry_mode')} className={`w-full flex items-center justify-between p-2.5 rounded-lg border text-xs font-semibold transition-all ${workerForm.limited_entry_mode ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-white border-[var(--border)] text-[var(--slate-dim)]'}`}>
                     <span className="flex items-center gap-1.5"><ShieldOff size={11} /> Pedido de Registo</span>
-                    <div className={`w-8 h-4 rounded-full relative transition-all ${workerForm.limited_entry_mode ? 'bg-amber-400' : 'bg-slate-200'}`}>
+                    <div className={`w-8 h-4 rounded-full relative transition-all ${workerForm.limited_entry_mode ? 'bg-amber-400' : 'bg-[var(--border)]'}`}>
                       <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full shadow transition-all ${workerForm.limited_entry_mode ? 'left-4' : 'left-0.5'}`} />
                     </div>
                   </button>
@@ -352,7 +352,7 @@ const WorkerForm = () => {
           {activeTab === 'contrato' && (
             <div className="space-y-5">
               <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5 mb-3">
+                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] flex items-center gap-1.5 mb-3">
                   <CalendarRange size={10} /> Vínculo
                 </p>
                 <div className="grid grid-cols-2 gap-3">
@@ -381,7 +381,7 @@ const WorkerForm = () => {
                             ss_cessacao_num_registo: null,
                           }));
                         }}
-                        className="w-full text-[10px] font-bold uppercase tracking-wide px-2.5 py-2 rounded-lg border border-dashed transition-all hover:bg-slate-50"
+                        className="w-full text-[10px] font-bold uppercase tracking-wide px-2.5 py-2 rounded-lg border border-dashed transition-all hover:bg-[var(--surface)]"
                         style={{ color: 'var(--navy)', borderColor: FT.navy }}
                         title="Fecha o período atual (guarda no histórico ao gravar) e prepara um novo período em aberto — limpa também as comunicações de admissão/cessação à SS para poderes comunicar de novo."
                       >
@@ -396,9 +396,9 @@ const WorkerForm = () => {
                     </div>
                   )}
                   {employmentHistory.length > 0 && (
-                    <div className="col-span-2 border-l-2 border-slate-100 pl-2 space-y-0.5">
+                    <div className="col-span-2 border-l-2 border-[var(--border-soft)] pl-2 space-y-0.5">
                       {employmentHistory.map(p => (
-                        <p key={p.id} className="text-[9px] text-slate-400 font-mono leading-tight">
+                        <p key={p.id} className="text-[9px] text-[var(--slate-dim)] font-mono leading-tight">
                           {fmtDate(p.data_inicio)} → {p.data_fim ? fmtDate(p.data_fim) : <span className="font-bold" style={{ color: 'var(--navy)' }}>atual</span>}
                         </p>
                       ))}
@@ -407,8 +407,8 @@ const WorkerForm = () => {
                 </div>
               </div>
 
-              <div className="border-t border-slate-100 pt-4">
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5 mb-3">
+              <div className="border-t border-[var(--border-soft)] pt-4">
+                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] flex items-center gap-1.5 mb-3">
                   <ShieldCheck size={10} /> Enquadramento PSI
                 </p>
                 <div className="grid grid-cols-2 gap-3">
@@ -465,8 +465,8 @@ const WorkerForm = () => {
                     {(() => {
                       const p = findProfissaoByCodigo(workerForm.profissao_cnp);
                       return p
-                        ? <p className="text-xs font-mono font-semibold text-slate-700 py-[5px] px-2.5 bg-slate-50 border border-slate-200 rounded-lg">{p.codigoCPP} — {p.designacaoModal}</p>
-                        : <p className="text-xs text-slate-400 py-[5px] px-2.5 bg-slate-50 border border-slate-200 rounded-lg italic">Sem profissão definida — selecionar em Pessoal</p>;
+                        ? <p className="text-xs font-mono font-semibold text-[var(--ink-mid)] py-[5px] px-2.5 bg-[var(--surface)] border border-[var(--border)] rounded-lg">{p.codigoCPP} — {p.designacaoModal}</p>
+                        : <p className="text-xs text-[var(--slate-dim)] py-[5px] px-2.5 bg-[var(--surface)] border border-[var(--border)] rounded-lg italic">Sem profissão definida — selecionar em Pessoal</p>;
                     })()}
                   </div>
                   <div className="col-span-2">
@@ -511,7 +511,7 @@ const WorkerForm = () => {
                     {valorHoraHistory.length > 0 && (
                       <div className="mt-1 border-l-2 border-emerald-100 pl-2 space-y-0.5">
                         {valorHoraHistory.map(h => (
-                          <p key={h.id} className="text-[9px] text-slate-400 font-mono leading-tight">
+                          <p key={h.id} className="text-[9px] text-[var(--slate-dim)] font-mono leading-tight">
                             {h.valor_anterior ?? '—'} → <span className="text-emerald-600">{h.valor_novo}€</span> · {fmtDate(h.data_alteracao)}
                           </p>
                         ))}
@@ -533,8 +533,8 @@ const WorkerForm = () => {
                 </div>
               </div>
 
-              <div className="border-t border-slate-100 pt-4">
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5 mb-3">
+              <div className="border-t border-[var(--border-soft)] pt-4">
+                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] flex items-center gap-1.5 mb-3">
                   <Receipt size={10} /> IRS — Situação Fiscal
                 </p>
                 <div className="grid grid-cols-2 gap-3">
@@ -558,7 +558,7 @@ const WorkerForm = () => {
           {/* Afetação — aba própria, mesmo nível das outras três (Clientes + Horários lado a lado) */}
           {activeTab === 'afetacao' && (
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5 mb-3">
+              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] flex items-center gap-1.5 mb-3">
                 <Building2 size={10} /> Afetação — Clientes &amp; Horários
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -601,17 +601,17 @@ function AfetacaoCards({
   return (
     <>
       {/* CARD: Clientes */}
-      <div className="rounded-xl border border-slate-200 overflow-hidden">
-        <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 border-b border-slate-100">
+      <div className="rounded-xl border border-[var(--border)] overflow-hidden">
+        <div className="flex items-center gap-2 px-3 py-2 bg-[var(--surface)] border-b border-[var(--border-soft)]">
           <Building2 size={12} className="text-[var(--slate)]" />
-          <span className="text-[10px] font-black uppercase tracking-widest text-slate-600">Clientes</span>
+          <span className="text-[10px] font-black uppercase tracking-widest text-[var(--ink-soft)]">Clientes</span>
         </div>
         <div className="max-h-[150px] overflow-y-auto p-2 space-y-0.5 bg-white">
           {clients.map(c => {
             const isAssigned = workerForm.assignedClients?.includes(c.id);
             return (
-              <label key={c.id} className={`flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer transition-all ${isAssigned ? '' : 'hover:bg-slate-50'}`} style={isAssigned ? { backgroundColor: 'rgba(27,58,87,0.05)' } : {}}>
-                <div className={`w-3.5 h-3.5 rounded flex items-center justify-center border shrink-0 ${isAssigned ? '' : 'border-slate-300'}`} style={isAssigned ? { backgroundColor: FT.navy, borderColor: FT.navy } : {}}>
+              <label key={c.id} className={`flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer transition-all ${isAssigned ? '' : 'hover:bg-[var(--surface)]'}`} style={isAssigned ? { backgroundColor: 'rgba(27,58,87,0.05)' } : {}}>
+                <div className={`w-3.5 h-3.5 rounded flex items-center justify-center border shrink-0 ${isAssigned ? '' : 'border-[var(--border)]'}`} style={isAssigned ? { backgroundColor: FT.navy, borderColor: FT.navy } : {}}>
                   {isAssigned && <CheckCircle size={9} className="text-white" />}
                 </div>
                 <input type="checkbox" className="hidden" checked={isAssigned} onChange={() => {
@@ -623,17 +623,17 @@ function AfetacaoCards({
             );
           })}
         </div>
-        <div className="px-2 py-2 border-t border-slate-100 bg-slate-50/50">
-          <label className="text-[9px] font-bold uppercase text-slate-400 block mb-1">Padrão</label>
-          <select value={workerForm.defaultClientId || ''} onChange={e => setWorkerForm(prev => ({ ...prev, defaultClientId: e.target.value }))} className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs font-semibold outline-none focus:border-[var(--navy)] transition-all">
+        <div className="px-2 py-2 border-t border-[var(--border-soft)] bg-[var(--surface)]">
+          <label className="text-[9px] font-bold uppercase text-[var(--slate-dim)] block mb-1">Padrão</label>
+          <select value={workerForm.defaultClientId || ''} onChange={e => setWorkerForm(prev => ({ ...prev, defaultClientId: e.target.value }))} className="w-full bg-white border border-[var(--border)] rounded-lg p-2 text-xs font-semibold outline-none focus:border-[var(--navy)] transition-all">
             <option value="">Selecionar</option>
             {clients.filter(c => workerForm.assignedClients?.includes(c.id)).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </div>
         {(workerForm.assignedClients?.length > 0) && <>
-          <div className="flex items-center gap-1.5 px-3 py-1.5 border-t border-slate-100 bg-slate-50">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 border-t border-[var(--border-soft)] bg-[var(--surface)]">
             <CalendarRange size={9} className="text-[var(--slate)]" />
-            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Períodos</span>
+            <span className="text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Períodos</span>
             {!workerForm.id && <span className="ml-auto text-[9px] text-amber-500 font-bold">Guarde primeiro</span>}
           </div>
           <div className="p-2 space-y-1 bg-white">
@@ -641,21 +641,21 @@ function AfetacaoCards({
               const dates = workerForm.assignedClientDates?.[c.id] || {};
               const isOpen = !!expandedClientPeriods[c.id];
               return (
-                <div key={c.id} className="border border-slate-100 rounded-lg overflow-hidden">
-                  <button type="button" onClick={() => setExpandedClientPeriods(prev => ({ ...prev, [c.id]: !prev[c.id] }))} className="w-full flex items-center justify-between px-2.5 py-1.5 hover:bg-slate-50 transition-colors">
+                <div key={c.id} className="border border-[var(--border-soft)] rounded-lg overflow-hidden">
+                  <button type="button" onClick={() => setExpandedClientPeriods(prev => ({ ...prev, [c.id]: !prev[c.id] }))} className="w-full flex items-center justify-between px-2.5 py-1.5 hover:bg-[var(--surface)] transition-colors">
                     <span className="text-[9px] font-black uppercase truncate" style={{ color: 'var(--navy)' }}>{c.name}</span>
-                    <ChevronDown size={11} className={`text-slate-400 shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+                    <ChevronDown size={11} className={`text-[var(--slate)] shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
                   </button>
                   {isOpen && (
-                    <div className="px-2 pb-2 pt-1.5 space-y-1.5 border-t border-slate-50 bg-slate-50/40">
+                    <div className="px-2 pb-2 pt-1.5 space-y-1.5 border-t border-[var(--border-soft)] bg-[var(--surface)]">
                       <div className="grid grid-cols-2 gap-1.5">
                         <div>
-                          <label className="text-[8px] font-bold uppercase text-slate-400 block mb-0.5">Início</label>
-                          <input type="date" value={dates.dataInicio || ''} onChange={e => setWorkerForm(prev => ({ ...prev, assignedClientDates: { ...(prev.assignedClientDates || {}), [c.id]: { ...dates, dataInicio: e.target.value } } }))} className="w-full bg-white border border-slate-200 rounded p-1.5 text-[10px] font-bold outline-none focus:border-[var(--navy)] transition-all" />
+                          <label className="text-[8px] font-bold uppercase text-[var(--slate-dim)] block mb-0.5">Início</label>
+                          <input type="date" value={dates.dataInicio || ''} onChange={e => setWorkerForm(prev => ({ ...prev, assignedClientDates: { ...(prev.assignedClientDates || {}), [c.id]: { ...dates, dataInicio: e.target.value } } }))} className="w-full bg-white border border-[var(--border)] rounded p-1.5 text-[10px] font-bold outline-none focus:border-[var(--navy)] transition-all" />
                         </div>
                         <div>
-                          <label className="text-[8px] font-bold uppercase text-slate-400 block mb-0.5">Fim</label>
-                          <input type="date" value={dates.dataFim || ''} onChange={e => setWorkerForm(prev => ({ ...prev, assignedClientDates: { ...(prev.assignedClientDates || {}), [c.id]: { ...dates, dataFim: e.target.value } } }))} className="w-full bg-white border border-slate-200 rounded p-1.5 text-[10px] font-bold outline-none focus:border-[var(--navy)] transition-all" />
+                          <label className="text-[8px] font-bold uppercase text-[var(--slate-dim)] block mb-0.5">Fim</label>
+                          <input type="date" value={dates.dataFim || ''} onChange={e => setWorkerForm(prev => ({ ...prev, assignedClientDates: { ...(prev.assignedClientDates || {}), [c.id]: { ...dates, dataFim: e.target.value } } }))} className="w-full bg-white border border-[var(--border)] rounded p-1.5 text-[10px] font-bold outline-none focus:border-[var(--navy)] transition-all" />
                         </div>
                       </div>
                       {workerForm.id && (
@@ -673,17 +673,17 @@ function AfetacaoCards({
       </div>
 
       {/* CARD: Horários */}
-      <div className="rounded-xl border border-slate-200 overflow-hidden">
-        <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 border-b border-slate-100">
+      <div className="rounded-xl border border-[var(--border)] overflow-hidden">
+        <div className="flex items-center gap-2 px-3 py-2 bg-[var(--surface)] border-b border-[var(--border-soft)]">
           <Timer size={12} className="text-[var(--slate)]" />
-          <span className="text-[10px] font-black uppercase tracking-widest text-slate-600">Horários</span>
+          <span className="text-[10px] font-black uppercase tracking-widest text-[var(--ink-soft)]">Horários</span>
         </div>
         <div className="max-h-[150px] overflow-y-auto p-2 space-y-0.5 bg-white">
           {schedules.map(s => {
             const isAssigned = workerForm.assignedSchedules?.includes(s.id);
             return (
-              <label key={s.id} className={`flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer transition-all ${isAssigned ? '' : 'hover:bg-slate-50'}`} style={isAssigned ? { backgroundColor: 'rgba(27,58,87,0.05)' } : {}}>
-                <div className={`w-3.5 h-3.5 rounded flex items-center justify-center border shrink-0 ${isAssigned ? '' : 'border-slate-300'}`} style={isAssigned ? { backgroundColor: FT.navy, borderColor: FT.navy } : {}}>
+              <label key={s.id} className={`flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer transition-all ${isAssigned ? '' : 'hover:bg-[var(--surface)]'}`} style={isAssigned ? { backgroundColor: 'rgba(27,58,87,0.05)' } : {}}>
+                <div className={`w-3.5 h-3.5 rounded flex items-center justify-center border shrink-0 ${isAssigned ? '' : 'border-[var(--border)]'}`} style={isAssigned ? { backgroundColor: FT.navy, borderColor: FT.navy } : {}}>
                   {isAssigned && <CheckCircle size={9} className="text-white" />}
                 </div>
                 <input type="checkbox" className="hidden" checked={isAssigned} onChange={() => {
@@ -695,17 +695,17 @@ function AfetacaoCards({
             );
           })}
         </div>
-        <div className="px-2 py-2 border-t border-slate-100 bg-slate-50/50">
-          <label className="text-[9px] font-bold uppercase text-slate-400 block mb-1">Padrão</label>
-          <select value={workerForm.defaultScheduleId || ''} onChange={e => setWorkerForm(prev => ({ ...prev, defaultScheduleId: e.target.value }))} className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs font-semibold outline-none focus:border-[var(--navy)] transition-all">
+        <div className="px-2 py-2 border-t border-[var(--border-soft)] bg-[var(--surface)]">
+          <label className="text-[9px] font-bold uppercase text-[var(--slate-dim)] block mb-1">Padrão</label>
+          <select value={workerForm.defaultScheduleId || ''} onChange={e => setWorkerForm(prev => ({ ...prev, defaultScheduleId: e.target.value }))} className="w-full bg-white border border-[var(--border)] rounded-lg p-2 text-xs font-semibold outline-none focus:border-[var(--navy)] transition-all">
             <option value="">Selecionar</option>
             {schedules.filter(s => workerForm.assignedSchedules?.includes(s.id)).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
         </div>
         {(workerForm.assignedSchedules?.length > 0) && <>
-          <div className="flex items-center gap-1.5 px-3 py-1.5 border-t border-slate-100 bg-slate-50">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 border-t border-[var(--border-soft)] bg-[var(--surface)]">
             <CalendarRange size={9} className="text-[var(--slate)]" />
-            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Períodos</span>
+            <span className="text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Períodos</span>
             {!workerForm.id && <span className="ml-auto text-[9px] text-amber-500 font-bold">Guarde primeiro</span>}
           </div>
           <div className="p-2 space-y-1 bg-white">
@@ -713,21 +713,21 @@ function AfetacaoCards({
               const dates = workerForm.assignedScheduleDates?.[s.id] || {};
               const isOpen = !!expandedSchedulePeriods[s.id];
               return (
-                <div key={s.id} className="border border-slate-100 rounded-lg overflow-hidden">
-                  <button type="button" onClick={() => setExpandedSchedulePeriods(prev => ({ ...prev, [s.id]: !prev[s.id] }))} className="w-full flex items-center justify-between px-2.5 py-1.5 hover:bg-slate-50 transition-colors">
+                <div key={s.id} className="border border-[var(--border-soft)] rounded-lg overflow-hidden">
+                  <button type="button" onClick={() => setExpandedSchedulePeriods(prev => ({ ...prev, [s.id]: !prev[s.id] }))} className="w-full flex items-center justify-between px-2.5 py-1.5 hover:bg-[var(--surface)] transition-colors">
                     <span className="text-[9px] font-black uppercase truncate" style={{ color: 'var(--navy)' }}>{s.name}</span>
-                    <ChevronDown size={11} className={`text-slate-400 shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+                    <ChevronDown size={11} className={`text-[var(--slate)] shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
                   </button>
                   {isOpen && (
-                    <div className="px-2 pb-2 pt-1.5 space-y-1.5 border-t border-slate-50 bg-slate-50/40">
+                    <div className="px-2 pb-2 pt-1.5 space-y-1.5 border-t border-[var(--border-soft)] bg-[var(--surface)]">
                       <div className="grid grid-cols-2 gap-1.5">
                         <div>
-                          <label className="text-[8px] font-bold uppercase text-slate-400 block mb-0.5">Início</label>
-                          <input type="date" value={dates.dataInicio || ''} onChange={e => setWorkerForm(prev => ({ ...prev, assignedScheduleDates: { ...(prev.assignedScheduleDates || {}), [s.id]: { ...dates, dataInicio: e.target.value } } }))} className="w-full bg-white border border-slate-200 rounded p-1.5 text-[10px] font-bold outline-none focus:border-[var(--navy)] transition-all" />
+                          <label className="text-[8px] font-bold uppercase text-[var(--slate-dim)] block mb-0.5">Início</label>
+                          <input type="date" value={dates.dataInicio || ''} onChange={e => setWorkerForm(prev => ({ ...prev, assignedScheduleDates: { ...(prev.assignedScheduleDates || {}), [s.id]: { ...dates, dataInicio: e.target.value } } }))} className="w-full bg-white border border-[var(--border)] rounded p-1.5 text-[10px] font-bold outline-none focus:border-[var(--navy)] transition-all" />
                         </div>
                         <div>
-                          <label className="text-[8px] font-bold uppercase text-slate-400 block mb-0.5">Fim</label>
-                          <input type="date" value={dates.dataFim || ''} onChange={e => setWorkerForm(prev => ({ ...prev, assignedScheduleDates: { ...(prev.assignedScheduleDates || {}), [s.id]: { ...dates, dataFim: e.target.value } } }))} className="w-full bg-white border border-slate-200 rounded p-1.5 text-[10px] font-bold outline-none focus:border-[var(--navy)] transition-all" />
+                          <label className="text-[8px] font-bold uppercase text-[var(--slate-dim)] block mb-0.5">Fim</label>
+                          <input type="date" value={dates.dataFim || ''} onChange={e => setWorkerForm(prev => ({ ...prev, assignedScheduleDates: { ...(prev.assignedScheduleDates || {}), [s.id]: { ...dates, dataFim: e.target.value } } }))} className="w-full bg-white border border-[var(--border)] rounded p-1.5 text-[10px] font-bold outline-none focus:border-[var(--navy)] transition-all" />
                         </div>
                       </div>
                       {workerForm.id && (

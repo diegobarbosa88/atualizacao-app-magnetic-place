@@ -392,28 +392,28 @@ const DocumentScannerModal = ({ open, onClose }) => {
               )}
 
               <div
-                className="border-2 border-dashed border-slate-200 rounded-2xl p-8 text-center cursor-pointer hover:border-[var(--slate)] hover:bg-slate-50 transition-all"
+                className="border-2 border-dashed border-[var(--border)] rounded-2xl p-8 text-center cursor-pointer hover:border-[var(--slate)] hover:bg-[var(--surface)] transition-all"
                 onClick={() => inputRef.current?.click()}
                 onDragOver={e => e.preventDefault()}
                 onDrop={e => { e.preventDefault(); handleFilesChange(e.dataTransfer.files); }}
               >
-                <div className="flex flex-col items-center gap-2 text-slate-400">
+                <div className="flex flex-col items-center gap-2 text-[var(--slate-dim)]">
                   <Upload size={32} />
                   <p className="font-bold text-sm">Arrasta ou clica para carregar</p>
                   <p className="text-xs">JPG, PNG, WEBP, PDF — podes selecionar vários ficheiros</p>
-                  <p className="text-[10px] text-slate-400 font-bold mt-1">Frente e verso são detetados e agrupados automaticamente</p>
+                  <p className="text-[10px] text-[var(--slate-dim)] font-bold mt-1">Frente e verso são detetados e agrupados automaticamente</p>
                 </div>
                 <input ref={inputRef} type="file" accept="image/*,application/pdf" multiple className="hidden" onChange={e => handleFilesChange(e.target.files)} />
               </div>
 
               {files.length > 0 && (
-                <div className="bg-slate-50 rounded-xl border border-slate-100 divide-y divide-slate-100">
+                <div className="bg-[var(--surface)] rounded-xl border border-[var(--border-soft)] divide-y divide-[var(--border-soft)]">
                   {files.map((f, i) => (
                     <div key={i} className="flex items-center gap-3 px-3 py-2">
-                      <FileText size={14} className="text-slate-400 flex-shrink-0" />
-                      <span className="text-xs font-bold text-slate-700 truncate flex-1">{f.name}</span>
-                      <span className="text-[10px] text-slate-400 font-bold flex-shrink-0">{(f.size / 1024).toFixed(0)} KB</span>
-                      <button onClick={() => setFiles(prev => prev.filter((_, j) => j !== i))} className="text-slate-300 hover:text-red-400 transition-colors flex-shrink-0"><X size={12} /></button>
+                      <FileText size={14} className="text-[var(--slate)] flex-shrink-0" />
+                      <span className="text-xs font-bold text-[var(--ink-mid)] truncate flex-1">{f.name}</span>
+                      <span className="text-[10px] text-[var(--slate-dim)] font-bold flex-shrink-0">{(f.size / 1024).toFixed(0)} KB</span>
+                      <button onClick={() => setFiles(prev => prev.filter((_, j) => j !== i))} className="text-[var(--slate)] hover:text-red-400 transition-colors flex-shrink-0"><X size={12} /></button>
                     </div>
                   ))}
                 </div>
@@ -434,14 +434,14 @@ const DocumentScannerModal = ({ open, onClose }) => {
           {step === 'processing' && (
             <div className="flex flex-col items-center gap-4 py-12">
               <Loader2 size={40} style={{ color: FT.slate }} className="animate-spin" />
-              <p className="font-black text-slate-600 text-sm text-center">{processingLabel}</p>
-              <div className="w-full bg-slate-100 rounded-full h-2">
+              <p className="font-black text-[var(--ink-soft)] text-sm text-center">{processingLabel}</p>
+              <div className="w-full bg-[var(--surface-dim)] rounded-full h-2">
                 <div
                   className="h-2 rounded-full transition-all"
                   style={{ backgroundColor: FT.navy, width: `${(results.filter(r => r.status === 'done' || r.status === 'error').length / files.length) * 100}%` }}
                 />
               </div>
-              <p className="text-xs text-slate-400">{results.filter(r => r.status === 'done' || r.status === 'error').length} de {files.length} processados</p>
+              <p className="text-xs text-[var(--slate-dim)]">{results.filter(r => r.status === 'done' || r.status === 'error').length} de {files.length} processados</p>
             </div>
           )}
 
@@ -454,9 +454,9 @@ const DocumentScannerModal = ({ open, onClose }) => {
                   <p className="text-lg font-black text-emerald-700">{savedCount}</p>
                   <p className="text-[10px] font-black text-emerald-600 uppercase">Guardados</p>
                 </div>
-                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-3">
                   <p className="text-lg font-black" style={{ color: 'var(--navy)' }}>{matchedCount}</p>
-                  <p className="text-[10px] font-black uppercase text-slate-500">Para guardar</p>
+                  <p className="text-[10px] font-black uppercase text-[var(--slate-dim)]">Para guardar</p>
                 </div>
                 <div className="bg-amber-50 border border-amber-100 rounded-xl p-3">
                   <p className="text-lg font-black text-amber-700">{results.filter(r => !r.matchedWorker && r.status === 'done').length}</p>
@@ -496,23 +496,23 @@ const DocumentScannerModal = ({ open, onClose }) => {
                   const groupExpanded = primary.expanded;
 
                   return (
-                    <div key={item.groupId} className="border-2 rounded-xl overflow-hidden bg-slate-50" style={{ borderColor: 'rgba(27,58,87,0.2)' }}>
+                    <div key={item.groupId} className="border-2 rounded-xl overflow-hidden bg-[var(--surface)]" style={{ borderColor: 'rgba(27,58,87,0.2)' }}>
                       {/* Header do par */}
                       <button
                         onClick={() => { if (fi >= 0) toggleExpanded(fi); if (vi >= 0) toggleExpanded(vi); }}
-                        className="w-full flex items-center gap-3 p-3 bg-slate-50 hover:bg-slate-100 transition-colors text-left"
+                        className="w-full flex items-center gap-3 p-3 bg-[var(--surface)] hover:bg-[var(--surface-dim)] transition-colors text-left"
                       >
                         <div className="p-1.5 rounded-lg flex-shrink-0" style={{ backgroundColor: 'rgba(27,58,87,0.1)', color: 'var(--navy)' }}>
                           <Layers size={13} />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-black" style={{ color: 'var(--navy)' }}>{tipoDoc} — Frente &amp; Verso</p>
-                          {worker && <p className="text-[10px] text-slate-500 font-bold">{worker.name}</p>}
+                          {worker && <p className="text-[10px] text-[var(--slate-dim)] font-bold">{worker.name}</p>}
                         </div>
                         {isSaved && <CheckCircle size={14} className="text-emerald-500 flex-shrink-0" />}
                         {!isSaved && worker && <span className="text-[10px] font-black text-emerald-600 bg-emerald-100 border border-emerald-200 px-2 py-0.5 rounded-full flex-shrink-0">{worker.name}</span>}
                         {!worker && <span className="text-[10px] font-black text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full flex-shrink-0">Sem match</span>}
-                        {groupExpanded ? <ChevronUp size={14} className="text-slate-400 flex-shrink-0" /> : <ChevronDown size={14} className="text-slate-400 flex-shrink-0" />}
+                        {groupExpanded ? <ChevronUp size={14} className="text-[var(--slate)] flex-shrink-0" /> : <ChevronDown size={14} className="text-[var(--slate)] flex-shrink-0" />}
                       </button>
 
                       {groupExpanded && (
@@ -522,12 +522,12 @@ const DocumentScannerModal = ({ open, onClose }) => {
                             <div className="grid grid-cols-2 gap-2">
                               {[{ r: rf, label: 'Frente' }, { r: rv, label: 'Verso' }].map(({ r: side, label }) => (
                                 <div key={label} className="space-y-1">
-                                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">{label}</p>
+                                  <p className="text-[9px] font-black text-[var(--slate-dim)] uppercase tracking-widest text-center">{label}</p>
                                   {side?.preview ? (
-                                    <img src={side.preview} alt={label} className="w-full h-32 object-cover rounded-lg border border-slate-200" />
+                                    <img src={side.preview} alt={label} className="w-full h-32 object-cover rounded-lg border border-[var(--border)]" />
                                   ) : (
-                                    <div className="w-full h-32 rounded-lg border border-slate-200 bg-slate-100 flex items-center justify-center">
-                                      <FileText size={20} className="text-slate-300" />
+                                    <div className="w-full h-32 rounded-lg border border-[var(--border)] bg-[var(--surface-dim)] flex items-center justify-center">
+                                      <FileText size={20} className="text-[var(--slate)]" />
                                     </div>
                                   )}
                                 </div>
@@ -536,19 +536,19 @@ const DocumentScannerModal = ({ open, onClose }) => {
                           )}
 
                           {/* Info combinada */}
-                          <div className="bg-white border border-slate-200 rounded-xl p-3 space-y-2">
+                          <div className="bg-white border border-[var(--border)] rounded-xl p-3 space-y-2">
                             <div className="flex items-center gap-1 mb-1">
                               <FileText size={11} style={{ color: FT.slate }} />
-                              <span className="text-[9px] font-black text-slate-400 uppercase">Informação do documento</span>
+                              <span className="text-[9px] font-black text-[var(--slate-dim)] uppercase">Informação do documento</span>
                             </div>
                             {nomeWorker && (
-                              <div><span className="text-[9px] text-slate-400 font-bold">Nome: </span><span className="text-[10px] font-black text-slate-700">{nomeWorker}</span></div>
+                              <div><span className="text-[9px] text-[var(--slate-dim)] font-bold">Nome: </span><span className="text-[10px] font-black text-[var(--ink-mid)]">{nomeWorker}</span></div>
                             )}
                             {nif && (
-                              <div><span className="text-[9px] text-slate-400 font-bold">NIF: </span><span className="text-[10px] font-black text-slate-700">{nif}</span></div>
+                              <div><span className="text-[9px] text-[var(--slate-dim)] font-bold">NIF: </span><span className="text-[10px] font-black text-[var(--ink-mid)]">{nif}</span></div>
                             )}
                             {emissao && (
-                              <div><span className="text-[9px] text-slate-400 font-bold">Emissão: </span><span className="text-[10px] font-black text-slate-700">{emissao}</span></div>
+                              <div><span className="text-[9px] text-[var(--slate-dim)] font-bold">Emissão: </span><span className="text-[10px] font-black text-[var(--ink-mid)]">{emissao}</span></div>
                             )}
                             <ValidadeInfo dataValidade={validade} />
                           </div>
@@ -584,19 +584,19 @@ const DocumentScannerModal = ({ open, onClose }) => {
                                 <User size={13} /> Criar Novo Colaborador
                               </button>
                               <div className="relative">
-                                <Search size={12} className="absolute left-2.5 top-2.5 text-slate-400" />
+                                <Search size={12} className="absolute left-2.5 top-2.5 text-[var(--slate)]" />
                                 <input
                                   type="text"
                                   value={primary.manualSearch || ''}
                                   onChange={e => { if (fi >= 0) setManualSearch(fi, e.target.value); if (vi >= 0) setManualSearch(vi, e.target.value); }}
                                   placeholder="Associar a colaborador..."
-                                  className="w-full pl-7 pr-3 py-2 text-xs font-bold border border-slate-200 rounded-lg outline-none focus:border-[var(--navy)] transition-all"
+                                  className="w-full pl-7 pr-3 py-2 text-xs font-bold border border-[var(--border)] rounded-lg outline-none focus:border-[var(--navy)] transition-all"
                                 />
                               </div>
                               {(primary.manualSearch || '').length >= 2 && (
-                                <div className="border border-slate-200 rounded-lg overflow-hidden divide-y divide-slate-100">
+                                <div className="border border-[var(--border)] rounded-lg overflow-hidden divide-y divide-[var(--border-soft)]">
                                   {workers.filter(w => w.name.toLowerCase().includes(primary.manualSearch.toLowerCase())).slice(0, 5).map(w => (
-                                    <button key={w.id} onClick={() => { if (fi >= 0) setMatchedWorker(fi, w); if (vi >= 0) setMatchedWorker(vi, w); }} className="w-full text-left px-3 py-2 hover:bg-slate-100 transition-colors text-xs font-bold text-slate-700">
+                                    <button key={w.id} onClick={() => { if (fi >= 0) setMatchedWorker(fi, w); if (vi >= 0) setMatchedWorker(vi, w); }} className="w-full text-left px-3 py-2 hover:bg-[var(--surface-dim)] transition-colors text-xs font-bold text-[var(--ink-mid)]">
                                       {w.name}
                                     </button>
                                   ))}
@@ -614,19 +614,19 @@ const DocumentScannerModal = ({ open, onClose }) => {
                 const { idx } = item;
                 const r = results[idx];
                 return (
-                  <div key={idx} className="border border-slate-200 rounded-xl overflow-hidden">
+                  <div key={idx} className="border border-[var(--border)] rounded-xl overflow-hidden">
                     <button
                       onClick={() => toggleExpanded(idx)}
-                      className="w-full flex items-center gap-3 p-3 bg-slate-50 hover:bg-slate-100 transition-colors text-left"
+                      className="w-full flex items-center gap-3 p-3 bg-[var(--surface)] hover:bg-[var(--surface-dim)] transition-colors text-left"
                     >
-                      <FileText size={14} className="text-slate-400 flex-shrink-0" />
-                      <span className="text-xs font-black text-slate-700 truncate flex-1">{r.file.name}</span>
+                      <FileText size={14} className="text-[var(--slate)] flex-shrink-0" />
+                      <span className="text-xs font-black text-[var(--ink-mid)] truncate flex-1">{r.file.name}</span>
                       {r.status === 'analyzing' && <Loader2 size={14} style={{ color: FT.slate }} className="animate-spin flex-shrink-0" />}
                       {r.status === 'error' && <AlertTriangle size={14} className="text-red-500 flex-shrink-0" />}
                       {r.status === 'done' && r.saved && <CheckCircle size={14} className="text-emerald-500 flex-shrink-0" />}
                       {r.status === 'done' && !r.saved && r.matchedWorker && <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full flex-shrink-0">{r.matchedWorker.name}</span>}
                       {r.status === 'done' && !r.saved && !r.matchedWorker && <span className="text-[10px] font-black text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full flex-shrink-0">Sem match</span>}
-                      {r.expanded ? <ChevronUp size={14} className="text-slate-400 flex-shrink-0" /> : <ChevronDown size={14} className="text-slate-400 flex-shrink-0" />}
+                      {r.expanded ? <ChevronUp size={14} className="text-[var(--slate)] flex-shrink-0" /> : <ChevronDown size={14} className="text-[var(--slate)] flex-shrink-0" />}
                     </button>
 
                     {r.expanded && (
@@ -638,19 +638,19 @@ const DocumentScannerModal = ({ open, onClose }) => {
                         {r.status === 'done' && r.extractedData && (
                           <>
                             {r.preview && (
-                              <img src={r.preview} alt={r.file.name} className="w-full max-h-40 object-contain rounded-lg border border-slate-100 bg-slate-50" />
+                              <img src={r.preview} alt={r.file.name} className="w-full max-h-40 object-contain rounded-lg border border-[var(--border-soft)] bg-[var(--surface)]" />
                             )}
                             <div className="grid grid-cols-2 gap-2">
-                              <div className="bg-slate-50 rounded-lg p-3 space-y-1.5">
-                                <div className="flex items-center gap-1 mb-1"><User size={11} style={{ color: FT.slate }} /><span className="text-[9px] font-black text-slate-400 uppercase">Trabalhador</span></div>
+                              <div className="bg-[var(--surface)] rounded-lg p-3 space-y-1.5">
+                                <div className="flex items-center gap-1 mb-1"><User size={11} style={{ color: FT.slate }} /><span className="text-[9px] font-black text-[var(--slate-dim)] uppercase">Trabalhador</span></div>
                                 {[['Nome', r.extractedData.trabalhador?.nome_completo], ['NIF', r.extractedData.trabalhador?.nif], ['NISS', r.extractedData.trabalhador?.niss]].map(([l, v]) => v && (
-                                  <div key={l}><span className="text-[9px] text-slate-400 font-bold">{l}: </span><span className="text-[10px] font-black text-slate-700">{v}</span></div>
+                                  <div key={l}><span className="text-[9px] text-[var(--slate-dim)] font-bold">{l}: </span><span className="text-[10px] font-black text-[var(--ink-mid)]">{v}</span></div>
                                 ))}
                               </div>
-                              <div className="bg-slate-50 rounded-lg p-3 space-y-1.5">
-                                <div className="flex items-center gap-1 mb-1"><FileText size={11} style={{ color: FT.slate }} /><span className="text-[9px] font-black text-slate-400 uppercase">Documento</span></div>
+                              <div className="bg-[var(--surface)] rounded-lg p-3 space-y-1.5">
+                                <div className="flex items-center gap-1 mb-1"><FileText size={11} style={{ color: FT.slate }} /><span className="text-[9px] font-black text-[var(--slate-dim)] uppercase">Documento</span></div>
                                 {[['Tipo', r.extractedData.documento?.tipo_documento], ['Emissão', r.extractedData.documento?.data_emissao]].map(([l, v]) => v && (
-                                  <div key={l}><span className="text-[9px] text-slate-400 font-bold">{l}: </span><span className="text-[10px] font-black text-slate-700">{v}</span></div>
+                                  <div key={l}><span className="text-[9px] text-[var(--slate-dim)] font-bold">{l}: </span><span className="text-[10px] font-black text-[var(--ink-mid)]">{v}</span></div>
                                 ))}
                                 <ValidadeInfo dataValidade={r.extractedData.documento?.data_validade} iconSize={9} />
                               </div>
@@ -684,19 +684,19 @@ const DocumentScannerModal = ({ open, onClose }) => {
                                   <User size={13} /> Criar Novo Colaborador
                                 </button>
                                 <div className="relative">
-                                  <Search size={12} className="absolute left-2.5 top-2.5 text-slate-400" />
+                                  <Search size={12} className="absolute left-2.5 top-2.5 text-[var(--slate)]" />
                                   <input
                                     type="text"
                                     value={r.manualSearch}
                                     onChange={e => setManualSearch(idx, e.target.value)}
                                     placeholder="Associar a colaborador..."
-                                    className="w-full pl-7 pr-3 py-2 text-xs font-bold border border-slate-200 rounded-lg outline-none focus:border-[var(--navy)] transition-all"
+                                    className="w-full pl-7 pr-3 py-2 text-xs font-bold border border-[var(--border)] rounded-lg outline-none focus:border-[var(--navy)] transition-all"
                                   />
                                 </div>
                                 {r.manualSearch.length >= 2 && (
-                                  <div className="border border-slate-200 rounded-lg overflow-hidden divide-y divide-slate-100">
+                                  <div className="border border-[var(--border)] rounded-lg overflow-hidden divide-y divide-[var(--border-soft)]">
                                     {workers.filter(w => w.name.toLowerCase().includes(r.manualSearch.toLowerCase())).slice(0, 5).map(w => (
-                                      <button key={w.id} onClick={() => setMatchedWorker(idx, w)} className="w-full text-left px-3 py-2 hover:bg-slate-100 transition-colors text-xs font-bold text-slate-700">
+                                      <button key={w.id} onClick={() => setMatchedWorker(idx, w)} className="w-full text-left px-3 py-2 hover:bg-[var(--surface-dim)] transition-colors text-xs font-bold text-[var(--ink-mid)]">
                                         {w.name}
                                       </button>
                                     ))}
@@ -714,7 +714,7 @@ const DocumentScannerModal = ({ open, onClose }) => {
 
               <button
                 onClick={() => { setStep('upload'); setFiles([]); setResults([]); }}
-                className="w-full flex items-center justify-center gap-2 text-slate-500 hover:text-slate-700 py-2 rounded-xl font-bold text-xs uppercase transition-colors"
+                className="w-full flex items-center justify-center gap-2 text-[var(--slate-dim)] hover:text-[var(--ink-mid)] py-2 rounded-xl font-bold text-xs uppercase transition-colors"
               >
                 <RefreshCw size={13} /> Analisar novos documentos
               </button>
