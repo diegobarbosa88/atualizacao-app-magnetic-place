@@ -341,7 +341,7 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb,
       {/* Tolerâncias */}
       <div className="flex justify-end">
         <button onClick={() => setConfigAberto(o => !o)}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-indigo-600 transition-colors">
+          className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] hover:text-indigo-600 transition-colors">
           <Settings size={13} />
           Tolerâncias
           <ChevronRight size={12} className={`transition-transform ${configAberto ? 'rotate-90' : ''}`} />
@@ -349,44 +349,44 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb,
       </div>
 
       {configAberto && (
-        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Limites de validação (€)</p>
+        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 space-y-3">
+          <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Limites de validação (€)</p>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-[10px] font-bold text-emerald-600 block mb-1">Válido até</label>
               <input type="number" min="0" step="0.01" value={tolValidoLocal}
                 onChange={e => setTolValidoLocal(e.target.value)}
                 onBlur={guardarTolerancias}
-                className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-emerald-500" />
+                className="w-full p-2 bg-white border border-[var(--border)] rounded-lg text-sm font-bold text-[var(--ink-mid)] outline-none focus:ring-2 focus:ring-emerald-500" />
             </div>
             <div>
               <label className="text-[10px] font-bold text-yellow-600 block mb-1">Aviso até</label>
               <input type="number" min="0" step="0.01" value={tolAvisoLocal}
                 onChange={e => setTolAvisoLocal(e.target.value)}
                 onBlur={guardarTolerancias}
-                className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-yellow-500" />
+                className="w-full p-2 bg-white border border-[var(--border)] rounded-lg text-sm font-bold text-[var(--ink-mid)] outline-none focus:ring-2 focus:ring-yellow-500" />
             </div>
           </div>
-          <p className="text-[10px] text-slate-400">
+          <p className="text-[10px] text-[var(--slate-dim)]">
             Divergência ≤ {tolValidoLocal}€ → válido · ≤ {tolAvisoLocal}€ → aviso · acima → inválido
           </p>
         </div>
       )}
 
       {/* Upload */}
-      <label className="flex flex-col items-center justify-center gap-2 p-8 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition-all">
-        <Files size={28} className="text-slate-300" />
-        <span className="text-sm font-bold text-slate-500">
+      <label className="flex flex-col items-center justify-center gap-2 p-8 bg-[var(--surface)] border-2 border-dashed border-[var(--border)] rounded-2xl cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition-all">
+        <Files size={28} className="text-[var(--slate)]" />
+        <span className="text-sm font-bold text-[var(--slate-dim)]">
           {files.length > 0
             ? `${files.length} ficheiro${files.length > 1 ? 's' : ''} selecionado${files.length > 1 ? 's' : ''}`
             : 'Clique para selecionar PDF(s)'}
         </span>
-        <span className="text-[10px] text-slate-400">1 PDF com todos os recibos, ou vários PDFs separados</span>
+        <span className="text-[10px] text-[var(--slate-dim)]">1 PDF com todos os recibos, ou vários PDFs separados</span>
         <input type="file" accept=".pdf" multiple className="hidden" onChange={handleFiles} />
       </label>
 
       <button onClick={handleProcessar} disabled={!files.length || processando}
-        className="w-full py-3 bg-[var(--orange)] text-[var(--navy-solid)] rounded-xl text-sm font-black uppercase tracking-widest hover:bg-slate-900 transition-all shadow-md shadow-[var(--orange-shadow)] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+        className="w-full py-3 bg-[var(--orange)] text-[var(--navy-solid)] rounded-xl text-sm font-black uppercase tracking-widest hover:bg-[var(--orange-deep)] transition-all shadow-md shadow-[var(--orange-shadow)] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
         {processando ? <Loader2 size={16} className="animate-spin" /> : <ReceiptText size={16} />}
         {processando ? 'A processar...' : files.length > 0 ? `Processar ${files.length} Ficheiro${files.length > 1 ? 's' : ''}` : 'Processar'}
       </button>
@@ -410,21 +410,21 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb,
 
       {/* Tabela de resultados */}
       {resultados.length > 0 && (
-        <div className="rounded-2xl border border-slate-100 overflow-hidden">
+        <div className="rounded-2xl border border-[var(--border-soft)] overflow-hidden">
           <table className="w-full text-xs">
-            <thead className="bg-slate-50 border-b border-slate-100">
+            <thead className="bg-[var(--surface)] border-b border-[var(--border-soft)]">
               <tr>
-                <th className="px-4 py-2.5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Trabalhador</th>
-                <th className="px-4 py-2.5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Mês</th>
-                <th className="px-4 py-2.5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Líquido</th>
-                <th className="px-4 py-2.5 text-center text-[10px] font-black uppercase tracking-widest text-slate-400">Divergência</th>
-                <th className="px-4 py-2.5 text-center text-[10px] font-black uppercase tracking-widest text-slate-400">Estado</th>
+                <th className="px-4 py-2.5 text-left text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Trabalhador</th>
+                <th className="px-4 py-2.5 text-left text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Mês</th>
+                <th className="px-4 py-2.5 text-right text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Líquido</th>
+                <th className="px-4 py-2.5 text-center text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Divergência</th>
+                <th className="px-4 py-2.5 text-center text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Estado</th>
                 {burstResultados && (
                   <th className="px-4 py-2.5 text-center text-[10px] font-black uppercase tracking-widest text-indigo-400">Enviar</th>
                 )}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
+            <tbody className="divide-y divide-[var(--border-soft)]">
               {resultados.map((r, i) => {
                 const estadoAtual = !r.sucesso ? 'erro' : r.valido ? 'valido' : r.aviso ? 'aviso' : 'invalido';
                 const burstMatch  = burstResultados?.find(b => b.worker?.id === r.worker?.id);
@@ -432,28 +432,28 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb,
                   <React.Fragment key={i}>
                     <tr
                       onClick={() => setExpandido(expandido === i ? null : i)}
-                      className="hover:bg-slate-50 transition-colors cursor-pointer select-none"
+                      className="hover:bg-[var(--surface)] transition-colors cursor-pointer select-none"
                     >
                       {/* Trabalhador */}
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
-                          <ChevronRight size={13} className={`text-slate-300 transition-transform shrink-0 ${expandido === i ? 'rotate-90' : ''}`} />
+                          <ChevronRight size={13} className={`text-[var(--slate)] transition-transform shrink-0 ${expandido === i ? 'rotate-90' : ''}`} />
                           <div>
-                            <p className="font-bold text-slate-800">
+                            <p className="font-bold text-[var(--ink)]">
                               {r.worker?.name ?? <span className="text-amber-500">Não encontrado</span>}
                             </p>
-                            {!r.worker && <p className="text-[10px] text-slate-400 truncate max-w-[160px]">{r.nomeExtraido}</p>}
+                            {!r.worker && <p className="text-[10px] text-[var(--slate-dim)] truncate max-w-[160px]">{r.nomeExtraido}</p>}
                           </div>
                         </div>
                       </td>
 
                       {/* Mês */}
-                      <td className="px-4 py-3 text-slate-600 font-medium whitespace-nowrap">
+                      <td className="px-4 py-3 text-[var(--ink-soft)] font-medium whitespace-nowrap">
                         {r.mes !== '—' ? formatarMes(r.mes) : '—'}
                       </td>
 
                       {/* Líquido */}
-                      <td className="px-4 py-3 text-right font-bold text-slate-700">
+                      <td className="px-4 py-3 text-right font-bold text-[var(--ink-mid)]">
                         {r.liquidoExtraido != null ? `${r.liquidoExtraido.toFixed(2)}€` : '—'}
                       </td>
 
@@ -461,7 +461,7 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb,
                       <td className="px-4 py-3 text-center">
                         {r.sucesso && r.divergenciaSinal != null
                           ? <DivergenciaBadge sinal={r.divergenciaSinal} className="text-xs font-bold" />
-                          : <span className="text-slate-300">—</span>
+                          : <span className="text-[var(--slate)]">—</span>
                         }
                       </td>
 
@@ -476,12 +476,12 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb,
                                 setResultados(prev => prev.map((x, idx) => idx === i ? { ...x, ...flags } : x));
                               }}
                             />
-                            <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${ESTADO_BADGE[estadoAtual] ?? 'bg-slate-100 text-slate-500'}`}>
+                            <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${ESTADO_BADGE[estadoAtual] ?? 'bg-[var(--surface-dim)] text-[var(--slate-dim)]'}`}>
                               {ESTADO_PT[estadoAtual] ?? estadoAtual}
                             </span>
                           </div>
                           {r.envioStatus === 'enviado'    && <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[9px] font-black uppercase"><CheckCircle size={10} />Enviado</span>}
-                          {r.envioStatus === 'ja_enviado' && <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 text-[9px] font-black uppercase"><CheckCircle size={10} />Já enviado</span>}
+                          {r.envioStatus === 'ja_enviado' && <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--surface-dim)] text-[var(--slate-dim)] text-[9px] font-black uppercase"><CheckCircle size={10} />Já enviado</span>}
                           {r.envioStatus === 'erro_envio' && <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-100 text-red-600 text-[9px] font-black uppercase" title={r.erroEnvio}><XCircle size={10} />Erro envio</span>}
                           {r.envioStatus === 'sem_pdf'    && <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-600 text-[9px] font-black uppercase"><AlertCircle size={10} />Sem PDF</span>}
                         </div>
@@ -499,7 +499,7 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb,
                                 title={burstMatch.jaEnviado ? 'Já enviado anteriormente' : undefined}
                                 className="accent-indigo-600 w-4 h-4 disabled:opacity-40 cursor-pointer"
                               />
-                            : <span className="text-slate-300">—</span>
+                            : <span className="text-[var(--slate)]">—</span>
                           }
                         </td>
                       )}
@@ -507,7 +507,7 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb,
 
                     {/* Linha expandida — detalhe numérico */}
                     {expandido === i && (
-                      <tr className="bg-slate-50">
+                      <tr className="bg-[var(--surface)]">
                         <td colSpan={burstResultados ? 6 : 5} className="px-6 py-4">
                           <div className={`rounded-xl border p-4 space-y-3 ${estadoBg(r)}`}>
                             {r.sucesso && (
@@ -518,20 +518,20 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb,
                                   ['Seg. Social',      r.ssExtraido != null ? `${r.ssExtraido.toFixed(2)}€` : '—'],
                                   ['IRS',              r.irsExtraido != null ? `${r.irsExtraido.toFixed(2)}€` : '—'],
                                 ].map(([label, val]) => (
-                                  <div key={label} className="bg-white rounded-xl p-3 text-center border border-slate-100">
-                                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">{label}</p>
-                                    <p className="text-sm font-black text-slate-800">{val}</p>
+                                  <div key={label} className="bg-white rounded-xl p-3 text-center border border-[var(--border-soft)]">
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-1">{label}</p>
+                                    <p className="text-sm font-black text-[var(--ink)]">{val}</p>
                                   </div>
                                 ))}
                               </div>
                             )}
                             {r.mensagem && (
-                              <p className="text-xs font-bold text-slate-700">{r.mensagem}</p>
+                              <p className="text-xs font-bold text-[var(--ink-mid)]">{r.mensagem}</p>
                             )}
                             {!r.sucesso && r._textoExtraido && (
                               <details>
-                                <summary className="text-[10px] font-black uppercase tracking-widest text-slate-400 cursor-pointer">Texto extraído (debug)</summary>
-                                <pre className="mt-2 text-[10px] text-slate-600 bg-white border border-slate-200 rounded-xl p-3 overflow-auto max-h-40 whitespace-pre-wrap break-all">{r._textoExtraido}</pre>
+                                <summary className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] cursor-pointer">Texto extraído (debug)</summary>
+                                <pre className="mt-2 text-[10px] text-[var(--ink-soft)] bg-white border border-[var(--border)] rounded-xl p-3 overflow-auto max-h-40 whitespace-pre-wrap break-all">{r._textoExtraido}</pre>
                               </details>
                             )}
                           </div>
@@ -551,17 +551,17 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb,
         <div className="space-y-2">
           <div className="flex flex-col sm:flex-row sm:justify-end sm:flex-wrap gap-2">
             <button onClick={handleAdicionarACustos} disabled={adicionando || adicionado || Object.keys(totaisPorMes).length === 0}
-              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:border-emerald-400 hover:text-emerald-600 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-[var(--border)] rounded-xl text-[10px] font-black uppercase tracking-widest text-[var(--ink-soft)] hover:border-emerald-400 hover:text-emerald-600 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
               {adicionando ? <Loader2 size={13} className="animate-spin" /> : <Coins size={13} />}
               {adicionado ? 'Adicionado a Custos' : 'Adicionar a Custos'}
             </button>
             <button onClick={handleGuardarTodos} disabled={guardando || guardados}
-              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:border-indigo-400 hover:text-indigo-600 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-[var(--border)] rounded-xl text-[10px] font-black uppercase tracking-widest text-[var(--ink-soft)] hover:border-indigo-400 hover:text-indigo-600 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
               {guardando ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
               {guardados ? 'Guardado' : 'Guardar Todos'}
             </button>
             <button onClick={handleExportarPDF}
-              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:border-indigo-400 hover:text-indigo-600 transition-all">
+              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-[var(--border)] rounded-xl text-[10px] font-black uppercase tracking-widest text-[var(--ink-soft)] hover:border-indigo-400 hover:text-indigo-600 transition-all">
               <FileDown size={13} />
               Exportar PDF
             </button>
@@ -570,12 +570,12 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb,
                 <button
                   onClick={handleConfirmarEnvio}
                   disabled={enviandoRecibos || selecionadosEnvio.size === 0}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-[var(--orange)] text-[var(--navy-solid)] rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 transition-all shadow-sm shadow-[var(--orange-shadow)] disabled:opacity-40 disabled:cursor-not-allowed">
+                  className="flex items-center gap-2 px-4 py-2.5 bg-[var(--orange)] text-[var(--navy-solid)] rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[var(--orange-deep)] transition-all shadow-sm shadow-[var(--orange-shadow)] disabled:opacity-40 disabled:cursor-not-allowed">
                   {enviandoRecibos ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
                   Confirmar Envio ({selecionadosEnvio.size})
                 </button>
                 <button onClick={() => { setBurstResultados(null); setSelecionadosEnvio(new Set()); }}
-                  className="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all">
+                  className="px-4 py-2.5 bg-[var(--surface-dim)] text-[var(--ink-soft)] rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[var(--border)] transition-all">
                   Cancelar
                 </button>
               </>
@@ -583,14 +583,14 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb,
               <button
                 onClick={handleIniciarEnvio}
                 disabled={enviandoRecibos}
-                className="flex items-center gap-2 px-4 py-2.5 bg-[var(--orange)] text-[var(--navy-solid)] rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 transition-all shadow-sm shadow-[var(--orange-shadow)] disabled:opacity-40 disabled:cursor-not-allowed">
+                className="flex items-center gap-2 px-4 py-2.5 bg-[var(--orange)] text-[var(--navy-solid)] rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[var(--orange-deep)] transition-all shadow-sm shadow-[var(--orange-shadow)] disabled:opacity-40 disabled:cursor-not-allowed">
                 {enviandoRecibos ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
                 Enviar Recibos
               </button>
             )}
           </div>
           {Object.keys(totaisPorMes).length > 0 && (
-            <p className="text-[10px] text-slate-400 text-right">
+            <p className="text-[10px] text-[var(--slate-dim)] text-right">
               {Object.entries(totaisPorMes).map(([mes, t]) =>
                 `${formatarMes(mes)}: SS ${t.ss.toFixed(2)}€ + IRS ${t.irs.toFixed(2)}€`
               ).join('  ·  ')}
