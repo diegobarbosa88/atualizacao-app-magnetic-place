@@ -481,6 +481,20 @@ para quem um dia a tomar não ter de as redescobrir:
   calibre do `--orange-hover`: muda o aspecto de todos os chips do admin.
   Os varrimentos por lote não o apanharam porque nunca estiveram os 60 visíveis no mesmo ecrã; só
   apareceu ao procurar o padrão no código, não no que estava renderizado.
+- **Família por tratar: o `--slate` a colorir texto.** O `--slate` foi reservado para ícone e
+  decorativo, onde os seus 2,89:1 sobre branco chegam. Mas acabou também em texto, e aí falha. O
+  varrimento de 16 rotas encontrou ~70 travessões no `faturacao`, 14 números de dia no
+  `mapa-salarios`, ~70 cabeçalhos de dia no `schedules` (esses já em `--slate-dim`, 4,45 no claro e
+  3,79 no escuro) e 2 chips no `pagamentos`. **Decisões de princípio já tomadas pelo Diego**, a
+  confirmar com levantamento normal quando o lote chegar:
+  - **travessão `—` de valor ausente → fica `--slate`.** É sinal deliberado de "nada aqui", não
+    informação a processar. Mesmo critério dos `—` de contacto ausente no lote de fornecedores.
+  - **números de dia do `mapa-salarios` → `--slate-dim`.** São dados: o utilizador lê o número para
+    saber a que dia corresponde o valor.
+  - **cabeçalhos `2ª`/`3ª`/`Sáb` do `schedules` → `--slate-dim`.** Mesma lógica dos `<th>` e labels
+    já classificados como funcionais.
+  - **chips do `pagamentos` com fundo no pai → verificar o par completo** (repouso *e* hover) antes
+    de escolher o destino, como no lote do par chip.
 - **A regra-ponte do `App.css` não cobre as variantes com opacidade.** `.dark .bg-amber-50` apanha
   `bg-amber-50`, mas não `bg-amber-50/50` — que o Tailwind compila para outra classe. São 12 casos
   (`bg-indigo-50/50`, `bg-amber-50/40`, `bg-rose-50/30`…) onde o fundo fica creme claro no modo
