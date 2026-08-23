@@ -151,7 +151,7 @@ export default function AlertasAdmin() {
             const statCfg = STATUS_CFG[alerta.status] || STATUS_CFG.pendente;
             const isBusy = busyId === alerta.id;
             return (
-              <div key={alerta.id} className="p-4 rounded-3xl border border-[var(--border-soft)] bg-white shadow-sm hover:shadow-md transition-all">
+              <div key={alerta.id} className="p-4 rounded-[1.5rem] border border-[var(--border-soft)] bg-white shadow-sm hover:shadow-md transition-all">
                 <div className="flex items-start gap-3">
                   <div className={`p-3 rounded-2xl ${sevCfg.bg} ${sevCfg.text} shrink-0`}>
                     <AlertOctagon size={18} />

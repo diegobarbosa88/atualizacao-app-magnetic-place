@@ -332,7 +332,7 @@ function NavList({ activeTab, setActiveTab, setAuditWorkerId, counts, onItemClic
                               <button
                                 key={st.id}
                                 onClick={() => handleNavigate(st.path)}
-                                className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-xs text-left"
+                                className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-left"
                                 style={{
                                   color: subActive ? 'white' : B.inactiveText,
                                   fontWeight: subActive ? 500 : 400,

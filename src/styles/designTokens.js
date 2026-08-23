@@ -95,12 +95,25 @@ export const SCALE = {
   radius: {
     chip:    'rounded-full',
     tab:     'rounded-[7px]',
+    // 4px — chips minúsculos, checkboxes, botões de uma linha. Degrau
+    // acrescentado na fase 2: eram 92 usos de `rounded` sem nome.
+    tight:   'rounded',
     control: 'rounded-lg',          //  8px — botões de ação, toggles
+    // 12px — caixas de ícone, botões com padding, contentores pequenos.
+    // É o raio DE FACTO da app: 709 usos, 39% de todos, mais do que qualquer
+    // outro. A escala original vinha dos mockups e não o tinha, o que deixava
+    // o valor mais comum sem token e três degraus (tab, card, input) quase
+    // sem uso. Acrescentado para a escala descrever a app, em vez de obrigar
+    // 700 elementos a mudar de aspecto sem ganho nenhum.
+    box:     'rounded-xl',
     input:   'rounded-[0.85rem]',   // 13.6px — campos de formulário
     header:  'rounded-2xl',         // 16px — faixa de cabeçalho de secção
     card:    'rounded-[1.2rem]',    // 19.2px — cartão de entidade
     panel:   'rounded-[1.5rem]',    // 24px — painel de página
     modal:   'rounded-[2rem]',      // 32px
+    // 40px — barras e faixas muito arredondadas. 34 usos, todos escritos
+    // à mão como `rounded-[2.5rem]` antes de terem nome.
+    hero:    'rounded-[2.5rem]',
   },
   pad: {
     card:   'px-[1.1rem] py-[1.05rem]',

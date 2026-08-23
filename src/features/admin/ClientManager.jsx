@@ -297,7 +297,7 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
             return (
               <Card key={c.id} variant="item" interactive>
                 <div className="flex items-start justify-between mb-[0.7rem]">
-                  <div className="w-[38px] h-[38px] rounded-[11px] flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: FT.slate }}>
+                  <div className="w-[38px] h-[38px] rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: FT.slate }}>
                     <Briefcase size={17} />
                   </div>
                   <div className="flex items-center gap-1">

@@ -358,7 +358,7 @@ export default function ContadorEmailsAdmin() {
             const aberto = revisao?.emailId === email.id;
 
             return (
-              <div key={email.id} className="bg-white rounded-3xl border border-[var(--border-soft)] shadow-sm overflow-hidden">
+              <div key={email.id} className="bg-white rounded-[1.5rem] border border-[var(--border-soft)] shadow-sm overflow-hidden">
                 <div className="p-4 sm:p-5 flex items-start justify-between gap-4 flex-wrap">
                   <div className="min-w-0 flex-1 flex items-start gap-3">
                     {!email.isMensal && (

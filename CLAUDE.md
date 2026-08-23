@@ -544,6 +544,37 @@ para quem um dia a tomar não ter de as redescobrir:
   regra nenhuma no `.dark`.** Tratar metade do par piora; tratar as duas metades é um lote grande e
   precisa de medir onde é que esses textos assentam em fundos que não invertem. Fica por decidir.
 
+### Fase 2 — raios (`SCALE.radius`)
+
+A escala original vinha dos mockups e **não descrevia a app**: o valor mais usado, `rounded-xl`
+(12px, 709 usos, 39% de todos), não tinha token nenhum, enquanto três degraus definidos — `tab`,
+`card`, `input` — tinham 0, 0 e 2 usos. Dos 1.813 raios do admin, 918 estavam fora da escala.
+
+**Decisão: a escala ganhou os degraus que faltavam, em vez de a app mudar de aspecto.** É o inverso
+do que se fez ao indigo do Vite, e a razão é a diferença entre resíduo e intenção: o indigo era
+sobra de template, sem ninguém a escolhê-lo; os 12px foram escolhidos consistentemente em quase 40%
+da app. A escala existe para nomear o que há.
+
+Três degraus novos: `tight` (4px, chips minúsculos e checkboxes), `box` (12px, caixas de ícone,
+botões com padding e contentores pequenos) e `hero` (40px, barras muito arredondadas).
+
+**Normalizar valores, não trocar sintaxe.** Converter as 1.813 classes para `SCALE.radius.X`
+obrigaria a importar `SCALE` em ~100 ficheiros sem que um único valor mudasse — trabalho cosmético
+com superfície de erro a mais. Em vez disso normalizaram-se os **81** valores órfãos para o degrau
+mais próximo, e as classes Tailwind ficam como estão, por serem exactamente os mesmos valores. O
+vocabulário fechou de 25 valores distintos para 10 degraus nomeados (mais os direccionais
+`rounded-r/l/t/tr/tl` e `rounded-none`, que são casos à parte).
+
+A maior mudança visual foi `rounded-md` → `control` (6→8px, 44 casos); o `rounded-3xl` → `panel`
+tem exactamente o mesmo valor (24px) e não muda nada. Verificado no browser em 12 rotas nos dois
+modos, à procura de raios maiores que metade do lado do elemento — os únicos que aparecem são
+círculos a 50% definidos em CSS (logótipo, botões redondos, pontos), nenhum deles tocado aqui.
+
+**Pendência à parte, sem decisão:** os três degraus órfãos. O `tab` (`rounded-[7px]`) continua com
+0 usos, e o `card` (`rounded-[1.2rem]`) só passou a ter 2 por receber normalizações. Ou se mantêm
+por virem a ser adoptados, ou saem da escala por não descreverem nada real — mas isso decide-se à
+parte, não no meio de uma conversão.
+
 **Ponte de cor de estado — projecto próprio, ainda não iniciado.** Categoria à parte: não é
 migração de neutros nem cor de marca, é o modo escuro das cores de estado, e é o maior bloco que
 resta.

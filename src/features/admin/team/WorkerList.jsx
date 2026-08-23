@@ -269,21 +269,21 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                               onClick={() => { onEdit(w); setOpenMenuId(null); }}
                               className="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-amber-50 group transition-colors"
                             >
-                              <span className="flex items-center justify-center w-6 h-6 rounded-md bg-amber-100 text-amber-500 group-hover:bg-amber-200 transition-colors shrink-0"><Edit2 size={11} /></span>
+                              <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-amber-100 text-amber-500 group-hover:bg-amber-200 transition-colors shrink-0"><Edit2 size={11} /></span>
                               <span className="text-[11px] font-semibold text-[var(--ink-mid)] group-hover:text-amber-700">Editar</span>
                             </button>
                             <button
                               onClick={() => { verPortal(w); setOpenMenuId(null); }}
                               className="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-[var(--surface)] group transition-colors"
                             >
-                              <span className="flex items-center justify-center w-6 h-6 rounded-md bg-[var(--surface-dim)] group-hover:bg-[var(--border)] transition-colors shrink-0" style={{ color: 'var(--slate-dim)' }}><Search size={11} /></span>
+                              <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-[var(--surface-dim)] group-hover:bg-[var(--border)] transition-colors shrink-0" style={{ color: 'var(--slate-dim)' }}><Search size={11} /></span>
                               <span className="text-[11px] font-semibold text-[var(--ink-mid)] group-hover:text-[var(--ink)]">Ver Portal</span>
                             </button>
                             <button
                               onClick={() => { onVerPasta?.(w.id); setOpenMenuId(null); }}
                               className="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-emerald-50 group transition-colors"
                             >
-                              <span className="flex items-center justify-center w-6 h-6 rounded-md bg-emerald-100 text-emerald-500 group-hover:bg-emerald-200 transition-colors shrink-0"><FolderOpen size={11} /></span>
+                              <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-emerald-100 text-emerald-500 group-hover:bg-emerald-200 transition-colors shrink-0"><FolderOpen size={11} /></span>
                               <span className="text-[11px] font-semibold text-[var(--ink-mid)] group-hover:text-emerald-700">Ver Pasta</span>
                             </button>
                             <div className="mx-3 my-1 border-t border-[var(--border-soft)]" />
@@ -291,14 +291,14 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                               onClick={() => { onOpenEmpHistory(w.id, w.name); setOpenMenuId(null); }}
                               className="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-[var(--surface)] group transition-colors"
                             >
-                              <span className="flex items-center justify-center w-6 h-6 rounded-md bg-[var(--surface-dim)] group-hover:bg-[var(--border)] transition-colors shrink-0 text-[11px] leading-none">📅</span>
+                              <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-[var(--surface-dim)] group-hover:bg-[var(--border)] transition-colors shrink-0 text-[11px] leading-none">📅</span>
                               <span className="text-[11px] font-semibold text-[var(--ink-mid)]">Períodos</span>
                             </button>
                             <button
                               onClick={() => { onOpenVHHistory(w.id, w.name); setOpenMenuId(null); }}
                               className="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-[var(--surface)] group transition-colors"
                             >
-                              <span className="flex items-center justify-center w-6 h-6 rounded-md bg-[var(--surface-dim)] group-hover:bg-[var(--border)] transition-colors shrink-0 text-[11px] leading-none">📊</span>
+                              <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-[var(--surface-dim)] group-hover:bg-[var(--border)] transition-colors shrink-0 text-[11px] leading-none">📊</span>
                               <span className="text-[11px] font-semibold text-[var(--ink-mid)]">Valor/hora</span>
                             </button>
                             {/* Segurança Social */}
@@ -309,7 +309,7 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                                   onClick={() => { setSsModal({ worker: w, tipo: 'admissao' }); setOpenMenuId(null); }}
                                   className="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-amber-50 group transition-colors"
                                 >
-                                  <span className="flex items-center justify-center w-6 h-6 rounded-md bg-amber-100 text-amber-600 group-hover:bg-amber-200 transition-colors shrink-0"><SendHorizonal size={11} /></span>
+                                  <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-amber-100 text-amber-600 group-hover:bg-amber-200 transition-colors shrink-0"><SendHorizonal size={11} /></span>
                                   <div className="text-left">
                                     <span className="text-[11px] font-semibold text-[var(--ink-mid)] group-hover:text-amber-700">Comunicar Admissão</span>
                                     {ssAmbiente === 'teste' && <p className="text-[8px] text-orange-500 font-bold leading-none">TESTE</p>}
@@ -324,7 +324,7 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                                   onClick={() => { setSsModal({ worker: w, tipo: 'cessacao' }); setOpenMenuId(null); }}
                                   className="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-amber-50 group transition-colors"
                                 >
-                                  <span className="flex items-center justify-center w-6 h-6 rounded-md bg-amber-100 text-amber-600 group-hover:bg-amber-200 transition-colors shrink-0"><SendHorizonal size={11} /></span>
+                                  <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-amber-100 text-amber-600 group-hover:bg-amber-200 transition-colors shrink-0"><SendHorizonal size={11} /></span>
                                   <div className="text-left">
                                     <span className="text-[11px] font-semibold text-[var(--ink-mid)] group-hover:text-amber-700">Comunicar Cessação</span>
                                     {ssAmbiente === 'teste' && <p className="text-[8px] text-orange-500 font-bold leading-none">TESTE</p>}
@@ -337,8 +337,8 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                               <div className="mx-2 mb-1 p-2 bg-rose-50 rounded-lg border border-rose-100">
                                 <p className="text-[9px] font-black text-rose-500 uppercase tracking-wider mb-1.5">Confirmar apagar?</p>
                                 <div className="flex gap-1">
-                                  <button onClick={() => { handleDelete(w.id); setConfirmDeleteWorkerId(null); setOpenMenuId(null); }} className="flex-1 py-1 bg-rose-600 text-white text-[9px] font-black rounded-md hover:bg-rose-700 transition-colors">Sim</button>
-                                  <button onClick={() => setConfirmDeleteWorkerId(null)} className="flex-1 py-1 bg-white border border-[var(--border)] text-[var(--ink-soft)] text-[9px] font-black rounded-md hover:bg-[var(--surface)] transition-colors">Não</button>
+                                  <button onClick={() => { handleDelete(w.id); setConfirmDeleteWorkerId(null); setOpenMenuId(null); }} className="flex-1 py-1 bg-rose-600 text-white text-[9px] font-black rounded-lg hover:bg-rose-700 transition-colors">Sim</button>
+                                  <button onClick={() => setConfirmDeleteWorkerId(null)} className="flex-1 py-1 bg-white border border-[var(--border)] text-[var(--ink-soft)] text-[9px] font-black rounded-lg hover:bg-[var(--surface)] transition-colors">Não</button>
                                 </div>
                               </div>
                             ) : (
@@ -346,7 +346,7 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                                 onClick={() => setConfirmDeleteWorkerId(w.id)}
                                 className="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-rose-50 group transition-colors"
                               >
-                                <span className="flex items-center justify-center w-6 h-6 rounded-md bg-rose-100 text-rose-500 group-hover:bg-rose-200 transition-colors shrink-0"><Trash2 size={11} /></span>
+                                <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-rose-100 text-rose-500 group-hover:bg-rose-200 transition-colors shrink-0"><Trash2 size={11} /></span>
                                 <span className="text-[11px] font-semibold text-rose-500 group-hover:text-rose-600">Apagar</span>
                               </button>
                             )}
@@ -390,22 +390,22 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                 {w.status === 'inativo' ? 'Inativo' : 'Ativo'}
               </div>
               <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
-                <button onClick={() => verPortal(w)} className="p-1 hover:bg-[var(--surface)] rounded-md transition-all border border-[var(--border-soft)]" style={{ color: 'var(--slate-dim)' }} title="Ver Portal"><Search size={10} /></button>
-                <button onClick={() => onEdit(w)} className="p-1 text-amber-600 hover:bg-amber-50 rounded-md transition-all border border-amber-100" title="Editar"><Edit2 size={10} /></button>
-                <button onClick={() => onVerPasta?.(w.id)} className="p-1 text-emerald-600 hover:bg-emerald-50 rounded-md transition-all border border-emerald-100" title="Ver Pasta de Documentos"><FolderOpen size={10} /></button>
+                <button onClick={() => verPortal(w)} className="p-1 hover:bg-[var(--surface)] rounded-lg transition-all border border-[var(--border-soft)]" style={{ color: 'var(--slate-dim)' }} title="Ver Portal"><Search size={10} /></button>
+                <button onClick={() => onEdit(w)} className="p-1 text-amber-600 hover:bg-amber-50 rounded-lg transition-all border border-amber-100" title="Editar"><Edit2 size={10} /></button>
+                <button onClick={() => onVerPasta?.(w.id)} className="p-1 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all border border-emerald-100" title="Ver Pasta de Documentos"><FolderOpen size={10} /></button>
                 {w.status === 'ativo' && !w.ss_admissao_comunicada_em && (
-                  <button onClick={() => setSsModal({ worker: w, tipo: 'admissao' })} className="p-1 text-amber-600 hover:bg-amber-50 rounded-md transition-all border border-amber-200" title={`Comunicar Admissão à SS${ssAmbiente === 'teste' ? ' (TESTE)' : ''}`}><SendHorizonal size={10} /></button>
+                  <button onClick={() => setSsModal({ worker: w, tipo: 'admissao' })} className="p-1 text-amber-600 hover:bg-amber-50 rounded-lg transition-all border border-amber-200" title={`Comunicar Admissão à SS${ssAmbiente === 'teste' ? ' (TESTE)' : ''}`}><SendHorizonal size={10} /></button>
                 )}
                 {w.dataFim && !w.ss_cessacao_comunicada_em && (
-                  <button onClick={() => setSsModal({ worker: w, tipo: 'cessacao' })} className="p-1 text-amber-600 hover:bg-amber-50 rounded-md transition-all border border-amber-200" title={`Comunicar Cessação à SS${ssAmbiente === 'teste' ? ' (TESTE)' : ''}`}><SendHorizonal size={10} /></button>
+                  <button onClick={() => setSsModal({ worker: w, tipo: 'cessacao' })} className="p-1 text-amber-600 hover:bg-amber-50 rounded-lg transition-all border border-amber-200" title={`Comunicar Cessação à SS${ssAmbiente === 'teste' ? ' (TESTE)' : ''}`}><SendHorizonal size={10} /></button>
                 )}
                 {confirmDeleteWorkerId === w.id ? (
                   <div className="flex items-center gap-1">
-                    <button onClick={() => { handleDelete(w.id); setConfirmDeleteWorkerId(null); }} className="px-1.5 py-0.5 bg-red-600 text-white text-[10px] font-bold rounded-md">Sim</button>
-                    <button onClick={() => setConfirmDeleteWorkerId(null)} className="px-1.5 py-0.5 bg-[var(--border)] text-[var(--ink-soft)] text-[10px] font-bold rounded-md">Não</button>
+                    <button onClick={() => { handleDelete(w.id); setConfirmDeleteWorkerId(null); }} className="px-1.5 py-0.5 bg-red-600 text-white text-[10px] font-bold rounded-lg">Sim</button>
+                    <button onClick={() => setConfirmDeleteWorkerId(null)} className="px-1.5 py-0.5 bg-[var(--border)] text-[var(--ink-soft)] text-[10px] font-bold rounded-lg">Não</button>
                   </div>
                 ) : (
-                  <button onClick={() => setConfirmDeleteWorkerId(w.id)} className="p-1 text-[var(--slate)] hover:text-rose-500 hover:bg-rose-50 rounded-md transition-all border border-[var(--border-soft)]"><Trash2 size={10} /></button>
+                  <button onClick={() => setConfirmDeleteWorkerId(w.id)} className="p-1 text-[var(--slate)] hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all border border-[var(--border-soft)]"><Trash2 size={10} /></button>
                 )}
               </div>
             </div>

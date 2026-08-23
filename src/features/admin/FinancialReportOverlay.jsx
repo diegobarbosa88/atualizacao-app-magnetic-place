@@ -100,19 +100,19 @@ const FinancialReportOverlay = ({ logs, workers, clients, expenses, finFilter, s
                   fora do cartão. Medido no browser: 4 colunas precisam de
                   ~1024px de container. */}
               <div className="grid grid-cols-2 @5xl:grid-cols-4 gap-3 sm:gap-6">
-                <div className="p-3 sm:p-6 rounded-2xl sm:rounded-3xl bg-indigo-50 border border-indigo-100">
+                <div className="p-3 sm:p-6 rounded-2xl sm:rounded-[1.5rem] bg-indigo-50 border border-indigo-100">
                   <div className="flex items-center gap-1.5 sm:gap-2 text-indigo-600 mb-1 font-black uppercase text-[8px] sm:text-[10px] tracking-widest"><BrainCircuit size={12} sm:size={16} /> Faturação</div>
                   <p className="text-xl sm:text-3xl font-black text-indigo-700">{formatCurrency(stats.revenue)}</p>
                 </div>
-                <div className="p-3 sm:p-6 rounded-2xl sm:rounded-3xl bg-red-50 border border-red-100">
+                <div className="p-3 sm:p-6 rounded-2xl sm:rounded-[1.5rem] bg-red-50 border border-red-100">
                   <div className="flex items-center gap-1.5 sm:gap-2 text-red-600 mb-1 font-black uppercase text-[8px] sm:text-[10px] tracking-widest"><Receipt size={12} sm:size={16} /> Custos</div>
                   <p className="text-xl sm:text-3xl font-black text-red-700">{formatCurrency(stats.teamCosts + stats.totalExpenses)}</p>
                 </div>
-                <div className={`p-3 sm:p-6 rounded-2xl sm:rounded-3xl border ${stats.netProfit >= 0 ? 'bg-emerald-50 border-emerald-100' : 'bg-rose-50 border-rose-100'}`}>
+                <div className={`p-3 sm:p-6 rounded-2xl sm:rounded-[1.5rem] border ${stats.netProfit >= 0 ? 'bg-emerald-50 border-emerald-100' : 'bg-rose-50 border-rose-100'}`}>
                   <div className={`flex items-center gap-1.5 sm:gap-2 mb-1 ${stats.netProfit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}><Wallet size={12} sm:size={16} /><span className="text-[8px] sm:text-[10px] font-black uppercase tracking-widest">Resultado</span></div>
                   <p className="text-xl sm:text-3xl font-black">{formatCurrency(stats.netProfit)}</p>
                 </div>
-                <div className="p-3 sm:p-6 rounded-2xl sm:rounded-3xl bg-[var(--navy-solid)] text-white border border-[var(--navy-deep)]">
+                <div className="p-3 sm:p-6 rounded-2xl sm:rounded-[1.5rem] bg-[var(--navy-solid)] text-white border border-[var(--navy-deep)]">
                   <div className="flex items-center gap-1.5 sm:gap-2 text-amber-400 mb-2 font-black uppercase text-[8px] sm:text-[10px] tracking-widest"><Sparkles size={12} sm:size={16} /> Insights do Consultor AI</div>
                   <button onClick={generateInsight} disabled={isAnalyzing} className="w-full bg-[var(--orange)] hover:bg-[var(--orange-hover)] px-2 py-1.5 rounded-lg text-[10px] font-bold transition-all text-[var(--navy-solid)] whitespace-nowrap">
                     {isAnalyzing ? "..." : "Gerar"}
@@ -198,7 +198,7 @@ const FinancialReportOverlay = ({ logs, workers, clients, expenses, finFilter, s
               </div>
 
               {/* Totais */}
-              <div className="rounded-3xl border border-[var(--border)] overflow-hidden">
+              <div className="rounded-[1.5rem] border border-[var(--border)] overflow-hidden">
                 <div className="bg-[var(--surface)] px-4 sm:px-5 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Resumo de Custos</div>
                 <div className="divide-y divide-[var(--border-soft)]">
                   <div className="flex justify-between px-4 sm:px-5 py-3 text-sm text-[var(--ink-soft)]"><span>Custo Staff</span><span className="font-bold font-mono">{formatCurrency(stats.teamCosts)}</span></div>

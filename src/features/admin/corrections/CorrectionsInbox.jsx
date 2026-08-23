@@ -113,7 +113,7 @@ function ClientCorrectionsPanel({ filtered, clients, workers, itemsByCorrection,
                     {/* Header */}
                     <div className="flex items-center justify-between gap-2 flex-wrap mb-2">
                       <div className={`flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-bold ${corrIsPending ? 'text-orange-700' : corrIsApplied ? 'text-emerald-700' : 'text-rose-700'}`}>
-                        <span className={`flex items-center gap-1 px-2 py-0.5 rounded-md font-black ${isQuick ? 'bg-indigo-100 text-indigo-600' : 'bg-amber-100 text-amber-600'}`}>
+                        <span className={`flex items-center gap-1 px-2 py-0.5 rounded-lg font-black ${isQuick ? 'bg-indigo-100 text-indigo-600' : 'bg-amber-100 text-amber-600'}`}>
                           {isQuick ? <MessageCircle size={10} /> : <FileText size={10} />}
                           {isQuick ? 'Mensagem' : 'Precisão'}
                         </span>
@@ -134,7 +134,7 @@ function ClientCorrectionsPanel({ filtered, clients, workers, itemsByCorrection,
                         </div>
                       )}
                       {!corrIsPending && (
-                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-md ${corrIsApplied ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-lg ${corrIsApplied ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
                           {corrIsApplied ? '✓ Aceite' : '✕ Rejeitado'}
                         </span>
                       )}
@@ -286,7 +286,7 @@ function WorkerCorrectionsPanel({ filtered, clients, workers, itemsByCorrection,
                         </div>
                       )}
                       {!corrIsPending && (
-                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-md ${corrIsApplied ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-lg ${corrIsApplied ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
                           {corrIsApplied ? '✓ Aceite' : '✕ Rejeitado'}
                         </span>
                       )}
@@ -511,7 +511,7 @@ const CorrectionsInbox = ({ initialCorrectionId, onCorrectionNavigated, forcedSo
       {/* List */}
       <div className="grid gap-3">
         {filtered.length === 0 && (
-          <div className="text-center py-20 bg-white rounded-3xl border border-[var(--border-soft)]">
+          <div className="text-center py-20 bg-white rounded-[1.5rem] border border-[var(--border-soft)]">
             <div className="w-16 h-16 bg-[var(--surface)] text-[var(--slate)] rounded-2xl flex items-center justify-center mx-auto mb-4"><CheckCircle size={32} /></div>
             <h3 className="text-lg font-black text-[var(--ink-mid)]">Nada por aqui</h3>
             <p className="text-[var(--slate-dim)] text-sm font-medium">Sem correções neste filtro.</p>

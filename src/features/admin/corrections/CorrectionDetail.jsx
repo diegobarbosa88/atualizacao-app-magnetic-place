@@ -135,21 +135,21 @@ export default function CorrectionDetail({ correction, items, onBack }) {
         <ChevronLeft size={16} /> Voltar à inbox
       </button>
 
-      <header className="bg-white rounded-3xl border border-[var(--border-soft)] p-6 shadow-sm">
+      <header className="bg-white rounded-[1.5rem] border border-[var(--border-soft)] p-6 shadow-sm">
         <div className="flex items-start justify-between flex-wrap gap-4">
           <div>
             <h2 className="text-2xl font-black text-[var(--ink)] uppercase tracking-tight">{clientName}</h2>
             <p className="text-sm text-[var(--slate-dim)] font-medium mt-1">Mês {correction.month} • Tipo {TYPE_LABEL[correction.type]?.label || correction.type}</p>
-            <span className={`mt-2 inline-block text-[10px] font-black px-2 py-1 rounded-md ${STATUS_LABEL[correction.status]?.cls}`}>{STATUS_LABEL[correction.status]?.label}</span>
+            <span className={`mt-2 inline-block text-[10px] font-black px-2 py-1 rounded-lg ${STATUS_LABEL[correction.status]?.cls}`}>{STATUS_LABEL[correction.status]?.label}</span>
           </div>
           <div className="text-right flex gap-6">
             <div>
               <p className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Resolução</p>
               <p className="text-3xl font-black text-[var(--ink)]">{resolved}/{total}</p>
               <div className="flex gap-2 mt-2 justify-end text-[10px] font-black flex-wrap">
-                {kindCounts.edit   > 0 && <span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700">{kindCounts.edit} ajuste(s)</span>}
-                {kindCounts.new    > 0 && <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700">{kindCounts.new} novo(s)</span>}
-                {kindCounts.remove > 0 && <span className="px-2 py-0.5 rounded-md bg-rose-50 text-rose-700">{kindCounts.remove} remover</span>}
+                {kindCounts.edit   > 0 && <span className="px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-700">{kindCounts.edit} ajuste(s)</span>}
+                {kindCounts.new    > 0 && <span className="px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-700">{kindCounts.new} novo(s)</span>}
+                {kindCounts.remove > 0 && <span className="px-2 py-0.5 rounded-lg bg-rose-50 text-rose-700">{kindCounts.remove} remover</span>}
               </div>
             </div>
             <div>
@@ -166,7 +166,7 @@ export default function CorrectionDetail({ correction, items, onBack }) {
       {/* Quick correction — editor */}
       {correction.type === 'quick' && !isClosed && (
         <>
-          <div className="bg-white rounded-3xl border-2 border-amber-200 p-6 shadow-sm">
+          <div className="bg-white rounded-[1.5rem] border-2 border-amber-200 p-6 shadow-sm">
             <div className="flex items-center gap-3 mb-3">
               <div className="w-10 h-10 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center"><MessageCircle size={20} /></div>
               <div>
@@ -176,7 +176,7 @@ export default function CorrectionDetail({ correction, items, onBack }) {
             </div>
             <p className="text-sm text-[var(--ink-mid)] font-medium whitespace-pre-wrap">{correction.justification || '(sem texto)'}</p>
           </div>
-          <div className="bg-white rounded-3xl border border-[var(--border-soft)] p-4">
+          <div className="bg-white rounded-[1.5rem] border border-[var(--border-soft)] p-4">
             <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
               <div>
                 <p className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Editor</p>
@@ -191,7 +191,7 @@ export default function CorrectionDetail({ correction, items, onBack }) {
 
       {/* Precision correction — editor */}
       {correction.type === 'precision' && !isClosed && (
-        <div className="bg-white rounded-3xl border border-[var(--border-soft)] p-4">
+        <div className="bg-white rounded-[1.5rem] border border-[var(--border-soft)] p-4">
           <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
             <div>
               <p className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Editor</p>
@@ -219,7 +219,7 @@ export default function CorrectionDetail({ correction, items, onBack }) {
 
       {/* Creation request with items */}
       {correction.type === 'creation_request' && !isClosed && items.length > 0 && (
-        <div className="bg-amber-50 rounded-3xl border-2 border-amber-200 p-6 shadow-sm">
+        <div className="bg-amber-50 rounded-[1.5rem] border-2 border-amber-200 p-6 shadow-sm">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center"><FileText size={20} /></div>
             <div>
@@ -244,7 +244,7 @@ export default function CorrectionDetail({ correction, items, onBack }) {
 
       {/* Creation request without items */}
       {correction.type === 'creation_request' && !isClosed && items.length === 0 && (
-        <div className="bg-amber-50 rounded-3xl border-2 border-amber-200 p-6 shadow-sm">
+        <div className="bg-amber-50 rounded-[1.5rem] border-2 border-amber-200 p-6 shadow-sm">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center"><Plus size={20} /></div>
             <div>
@@ -262,7 +262,7 @@ export default function CorrectionDetail({ correction, items, onBack }) {
 
       {/* Deletion request with items */}
       {correction.type === 'deletion_request' && !isClosed && items.length > 0 && (
-        <div className="bg-rose-50 rounded-3xl border-2 border-rose-200 p-6 shadow-sm">
+        <div className="bg-rose-50 rounded-[1.5rem] border-2 border-rose-200 p-6 shadow-sm">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 bg-rose-100 text-rose-600 rounded-xl flex items-center justify-center"><Trash2 size={20} /></div>
             <div>
@@ -286,7 +286,7 @@ export default function CorrectionDetail({ correction, items, onBack }) {
 
       {/* Deletion request without items */}
       {correction.type === 'deletion_request' && !isClosed && items.length === 0 && (
-        <div className="bg-rose-50 rounded-3xl border-2 border-rose-200 p-6 shadow-sm">
+        <div className="bg-rose-50 rounded-[1.5rem] border-2 border-rose-200 p-6 shadow-sm">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 bg-rose-100 text-rose-600 rounded-xl flex items-center justify-center"><Trash2 size={20} /></div>
             <div>

@@ -6,9 +6,9 @@ import '../reconciliacao/reconciliacao-mockup.css';
 import { FT } from '../../../styles/designTokens';
 
 function TypeBadge({ tipo }) {
-  if (tipo === 'fornecedor') return <span className="px-2 py-0.5 rounded-md text-[9px] font-black uppercase bg-rose-100 text-rose-700">Fornecedor</span>;
-  if (tipo === 'cliente') return <span className="px-2 py-0.5 rounded-md text-[9px] font-black uppercase bg-emerald-100 text-emerald-700">Cliente</span>;
-  return <span className="px-2 py-0.5 rounded-md text-[9px] font-black uppercase bg-[var(--surface-dim)] text-[var(--ink-soft)]">Sem tipo</span>;
+  if (tipo === 'fornecedor') return <span className="px-2 py-0.5 rounded-lg text-[9px] font-black uppercase bg-rose-100 text-rose-700">Fornecedor</span>;
+  if (tipo === 'cliente') return <span className="px-2 py-0.5 rounded-lg text-[9px] font-black uppercase bg-emerald-100 text-emerald-700">Cliente</span>;
+  return <span className="px-2 py-0.5 rounded-lg text-[9px] font-black uppercase bg-[var(--surface-dim)] text-[var(--ink-soft)]">Sem tipo</span>;
 }
 
 export default function DespesasTab({

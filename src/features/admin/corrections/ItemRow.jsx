@@ -50,13 +50,13 @@ export default function ItemRow({ item, supabase, disabled, setCorrectionItems }
       <div className="flex items-start gap-4 flex-wrap">
         <div className="min-w-[140px]">
           <div className="flex gap-1 flex-wrap mb-2">
-            <span className={`inline-block text-[10px] font-black px-2 py-1 rounded-md border ${K.cls}`}>{K.label}</span>
-            <span className={`inline-block text-[10px] font-black px-2 py-1 rounded-md ${deltaClass(itemDelta(item))}`}>Δ {fmtDelta(itemDelta(item))}</span>
+            <span className={`inline-block text-[10px] font-black px-2 py-1 rounded-lg border ${K.cls}`}>{K.label}</span>
+            <span className={`inline-block text-[10px] font-black px-2 py-1 rounded-lg ${deltaClass(itemDelta(item))}`}>Δ {fmtDelta(itemDelta(item))}</span>
           </div>
           <p className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Colaborador</p>
           <p className="font-bold text-[var(--ink)]">{item.worker_name || item.worker_id}</p>
           <p className="text-xs text-[var(--slate-dim)] font-mono mt-1">{item.date}</p>
-          <span className={`mt-2 inline-block text-[10px] font-black px-2 py-1 rounded-md ${status.cls}`}>{status.label}</span>
+          <span className={`mt-2 inline-block text-[10px] font-black px-2 py-1 rounded-lg ${status.cls}`}>{status.label}</span>
         </div>
 
         <div className="flex-1 grid grid-cols-3 gap-4 min-w-[300px]">
@@ -77,7 +77,7 @@ export default function ItemRow({ item, supabase, disabled, setCorrectionItems }
             {editing ? (
               <div className="grid grid-cols-2 gap-1">
                 {['startTime', 'endTime', 'breakStart', 'breakEnd'].map((k) => (
-                  <TimeTextInput key={k} value={draft[k] || ''} onChange={(v) => setDraft({ ...draft, [k]: v })} className="border border-[var(--border)] rounded-md px-2 py-1 text-xs font-mono w-full" />
+                  <TimeTextInput key={k} value={draft[k] || ''} onChange={(v) => setDraft({ ...draft, [k]: v })} className="border border-[var(--border)] rounded-lg px-2 py-1 text-xs font-mono w-full" />
                 ))}
               </div>
             ) : item.item_status === 'pending' ? (

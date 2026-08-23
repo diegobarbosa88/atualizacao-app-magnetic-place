@@ -41,7 +41,7 @@ function ValidadeBadge({ dataValidade }) {
   };
   const { cls, icon, label } = config[status];
   return (
-    <span className={`inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded-md text-[9px] font-black border ${cls}`}>
+    <span className={`inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded-lg text-[9px] font-black border ${cls}`}>
       {icon} {label}
     </span>
   );
@@ -67,7 +67,7 @@ function CategoriaEditor({ docId, source, categoria, onSave }) {
     <div className="relative inline-block" ref={ref}>
       <button
         onClick={() => setOpen(o => !o)}
-        className={`inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-md text-[9px] font-black border transition-all group ${colors.bg} ${colors.text} ${colors.border} hover:brightness-95`}
+        className={`inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-lg text-[9px] font-black border transition-all group ${colors.bg} ${colors.text} ${colors.border} hover:brightness-95`}
         title={semCategoria ? 'Sem categoria — clique para definir' : 'Editar categoria'}
       >
         {semCategoria && <AlertTriangle size={8} />}
@@ -175,7 +175,7 @@ export default function DocumentsTable({
                         ? { bg: 'bg-orange-100', text: 'text-orange-700', border: 'border-orange-200' }
                         : CATEGORIA_COLOR_MAP[(CATEGORIA_CONFIG[d.categoria] || CATEGORIA_CONFIG["Outros"]).color];
                       return (
-                        <span className={`inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-md text-[9px] font-black border ${colors.bg} ${colors.text} ${colors.border}`}>
+                        <span className={`inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-lg text-[9px] font-black border ${colors.bg} ${colors.text} ${colors.border}`}>
                           {semCategoria && <AlertTriangle size={8} />}
                           {d.categoria || 'Sem categoria'}
                         </span>

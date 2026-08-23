@@ -3740,7 +3740,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
               </svg>
               Trabalhadores
               {selectedWorkers.size > 0 && (
-                <span className="bg-[var(--border)] text-[var(--ink-mid)] px-1.5 py-0.5 rounded-md text-[9px] font-black">
+                <span className="bg-[var(--border)] text-[var(--ink-mid)] px-1.5 py-0.5 rounded-lg text-[9px] font-black">
                   {selectedWorkers.size}/{rows.length}
                 </span>
               )}
@@ -3811,7 +3811,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                 <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
               </svg>
               Colunas
-              <span className="bg-[var(--surface-dim)] text-[var(--ink-mid)] px-1.5 py-0.5 rounded-md text-[9px] font-black">
+              <span className="bg-[var(--surface-dim)] text-[var(--ink-mid)] px-1.5 py-0.5 rounded-lg text-[9px] font-black">
                 {visibleCols.size}/{RESUMO_COLS.length}
               </span>
             </button>
@@ -3977,7 +3977,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                       >
                         {isCopied && (
                           <span
-                            className="absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full px-1.5 py-0.5 rounded-md bg-emerald-600 text-white text-[9px] font-black uppercase tracking-wide shadow-md pointer-events-none whitespace-nowrap"
+                            className="absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full px-1.5 py-0.5 rounded-lg bg-emerald-600 text-white text-[9px] font-black uppercase tracking-wide shadow-md pointer-events-none whitespace-nowrap"
                             style={{ zIndex: 20 }}
                           >
                             Copiado!

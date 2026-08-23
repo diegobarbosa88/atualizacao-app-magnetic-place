@@ -5,7 +5,7 @@ export default function FieldBadge({ name }) {
   const known = isKnownField(name);
   return (
     <span
-      className={`px-2 py-0.5 rounded-md font-mono text-[10px] font-bold tracking-tight ${
+      className={`px-2 py-0.5 rounded-lg font-mono text-[10px] font-bold tracking-tight ${
         known
           ? 'bg-[var(--surface-dim)] text-[var(--navy)] border border-[var(--border)]'
           : 'bg-amber-50 text-amber-700 border border-amber-100'

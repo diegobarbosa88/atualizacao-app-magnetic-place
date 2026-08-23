@@ -268,7 +268,7 @@ export function IlustracaoTile({ nome, height = 150, className = '' }) {
   const badge = Math.round(height * 0.34);
   return (
     <div
-      className={`w-full relative flex items-center justify-center rounded-[10px] overflow-hidden ${className}`}
+      className={`w-full relative flex items-center justify-center rounded-xl overflow-hidden ${className}`}
       style={{ height, background: `linear-gradient(135deg, ${FT.bg} 0%, #E5E1D6 100%)`, border: `1px solid ${FT.border}` }}
     >
       <svg viewBox="0 0 100 120" width={Math.round(height * 0.62)} height={height} style={{ overflow: 'visible' }}>

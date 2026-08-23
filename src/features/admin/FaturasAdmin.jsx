@@ -475,7 +475,7 @@ export default function FaturasAdmin() {
       />
 
       {/* Comprovativos novobanco */}
-      <div className="bg-white rounded-3xl border border-[var(--border-soft)] shadow-sm p-5 space-y-3">
+      <div className="bg-white rounded-[1.5rem] border border-[var(--border-soft)] shadow-sm p-5 space-y-3">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-2xl flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(134,154,175,0.15)' }}>

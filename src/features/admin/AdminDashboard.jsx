@@ -433,9 +433,9 @@ function AdminDashboard(props) {
       {auditWorkerId && (() => {
         const currentApproval = approvals.find(a => a.workerId === auditWorkerId && a.month === currentMonthStr);
         return (
-          <div className="mb-6 bg-white rounded-2xl sm:rounded-[3rem] p-4 sm:p-8 lg:p-10 shadow-2xl border-4 border-indigo-500/20 animate-in slide-in-from-top-8 duration-500">
+          <div className="mb-6 bg-white rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-8 lg:p-10 shadow-2xl border-4 border-indigo-500/20 animate-in slide-in-from-top-8 duration-500">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 md:mb-10 gap-3 md:gap-6">
-              <div className="flex items-center gap-3 sm:gap-6"><div className="bg-[var(--navy-solid)] p-3 sm:p-5 rounded-2xl sm:rounded-3xl text-white shadow-xl"><Settings2 size={28} className="sm:hidden" /><Settings2 size={40} className="hidden sm:block" /></div><div><h2 className="text-xl sm:text-3xl font-black uppercase">Audit: {auditedWorker?.name}</h2><p className="text-[var(--slate-dim)] font-bold uppercase text-[10px] tracking-widest mt-1">Controlo Mensal Detalhado</p></div></div>
+              <div className="flex items-center gap-3 sm:gap-6"><div className="bg-[var(--navy-solid)] p-3 sm:p-5 rounded-2xl sm:rounded-[1.5rem] text-white shadow-xl"><Settings2 size={28} className="sm:hidden" /><Settings2 size={40} className="hidden sm:block" /></div><div><h2 className="text-xl sm:text-3xl font-black uppercase">Audit: {auditedWorker?.name}</h2><p className="text-[var(--slate-dim)] font-bold uppercase text-[10px] tracking-widest mt-1">Controlo Mensal Detalhado</p></div></div>
               <div className="flex items-center gap-4 bg-[var(--surface)] p-2 rounded-[2.5rem] border border-[var(--border)]">
                 {currentApproval && (
                   <div className="bg-emerald-50 text-emerald-600 px-6 py-3 rounded-[2rem] shadow-sm flex items-center gap-4 border border-emerald-200">
@@ -453,14 +453,14 @@ function AdminDashboard(props) {
                 <button onClick={() => setAuditWorkerId(null)} className="p-4 bg-white text-red-500 rounded-full border border-red-100 shadow-md"><X size={28} /></button>
               </div>
             </div>
-            <div className="mb-8 p-6 bg-indigo-50 rounded-3xl border border-indigo-100 relative">
+            <div className="mb-8 p-6 bg-indigo-50 rounded-[1.5rem] border border-indigo-100 relative">
               <div className="flex justify-between items-center mb-2">
                 <h4 className="font-bold text-indigo-700 flex items-center gap-2"><Sparkles size={16} /> Resumo de Produtividade AI ✨</h4>
                 <button onClick={generateWorkerSummary} disabled={isSummarizing || auditedMonthLogs.length === 0} className="text-[10px] bg-[var(--orange)] text-[var(--navy-solid)] px-4 py-1.5 rounded-full font-black uppercase">{isSummarizing ? "Gerando..." : "Gerar com IA"}</button>
               </div>
               <p className="text-sm text-[var(--ink-soft)] italic leading-relaxed">{workerAISummary || "Utilize o Gemini para resumir as atividades deste mês."}</p>
             </div>
-            <div className="overflow-x-auto rounded-[3rem] border border-[var(--border-soft)] bg-white shadow-inner"><table className="w-full text-left border-collapse">
+            <div className="overflow-x-auto rounded-[2.5rem] border border-[var(--border-soft)] bg-white shadow-inner"><table className="w-full text-left border-collapse">
               <thead className="bg-[var(--surface)] border-b border-[var(--border-soft)]"><tr><th className="px-4 sm:px-10 py-4 sm:py-6 text-[10px] font-black uppercase tracking-widest w-16 sm:w-32">Dia</th><th className="px-4 sm:px-10 py-4 sm:py-6 text-[10px] font-black uppercase tracking-widest">Actividades</th><th className="px-4 sm:px-10 py-4 sm:py-6 text-[10px] font-black uppercase tracking-widest text-right">Acção</th></tr></thead>
               <tbody className="divide-y divide-[var(--border-soft)]">
                 {daysInMonthList.map(ds => {
@@ -473,7 +473,7 @@ function AdminDashboard(props) {
                         <td className="px-4 sm:px-10 py-4 sm:py-8">
                           <div className="space-y-3">
                             {dayLogs.map(log => (
-                              <div key={log.id} className="bg-white p-3 sm:p-6 rounded-2xl sm:rounded-3xl border border-indigo-100/50 flex items-center justify-between shadow-sm gap-2">
+                              <div key={log.id} className="bg-white p-3 sm:p-6 rounded-2xl sm:rounded-[1.5rem] border border-indigo-100/50 flex items-center justify-between shadow-sm gap-2">
                                 <div className="flex items-center gap-3 flex-wrap">
                                   <span className="text-[10px] font-black bg-indigo-50 text-indigo-600 px-4 py-2 rounded-xl uppercase border border-indigo-100">{clients.find(c => c.id === log.clientId)?.name}</span>
                                   <div className="text-sm font-bold font-mono">{log.startTime}-{log.endTime} {log.breakStart ? `(P: ${log.breakStart})` : ''}</div>

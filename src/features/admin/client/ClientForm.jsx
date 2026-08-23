@@ -77,7 +77,7 @@ export default function ClientForm() {
           {/* IDENTIFICAÇÃO */}
           <div className="bg-[#FAFAF7] border border-[#E5E1D6] rounded-[1.5rem] pt-[1.4rem] px-[1.5rem] pb-[1.6rem] space-y-5">
             <div className="flex items-center gap-2.5">
-              <div className="w-[34px] h-[34px] rounded-[11px] flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(134,154,175,0.16)', color: FT.slate }}>
+              <div className="w-[34px] h-[34px] rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(134,154,175,0.16)', color: FT.slate }}>
                 <Briefcase size={16} />
               </div>
               <div>
@@ -116,7 +116,7 @@ export default function ClientForm() {
 
               <div className="md:col-span-2">
                 <label
-                  className="flex items-center justify-between gap-4 rounded-[0.9rem] px-[0.95rem] py-[0.75rem] cursor-pointer select-none"
+                  className="flex items-center justify-between gap-4 rounded-[0.85rem] px-[0.95rem] py-[0.75rem] cursor-pointer select-none"
                   style={{ background: '#FEF6E8', border: '1px solid #F3DDA8' }}
                 >
                   <div className="flex items-center gap-2.5">
@@ -149,7 +149,7 @@ export default function ClientForm() {
           {/* FINANCEIRO */}
           <div className="bg-[#FAFAF7] border border-[#E5E1D6] rounded-[1.5rem] pt-[1.4rem] px-[1.5rem] pb-[1.6rem] space-y-4">
             <div className="flex items-center gap-2.5">
-              <div className="w-[34px] h-[34px] rounded-[11px] flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(235,141,0,0.14)', color: '#C97600' }}>
+              <div className="w-[34px] h-[34px] rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(235,141,0,0.14)', color: '#C97600' }}>
                 <Euro size={16} />
               </div>
               <div>
@@ -159,7 +159,7 @@ export default function ClientForm() {
             </div>
 
             {currentClient && (
-              <div className="relative overflow-hidden flex items-end justify-between gap-4 rounded-[1.15rem] px-[1.35rem] py-[1.15rem] mb-[1.1rem]" style={{ background: `linear-gradient(135deg, ${FT.navy} 0%, ${FT.navyMid} 100%)` }}>
+              <div className="relative overflow-hidden flex items-end justify-between gap-4 rounded-[1.2rem] px-[1.35rem] py-[1.15rem] mb-[1.1rem]" style={{ background: `linear-gradient(135deg, ${FT.navy} 0%, ${FT.navyMid} 100%)` }}>
                 <div>
                   <p className="text-[9.5px] font-bold uppercase tracking-widest mb-1" style={{ fontFamily: FONT_MONO, color: '#9fb4c8' }}>Valor / hora atual</p>
                   <p className="font-bold leading-none text-white" style={{ fontFamily: FONT_TITLE, fontSize: '2.5rem' }}>
@@ -199,14 +199,14 @@ export default function ClientForm() {
           {/* GEOLOCALIZAÇÃO */}
           <div className="bg-[#F7F8FA] border border-[#E5E1D6] rounded-[1.5rem] py-[1.25rem] px-[1.3rem]">
             <div className="flex items-center gap-2.5 mb-4">
-              <div className="w-[34px] h-[34px] rounded-[11px] flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(134,154,175,0.16)', color: FT.slate }}>
+              <div className="w-[34px] h-[34px] rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(134,154,175,0.16)', color: FT.slate }}>
                 <MapPin size={16} />
               </div>
               <h4 className="font-bold uppercase tracking-wide text-[0.95rem]" style={{ fontFamily: FONT_MONO, color: '#51606E' }}>Geolocalização</h4>
             </div>
 
             {/* Mapa esquemático — pré-visualização do raio, não é um mapa real */}
-            <div className="relative h-[150px] rounded-[1.1rem] overflow-hidden border border-[#E5E1D6] mb-4" style={{ background: 'linear-gradient(135deg,#e9edf1,#dfe6ec)' }}>
+            <div className="relative h-[150px] rounded-[1.2rem] overflow-hidden border border-[#E5E1D6] mb-4" style={{ background: 'linear-gradient(135deg,#e9edf1,#dfe6ec)' }}>
               <div
                 className="absolute inset-0 opacity-50"
                 style={{ backgroundImage: 'linear-gradient(#c9d3db 1px, transparent 1px), linear-gradient(90deg, #c9d3db 1px, transparent 1px)', backgroundSize: '22px 22px' }}
@@ -233,16 +233,16 @@ export default function ClientForm() {
             <div className="grid grid-cols-2 gap-[0.7rem] mb-[0.7rem]">
               <div className="space-y-1">
                 <label className="text-[9px] font-bold uppercase tracking-wider text-[var(--slate-dim)]" style={{ fontFamily: FONT_MONO }}>Latitude</label>
-                <input type="number" step="any" value={clientForm.lat ?? ''} onChange={e => setClientForm(prev => ({ ...prev, lat: e.target.value }))} className="w-full bg-white border-[1.5px] border-[#E4E1D6] rounded-[0.7rem] py-[0.55rem] px-[0.7rem] text-[0.78rem] font-bold outline-none shadow-sm focus:border-[var(--navy)] focus:ring-4 focus:ring-[#1B3A57]/10 transition-all" style={{ fontFamily: FONT_MONO }} placeholder="38.7169" />
+                <input type="number" step="any" value={clientForm.lat ?? ''} onChange={e => setClientForm(prev => ({ ...prev, lat: e.target.value }))} className="w-full bg-white border-[1.5px] border-[#E4E1D6] rounded-xl py-[0.55rem] px-[0.7rem] text-[0.78rem] font-bold outline-none shadow-sm focus:border-[var(--navy)] focus:ring-4 focus:ring-[#1B3A57]/10 transition-all" style={{ fontFamily: FONT_MONO }} placeholder="38.7169" />
               </div>
               <div className="space-y-1">
                 <label className="text-[9px] font-bold uppercase tracking-wider text-[var(--slate-dim)]" style={{ fontFamily: FONT_MONO }}>Longitude</label>
-                <input type="number" step="any" value={clientForm.lng ?? ''} onChange={e => setClientForm(prev => ({ ...prev, lng: e.target.value }))} className="w-full bg-white border-[1.5px] border-[#E4E1D6] rounded-[0.7rem] py-[0.55rem] px-[0.7rem] text-[0.78rem] font-bold outline-none shadow-sm focus:border-[var(--navy)] focus:ring-4 focus:ring-[#1B3A57]/10 transition-all" style={{ fontFamily: FONT_MONO }} placeholder="-9.1399" />
+                <input type="number" step="any" value={clientForm.lng ?? ''} onChange={e => setClientForm(prev => ({ ...prev, lng: e.target.value }))} className="w-full bg-white border-[1.5px] border-[#E4E1D6] rounded-xl py-[0.55rem] px-[0.7rem] text-[0.78rem] font-bold outline-none shadow-sm focus:border-[var(--navy)] focus:ring-4 focus:ring-[#1B3A57]/10 transition-all" style={{ fontFamily: FONT_MONO }} placeholder="-9.1399" />
               </div>
             </div>
             <div className="space-y-1 mb-3">
               <label className="text-[9px] font-bold uppercase tracking-wider text-[var(--slate-dim)]" style={{ fontFamily: FONT_MONO }}>Raio (metros)</label>
-              <input type="number" value={clientForm.geo_radius_m ?? 200} onChange={e => setClientForm(prev => ({ ...prev, geo_radius_m: e.target.value }))} className="w-full bg-white border-[1.5px] border-[#E4E1D6] rounded-[0.7rem] py-[0.55rem] px-[0.7rem] text-[0.78rem] font-bold outline-none shadow-sm focus:border-[var(--navy)] focus:ring-4 focus:ring-[#1B3A57]/10 transition-all" style={{ fontFamily: FONT_MONO }} placeholder="200" />
+              <input type="number" value={clientForm.geo_radius_m ?? 200} onChange={e => setClientForm(prev => ({ ...prev, geo_radius_m: e.target.value }))} className="w-full bg-white border-[1.5px] border-[#E4E1D6] rounded-xl py-[0.55rem] px-[0.7rem] text-[0.78rem] font-bold outline-none shadow-sm focus:border-[var(--navy)] focus:ring-4 focus:ring-[#1B3A57]/10 transition-all" style={{ fontFamily: FONT_MONO }} placeholder="200" />
             </div>
 
             <button
@@ -270,7 +270,7 @@ export default function ClientForm() {
           {/* HORÁRIOS */}
           <div className="bg-[#F7F8FA] border border-[#E5E1D6] rounded-[1.5rem] py-[1.25rem] px-[1.3rem]">
             <div className="flex items-center gap-2.5 mb-3.5">
-              <div className="w-[34px] h-[34px] rounded-[11px] flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(134,154,175,0.16)', color: FT.slate }}>
+              <div className="w-[34px] h-[34px] rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(134,154,175,0.16)', color: FT.slate }}>
                 <Clock size={16} />
               </div>
               <h4 className="font-bold uppercase tracking-wide text-[0.95rem]" style={{ fontFamily: FONT_MONO, color: '#51606E' }}>Horários</h4>
@@ -296,7 +296,7 @@ export default function ClientForm() {
                       const updated = current.includes(s.id) ? current.filter(id => id !== s.id) : [...current, s.id];
                       setClientForm({ ...clientForm, assignedSchedules: updated });
                     }}
-                    className="flex items-center gap-1.5 rounded-[0.6rem] px-2.5 py-1.5 text-[10px] font-bold border-[1.5px] transition-all"
+                    className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[10px] font-bold border-[1.5px] transition-all"
                     style={{
                       fontFamily: FONT_MONO,
                       backgroundColor: isAssigned ? FT.navy : '#fff',

@@ -206,7 +206,7 @@ const NotificationsAdmin = ({ workers, appNotifications, saveToDb, handleDelete,
           <p className="text-center py-10 text-[var(--slate-dim)] text-xs font-bold">Nenhum aviso criado.</p>
         ) : (
           manualNotifications.map(notif => (
-            <div key={notif.id} className={`p-4 rounded-3xl border flex items-center justify-between gap-3 shadow-sm hover:shadow-md transition-all ${notif.is_active ? 'bg-white border-[var(--border-soft)]' : 'bg-[var(--surface)] border-[var(--border)] opacity-60'}`}>
+            <div key={notif.id} className={`p-4 rounded-[1.5rem] border flex items-center justify-between gap-3 shadow-sm hover:shadow-md transition-all ${notif.is_active ? 'bg-white border-[var(--border-soft)]' : 'bg-[var(--surface)] border-[var(--border)] opacity-60'}`}>
               <div className="flex items-center gap-3 min-w-0 flex-1">
                 <div className={`p-3 rounded-2xl ${notif.type === 'urgent' ? 'bg-rose-50 text-rose-600' :
                   notif.type === 'warning' ? 'bg-amber-50 text-amber-600' :
