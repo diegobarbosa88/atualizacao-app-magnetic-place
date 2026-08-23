@@ -32,7 +32,7 @@ function LogSourceBadge({ log }) {
         </span>
       )}
       {log.edited_at && (
-        <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest bg-[var(--surface-dim)] text-[var(--slate-dim)]">
+        <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest bg-[var(--surface-dim)] text-[var(--ink-soft)]">
           <Pencil size={8} /> Editado
         </span>
       )}
@@ -788,7 +788,7 @@ function AdminDashboard(props) {
                           navigate('/admin/team?source=workers');
                           setShowNotifDropdown(false);
                         }} className="flex-1 py-1.5 text-[10px] font-black bg-amber-600 text-white rounded-lg hover:bg-amber-700 uppercase tracking-widest">Ver</button>
-                        <button onClick={() => { markNotifRead(n.id); handleDismissAdminNotif(n.id); }} className="px-3 py-1.5 text-[10px] font-black bg-[var(--surface-dim)] text-[var(--slate-dim)] rounded-lg hover:bg-[var(--border)] uppercase tracking-widest">Ignorar</button>
+                        <button onClick={() => { markNotifRead(n.id); handleDismissAdminNotif(n.id); }} className="px-3 py-1.5 text-[10px] font-black bg-[var(--surface-dim)] text-[var(--ink-soft)] rounded-lg hover:bg-[var(--border)] uppercase tracking-widest">Ignorar</button>
                       </div>
                     )}
                   </div>
@@ -818,7 +818,7 @@ function AdminDashboard(props) {
                             Ver Fila
                           </button>
                           <button onClick={() => { markNotifRead(n.id); handleDismissAdminNotif(n.id); }}
-                            className="px-3 py-1.5 text-[10px] font-black bg-[var(--surface-dim)] text-[var(--slate-dim)] rounded-lg hover:bg-[var(--border)] uppercase tracking-widest">
+                            className="px-3 py-1.5 text-[10px] font-black bg-[var(--surface-dim)] text-[var(--ink-soft)] rounded-lg hover:bg-[var(--border)] uppercase tracking-widest">
                             Ignorar
                           </button>
                         </div>

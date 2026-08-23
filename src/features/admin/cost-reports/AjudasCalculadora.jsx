@@ -899,7 +899,7 @@ table{width:100%;border-collapse:collapse;margin-bottom:20px;}
                           </span>
                         )}
                         {(obsAplicados.has(l.clientId) || (l.daObservacao && overrides[l.clientId] === undefined)) && (
-                          <span className="px-1.5 py-0.5 bg-[var(--surface-dim)] text-[var(--slate)] rounded text-[8px] font-black uppercase tracking-wider" title="Valor obtido da observação da fatura TOConline">Obs.</span>
+                          <span className="px-1.5 py-0.5 bg-[var(--surface-dim)] text-[var(--ink-soft)] rounded text-[8px] font-black uppercase tracking-wider" title="Valor obtido da observação da fatura TOConline">Obs.</span>
                         )}
                         <input
                           type="number"
@@ -1195,7 +1195,7 @@ table{width:100%;border-collapse:collapse;margin-bottom:20px;}
                                     return (
                                       <tr key={inv.docNum} className={subRowCls}>
                                         <td className="px-3 py-1.5 pl-12">
-                                          <span className="px-1.5 py-0.5 bg-[var(--surface-dim)] text-[var(--slate-dim)] rounded text-[8px] font-mono">{inv.docNum}</span>
+                                          <span className="px-1.5 py-0.5 bg-[var(--surface-dim)] text-[var(--ink-soft)] rounded text-[8px] font-mono">{inv.docNum}</span>
                                         </td>
                                         <td className="hidden sm:table-cell" />
                                         <td className="px-3 py-1.5 text-right text-[10px] text-[var(--slate-dim)] hidden sm:table-cell">{fmtEur(inv.valor)}</td>
@@ -1228,7 +1228,7 @@ table{width:100%;border-collapse:collapse;margin-bottom:20px;}
                                 <tr className={rowCls}>
                                   <td className="px-3 py-2.5 pl-8 font-bold text-[var(--ink)]">
                                     {nomeCliente}
-                                    {invoices[0] && <span className="ml-2 px-1.5 py-0.5 bg-[var(--surface-dim)] text-[var(--slate-dim)] rounded text-[8px] font-mono">{invoices[0].docNum}</span>}
+                                    {invoices[0] && <span className="ml-2 px-1.5 py-0.5 bg-[var(--surface-dim)] text-[var(--ink-soft)] rounded text-[8px] font-mono">{invoices[0].docNum}</span>}
                                   </td>
                                   <td className="px-3 py-2.5 text-right text-[var(--slate-dim)] hidden sm:table-cell">
                                     {temLogsNoMes ? `${horasCliente.toFixed(2)}h` : '—'}

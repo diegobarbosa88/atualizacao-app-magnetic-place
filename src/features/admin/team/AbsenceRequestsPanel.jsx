@@ -176,7 +176,7 @@ export default function AbsenceRequestsPanel({ requests, systemSettings, clients
                   const month = d.toLocaleDateString('pt-PT', { month: 'short' });
                   const isWeekend = d.getDay() === 0 || d.getDay() === 6;
                   return (
-                    <span key={ds} className={`inline-flex flex-col items-center px-2.5 py-1.5 rounded-xl text-center leading-none ${isWeekend ? 'bg-[var(--surface-dim)] text-[var(--slate-dim)]' : 'bg-orange-100 text-orange-700'}`}>
+                    <span key={ds} className={`inline-flex flex-col items-center px-2.5 py-1.5 rounded-xl text-center leading-none ${isWeekend ? 'bg-[var(--surface-dim)] text-[var(--ink-soft)]' : 'bg-orange-100 text-orange-700'}`}>
                       <span className="text-[8px] font-black uppercase tracking-wider">{weekday}</span>
                       <span className="text-sm font-black">{dayNum}</span>
                       <span className="text-[8px] font-bold opacity-70">{month}</span>
@@ -218,13 +218,13 @@ export default function AbsenceRequestsPanel({ requests, systemSettings, clients
             )}
             <button
               onClick={() => handleArchive(req)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--surface-dim)] text-[var(--slate-dim)] rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-red-50 hover:text-red-500 transition-all"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--surface-dim)] text-[var(--ink-soft)] rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-red-50 hover:text-red-500 transition-all"
             >
               <Archive size={11} /> Arquivar
             </button>
             <button
               onClick={() => handleDelete(req)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--surface-dim)] text-[var(--slate-dim)] rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-red-100 hover:text-red-600 transition-all"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--surface-dim)] text-[var(--ink-soft)] rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-red-100 hover:text-red-600 transition-all"
             >
               <Trash2 size={11} /> Apagar
             </button>
@@ -298,7 +298,7 @@ export default function AbsenceRequestsPanel({ requests, systemSettings, clients
                     <>
                       <button
                         onClick={() => toggleApprovedGroup(group.id)}
-                        className="w-full px-4 py-2 flex items-center gap-2 text-[10px] font-black uppercase text-[var(--slate-dim)] bg-[var(--surface)] rounded-xl hover:text-[var(--ink-soft)] hover:bg-[var(--surface-dim)] transition-all"
+                        className="w-full px-4 py-2 flex items-center gap-2 text-[10px] font-black uppercase text-[var(--ink-soft)] bg-[var(--surface)] rounded-xl hover:text-[var(--ink-soft)] hover:bg-[var(--surface-dim)] transition-all"
                       >
                         {approvedOpen ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
                         {approvedOpen ? 'Mostrar menos' : `Ver mais ${restApproved.length} com OK dado`}

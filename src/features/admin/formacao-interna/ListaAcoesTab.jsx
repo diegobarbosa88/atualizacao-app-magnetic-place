@@ -191,7 +191,7 @@ export default function ListaAcoesTab({ refreshKey }) {
                             {CATEGORIA_LABEL[f.categoria] || f.categoria}
                           </span>
                           {f.exige_entidade_externa && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest bg-[var(--surface-dim)] text-[var(--slate-dim)]">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest bg-[var(--surface-dim)] text-[var(--ink-soft)]">
                               <Building2 size={10} /> {f.entidade_externa || 'Entidade Externa'}
                             </span>
                           )}
@@ -282,7 +282,7 @@ export default function ListaAcoesTab({ refreshKey }) {
                                         </button>
                                       </>
                                     ) : (
-                                      <span className="text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)] bg-[var(--surface-dim)] px-2 py-1 rounded-lg">
+                                      <span className="text-[9px] font-black uppercase tracking-widest text-[var(--ink-soft)] bg-[var(--surface-dim)] px-2 py-1 rounded-lg">
                                         Por assinar (worker)
                                       </span>
                                     )}

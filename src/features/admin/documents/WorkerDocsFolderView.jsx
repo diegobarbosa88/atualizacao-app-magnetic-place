@@ -216,7 +216,7 @@ export function DocumentViewerModal({ doc, onClose }) {
       layer="viewer"
       footer={url ? (
         <div className="flex justify-end px-5 py-3">
-          <a href={url} download className="p-2 rounded-xl bg-[var(--surface-dim)] hover:bg-indigo-50 text-[var(--slate-dim)] hover:text-indigo-600 transition-colors" title="Descarregar">
+          <a href={url} download className="p-2 rounded-xl bg-[var(--surface-dim)] hover:bg-indigo-50 text-[var(--ink-soft)] hover:text-indigo-600 transition-colors" title="Descarregar">
             <Download size={14} />
           </a>
         </div>
@@ -317,7 +317,7 @@ function DocCardSingle({ d, onOpenDoc, onDelete, confirmDeleteId, setConfirmDele
                   await supabase?.from('documents').update({ visivel_worker: next }).eq('id', d.raw.id);
                 }}
                 title={visivelWorker ? 'Visível ao trabalhador — clique para ocultar' : 'Oculto ao trabalhador — clique para tornar visível'}
-                className={`p-1.5 rounded-lg transition-colors ${visivelWorker ? 'text-emerald-600 hover:bg-emerald-50' : 'text-[var(--slate)] hover:bg-[var(--surface-dim)]'}`}
+                className={`p-1.5 rounded-lg transition-colors ${visivelWorker ? 'text-emerald-600 hover:bg-emerald-50' : 'text-[var(--slate)] hover:text-[var(--ink-soft)] hover:bg-[var(--surface-dim)]'}`}
               >
                 {visivelWorker ? <Eye size={16} /> : <EyeOff size={16} />}
               </button>
@@ -831,7 +831,7 @@ export default function WorkerDocsFolderView({ docs, onPreview, onDeleteManual, 
                       );
                     })}
                     {categorias.length > 4 && (
-                      <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-[var(--surface-dim)] text-[var(--slate-dim)]">
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-[var(--surface-dim)] text-[var(--ink-soft)]">
                         +{categorias.length - 4}
                       </span>
                     )}

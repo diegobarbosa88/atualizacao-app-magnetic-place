@@ -94,7 +94,7 @@ function ClientCorrectionsPanel({ filtered, clients, workers, itemsByCorrection,
             </div>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
-            {isResolved && <span className="text-[10px] font-black px-3 py-1.5 rounded-xl bg-[var(--surface-dim)] text-[var(--slate-dim)]">Resolvido</span>}
+            {isResolved && <span className="text-[10px] font-black px-3 py-1.5 rounded-xl bg-[var(--surface-dim)] text-[var(--ink-soft)]">Resolvido</span>}
             <ChevronDown size={16} className={`text-[var(--slate)] transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
           </div>
         </button>
@@ -250,7 +250,7 @@ function WorkerCorrectionsPanel({ filtered, clients, workers, itemsByCorrection,
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             {isResolved && (
-              <span className="text-[10px] font-black px-3 py-1.5 rounded-xl bg-[var(--surface-dim)] text-[var(--slate-dim)]">Resolvido</span>
+              <span className="text-[10px] font-black px-3 py-1.5 rounded-xl bg-[var(--surface-dim)] text-[var(--ink-soft)]">Resolvido</span>
             )}
             <ChevronDown size={16} className={`text-[var(--slate)] transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
           </div>

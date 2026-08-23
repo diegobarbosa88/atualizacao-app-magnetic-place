@@ -88,17 +88,17 @@ export default function ResultadosTabs({
               else alert('Nenhuma nova entrada com cliente identificável.');
             }}
             disabled={autoAssociando}
-            className="flex items-center gap-1.5 px-3 py-2 bg-[var(--surface-dim)] hover:bg-emerald-100 text-[var(--slate-dim)] hover:text-emerald-700 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex-shrink-0 disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3 py-2 bg-[var(--surface-dim)] hover:bg-emerald-100 text-[var(--ink-soft)] hover:text-emerald-700 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex-shrink-0 disabled:opacity-50"
             title="Associar automaticamente entradas bancárias a clientes"
           >
             {autoAssociando ? <Loader2 size={13} className="animate-spin" /> : <Link2 size={13} />} Auto
           </button>
           <button onClick={() => setShowAliases(true)}
-            className="flex items-center gap-1.5 px-3 py-2 bg-[var(--surface-dim)] hover:bg-violet-100 text-[var(--slate-dim)] hover:text-violet-700 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex-shrink-0">
+            className="flex items-center gap-1.5 px-3 py-2 bg-[var(--surface-dim)] hover:bg-violet-100 text-[var(--ink-soft)] hover:text-violet-700 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex-shrink-0">
             <Tag size={13} /> Aliases {aliases.length > 0 && `(${aliases.length})`}
           </button>
           <button onClick={() => setShowRelatorio(true)}
-            className="flex items-center gap-1.5 px-3 py-2 bg-[var(--surface-dim)] hover:bg-indigo-100 text-[var(--slate-dim)] hover:text-indigo-700 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex-shrink-0">
+            className="flex items-center gap-1.5 px-3 py-2 bg-[var(--surface-dim)] hover:bg-indigo-100 text-[var(--ink-soft)] hover:text-indigo-700 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex-shrink-0">
             <Download size={13} /> Relatório
           </button>
         </div>

@@ -128,7 +128,7 @@ function PagarFaturaModal({ fatura, onClose, onPago }) {
               onClick={buscarIban}
               disabled={buscandoIban}
               title="Buscar IBAN no TOConline"
-              className="px-3 py-2 rounded-xl bg-[var(--surface-dim)] hover:bg-violet-100 text-[var(--slate-dim)] hover:text-violet-700 transition-colors disabled:opacity-40"
+              className="px-3 py-2 rounded-xl bg-[var(--surface-dim)] hover:bg-violet-100 text-[var(--ink-soft)] hover:text-violet-700 transition-colors disabled:opacity-40"
             >
               {buscandoIban ? <Loader2 size={13} className="animate-spin" /> : <Search size={13} />}
             </button>
@@ -209,7 +209,7 @@ function FaturaFornecedorCard({ fornecedor, faturas, justificacoes, onJustificar
                         </span>
                         <button
                           onClick={() => onRemoverJustificacao(f.id)}
-                          className="flex items-center gap-0.5 px-2 py-0.5 rounded-xl text-[9px] font-black uppercase tracking-widest bg-[var(--surface-dim)] text-[var(--slate-dim)] hover:bg-rose-100 hover:text-rose-600 transition-colors"
+                          className="flex items-center gap-0.5 px-2 py-0.5 rounded-xl text-[9px] font-black uppercase tracking-widest bg-[var(--surface-dim)] text-[var(--ink-soft)] hover:bg-rose-100 hover:text-rose-600 transition-colors"
                           title="Desfazer justificação"
                         >
                           <Undo2 size={9} /> Desfazer
@@ -419,7 +419,7 @@ export default function FaturasTab() {
         <div className="relative self-start sm:flex-shrink-0" ref={exportRef}>
           <button
             onClick={() => setShowExportMenu(v => !v)}
-            className="flex items-center gap-1.5 px-3 py-2 bg-[var(--surface-dim)] hover:bg-indigo-100 text-[var(--slate-dim)] hover:text-indigo-700 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all"
+            className="flex items-center gap-1.5 px-3 py-2 bg-[var(--surface-dim)] hover:bg-indigo-100 text-[var(--ink-soft)] hover:text-indigo-700 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all"
           >
             <Download size={13} /> Exportar
           </button>

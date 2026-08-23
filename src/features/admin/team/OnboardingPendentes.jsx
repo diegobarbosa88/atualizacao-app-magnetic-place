@@ -177,7 +177,7 @@ export default function OnboardingPendentes() {
             <p className="text-[10px] text-[var(--slate-dim)] font-bold">Formulários de onboarding aguardando aprovação</p>
           </div>
         </div>
-        <button onClick={loadSubmissions} className="p-2 text-[var(--slate)] hover:text-[var(--slate)] hover:bg-[var(--surface-dim)] rounded-xl transition-all" title="Atualizar">
+        <button onClick={loadSubmissions} className="p-2 text-[var(--slate)] hover:text-[var(--ink-soft)] hover:bg-[var(--surface-dim)] rounded-xl transition-all" title="Atualizar">
           <RefreshCw size={16} />
         </button>
       </div>

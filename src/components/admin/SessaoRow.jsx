@@ -275,7 +275,7 @@ function SessaoRow({ sessao, onAlterarEstado, onApagarRegisto, onApagarSessao, o
                   {enviandoRecibos ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
                   Confirmar
                 </button>
-                <button onClick={e => { e.stopPropagation(); setBurstResultados(null); }} className="px-3 py-1.5 rounded-lg text-xs font-bold text-[var(--slate-dim)] hover:bg-[var(--surface-dim)] transition-colors">
+                <button onClick={e => { e.stopPropagation(); setBurstResultados(null); }} className="px-3 py-1.5 rounded-lg text-xs font-bold text-[var(--ink-soft)] hover:bg-[var(--surface-dim)] transition-colors">
                   Cancelar
                 </button>
               </div>
@@ -324,7 +324,7 @@ function SessaoRow({ sessao, onAlterarEstado, onApagarRegisto, onApagarSessao, o
                       <td className="px-3 py-2.5">
                         <div className="flex items-center justify-center gap-2">
                           <EstadoPicker atual={r.estado} onChange={(novo) => onAlterarEstado(r.id, novo)} size={14} />
-                          <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${ESTADO_BADGE[r.estado] ?? 'bg-[var(--surface-dim)] text-[var(--slate-dim)]'}`}>
+                          <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${ESTADO_BADGE[r.estado] ?? 'bg-[var(--surface-dim)] text-[var(--ink-soft)]'}`}>
                             {ESTADO_PT[r.estado] ?? r.estado}
                           </span>
                           {r.liquido_extraido != null && (

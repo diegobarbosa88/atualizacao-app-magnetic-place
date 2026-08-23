@@ -615,7 +615,7 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
 
             <div className="flex gap-2">
               <button onClick={() => setSemClienteCorrespondente(true)}
-                className="flex-1 px-3 py-2.5 text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] hover:bg-[var(--surface-dim)] rounded-xl transition-all">
+                className="flex-1 px-3 py-2.5 text-[10px] font-black uppercase tracking-widest text-[var(--ink-soft)] hover:bg-[var(--surface-dim)] rounded-xl transition-all">
                 Não corresponde a nenhum cliente
               </button>
               <button onClick={() => { if (resolucaoEscolhida) setClienteId(resolucaoEscolhida); }} disabled={!resolucaoEscolhida}
@@ -1191,7 +1191,7 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
               {(!gateAjudas || gateAjudas.status === 'verificando') && (
                 <div className="flex gap-2">
                   <button onClick={() => setPasso(1)} disabled={gateAjudas?.status === 'verificando'}
-                    className="flex-1 px-4 py-2.5 text-xs font-black uppercase tracking-widest text-[var(--slate-dim)] hover:bg-[var(--surface-dim)] rounded-xl transition-all disabled:opacity-50">
+                    className="flex-1 px-4 py-2.5 text-xs font-black uppercase tracking-widest text-[var(--ink-soft)] hover:bg-[var(--surface-dim)] rounded-xl transition-all disabled:opacity-50">
                     Voltar
                   </button>
                   <button onClick={handleIniciarEmissao} disabled={emitindo || gateAjudas?.status === 'verificando'}
@@ -1235,7 +1235,7 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
               </div>
             )}
             <button onClick={onClose}
-              className="w-full px-4 py-2.5 text-xs font-black uppercase tracking-widest text-[var(--slate-dim)] hover:bg-[var(--surface-dim)] rounded-xl transition-all">
+              className="w-full px-4 py-2.5 text-xs font-black uppercase tracking-widest text-[var(--ink-soft)] hover:bg-[var(--surface-dim)] rounded-xl transition-all">
               Fechar
             </button>
           </div>

@@ -59,7 +59,7 @@ function WorkerLogsModal({ worker, logs, month, onClose }) {
               {cfg.label}
             </span>
           ))}
-          <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest bg-[var(--surface-dim)] text-[var(--slate-dim)]">
+          <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest bg-[var(--surface-dim)] text-[var(--ink-soft)]">
             <Pencil size={8} /> Editado
           </span>
         </div>
@@ -100,13 +100,13 @@ function WorkerLogsModal({ worker, logs, month, onClose }) {
                               </span>
                             )}
                             {!srcCfg && !log.source && (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest shrink-0 bg-[var(--surface-dim)] text-[var(--slate-dim)]">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest shrink-0 bg-[var(--surface-dim)] text-[var(--ink-soft)]">
                                 Desconhecido
                               </span>
                             )}
                             {/* Edited badge */}
                             {log.edited_at && (
-                              <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest shrink-0 bg-[var(--surface-dim)] text-[var(--slate-dim)]">
+                              <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest shrink-0 bg-[var(--surface-dim)] text-[var(--ink-soft)]">
                                 <Pencil size={8} />
                                 Editado
                                 {SOURCE_CFG[log.edited_source] && (

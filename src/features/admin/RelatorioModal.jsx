@@ -369,7 +369,7 @@ export default function RelatorioModal({ displayData, filename, dataRun, onClose
           <div className="flex gap-2">
             {[{ k: 'csv', l: 'CSV (Excel)' }, { k: 'pdf', l: 'PDF' }].map(({ k, l }) => (
               <button key={k} onClick={() => setFormato(k)}
-                className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${formato === k ? 'bg-indigo-600 text-white' : 'bg-[var(--surface-dim)] text-[var(--slate-dim)] hover:bg-[var(--border)]'}`}>
+                className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${formato === k ? 'bg-indigo-600 text-white' : 'bg-[var(--surface-dim)] text-[var(--ink-soft)] hover:bg-[var(--border)]'}`}>
                 {l}
               </button>
             ))}

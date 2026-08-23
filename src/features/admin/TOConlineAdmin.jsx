@@ -83,7 +83,7 @@ export default function TOConlineAdmin() {
                   <TrendingUp size={14} className="text-[var(--slate)] shrink-0" />
                 )}
                 <div>
-                  <p className="text-[8.5px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Saldo Contas</p>
+                  <p className="text-[8.5px] font-black uppercase tracking-widest text-[var(--ink-soft)]">Saldo Contas</p>
                   <p className="text-xs font-black text-[var(--navy)]">
                     {saldoContas != null
                       ? new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(saldoContas.total)

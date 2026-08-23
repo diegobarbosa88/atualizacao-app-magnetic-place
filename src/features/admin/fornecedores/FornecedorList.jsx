@@ -103,12 +103,12 @@ export default function FornecedorList() {
                 <tr key={f.id} className="border-b border-[var(--border-soft)] hover:bg-[var(--surface)] transition-colors">
                   <td className="px-4 py-3">
                     <p className="font-black text-[var(--ink)] text-sm">{f.nome}</p>
-                    {f.nif && <p className="text-[10px] text-[var(--slate-dim)] font-mono mt-0.5">NIF {f.nif}</p>}
+                    {f.nif && <p className="text-[10px] text-[var(--ink-soft)] font-mono mt-0.5">NIF {f.nif}</p>}
                   </td>
                   <td className="px-4 py-3">
                     {f.email && <p className="text-xs text-[var(--ink-soft)]">{f.email}</p>}
                     {f.telefone && <p className="text-[10px] text-[var(--slate-dim)] mt-0.5">{f.telefone}</p>}
-                    {!f.email && !f.telefone && <span className="text-[var(--slate)]">—</span>}
+                    {!f.email && !f.telefone && <span className="text-[var(--ink-soft)]">—</span>}
                   </td>
                   <td className="px-4 py-3">
                     {f.iban
@@ -128,13 +128,13 @@ export default function FornecedorList() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
-                      <button onClick={() => editarFornecedor(f)} className="p-1.5 text-[var(--slate)] hover:text-[var(--slate)] hover:bg-[var(--surface-dim)] rounded-lg transition-colors">
+                      <button onClick={() => editarFornecedor(f)} className="p-1.5 text-[var(--slate)] hover:text-[var(--ink-soft)] hover:bg-[var(--surface-dim)] rounded-lg transition-colors">
                         <Edit2 size={13} />
                       </button>
                       {confirmDeleteId === f.id ? (
                         <div className="flex items-center gap-1">
                           <button onClick={() => handleDelete(f.id)} className="px-2 py-1 bg-red-600 text-white rounded-lg text-[9px] font-black uppercase">Sim</button>
-                          <button onClick={() => setConfirmDeleteId(null)} className="px-2 py-1 bg-[var(--surface-dim)] text-[var(--slate-dim)] rounded-lg text-[9px] font-black uppercase">Não</button>
+                          <button onClick={() => setConfirmDeleteId(null)} className="px-2 py-1 bg-[var(--surface-dim)] text-[var(--ink-soft)] rounded-lg text-[9px] font-black uppercase">Não</button>
                         </div>
                       ) : (
                         <button onClick={() => setConfirmDeleteId(f.id)} className="p-1.5 text-[var(--slate)] hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
@@ -218,7 +218,7 @@ export default function FornecedorList() {
                 {confirmDeleteId === f.id ? (
                   <div className="flex items-center gap-1">
                     <button onClick={() => handleDelete(f.id)} className="px-2 py-1.5 bg-red-600 text-white rounded-lg text-[9px] font-black uppercase">Confirmar</button>
-                    <button onClick={() => setConfirmDeleteId(null)} className="px-2 py-1.5 bg-[var(--surface-dim)] text-[var(--slate-dim)] rounded-lg text-[9px] font-black uppercase">Cancelar</button>
+                    <button onClick={() => setConfirmDeleteId(null)} className="px-2 py-1.5 bg-[var(--surface-dim)] text-[var(--ink-soft)] rounded-lg text-[9px] font-black uppercase">Cancelar</button>
                   </div>
                 ) : (
                   <button onClick={() => setConfirmDeleteId(f.id)} className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-black uppercase text-red-400 hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors">

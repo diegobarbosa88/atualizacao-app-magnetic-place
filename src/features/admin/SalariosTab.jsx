@@ -551,7 +551,7 @@ export default function SalariosTab({ month }) {
               <div className="relative" ref={exportRef}>
                 <button
                   onClick={() => setShowExportMenu(v => !v)}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-[var(--surface-dim)] hover:bg-[var(--border)] text-[var(--slate-dim)] hover:text-[var(--ink-mid)] rounded-2xl text-xs font-black uppercase tracking-widest transition-all w-full justify-center"
+                  className="flex items-center gap-1.5 px-3 py-2 bg-[var(--surface-dim)] hover:bg-[var(--border)] text-[var(--ink-soft)] hover:text-[var(--ink-mid)] rounded-2xl text-xs font-black uppercase tracking-widest transition-all w-full justify-center"
                 >
                   <Download size={13} /> Exportar
                 </button>

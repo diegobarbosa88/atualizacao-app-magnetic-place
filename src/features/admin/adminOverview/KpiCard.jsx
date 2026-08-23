@@ -18,7 +18,7 @@ export default function KpiCard({ icon, iconBg, iconColor, iconStyle = {}, value
   const textoNeutro = dark ? 'text-[var(--on-navy)]' : 'text-[var(--slate-dim)]';
 
   const badgeClass = neutralBadge
-    ? (dark ? `bg-slate-500/20 ${textoNeutro}` : `bg-[var(--surface-dim)] ${textoNeutro}`)
+    ? (dark ? `bg-slate-500/20 ${textoNeutro}` : `bg-[var(--surface-dim)] text-[var(--ink-soft)]`)
     : dark
       ? (trendGood ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400')
       : (trendGood ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600');

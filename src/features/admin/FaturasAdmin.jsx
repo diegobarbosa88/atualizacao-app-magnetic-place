@@ -769,7 +769,7 @@ export default function FaturasAdmin() {
               </button>
               <button
                 onClick={() => setIbanModal(null)}
-                className="px-4 py-2 text-xs font-black bg-[var(--surface-dim)] text-[var(--slate-dim)] rounded-xl hover:bg-[var(--border)] uppercase tracking-widest"
+                className="px-4 py-2 text-xs font-black bg-[var(--surface-dim)] text-[var(--ink-soft)] rounded-xl hover:bg-[var(--border)] uppercase tracking-widest"
               >
                 Cancelar
               </button>

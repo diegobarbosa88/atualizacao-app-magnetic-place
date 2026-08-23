@@ -135,7 +135,7 @@ export default function ScheduleForm() {
                   <button type="button" onClick={() => {
                     const nextHasBreak = !(scheduleForm.hasBreak || !!scheduleForm.breakStart);
                     setScheduleForm({ ...scheduleForm, hasBreak: nextHasBreak, breakStart: nextHasBreak ? scheduleForm.breakStart : '', breakEnd: nextHasBreak ? scheduleForm.breakEnd : '' });
-                  }} className="text-[10px] font-black uppercase text-[var(--slate)] bg-[var(--surface-dim)] px-3 py-1.5 rounded-xl hover:bg-[var(--border)] transition-colors">
+                  }} className="text-[10px] font-black uppercase text-[var(--ink-soft)] bg-[var(--surface-dim)] px-3 py-1.5 rounded-xl hover:bg-[var(--border)] transition-colors">
                     {(scheduleForm.hasBreak || !!scheduleForm.breakStart) ? 'Remover Pausa' : '+ Adicionar'}
                   </button>
                 </div>
@@ -157,7 +157,7 @@ export default function ScheduleForm() {
                           const current = scheduleForm.weekdays || [1, 2, 3, 4, 5];
                           const updated = isActive ? current.filter(d => d !== day.v) : [...current, day.v];
                           setScheduleForm({ ...scheduleForm, weekdays: updated });
-                        }} className={`px-4 py-2 rounded-full text-xs font-black transition-all shadow-sm ${isActive ? 'text-white' : 'bg-[var(--surface-dim)] text-[var(--slate-dim)] hover:bg-[var(--border)]'}`} style={isActive ? { backgroundColor: FT.navy } : {}}>
+                        }} className={`px-4 py-2 rounded-full text-xs font-black transition-all shadow-sm ${isActive ? 'text-white' : 'bg-[var(--surface-dim)] text-[var(--ink-soft)] hover:bg-[var(--border)]'}`} style={isActive ? { backgroundColor: FT.navy } : {}}>
                           {day.l}
                         </button>
                       );
@@ -289,7 +289,7 @@ export default function ScheduleForm() {
                           {scheduleForm.id && (
                             <button
                               onClick={() => loadScheduleHistory(w.id, w.name, scheduleForm.id, scheduleForm.name)}
-                              className="text-xs font-bold text-[var(--slate-dim)] hover:text-[var(--slate)] px-2 py-1 bg-[var(--surface)] rounded-lg hover:bg-[var(--surface-dim)] transition-colors flex items-center gap-1"
+                              className="text-xs font-bold text-[var(--ink-soft)] hover:text-[var(--ink-soft)] px-2 py-1 bg-[var(--surface)] rounded-lg hover:bg-[var(--surface-dim)] transition-colors flex items-center gap-1"
                               title="Histórico"
                             >📅 <span className="hidden xl:inline">Histórico</span></button>
                           )}

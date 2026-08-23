@@ -624,7 +624,7 @@ export default function ReconciliacaoAdmin() {
                       ? key === 'debito' ? 'bg-rose-100 text-rose-700 ring-2 ring-rose-300'
                         : key === 'credito' ? 'bg-emerald-100 text-emerald-700 ring-2 ring-emerald-300'
                         : 'bg-slate-200 text-[var(--ink-mid)] ring-2 ring-slate-300'
-                      : 'bg-[var(--surface-dim)] text-[var(--slate-dim)] hover:bg-slate-200'
+                      : 'bg-[var(--surface-dim)] text-[var(--ink-soft)] hover:bg-slate-200'
                   }`}>{label}</button>
               ))}
             </div>

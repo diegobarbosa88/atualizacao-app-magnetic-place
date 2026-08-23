@@ -366,14 +366,14 @@ export default function ImportarContratosSSDModal({ workers, onClose, onImportad
       <div className="flex gap-1">
         <button
           onClick={() => setDecisao(workerId, alt.campo, 'aplicar')}
-          className={`px-2 py-0.5 rounded text-[10px] font-black transition-all ${decisao === 'aplicar' ? 'text-white' : 'bg-[var(--surface-dim)] text-[var(--slate-dim)] hover:bg-[var(--border)]'}`}
+          className={`px-2 py-0.5 rounded text-[10px] font-black transition-all ${decisao === 'aplicar' ? 'text-white' : 'bg-[var(--surface-dim)] text-[var(--ink-soft)] hover:bg-[var(--border)]'}`}
           style={decisao === 'aplicar' ? { backgroundColor: FT.navy } : {}}
         >
           Usar CSV
         </button>
         <button
           onClick={() => setDecisao(workerId, alt.campo, 'ignorar')}
-          className={`px-2 py-0.5 rounded text-[10px] font-black transition-all ${decisao === 'ignorar' ? 'bg-[var(--navy-solid)] text-white' : 'bg-[var(--surface-dim)] text-[var(--slate-dim)] hover:bg-[var(--border)]'}`}
+          className={`px-2 py-0.5 rounded text-[10px] font-black transition-all ${decisao === 'ignorar' ? 'bg-[var(--navy-solid)] text-white' : 'bg-[var(--surface-dim)] text-[var(--ink-soft)] hover:bg-[var(--border)]'}`}
         >
           Manter
         </button>

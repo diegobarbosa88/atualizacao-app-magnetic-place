@@ -86,7 +86,7 @@ function apoliceBadge(w, apoliceMap) {
   }
   if (status === 'excluido') {
     return (
-      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-black bg-[var(--surface-dim)] border border-[var(--border)] text-[var(--slate-dim)]">
+      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-black bg-[var(--surface-dim)] border border-[var(--border)] text-[var(--ink-soft)]">
         <ShieldOff size={8} /> Apólice Excluída
       </span>
     );
@@ -244,7 +244,7 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                       <button
                         onClick={() => saveToDb('workers', w.id, { ...w, limited_entry_mode: !w.limited_entry_mode })}
                         title={w.limited_entry_mode ? 'Modo limitado ativo — clique para desativar' : 'Modo livre — clique para ativar modo limitado'}
-                        className={`p-1.5 rounded-lg transition-all ${w.limited_entry_mode ? 'text-amber-500 hover:bg-amber-50' : 'text-[var(--slate)] hover:bg-[var(--surface-dim)]'}`}
+                        className={`p-1.5 rounded-lg transition-all ${w.limited_entry_mode ? 'text-amber-500 hover:bg-amber-50' : 'text-[var(--slate)] hover:text-[var(--ink-soft)] hover:bg-[var(--surface-dim)]'}`}
                       >
                         {w.limited_entry_mode ? <ShieldOff size={15} /> : <CheckCircle size={15} />}
                       </button>

@@ -232,7 +232,7 @@ export default function RegistoIndividualTab() {
                             </button>
                           </div>
                         ) : (
-                          <span className="text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)] bg-[var(--surface-dim)] px-2 py-1 rounded-lg">
+                          <span className="text-[9px] font-black uppercase tracking-widest text-[var(--ink-soft)] bg-[var(--surface-dim)] px-2 py-1 rounded-lg">
                             Por assinar
                           </span>
                         )}

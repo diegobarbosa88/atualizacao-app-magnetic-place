@@ -642,7 +642,7 @@ const ModoHistorico = ({ workers, logs = [], saveToDb, systemSettings, saveSyste
                             <td className="px-3 py-2.5" onClick={e => e.stopPropagation()}>
                               <div className="flex items-center justify-center gap-1.5">
                                 <EstadoPicker atual={estadoAtual} onChange={novo => alterarEstado(r.id, novo)} />
-                                <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${ESTADO_BADGE[estadoAtual] ?? 'bg-[var(--surface-dim)] text-[var(--slate-dim)]'}`}>
+                                <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${ESTADO_BADGE[estadoAtual] ?? 'bg-[var(--surface-dim)] text-[var(--ink-soft)]'}`}>
                                   {ESTADO_PT[estadoAtual] ?? estadoAtual}
                                 </span>
                               </div>

@@ -471,7 +471,7 @@ export default function FilaAprovacaoTab() {
                 <div className="flex items-center gap-1 shrink-0">
                   {item.url && (
                     <a href={item.url} target="_blank" rel="noopener noreferrer"
-                      className="p-1.5 rounded-lg text-[var(--slate)] hover:text-[var(--slate)] hover:bg-[var(--surface-dim)] transition-colors"
+                      className="p-1.5 rounded-lg text-[var(--slate)] hover:text-[var(--ink-soft)] hover:bg-[var(--surface-dim)] transition-colors"
                       title="Ver PDF">
                       <FileText size={13} />
                     </a>
@@ -524,7 +524,7 @@ export default function FilaAprovacaoTab() {
               </button>
               <button
                 onClick={() => setIbanModal(null)}
-                className="px-4 py-2 text-xs font-black bg-[var(--surface-dim)] text-[var(--slate-dim)] rounded-xl hover:bg-[var(--border)] uppercase tracking-widest"
+                className="px-4 py-2 text-xs font-black bg-[var(--surface-dim)] text-[var(--ink-soft)] rounded-xl hover:bg-[var(--border)] uppercase tracking-widest"
               >
                 Cancelar
               </button>

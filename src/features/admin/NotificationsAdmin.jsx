@@ -232,7 +232,7 @@ const NotificationsAdmin = ({ workers, appNotifications, saveToDb, handleDelete,
                         </div>
                       ))}
                       {(notif.viewed_by_ids || []).length > 5 && (
-                        <div className="w-5 h-5 rounded-full bg-[var(--surface-dim)] border-2 border-white flex items-center justify-center text-[7px] font-black text-[var(--slate-dim)]">
+                        <div className="w-5 h-5 rounded-full bg-[var(--surface-dim)] border-2 border-white flex items-center justify-center text-[7px] font-black text-[var(--ink-soft)]">
                           +{(notif.viewed_by_ids || []).length - 5}
                         </div>
                       )}

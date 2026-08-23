@@ -54,7 +54,7 @@ export default function CsvMappingCard({ csvMapping, colMap, setColMap, previewi
           <div className="flex gap-2 flex-wrap">
             {[{ k: 'valor', l: 'Valor único' }, { k: 'debcred', l: 'Déb + Créd' }].map(({ k, l }) => (
               <button key={k} onClick={() => setColMap(p => ({ ...p, modo: k }))}
-                className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${colMap.modo === k ? 'bg-indigo-100 text-indigo-700 ring-2 ring-indigo-300' : 'bg-[var(--surface-dim)] text-[var(--slate-dim)] hover:bg-[var(--border)]'}`}>
+                className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${colMap.modo === k ? 'bg-indigo-100 text-indigo-700 ring-2 ring-indigo-300' : 'bg-[var(--surface-dim)] text-[var(--ink-soft)] hover:bg-[var(--border)]'}`}>
                 {l}
               </button>
             ))}

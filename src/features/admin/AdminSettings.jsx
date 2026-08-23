@@ -261,7 +261,7 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
                       <input type="text" value={adminForm.nif} onChange={e => setAdminForm(p => ({ ...p, nif: e.target.value }))} placeholder="Senha (NIF)" className="w-full bg-white border border-[var(--border)] rounded-xl p-2.5 text-sm outline-none focus:ring-2 focus:ring-[var(--navy)]" />
                       <div className="flex gap-2 pt-1">
                         <button onClick={handleSaveAdmin} className="flex-1 text-white py-2 rounded-xl font-black text-xs uppercase tracking-wider transition-all" style={{ backgroundColor: FT.navy }}>Guardar</button>
-                        <button onClick={() => setAdminFormMode(null)} className="px-4 py-2 rounded-xl font-black text-xs text-[var(--slate-dim)] hover:bg-[var(--surface-dim)] transition-all">Cancelar</button>
+                        <button onClick={() => setAdminFormMode(null)} className="px-4 py-2 rounded-xl font-black text-xs text-[var(--ink-soft)] hover:bg-[var(--surface-dim)] transition-all">Cancelar</button>
                       </div>
                     </div>
                   ) : (
@@ -298,7 +298,7 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
               <input type="text" placeholder="Senha (NIF)" value={adminForm.nif} onChange={e => setAdminForm(p => ({ ...p, nif: e.target.value }))} className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-[var(--navy)]" />
               <div className="flex gap-2">
                 <button onClick={handleSaveAdmin} className="flex-1 text-[var(--navy)] py-3 rounded-xl font-black text-xs uppercase tracking-wider transition-all" style={{ backgroundColor: FT.orange }}>Criar</button>
-                <button onClick={() => { setAdminFormMode(null); setAdminForm({ id: null, name: '', nif: '', selectedWorkerId: '' }); }} className="px-4 py-3 rounded-xl font-black text-xs text-[var(--slate-dim)] hover:bg-[var(--surface-dim)] transition-all">Cancelar</button>
+                <button onClick={() => { setAdminFormMode(null); setAdminForm({ id: null, name: '', nif: '', selectedWorkerId: '' }); }} className="px-4 py-3 rounded-xl font-black text-xs text-[var(--ink-soft)] hover:bg-[var(--surface-dim)] transition-all">Cancelar</button>
               </div>
             </div>
           )}

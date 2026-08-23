@@ -383,7 +383,7 @@ export default function ElearningAcoesTab({ refreshKey }) {
                                             </button>
                                           </>
                                         ) : (
-                                          <span className="text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)] bg-[var(--surface-dim)] px-2 py-1 rounded-lg">
+                                          <span className="text-[9px] font-black uppercase tracking-widest text-[var(--ink-soft)] bg-[var(--surface-dim)] px-2 py-1 rounded-lg">
                                             Por assinar (worker)
                                           </span>
                                         )}
@@ -418,7 +418,7 @@ export default function ElearningAcoesTab({ refreshKey }) {
                                     {sec.icone ? (
                                       <IlustracaoTile nome={sec.icone} height={56} />
                                     ) : (
-                                      <div className="w-14 h-14 rounded-xl bg-[var(--surface-dim)] flex items-center justify-center text-[var(--slate)]">
+                                      <div className="w-14 h-14 rounded-xl bg-[var(--surface-dim)] flex items-center justify-center text-[var(--ink-soft)]">
                                         <ImageIcon size={18} />
                                       </div>
                                     )}
@@ -439,7 +439,7 @@ export default function ElearningAcoesTab({ refreshKey }) {
                                     {q.icone ? (
                                       <IlustracaoTile nome={q.icone} height={56} />
                                     ) : (
-                                      <div className="w-14 h-14 rounded-xl bg-[var(--surface-dim)] flex items-center justify-center text-[var(--slate)]">
+                                      <div className="w-14 h-14 rounded-xl bg-[var(--surface-dim)] flex items-center justify-center text-[var(--ink-soft)]">
                                         <ImageIcon size={18} />
                                       </div>
                                     )}

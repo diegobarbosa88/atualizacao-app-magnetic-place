@@ -230,7 +230,7 @@ export default function PagamentosTab() {
             <option value="confirmado">Confirmado</option>
           </select>
           <button onClick={carregar}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-black uppercase tracking-widest text-[var(--slate-dim)] hover:bg-[var(--surface-dim)] rounded-xl transition-all">
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-black uppercase tracking-widest text-[var(--ink-soft)] hover:bg-[var(--surface-dim)] rounded-xl transition-all">
             <RefreshCw size={13} /> Atualizar
           </button>
           <button onClick={() => setMostrarModal(true)}

@@ -70,7 +70,7 @@ const ChangeRequestsPanel = ({ requests, onUpdate }) => {
                 <div className="mt-2 flex gap-2">
                   <input value={rejectNote} onChange={e => setRejectNote(e.target.value)} placeholder="Motivo da rejeição (opcional)..." className="flex-1 text-xs border border-[var(--border)] rounded-xl px-3 py-2 outline-none focus:border-rose-300" autoFocus />
                   <button onClick={() => handleReject(req)} className="px-3 py-1.5 bg-rose-600 text-white rounded-xl text-[10px] font-black uppercase">Confirmar</button>
-                  <button onClick={() => { setRejectingId(null); setRejectNote(''); }} className="px-3 py-1.5 bg-[var(--surface-dim)] text-[var(--slate-dim)] rounded-xl text-[10px] font-black uppercase">Cancelar</button>
+                  <button onClick={() => { setRejectingId(null); setRejectNote(''); }} className="px-3 py-1.5 bg-[var(--surface-dim)] text-[var(--ink-soft)] rounded-xl text-[10px] font-black uppercase">Cancelar</button>
                 </div>
               )}
             </div>

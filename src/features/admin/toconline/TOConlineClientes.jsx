@@ -66,7 +66,7 @@ function NovoClienteModal({ onClose, onSalvo }) {
 
           <div className="flex gap-2 pt-1">
             <button type="button" onClick={onClose}
-              className="flex-1 px-4 py-2 text-xs font-black uppercase tracking-widest text-[var(--slate-dim)] hover:bg-[var(--surface-dim)] rounded-xl transition-all">
+              className="flex-1 px-4 py-2 text-xs font-black uppercase tracking-widest text-[var(--ink-soft)] hover:bg-[var(--surface-dim)] rounded-xl transition-all">
               Cancelar
             </button>
             <button type="submit" disabled={salvando}
@@ -130,7 +130,7 @@ export default function TOConlineClientes({ onDesligado }) {
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => carregar()}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-black uppercase tracking-widest text-[var(--slate-dim)] hover:bg-[var(--surface-dim)] rounded-xl transition-all">
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-black uppercase tracking-widest text-[var(--ink-soft)] hover:bg-[var(--surface-dim)] rounded-xl transition-all">
             <RefreshCw size={13} /> Sincronizar
           </button>
           <button onClick={() => setMostrarModal(true)}
@@ -202,12 +202,12 @@ export default function TOConlineClientes({ onDesligado }) {
       {meta.total_pages > 1 && (
         <div className="px-5 py-3 border-t border-[var(--border-soft)] flex items-center justify-center gap-2">
           <button disabled={pagina <= 1} onClick={() => { setPagina(p => p - 1); carregar(pesquisa, pagina - 1); }}
-            className="px-3 py-1.5 text-xs font-bold text-[var(--slate-dim)] hover:bg-[var(--surface-dim)] rounded-xl disabled:opacity-40 transition-all">
+            className="px-3 py-1.5 text-xs font-bold text-[var(--ink-soft)] hover:bg-[var(--surface-dim)] rounded-xl disabled:opacity-40 transition-all">
             Anterior
           </button>
           <span className="text-xs text-[var(--slate-dim)]">{pagina} / {meta.total_pages}</span>
           <button disabled={pagina >= meta.total_pages} onClick={() => { setPagina(p => p + 1); carregar(pesquisa, pagina + 1); }}
-            className="px-3 py-1.5 text-xs font-bold text-[var(--slate-dim)] hover:bg-[var(--surface-dim)] rounded-xl disabled:opacity-40 transition-all">
+            className="px-3 py-1.5 text-xs font-bold text-[var(--ink-soft)] hover:bg-[var(--surface-dim)] rounded-xl disabled:opacity-40 transition-all">
             Próxima
           </button>
         </div>

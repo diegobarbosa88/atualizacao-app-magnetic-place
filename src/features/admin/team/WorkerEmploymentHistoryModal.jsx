@@ -51,7 +51,7 @@ const WorkerEmploymentHistoryModal = ({ show, workerId, workerName, supabase, on
                     <span className="text-[var(--slate)] text-xs">→</span>
                     <input type="date" value={editingDraft.data_fim || ''} onChange={e => setEditingDraft(d => ({ ...d, data_fim: e.target.value }))} className="border border-[var(--border)] rounded-lg p-1 text-xs font-bold flex-1 min-w-0" placeholder="Em aberto" />
                     <button onClick={() => handleSave(p)} className="p-1 text-green-600 hover:bg-green-50 rounded-lg"><Check size={14} /></button>
-                    <button onClick={() => setEditingId(null)} className="p-1 text-[var(--slate-dim)] hover:bg-[var(--surface-dim)] rounded-lg"><X size={14} /></button>
+                    <button onClick={() => setEditingId(null)} className="p-1 text-[var(--ink-soft)] hover:bg-[var(--surface-dim)] rounded-lg"><X size={14} /></button>
                   </div>
                 ) : confirmDeleteId === p.id ? (
                   <div className="flex items-center justify-between p-3 bg-red-50 rounded-xl border border-red-200">

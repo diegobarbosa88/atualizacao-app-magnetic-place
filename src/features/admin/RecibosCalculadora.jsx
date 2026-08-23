@@ -2981,7 +2981,7 @@ ${hdrRow}${bodyRows}${totRow}
             </button>
             <button
               onClick={() => addRow()}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-black text-[var(--slate-dim)] hover:bg-[var(--surface-dim)] transition-all"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-black text-[var(--ink-soft)] hover:bg-[var(--surface-dim)] transition-all"
             >
               <Plus size={12} /> Linha
             </button>
@@ -4015,7 +4015,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                             value={observacoes[row.workerId] || ''}
                             onChange={e => updateObs(row.workerId, e.target.value)}
                             placeholder="—"
-                            className="w-full min-w-36 bg-transparent outline-none text-center text-xs font-bold text-[var(--ink-mid)] placeholder:text-[var(--slate-dim)] px-2 py-1 rounded-lg hover:bg-[var(--surface-dim)] focus:bg-white focus:ring-2 focus:ring-[#1B3A57]/20 transition-all"
+                            className="w-full min-w-36 bg-transparent outline-none text-center text-xs font-bold text-[var(--ink-mid)] placeholder:text-[var(--ink-soft)] px-2 py-1 rounded-lg hover:bg-[var(--surface-dim)] focus:bg-white focus:ring-2 focus:ring-[#1B3A57]/20 transition-all"
                           />
                         ) : isNome ? (
                           <span>{row[col.key]}</span>

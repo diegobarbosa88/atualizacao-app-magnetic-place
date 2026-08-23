@@ -335,7 +335,7 @@ export default function AdminOverview({ currentMonth, setCurrentMonth }) {
                 .slice(0, showAllActivity ? undefined : 5)
                 .map(log => (
                   <div key={log.id} className="flex gap-3 items-start p-3 hover:bg-[var(--surface)] rounded-2xl transition-colors">
-                    <div className="bg-[var(--surface-dim)] p-2 rounded-xl text-[var(--slate)] mt-0.5"><Activity size={12} /></div>
+                    <div className="bg-[var(--surface-dim)] p-2 rounded-xl text-[var(--ink-soft)] mt-0.5"><Activity size={12} /></div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-bold text-[var(--ink-mid)] truncate">{workers.find(w => w.id === log.workerId)?.name || 'Colaborador'}</p>
                       <p className="text-[10px] text-[var(--slate-dim)] uppercase tracking-widest">{clients.find(c => c.id === log.clientId)?.name} • {formatLogDate(log.date)}</p>

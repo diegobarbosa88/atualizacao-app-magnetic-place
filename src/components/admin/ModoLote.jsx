@@ -476,12 +476,12 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb,
                                 setResultados(prev => prev.map((x, idx) => idx === i ? { ...x, ...flags } : x));
                               }}
                             />
-                            <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${ESTADO_BADGE[estadoAtual] ?? 'bg-[var(--surface-dim)] text-[var(--slate-dim)]'}`}>
+                            <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${ESTADO_BADGE[estadoAtual] ?? 'bg-[var(--surface-dim)] text-[var(--ink-soft)]'}`}>
                               {ESTADO_PT[estadoAtual] ?? estadoAtual}
                             </span>
                           </div>
                           {r.envioStatus === 'enviado'    && <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[9px] font-black uppercase"><CheckCircle size={10} />Enviado</span>}
-                          {r.envioStatus === 'ja_enviado' && <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--surface-dim)] text-[var(--slate-dim)] text-[9px] font-black uppercase"><CheckCircle size={10} />Já enviado</span>}
+                          {r.envioStatus === 'ja_enviado' && <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--surface-dim)] text-[var(--ink-soft)] text-[9px] font-black uppercase"><CheckCircle size={10} />Já enviado</span>}
                           {r.envioStatus === 'erro_envio' && <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-100 text-red-600 text-[9px] font-black uppercase" title={r.erroEnvio}><XCircle size={10} />Erro envio</span>}
                           {r.envioStatus === 'sem_pdf'    && <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-600 text-[9px] font-black uppercase"><AlertCircle size={10} />Sem PDF</span>}
                         </div>

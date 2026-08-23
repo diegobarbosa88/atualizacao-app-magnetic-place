@@ -129,7 +129,7 @@ export default function AlertasAdmin() {
             key={s}
             onClick={() => setStatusFilter(s)}
             className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
-              statusFilter === s ? 'text-white' : 'bg-[var(--surface-dim)] text-[var(--slate-dim)] hover:bg-[var(--border)]'
+              statusFilter === s ? 'text-white' : 'bg-[var(--surface-dim)] text-[var(--ink-soft)] hover:bg-[var(--border)]'
             }`}
             style={statusFilter === s ? { backgroundColor: FT.navy } : {}}
           >
@@ -161,7 +161,7 @@ export default function AlertasAdmin() {
                       <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest ${sevCfg.bg} ${sevCfg.text}`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${sevCfg.dot}`} /> {sevCfg.label}
                       </span>
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest bg-[var(--surface-dim)] text-[var(--slate-dim)]">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest bg-[var(--surface-dim)] text-[var(--ink-soft)]">
                         {alerta.tipo}
                       </span>
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest ${statCfg.bg} ${statCfg.text}`}>
@@ -217,7 +217,7 @@ export default function AlertasAdmin() {
                         <button
                           onClick={() => setConfirmIgnorar(alerta)}
                           disabled={isBusy}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider bg-[var(--surface-dim)] text-[var(--slate-dim)] hover:bg-[var(--border)] transition-all disabled:opacity-50"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider bg-[var(--surface-dim)] text-[var(--ink-soft)] hover:bg-[var(--border)] transition-all disabled:opacity-50"
                         >
                           <XCircle size={12} /> Ignorar
                         </button>

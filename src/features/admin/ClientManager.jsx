@@ -373,7 +373,7 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
                         <input type="number" step="0.01" value={editingHistoryDraft.valor_novo || ''} onChange={e => setEditingHistoryDraft(d => ({ ...d, valor_novo: e.target.value }))} className="w-16 border border-[var(--border)] rounded-lg p-1 text-xs font-bold" placeholder="Novo" />
                         <input type="date" value={editingHistoryDraft.data_alteracao ? editingHistoryDraft.data_alteracao.split('T')[0] : ''} onChange={e => setEditingHistoryDraft(d => ({ ...d, data_alteracao: e.target.value }))} className="border border-[var(--border)] rounded-lg p-1 text-xs font-bold flex-1 min-w-0" />
                         <button onClick={() => handleSaveClientHistory(h)} className="p-1 text-green-600 hover:bg-green-50 rounded-lg"><Check size={14} /></button>
-                        <button onClick={() => setEditingHistoryId(null)} className="p-1 text-[var(--slate)] hover:bg-[var(--surface-dim)] rounded-lg"><X size={14} /></button>
+                        <button onClick={() => setEditingHistoryId(null)} className="p-1 text-[var(--slate)] hover:text-[var(--ink-soft)] hover:bg-[var(--surface-dim)] rounded-lg"><X size={14} /></button>
                       </div>
                     ) : confirmDeleteHistoryId === h.id ? (
                       <div className="flex items-center justify-between p-3 bg-red-50 rounded-xl border border-red-200">

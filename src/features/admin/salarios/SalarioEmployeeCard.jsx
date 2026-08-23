@@ -97,7 +97,7 @@ export default function SalarioEmployeeCard({
                     </span>
                     <button
                       onClick={() => onRemoverJustificacao({ employee_name: employee.employee_name, month: m.month })}
-                      className="flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest bg-[var(--surface-dim)] text-[var(--slate-dim)] hover:bg-rose-100 hover:text-rose-600 transition-colors flex-shrink-0 ml-2"
+                      className="flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest bg-[var(--surface-dim)] text-[var(--ink-soft)] hover:bg-rose-100 hover:text-rose-600 transition-colors flex-shrink-0 ml-2"
                       title="Desfazer justificação"
                     >
                       <Undo2 size={9} /> Desfazer

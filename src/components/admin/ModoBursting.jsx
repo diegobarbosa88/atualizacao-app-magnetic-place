@@ -352,7 +352,7 @@ const ModoBursting = ({ workers, logs, systemSettings, saveToDb, workerRateHisto
                       </td>
                       <td className="px-3 py-2.5" onClick={e => e.stopPropagation()}>
                         <button onClick={() => downloadPdf(r)} title="Guardar PDF"
-                          className="p-1.5 rounded-lg text-[var(--slate)] hover:text-[var(--slate)] hover:bg-[var(--surface-dim)] transition-colors">
+                          className="p-1.5 rounded-lg text-[var(--slate)] hover:text-[var(--ink-soft)] hover:bg-[var(--surface-dim)] transition-colors">
                           <FileDown size={13} />
                         </button>
                       </td>
