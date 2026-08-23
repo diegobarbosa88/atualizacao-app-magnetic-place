@@ -87,7 +87,7 @@ function PagarFaturaModal({ fatura, onClose, onPago }) {
       footer={
         <div className="flex gap-2 p-6">
           <button onClick={onClose}
-            className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">
+            className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-[var(--border)] text-[var(--ink-soft)] hover:bg-[var(--surface)] transition-colors">
             Cancelar
           </button>
           <button
@@ -105,30 +105,30 @@ function PagarFaturaModal({ fatura, onClose, onPago }) {
         {/* Resumo da fatura */}
         <div className="bg-amber-50 rounded-2xl px-4 py-3 space-y-0.5">
           <p className="text-[10px] font-black uppercase tracking-widest text-amber-600">Fatura a pagar</p>
-          <p className="text-sm font-bold text-slate-800">{fornecedorNome || '—'}</p>
-          <p className="text-[11px] text-slate-500">
+          <p className="text-sm font-bold text-[var(--ink)]">{fornecedorNome || '—'}</p>
+          <p className="text-[11px] text-[var(--slate-dim)]">
             {referencia && <>Nº {referencia} · </>}
-            Valor: <strong className="text-slate-700">{(parseFloat(valor) || 0).toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</strong>
+            Valor: <strong className="text-[var(--ink-mid)]">{(parseFloat(valor) || 0).toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</strong>
           </p>
         </div>
 
         {/* IBAN */}
         <div className="space-y-1">
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">IBAN do Fornecedor *</p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">IBAN do Fornecedor *</p>
           <div className="flex gap-2">
             <input
               type="text"
               value={iban}
               onChange={e => setIban(e.target.value.toUpperCase())}
               placeholder="PT50 0000 0000 0000 0000 0000 0"
-              className="flex-1 px-3 py-2 rounded-xl border border-slate-200 text-xs font-mono text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-300"
+              className="flex-1 px-3 py-2 rounded-xl border border-[var(--border)] text-xs font-mono text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-violet-300"
             />
             <button
               type="button"
               onClick={buscarIban}
               disabled={buscandoIban}
               title="Buscar IBAN no TOConline"
-              className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-violet-100 text-slate-500 hover:text-violet-700 transition-colors disabled:opacity-40"
+              className="px-3 py-2 rounded-xl bg-[var(--surface-dim)] hover:bg-violet-100 text-[var(--slate-dim)] hover:text-violet-700 transition-colors disabled:opacity-40"
             >
               {buscandoIban ? <Loader2 size={13} className="animate-spin" /> : <Search size={13} />}
             </button>
@@ -137,12 +137,12 @@ function PagarFaturaModal({ fatura, onClose, onPago }) {
 
         {/* Data */}
         <div className="space-y-1">
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Data de pagamento *</p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Data de pagamento *</p>
           <input
             type="date"
             value={dataPagamento}
             onChange={e => setDataPagamento(e.target.value)}
-            className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-300"
+            className="w-full px-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-violet-300"
           />
         </div>
 
@@ -161,26 +161,26 @@ function FaturaFornecedorCard({ fornecedor, faturas, justificacoes, onJustificar
   const allOk = pendingCount === 0;
 
   return (
-    <div className="border border-slate-200 rounded-2xl overflow-hidden">
+    <div className="border border-[var(--border)] rounded-2xl overflow-hidden">
       <button
         onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between px-4 py-3 bg-white hover:bg-slate-50 transition-colors text-left"
+        className="w-full flex items-center justify-between px-4 py-3 bg-white hover:bg-[var(--surface)] transition-colors text-left"
       >
         <div className="flex items-center gap-3">
           <div className={`w-2 h-2 rounded-full flex-shrink-0 ${allOk ? 'bg-emerald-500' : 'bg-amber-400'}`} />
-          <span className="text-sm font-bold text-slate-800">{fornecedor}</span>
-          <span className="text-[10px] text-slate-400">{faturas.length} fatura(s)</span>
+          <span className="text-sm font-bold text-[var(--ink)]">{fornecedor}</span>
+          <span className="text-[10px] text-[var(--slate-dim)]">{faturas.length} fatura(s)</span>
         </div>
         <div className="flex items-center gap-3">
           <span className={`text-[10px] font-black uppercase tracking-widest ${allOk ? 'text-emerald-600' : 'text-amber-600'}`}>
             {allOk ? 'Tudo Ok' : `${pendingCount} pendente(s)`}
           </span>
-          {open ? <ChevronUp size={14} className="text-slate-400" /> : <ChevronDown size={14} className="text-slate-400" />}
+          {open ? <ChevronUp size={14} className="text-[var(--slate)]" /> : <ChevronDown size={14} className="text-[var(--slate)]" />}
         </div>
       </button>
 
       {open && (
-        <div className="divide-y divide-slate-100 bg-slate-50">
+        <div className="divide-y divide-[var(--border-soft)] bg-[var(--surface)]">
           {faturas.map(f => {
             const isPago = f.status === 'PAGO';
             const justEntry = justificacoes.find(j => j.fatura_id === f.id);
@@ -194,22 +194,22 @@ function FaturaFornecedorCard({ fornecedor, faturas, justificacoes, onJustificar
               <div key={f.id} className="px-4 py-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2 flex-wrap min-w-0">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">
                       {f.dados?.numero_fatura || '—'}
                     </span>
-                    <span className="text-[10px] text-slate-400">{fmtData(f.dados?.data_fatura)}</span>
+                    <span className="text-[10px] text-[var(--slate-dim)]">{fmtData(f.dados?.data_fatura)}</span>
                     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${badgeClass}`}>
                       {isPago || isJustified ? <CheckCircle size={9} /> : <AlertCircle size={9} />}
                       {displayStatus}
                     </span>
                     {isJustified && (
                       <>
-                        <span className="text-[9px] text-slate-400 italic max-w-[180px] truncate" title={justEntry.justification}>
+                        <span className="text-[9px] text-[var(--slate-dim)] italic max-w-[180px] truncate" title={justEntry.justification}>
                           "{justEntry.justification}"
                         </span>
                         <button
                           onClick={() => onRemoverJustificacao(f.id)}
-                          className="flex items-center gap-0.5 px-2 py-0.5 rounded-xl text-[9px] font-black uppercase tracking-widest bg-slate-100 text-slate-500 hover:bg-rose-100 hover:text-rose-600 transition-colors"
+                          className="flex items-center gap-0.5 px-2 py-0.5 rounded-xl text-[9px] font-black uppercase tracking-widest bg-[var(--surface-dim)] text-[var(--slate-dim)] hover:bg-rose-100 hover:text-rose-600 transition-colors"
                           title="Desfazer justificação"
                         >
                           <Undo2 size={9} /> Desfazer
@@ -218,7 +218,7 @@ function FaturaFornecedorCard({ fornecedor, faturas, justificacoes, onJustificar
                     )}
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className="text-[12px] font-bold text-slate-700">{fmtEur(f.dados?.valor_total)}</span>
+                    <span className="text-[12px] font-bold text-[var(--ink-mid)]">{fmtEur(f.dados?.valor_total)}</span>
                     {!isPago && !isJustified && (
                       <>
                         <button
@@ -229,7 +229,7 @@ function FaturaFornecedorCard({ fornecedor, faturas, justificacoes, onJustificar
                         </button>
                         <button
                           onClick={() => onJustificar({ fatura_id: f.id, fornecedor, numero: f.dados?.numero_fatura, valor: f.dados?.valor_total })}
-                          className="flex items-center gap-1 px-2 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+                          className="flex items-center gap-1 px-2 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest bg-[var(--surface-dim)] text-[var(--ink-soft)] hover:bg-[var(--border)] transition-colors"
                         >
                           <MessageSquare size={9} /> Justificar
                         </button>
@@ -393,7 +393,7 @@ export default function FaturasTab() {
     return (
       <div className="flex flex-col items-center justify-center py-12 gap-3">
         <Loader2 size={24} className="animate-spin text-indigo-400" />
-        <p className="text-[11px] text-slate-400">A carregar faturas…</p>
+        <p className="text-[11px] text-[var(--slate-dim)]">A carregar faturas…</p>
       </div>
     );
   }
@@ -404,13 +404,13 @@ export default function FaturasTab() {
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div className="grid grid-cols-3 gap-2">
           {[
-            { label: 'Faturas',    value: totalFaturas,      color: 'text-slate-700',  bg: 'bg-slate-50' },
+            { label: 'Faturas',    value: totalFaturas,      color: 'text-[var(--ink-mid)]',  bg: 'bg-[var(--surface)]' },
             { label: 'Pagas',      value: pagas,             color: 'text-emerald-700', bg: 'bg-emerald-50' },
             { label: 'Pendentes',  value: pendentesEfectivos, color: 'text-amber-700',  bg: 'bg-amber-50' },
           ].map(c => (
             <div key={c.label} className={`${c.bg} rounded-2xl px-4 py-3 text-center min-w-0`}>
               <p className={`text-2xl font-black ${c.color}`}>{c.value}</p>
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-0.5">{c.label}</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] mt-0.5">{c.label}</p>
             </div>
           ))}
         </div>
@@ -419,18 +419,18 @@ export default function FaturasTab() {
         <div className="relative self-start sm:flex-shrink-0" ref={exportRef}>
           <button
             onClick={() => setShowExportMenu(v => !v)}
-            className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-indigo-100 text-slate-500 hover:text-indigo-700 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all"
+            className="flex items-center gap-1.5 px-3 py-2 bg-[var(--surface-dim)] hover:bg-indigo-100 text-[var(--slate-dim)] hover:text-indigo-700 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all"
           >
             <Download size={13} /> Exportar
           </button>
           {showExportMenu && (
-            <div className="absolute right-0 top-full mt-1 bg-white rounded-2xl shadow-xl border border-slate-100 py-1 z-20 min-w-[130px] max-w-[calc(100vw-2rem)]">
+            <div className="absolute right-0 top-full mt-1 bg-white rounded-2xl shadow-xl border border-[var(--border-soft)] py-1 z-20 min-w-[130px] max-w-[calc(100vw-2rem)]">
               <button onClick={handleExportCsv}
-                className="w-full flex items-center gap-2 px-4 py-2.5 text-[11px] font-bold text-slate-700 hover:bg-slate-50 transition-colors">
+                className="w-full flex items-center gap-2 px-4 py-2.5 text-[11px] font-bold text-[var(--ink-mid)] hover:bg-[var(--surface)] transition-colors">
                 <FileText size={13} className="text-emerald-600" /> CSV
               </button>
               <button onClick={handleExportPdf}
-                className="w-full flex items-center gap-2 px-4 py-2.5 text-[11px] font-bold text-slate-700 hover:bg-slate-50 transition-colors">
+                className="w-full flex items-center gap-2 px-4 py-2.5 text-[11px] font-bold text-[var(--ink-mid)] hover:bg-[var(--surface)] transition-colors">
                 <FileText size={13} className="text-rose-500" /> PDF
               </button>
             </div>
@@ -440,7 +440,7 @@ export default function FaturasTab() {
 
       {/* Lista por fornecedor */}
       {Object.keys(grupos).length === 0 ? (
-        <p className="text-center text-slate-400 py-8 text-sm">Nenhuma fatura encontrada.</p>
+        <p className="text-center text-[var(--slate-dim)] py-8 text-sm">Nenhuma fatura encontrada.</p>
       ) : (
         Object.entries(grupos)
           .sort(([a], [b]) => a.localeCompare(b, 'pt'))
@@ -490,7 +490,7 @@ export default function FaturasTab() {
             <div className="flex gap-2 p-6">
               <button
                 onClick={() => { setJustModal(null); setJustText(''); }}
-                className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
+                className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-[var(--border)] text-[var(--ink-soft)] hover:bg-[var(--surface)] transition-colors"
               >
                 Cancelar
               </button>
@@ -507,13 +507,13 @@ export default function FaturasTab() {
           <div className="p-6 space-y-4">
             <div className="bg-amber-50 rounded-2xl px-4 py-3">
               <p className="text-[10px] font-black uppercase tracking-widest text-amber-600 mb-1">Fatura pendente</p>
-              <p className="text-sm font-bold text-slate-800">{justModal.fornecedor}</p>
-              <p className="text-[11px] text-slate-500 mt-0.5">
+              <p className="text-sm font-bold text-[var(--ink)]">{justModal.fornecedor}</p>
+              <p className="text-[11px] text-[var(--slate-dim)] mt-0.5">
                 Nº {justModal.numero || '—'} · Valor: <strong className="text-red-600">{fmtEur(justModal.valor)}</strong>
               </p>
             </div>
             <div>
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1">
+              <label className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] block mb-1">
                 Justificação
               </label>
               <textarea
@@ -521,7 +521,7 @@ export default function FaturasTab() {
                 onChange={e => setJustText(e.target.value)}
                 placeholder="Ex: Pago em numerário, acordado com fornecedor, aguarda crédito…"
                 rows={3}
-                className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-300 resize-none"
+                className="w-full border border-[var(--border)] rounded-xl px-3 py-2 text-sm text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-violet-300 resize-none"
               />
             </div>
           </div>
