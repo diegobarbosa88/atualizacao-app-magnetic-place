@@ -353,9 +353,9 @@ perguntar. E usar sempre a mesma métrica: o script conta **ocorrências**, não
   
   ### Estado da migração (atualizar a cada lote)
 
-Total: 4.197 classes Tailwind → tokens `FT`. **Restam 503 em `src/features/admin` +
-`src/components/admin`, mas só 431 são trabalho** — e são exactamente os dois ficheiros de
-dinheiro, isolados de propósito para o fim: `AjudasCustoAdmin` (234) e `RecibosCalculadora` (197).
+Total: 4.197 classes Tailwind → tokens `FT`. **Restam 269 em `src/features/admin` +
+`src/components/admin`, mas só 197 são trabalho** — e são exactamente o último ficheiro de
+dinheiro, isolado de propósito para o fim: `RecibosCalculadora` (197).
 Todo o resto do admin está convertido. Dois ficheiros que estavam nesta lista foram apagados em vez
 de convertidos, por serem código morto: o `EntradasTab` (55), que nunca chegou a ser importado desde
 que nasceu em 2026-05-24, e o `ReconciliacaoSalarialAdmin` (56), desligado por decisão explícita no
@@ -429,6 +429,22 @@ para quem um dia a tomar não ter de as redescobrir:
   navy (`de236ab`) e ali a conversão **não teve efeito** — o `var(--navy)` resolve para o #1B3A57
   fixo do mockup, não para o global que clareia. Não é regressão nem bug: o mockup fixa fundo *e*
   texto, e a faixa dá 11,74:1 nos dois modos. É só a mesma ilha clara das outras pendências.
+- **O par chip: `--slate-dim` sobre `--surface-dim` dá 4,36:1 e falha AA.** São **60 elementos em 35
+  ficheiros** — chips de estado, tabs inactivas, botões secundários. **Não é regressão da migração**:
+  o original `bg-slate-100 text-slate-500` já dava 4,34:1, e onde era `text-slate-400` dava 2,34:1,
+  por isso a conversão manteve ou melhorou. Mas ficou uniforme, e por isso corrigível de uma vez:
+  `--ink-soft` sobre `--surface-dim` dá 5,52:1 no claro e 6,12:1 no escuro. **Lote próprio**, à
+  espera de decisão — é o mesmo calibre do `--orange-hover`, muda o aspecto de todos os chips.
+  Os varrimentos por lote não o apanharam porque nunca estiveram os 60 visíveis no mesmo ecrã; só
+  apareceu ao procurar o padrão no código, não no que estava renderizado.
+- **A regra-ponte do `App.css` não cobre as variantes com opacidade.** `.dark .bg-amber-50` apanha
+  `bg-amber-50`, mas não `bg-amber-50/50` — que o Tailwind compila para outra classe. São 12 casos
+  (`bg-indigo-50/50`, `bg-amber-50/40`, `bg-rose-50/30`…) onde o fundo fica creme claro no modo
+  escuro e o texto por cima, já convertido para tinta que inverte, fica claro-sobre-claro. Já
+  estavam partidos antes da migração pela mesma razão (a ponte também não os cobria com
+  `text-slate-800`), e a conversão melhorou-os marginalmente. São cor semântica, fora do lote de
+  neutros — tratar quando se decidir o que fazer ao bloco-ponte.
+
 **Cor de marca fora do alcance dos tokens.** Categoria à parte das anteriores: aqui o problema não é
 uma variável que colide, é cor que os tokens não conseguem alcançar de todo. Não se resolve com mais
 lotes de conversão.
