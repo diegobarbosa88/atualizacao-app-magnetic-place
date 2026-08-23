@@ -152,6 +152,13 @@ perguntar. E usar sempre a mesma métrica: o script conta **ocorrências**, não
 
 ### Antes de cada lote
 
+- **`grep` conta ocorrências da string, não trabalho.** Já enganou de quatro maneiras diferentes:
+  contando comentários, ignorando CRLF, tratando `/NN` como parte da cor e lendo `oklab` como RGB.
+  O caso mais recente: `ModoLote.jsx` aparecia com 1 classe por converter, e era
+  `pdf.setTextColor(30, 41, 59);    // slate-800` — um comentário a documentar o RGB passado ao
+  jsPDF. Converter o comentário não faria nada; mexer no número mudaria o PDF. **Confirmar que a
+  ocorrência é código antes de a tratar como pendente**, sobretudo em ficheiros que geram
+  ficheiros, onde as cores aparecem como valores numéricos e não como classes.
 - **Correr `verificar-lote-design.sh` sobre `admin` + `components/admin` inteiros, não só o módulo do
   lote.** Duas inconsistências (`color-mix` num `shadow-[var(--orange)]/30`, um botão laranja com
   `text-white` fora do padrão indigo) só apareceram na verificação global — o script do módulo não as
