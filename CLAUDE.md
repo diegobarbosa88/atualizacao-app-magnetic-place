@@ -136,6 +136,20 @@ Aplicam-se a qualquer lote de conversão Tailwind → tokens `FT`/CSS vars (`des
 `index.css`). Servem para decidir sozinho os casos repetidos; só escalar ao Diego os genuinamente
 novos.
 
+### Contagens
+
+**Nunca comunicar um número sem o ter corrido.** Aconteceu três vezes nesta migração, sempre no
+mesmo sentido — a estimativa a olho inflaciona:
+- a soma manual da tabela de progresso dava 1.107, o valor derivado do script era 1.189;
+- a raiz de `features/admin` foi anunciada como «~1.900», eram 1.319 (e o número certo só apareceu
+  quando se percorreu ficheiro a ficheiro);
+- os hex arbitrários foram anunciados como «~30», eram 16.
+
+Nenhuma foi grave por si, mas todas alimentaram decisões de ordem e de âmbito. A regra é correr
+`verificar-lote-design.sh` ou um `grep -c` **antes** de escrever o número, não depois de alguém
+perguntar. E usar sempre a mesma métrica: o script conta **ocorrências**, não linhas — 34 linhas com
+`slate` podem ser 51 ocorrências, e misturar as duas foi o que produziu a discrepância do FaturasTab.
+
 ### Antes de cada lote
 
 - **Correr `verificar-lote-design.sh` sobre `admin` + `components/admin` inteiros, não só o módulo do
