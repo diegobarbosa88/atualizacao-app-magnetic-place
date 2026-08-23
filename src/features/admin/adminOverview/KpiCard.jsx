@@ -9,12 +9,13 @@ export default function KpiCard({ icon, iconBg, iconColor, iconStyle = {}, value
   const darkBg = dark ? { backgroundColor: FT.navy } : {};
 
   // Este cartão renderiza-se sobre dois fundos opostos — navy fixo quando
-  // `dark`, branco quando não — e nenhum tom de neutro serve os dois:
-  // --slate dá 4,05:1 sobre o navy mas só 2,89:1 sobre branco; --slate-dim
-  // dá 5,10:1 sobre branco mas 2,30:1 sobre o navy, ilegível. Daí o ternário
-  // em cada texto: é a regra "sobre fundo escuro o texto sobe na escala"
-  // aplicada dentro de um só componente.
-  const textoNeutro = dark ? 'text-[var(--slate)]' : 'text-[var(--slate-dim)]';
+  // `dark`, branco quando não — e nenhum tom da escala de tinta serve os dois:
+  // o --slate-dim dá 5,10:1 sobre branco mas 2,30:1 sobre o navy, e o --slate
+  // dava 4,05:1 sobre o navy, a falhar AA por pouco. Daí o --on-navy (#A9B8C7,
+  // 5,79:1), criado para este papel: texto secundário sobre os fundos navy da
+  // marca, que não invertem. O ternário mantém-se porque os dois fundos são
+  // mesmo opostos — o que mudou é que agora ambos os ramos passam AA.
+  const textoNeutro = dark ? 'text-[var(--on-navy)]' : 'text-[var(--slate-dim)]';
 
   const badgeClass = neutralBadge
     ? (dark ? `bg-slate-500/20 ${textoNeutro}` : `bg-[var(--surface-dim)] ${textoNeutro}`)

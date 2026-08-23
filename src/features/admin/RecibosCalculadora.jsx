@@ -2502,7 +2502,7 @@ ${hdrRow}${bodyRows}${totRow}
               </span>
               <div>
                 <p className="font-black text-white text-sm leading-tight">{inputs.nome || '—'}</p>
-                <p className="text-xs font-bold" style={{ color: 'var(--slate-dim)' }}>{MESES_PT[parseInt(inputs.mes, 10)] || ''} {inputs.ano}</p>
+                <p className="text-xs font-bold" style={{ color: 'var(--on-navy)' }}>{MESES_PT[parseInt(inputs.mes, 10)] || ''} {inputs.ano}</p>
               </div>
             </div>
             <button

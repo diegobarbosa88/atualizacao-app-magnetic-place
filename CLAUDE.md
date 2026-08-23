@@ -220,7 +220,19 @@ perguntar. E usar sempre a mesma métrica: o script conta **ocorrências**, não
   `--surface-dim` pode precisar de `--ink-soft` mesmo com a mesma cor de texto que passa noutro sítio.
 - **Regra de fundo escuro:** sobre fundo claro o texto desce na escala de tinta (mais escuro); sobre
   fundo escuro sobe (mais claro). Não aplicar a mesma direção às cegas — foi o erro que escureceu
-  "Unipessoal, Lda" no topbar navy.
+  "Unipessoal, Lda" no topbar navy — hoje resolvido com o --on-navy (ver abaixo).
+- **Sobre os fundos navy da marca, use-se `--on-navy` (#A9B8C7).** Os fundos navy — `--navy-solid`,
+  `background: FT.navy` — não invertem, e a escala de tinta não tem tom que sirva ali: o
+  `--slate-dim` inverte e cai para 2,30:1 no modo claro; o `--slate` não inverte mas fica a 4,05:1,
+  a falhar AA por pouco. Foram precisos três encontros com o mesmo beco para o perceber — o
+  "Unipessoal, Lda" do topbar, os rótulos do KpiCard em modo `dark`, e o mês/ano do recibo — e o
+  comentário do KpiCard chegou a documentá-lo como se fosse inevitável ("nenhum tom de neutro serve
+  os dois"). Não era: faltava um token para o papel. O `--on-navy` dá 5,79:1 e, como o fundo é
+  constante nos dois modos, também não é redefinido no `.dark`.
+  **O varrimento que os encontrou não foi por classe, foi por fundo:** percorrer o DOM à procura de
+  elementos cujo fundo efectivo seja um dos navys fixos e medir tudo o que lá está por cima. A busca
+  estática equivalente deu 117 candidatos, quase todos falsos positivos — um avatar navy seguido de
+  texto sobre fundo branco parece igual no código e é o contrário no ecrã.
 - **Tinta não serve de fundo.** Os tokens de tinta — `--ink`, `--ink-mid`, `--ink-soft`, `--navy`,
   `--slate`, `--slate-dim` — invertem no modo escuro, porque é isso que se espera de texto. Usá-los
   como superfície (`bg-`, `backgroundColor`) faz o fundo clarear no escuro enquanto o texto por cima

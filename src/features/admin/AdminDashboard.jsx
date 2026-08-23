@@ -106,7 +106,7 @@ function BrandBar({ unreadCount, onToggleNotifDropdown, onOpenFinReport, onLogou
         </div>
         <div className="text-left min-w-0">
           <p className="text-sm sm:text-2xl truncate" style={{ fontWeight: 800, color: 'white', lineHeight: 1.2, letterSpacing: 'normal', textTransform: 'uppercase' }}>Magnetic Place</p>
-          <p className="text-[10px] sm:text-[13px] truncate" style={{ fontWeight: 500, color: FT.slate, lineHeight: 1.3, marginTop: '2px' }}>Unipessoal, Lda</p>
+          <p className="text-[10px] sm:text-[13px] truncate" style={{ fontWeight: 500, color: 'var(--on-navy)', lineHeight: 1.3, marginTop: '2px' }}>Unipessoal, Lda</p>
           <p className="text-[9px] sm:text-xs truncate" style={{ fontWeight: 500, color: FT.orange, textTransform: 'uppercase', letterSpacing: '0.08em', lineHeight: 1.3 }}>Gestão</p>
         </div>
       </button>

@@ -69,6 +69,16 @@
      o tornaria ilegível sobre o laranja. Esses usam --navy-solid. */
   --navy-solid: #1b3a57;
 
+  /* Texto secundário sobre os fundos navy da marca, que NÃO invertem
+     (`--navy-solid`, `background: FT.navy`). Existe porque nenhum tom da escala
+     de tinta serve ali: o `--slate` dá 4,05:1 e falha AA por pouco; o
+     `--slate-dim` dá 2,30:1 no modo claro, porque inverte e o fundo não. O
+     comentário do KpiCard descrevia exactamente este beco — "nenhum tom de
+     neutro serve os dois" — e resolvia-o com um ternário por texto.
+     #A9B8C7 dá 5,79:1 sobre o navy. Como o fundo é constante nos dois modos,
+     este token também não é redefinido no bloco .dark: é o par estável. */
+  --on-navy: #a9b8c7;
+
   /* Sombra dos botões primários. Existe como variável própria porque
      `shadow-[var(--orange)]/30` compilaria para color-mix(), cujo fallback
      em browsers sem suporte é a cor a 100% — a sombra suave viraria um
