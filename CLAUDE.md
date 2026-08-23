@@ -175,13 +175,21 @@ novos.
   como superfície (`bg-`, `backgroundColor`) faz o fundo clarear no escuro enquanto o texto por cima
   fica igual. Para fundo, usar sempre as variantes que **não** invertem: `--navy-solid` (o navy da
   marca) e `--navy-deep` (para o hover).
-  A verificar em cada lote — `verificar-lote-design.sh` conta os casos, mas convém saber porquê:
-  esta família de erro já apareceu três vezes e parece inofensiva de cada vez.
+  A verificar em cada lote — **já apareceu cinco vezes** e parece inofensiva de cada vez:
   - `bg-[var(--navy)]` na barra do trabalhador e nos 30 botões `bg-[var(--orange)]
     text-[var(--navy)]` → resolvido com `--navy-solid`;
   - `bg-[var(--ink)]` no botão "gerar relatório" (documents) → 16,9:1 no claro, **1,2:1 no escuro**;
   - `bg-[var(--ink-mid)]` no botão "marcar resolvido" (corrections), introduzido por um lote anterior
-    e só apanhado dois lotes depois, porque a verificação de então corria só em modo claro.
+    e só apanhado dois lotes depois, porque a verificação de então corria só em modo claro;
+  - `bg-slate-800` no `<tfoot>` da ContabilidadeTab → `--navy-solid`;
+  - `bg-slate-900` no painel de Resumo do Turno (ScheduleForm) → `--navy-solid`.
+
+  **O detetor do script apanha os três primeiros, não os dois últimos** — e a diferença importa. Ele
+  procura `bg-[var(--ink*)]`, ou seja o erro **depois de cometido**. Nos casos 4 e 5 a origem era
+  `bg-slate-800/900` ainda em Tailwind, e a decisão errada teria sido convertê-los para um token de
+  tinta; aí o script já os apanharia, mas com o estrago feito. A prevenção continua a ser a régua
+  mental na hora de escolher o destino de um fundo escuro: **é superfície, logo `--navy-solid` /
+  `--navy-deep`, nunca a escala de tinta.**
 
   **A lista de tokens do detetor tem de acompanhar o bloco `.dark`:** só entra token que lá esteja
   redefinido. O `--slate` está de fora de propósito — serve os dois modos (5,68:1 sobre `--surface`
@@ -200,6 +208,14 @@ novos.
 - Varrimento de contraste no ecrã real, **nos dois modos (claro e escuro)**, não só claro — o modo
   escuro pode ficar diferente do esperado se houver regras `.dark` legadas com `!important` presas a
   classes em vez de tokens.
+- **Navegar por URL, não por cliques.** O admin usa react-router e `setActiveTab` é literalmente
+  `navigate('/admin/' + tab)`, por isso `http://localhost:4179/admin/<seccao>` abre qualquer ecrã
+  directamente. Clicar na barra lateral com refs do browser é frágil: os refs desalinham quando os
+  toasts de notificação entram e saem, e isso já travou dois checkpoints (o gate do
+  FaturarClienteModal e o do ScheduleForm). Ids das secções em `adminNavConfig.js` — os principais:
+  `overview team clients fornecedores schedules documentos faturacao reconciliacao pagamentos
+  reports costs ajudas-custo recibos mapa-salarios toconline formacao alertas settings`, e há
+  sub-rotas como `/admin/pagamentos/fila` ou `/admin/toconline/toc-relatorios`.
 - Antes de apagar qualquer ficheiro suspeito de código morto: confirmar por três vias — grep de
   imports em todo o `src/`, quem consome os subcomponentes, e presença de strings únicas no `dist/`
   do build. Ver histórico do git para saber se foi desligado por decisão consciente antes de propor
