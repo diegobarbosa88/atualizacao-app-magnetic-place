@@ -50,6 +50,13 @@
      o tornaria ilegível sobre o laranja. Esses usam --navy-solid. */
   --navy-solid: #1b3a57;
 
+  /* Sombra dos botões primários. Existe como variável própria porque
+     `shadow-[var(--orange)]/30` compilaria para color-mix(), cujo fallback
+     em browsers sem suporte é a cor a 100% — a sombra suave viraria um
+     bloco laranja sólido. Mesma razão pela qual os `/NN` sobre hex ficaram
+     de fora na fase 5. */
+  --orange-shadow: rgba(235, 141, 0, 0.3);
+
   --ok: #2e7d4f;
   --ok-bg: #e7f3eb;
   --ok-border: rgba(46, 125, 79, 0.3);
