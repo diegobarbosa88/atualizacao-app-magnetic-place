@@ -97,25 +97,25 @@ export default function ListaAcoesTab({ refreshKey }) {
     <div>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
         <ResumoCard icon={<ListChecks size={16} />} label="Ações presenciais" value={resumo.totalAcoes} />
-        <ResumoCard icon={<Users size={16} />} label="Participantes" value={resumo.totalParticipantes} accent="bg-slate-100 text-slate-600" />
+        <ResumoCard icon={<Users size={16} />} label="Participantes" value={resumo.totalParticipantes} accent="bg-[var(--surface-dim)] text-[var(--ink-soft)]" />
         <ResumoCard icon={<ListChecks size={16} />} label="Taxa de assinatura" value={`${resumo.taxaMedia}%`} accent="bg-emerald-50 text-emerald-600" />
         <ResumoCard icon={<PenLine size={16} />} label="Por assinar" value={resumo.pendentesAssinatura} accent="bg-amber-50 text-amber-600" />
       </div>
 
       <div className="flex flex-wrap gap-3 mb-5">
         <div className="relative">
-          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" />
+          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--slate)]" />
           <input
             value={busca}
             onChange={e => setBusca(e.target.value)}
             placeholder="Pesquisar formação..."
-            className="pl-8 pr-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 placeholder:text-slate-300 placeholder:font-semibold w-52"
+            className="pl-8 pr-3 py-2 rounded-xl border border-[var(--border)] text-xs font-bold text-[var(--ink-soft)] placeholder:text-[var(--slate)] placeholder:font-semibold w-52"
           />
         </div>
         <select
           value={workerFilter}
           onChange={e => setWorkerFilter(e.target.value)}
-          className="px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-600"
+          className="px-3 py-2 rounded-xl border border-[var(--border)] text-xs font-bold text-[var(--ink-soft)]"
         >
           <option value="">Todos os trabalhadores</option>
           {workers.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
@@ -123,7 +123,7 @@ export default function ListaAcoesTab({ refreshKey }) {
         <select
           value={categoriaFilter}
           onChange={e => setCategoriaFilter(e.target.value)}
-          className="px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-600"
+          className="px-3 py-2 rounded-xl border border-[var(--border)] text-xs font-bold text-[var(--ink-soft)]"
         >
           <option value="">Todas as categorias</option>
           {CATEGORIAS.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
@@ -131,7 +131,7 @@ export default function ListaAcoesTab({ refreshKey }) {
         <select
           value={estadoFilter}
           onChange={e => setEstadoFilter(e.target.value)}
-          className="px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-600"
+          className="px-3 py-2 rounded-xl border border-[var(--border)] text-xs font-bold text-[var(--ink-soft)]"
         >
           <option value="">Qualquer estado de validade</option>
           <option value="valido">Válido</option>
@@ -141,7 +141,7 @@ export default function ListaAcoesTab({ refreshKey }) {
         <select
           value={anoFilter}
           onChange={e => setAnoFilter(e.target.value)}
-          className="px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-600"
+          className="px-3 py-2 rounded-xl border border-[var(--border)] text-xs font-bold text-[var(--ink-soft)]"
         >
           {ANOS.map(a => <option key={a} value={a}>{a}</option>)}
         </select>
@@ -150,18 +150,18 @@ export default function ListaAcoesTab({ refreshKey }) {
       {error && <div className="mb-4 p-3 bg-rose-50 text-rose-600 text-xs font-bold rounded-xl">{error}</div>}
 
       {loading ? (
-        <div className="flex items-center justify-center py-16 text-slate-400">
+        <div className="flex items-center justify-center py-16 text-[var(--slate-dim)]">
           <Loader2 className="animate-spin" size={24} />
         </div>
       ) : formacoesFiltradas.length === 0 ? (
-        <p className="text-center py-10 text-slate-400 text-xs font-bold">
+        <p className="text-center py-10 text-[var(--slate-dim)] text-xs font-bold">
           {formacoes.length === 0 ? 'Nenhuma ação presencial registada.' : 'Nenhuma ação corresponde aos filtros.'}
         </p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-[9px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100">
+              <tr className="text-left text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)] border-b border-[var(--border-soft)]">
                 <th className="py-2 pr-4">Formação</th>
                 <th className="py-2 pr-4">Duração</th>
                 <th className="py-2 pr-4">Assinaturas</th>
@@ -183,7 +183,7 @@ export default function ListaAcoesTab({ refreshKey }) {
                   <React.Fragment key={f.id}>
                     <tr
                       onClick={() => setExpandedId(isOpen ? null : f.id)}
-                      className="border-b border-slate-50 cursor-pointer hover:bg-slate-50/70 transition-all"
+                      className="border-b border-[var(--border-soft)] cursor-pointer hover:bg-[var(--surface)] transition-all"
                     >
                       <td className="py-3 pr-4">
                         <div className="flex items-center gap-1.5 mb-1">
@@ -191,7 +191,7 @@ export default function ListaAcoesTab({ refreshKey }) {
                             {CATEGORIA_LABEL[f.categoria] || f.categoria}
                           </span>
                           {f.exige_entidade_externa && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest bg-slate-100 text-slate-500">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest bg-[var(--surface-dim)] text-[var(--slate-dim)]">
                               <Building2 size={10} /> {f.entidade_externa || 'Entidade Externa'}
                             </span>
                           )}
@@ -201,63 +201,63 @@ export default function ListaAcoesTab({ refreshKey }) {
                             </span>
                           )}
                         </div>
-                        <p className="font-black text-slate-800">{f.tipo_formacao || f.titulo}</p>
+                        <p className="font-black text-[var(--ink)]">{f.tipo_formacao || f.titulo}</p>
                       </td>
-                      <td className="py-3 pr-4 text-slate-500 whitespace-nowrap">
+                      <td className="py-3 pr-4 text-[var(--slate-dim)] whitespace-nowrap">
                         <span className="inline-flex items-center gap-1"><Clock size={12} /> {f.duracao_horas}h</span>
                       </td>
                       <td className="py-3 pr-4">
                         <BarraProgresso concluidos={totalAssinados} total={participantes.length} />
                       </td>
-                      <td className="py-3 pr-4 text-slate-500 whitespace-nowrap">
+                      <td className="py-3 pr-4 text-[var(--slate-dim)] whitespace-nowrap">
                         {f.local ? <span className="inline-flex items-center gap-1"><MapPin size={12} /> {f.local}</span> : '—'}
                       </td>
                       <td className="py-3 pr-4">
                         <button
                           onClick={(e) => { e.stopPropagation(); exportFormacaoPDF(f); }}
-                          className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
+                          className="p-2 text-[var(--slate)] hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
                           title="Exportar PDF"
                         >
                           <FileDown size={16} />
                         </button>
                       </td>
                       <td className="py-3">
-                        {isOpen ? <ChevronUp size={16} className="text-slate-400" /> : <ChevronDown size={16} className="text-slate-400" />}
+                        {isOpen ? <ChevronUp size={16} className="text-[var(--slate)]" /> : <ChevronDown size={16} className="text-[var(--slate)]" />}
                       </td>
                     </tr>
                     {isOpen && (
-                      <tr className="border-b border-slate-50">
-                        <td colSpan={6} className="bg-slate-50/50 px-2 pb-4 pt-3">
+                      <tr className="border-b border-[var(--border-soft)]">
+                        <td colSpan={6} className="bg-[var(--surface)] px-2 pb-4 pt-3">
                           <div className="px-1 space-y-1 mb-3">
                             {f.formador?.name && (
-                              <p className="text-xs text-slate-500"><span className="font-bold text-slate-700">Formador:</span> {f.formador.name}</p>
+                              <p className="text-xs text-[var(--slate-dim)]"><span className="font-bold text-[var(--ink-mid)]">Formador:</span> {f.formador.name}</p>
                             )}
                             {f.objetivos && (
-                              <p className="text-xs text-slate-500"><span className="font-bold text-slate-700">Objetivos:</span> {f.objetivos}</p>
+                              <p className="text-xs text-[var(--slate-dim)]"><span className="font-bold text-[var(--ink-mid)]">Objetivos:</span> {f.objetivos}</p>
                             )}
                             {f.conteudo_programatico && (
-                              <p className="text-xs text-slate-500"><span className="font-bold text-slate-700">Conteúdo Programático:</span> {f.conteudo_programatico}</p>
+                              <p className="text-xs text-[var(--slate-dim)]"><span className="font-bold text-[var(--ink-mid)]">Conteúdo Programático:</span> {f.conteudo_programatico}</p>
                             )}
-                            <p className="text-xs text-slate-500">
-                              <span className="font-bold text-slate-700">Período:</span> {new Date(f.data_inicio).toLocaleDateString('pt-PT')} a {new Date(f.data_fim).toLocaleDateString('pt-PT')}
+                            <p className="text-xs text-[var(--slate-dim)]">
+                              <span className="font-bold text-[var(--ink-mid)]">Período:</span> {new Date(f.data_inicio).toLocaleDateString('pt-PT')} a {new Date(f.data_fim).toLocaleDateString('pt-PT')}
                             </p>
                           </div>
 
                           <div className="space-y-2 px-1">
                             {participantesOrdenados.length === 0 ? (
-                              <p className="text-center py-6 text-slate-400 text-xs font-bold">Sem participantes atribuídos.</p>
+                              <p className="text-center py-6 text-[var(--slate-dim)] text-xs font-bold">Sem participantes atribuídos.</p>
                             ) : participantesOrdenados.map(p => {
                               const estCfg = ESTADO_CFG[p.estado];
                               return (
-                                <div key={p.id} className="flex items-center justify-between p-3 rounded-2xl bg-white border border-slate-100">
+                                <div key={p.id} className="flex items-center justify-between p-3 rounded-2xl bg-white border border-[var(--border-soft)]">
                                   <div className="flex items-center gap-2 min-w-0">
                                     {p.assinatura_signed_url ? (
-                                      <img src={p.assinatura_signed_url} alt="Assinatura" className="h-8 w-16 object-contain bg-white rounded-lg border border-slate-100" />
+                                      <img src={p.assinatura_signed_url} alt="Assinatura" className="h-8 w-16 object-contain bg-white rounded-lg border border-[var(--border-soft)]" />
                                     ) : null}
                                     <div className="min-w-0">
-                                      <p className="text-xs font-bold text-slate-700 truncate">{p.workers?.name || p.worker_id}</p>
+                                      <p className="text-xs font-bold text-[var(--ink-mid)] truncate">{p.workers?.name || p.worker_id}</p>
                                       {p.data_validade && (
-                                        <p className="text-[9px] font-bold text-slate-400">Válido até {new Date(p.data_validade).toLocaleDateString('pt-PT')}</p>
+                                        <p className="text-[9px] font-bold text-[var(--slate-dim)]">Válido até {new Date(p.data_validade).toLocaleDateString('pt-PT')}</p>
                                       )}
                                     </div>
                                   </div>
@@ -275,14 +275,14 @@ export default function ListaAcoesTab({ refreshKey }) {
                                         <button
                                           onClick={() => emitirCertificado(f, p)}
                                           disabled={emitindoCertId === p.id}
-                                          className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all disabled:opacity-50"
+                                          className="p-1.5 text-[var(--slate)] hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all disabled:opacity-50"
                                           title="Emitir Certificado"
                                         >
                                           {emitindoCertId === p.id ? <Loader2 size={13} className="animate-spin" /> : <Award size={13} />}
                                         </button>
                                       </>
                                     ) : (
-                                      <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 bg-slate-100 px-2 py-1 rounded-lg">
+                                      <span className="text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)] bg-[var(--surface-dim)] px-2 py-1 rounded-lg">
                                         Por assinar (worker)
                                       </span>
                                     )}

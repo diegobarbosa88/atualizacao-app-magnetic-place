@@ -126,7 +126,7 @@ export default function RegistoIndividualTab() {
         <select
           value={workerId}
           onChange={e => setWorkerId(e.target.value)}
-          className="px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-600"
+          className="px-3 py-2 rounded-xl border border-[var(--border)] text-xs font-bold text-[var(--ink-soft)]"
         >
           <option value="">— Selecionar trabalhador —</option>
           {workers.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
@@ -134,7 +134,7 @@ export default function RegistoIndividualTab() {
         <select
           value={ano}
           onChange={e => setAno(e.target.value)}
-          className="px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-600"
+          className="px-3 py-2 rounded-xl border border-[var(--border)] text-xs font-bold text-[var(--ink-soft)]"
         >
           {ANOS.map(a => <option key={a} value={a}>{a}</option>)}
         </select>
@@ -153,33 +153,33 @@ export default function RegistoIndividualTab() {
       {error && <div className="mb-4 p-3 bg-rose-50 text-rose-600 text-xs font-bold rounded-xl">{error}</div>}
 
       {!workerId ? (
-        <p className="text-center py-10 text-slate-400 text-xs font-bold">Seleciona um trabalhador para gerar o registo individual.</p>
+        <p className="text-center py-10 text-[var(--slate-dim)] text-xs font-bold">Seleciona um trabalhador para gerar o registo individual.</p>
       ) : loading ? (
-        <div className="flex items-center justify-center py-16 text-slate-400">
+        <div className="flex items-center justify-center py-16 text-[var(--slate-dim)]">
           <Loader2 className="animate-spin" size={24} />
         </div>
       ) : !worker ? null : (
         <div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
-            <div className="p-4 rounded-2xl bg-white border border-slate-100">
-              <div className="flex items-center gap-2 mb-3 text-slate-400">
+            <div className="p-4 rounded-2xl bg-white border border-[var(--border-soft)]">
+              <div className="flex items-center gap-2 mb-3 text-[var(--slate-dim)]">
                 <User size={14} />
                 <p className="text-[10px] font-black uppercase tracking-widest">Trabalhador</p>
               </div>
-              <p className="text-sm font-black text-slate-800 mb-1">{worker.name}</p>
-              <p className="text-xs text-slate-500">NIF: {worker.nif || '—'}</p>
-              <p className="text-xs text-slate-500">Função: {worker.profissao || '—'}</p>
-              <p className="text-xs text-slate-500">Admissão: {fmtData(worker.dataInicio)}{worker.dataFim ? ` · Cessação: ${fmtData(worker.dataFim)}` : ''}</p>
+              <p className="text-sm font-black text-[var(--ink)] mb-1">{worker.name}</p>
+              <p className="text-xs text-[var(--slate-dim)]">NIF: {worker.nif || '—'}</p>
+              <p className="text-xs text-[var(--slate-dim)]">Função: {worker.profissao || '—'}</p>
+              <p className="text-xs text-[var(--slate-dim)]">Admissão: {fmtData(worker.dataInicio)}{worker.dataFim ? ` · Cessação: ${fmtData(worker.dataFim)}` : ''}</p>
             </div>
 
-            <div className="p-4 rounded-2xl bg-white border border-slate-100">
-              <div className="flex items-center gap-2 mb-3 text-slate-400">
+            <div className="p-4 rounded-2xl bg-white border border-[var(--border-soft)]">
+              <div className="flex items-center gap-2 mb-3 text-[var(--slate-dim)]">
                 <Clock size={14} />
                 <p className="text-[10px] font-black uppercase tracking-widest">Art. 131.º CT — {ano}</p>
               </div>
               <div className="flex items-baseline gap-2 mb-1">
-                <p className="text-2xl font-black text-slate-800">{resumo.horasRealizadas.toFixed(1)}h</p>
-                <p className="text-xs font-bold text-slate-400">de {resumo.horasMinimas.toFixed(1)}h mínimas (proporcional)</p>
+                <p className="text-2xl font-black text-[var(--ink)]">{resumo.horasRealizadas.toFixed(1)}h</p>
+                <p className="text-xs font-bold text-[var(--slate-dim)]">de {resumo.horasMinimas.toFixed(1)}h mínimas (proporcional)</p>
               </div>
               <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${
                 resumo.anoEmCurso ? 'bg-amber-50 text-amber-600' : resumo.cumprido ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'
@@ -194,12 +194,12 @@ export default function RegistoIndividualTab() {
           </div>
 
           {formacoesDoTrabalhador.length === 0 ? (
-            <p className="text-center py-10 text-slate-400 text-xs font-bold">Sem formações registadas para {ano}.</p>
+            <p className="text-center py-10 text-[var(--slate-dim)] text-xs font-bold">Sem formações registadas para {ano}.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-left text-[9px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100">
+                  <tr className="text-left text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)] border-b border-[var(--border-soft)]">
                     <th className="py-2 pr-4">Data</th>
                     <th className="py-2 pr-4">Formação</th>
                     <th className="py-2 pr-4">Categoria</th>
@@ -210,12 +210,12 @@ export default function RegistoIndividualTab() {
                 </thead>
                 <tbody>
                   {formacoesDoTrabalhador.map(({ formacao: f, participacao: p }) => (
-                    <tr key={f.id} className="border-b border-slate-50">
-                      <td className="py-3 pr-4 text-slate-500 whitespace-nowrap">{fmtData(f.data_inicio)}</td>
-                      <td className="py-3 pr-4 font-bold text-slate-800">{f.tipo_formacao || f.titulo}</td>
-                      <td className="py-3 pr-4 text-slate-500 whitespace-nowrap">{CATEGORIA_LABEL[f.categoria] || f.categoria}</td>
-                      <td className="py-3 pr-4 text-slate-500 whitespace-nowrap">{f.formato === 'e-learning' ? 'E-learning' : 'Presencial'}</td>
-                      <td className="py-3 pr-4 text-slate-500 whitespace-nowrap">{f.duracao_horas}h</td>
+                    <tr key={f.id} className="border-b border-[var(--border-soft)]">
+                      <td className="py-3 pr-4 text-[var(--slate-dim)] whitespace-nowrap">{fmtData(f.data_inicio)}</td>
+                      <td className="py-3 pr-4 font-bold text-[var(--ink)]">{f.tipo_formacao || f.titulo}</td>
+                      <td className="py-3 pr-4 text-[var(--slate-dim)] whitespace-nowrap">{CATEGORIA_LABEL[f.categoria] || f.categoria}</td>
+                      <td className="py-3 pr-4 text-[var(--slate-dim)] whitespace-nowrap">{f.formato === 'e-learning' ? 'E-learning' : 'Presencial'}</td>
+                      <td className="py-3 pr-4 text-[var(--slate-dim)] whitespace-nowrap">{f.duracao_horas}h</td>
                       <td className="py-3 pr-4 whitespace-nowrap">
                         {p.assinado_em ? (
                           <div className="flex items-center gap-1.5">
@@ -225,14 +225,14 @@ export default function RegistoIndividualTab() {
                             <button
                               onClick={() => emitirCertificado(f, p)}
                               disabled={emitindoCertId === p.id}
-                              className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all disabled:opacity-50"
+                              className="p-1.5 text-[var(--slate)] hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all disabled:opacity-50"
                               title="Emitir Certificado"
                             >
                               {emitindoCertId === p.id ? <Loader2 size={13} className="animate-spin" /> : <Award size={13} />}
                             </button>
                           </div>
                         ) : (
-                          <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 bg-slate-100 px-2 py-1 rounded-lg">
+                          <span className="text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)] bg-[var(--surface-dim)] px-2 py-1 rounded-lg">
                             Por assinar
                           </span>
                         )}

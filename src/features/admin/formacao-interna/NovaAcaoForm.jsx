@@ -8,9 +8,9 @@ import {
 } from './formacaoTemplates';
 import { ICON_NAMES, IlustracaoTile } from './formacaoIcons';
 
-const CAMPO = 'w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300';
-const CAMPO_DISABLED = 'w-full px-3 py-2.5 rounded-xl border border-slate-100 bg-slate-50 text-sm text-slate-400';
-const LABEL = 'block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5';
+const CAMPO = 'w-full px-3 py-2.5 rounded-xl border border-[var(--border)] text-sm text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300';
+const CAMPO_DISABLED = 'w-full px-3 py-2.5 rounded-xl border border-[var(--border-soft)] bg-[var(--surface)] text-sm text-[var(--slate-dim)]';
+const LABEL = 'block text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-1.5';
 
 const INICIAL = {
   categoria: 'soldadura', tipo_formacao: '', data_inicio: '', data_fim: '', duracao_horas: '',
@@ -295,7 +295,7 @@ export default function NovaAcaoForm({ onCriada }) {
           <option value="presencial">Presencial</option>
           <option value="e-learning">E-learning</option>
         </select>
-        <p className="text-[10px] font-bold text-slate-400 mt-1.5">
+        <p className="text-[10px] font-bold text-[var(--slate-dim)] mt-1.5">
           {isElearning
             ? 'O trabalhador vê o conteúdo, responde ao questionário e só depois de aprovado assina.'
             : 'Fluxo atual — o trabalhador assina diretamente a partir do dashboard.'}
@@ -325,14 +325,14 @@ export default function NovaAcaoForm({ onCriada }) {
               <label className={LABEL}>Ilustrações do Conteúdo (uma por secção, opcional)</label>
               <div className="space-y-2">
                 {conteudoEstruturado.seccoes.map((sec, idx) => (
-                  <div key={idx} className="flex items-center gap-2 p-2.5 rounded-xl bg-white border border-slate-100">
+                  <div key={idx} className="flex items-center gap-2 p-2.5 rounded-xl bg-white border border-[var(--border-soft)]">
                     <div className="w-9 h-9 shrink-0">
                       {sec.icone && <IlustracaoTile nome={sec.icone} height={36} />}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 truncate mb-1">{sec.titulo}</p>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] truncate mb-1">{sec.titulo}</p>
                       <select
-                        className="w-full text-sm text-slate-700 bg-transparent focus:outline-none"
+                        className="w-full text-sm text-[var(--ink-mid)] bg-transparent focus:outline-none"
                         value={sec.icone || ''}
                         onChange={e => setSecaoIcone(idx, e.target.value)}
                       >
@@ -355,7 +355,7 @@ export default function NovaAcaoForm({ onCriada }) {
             )}
             <div className="space-y-3">
               {questionario.map((q, idx) => (
-                <div key={idx} className="p-3 rounded-xl bg-white border border-slate-100 space-y-2">
+                <div key={idx} className="p-3 rounded-xl bg-white border border-[var(--border-soft)] space-y-2">
                   <div className="flex items-center gap-2">
                     <input
                       className={`${CAMPO} flex-1`}
@@ -399,7 +399,7 @@ export default function NovaAcaoForm({ onCriada }) {
                           placeholder={`Opção ${oIdx + 1}`}
                         />
                         {q.opcoes.length > 2 && (
-                          <button type="button" onClick={() => removeOpcao(idx, oIdx)} className="p-1.5 text-slate-300 hover:text-rose-500 transition-all shrink-0">
+                          <button type="button" onClick={() => removeOpcao(idx, oIdx)} className="p-1.5 text-[var(--slate)] hover:text-rose-500 transition-all shrink-0">
                             <Trash2 size={12} />
                           </button>
                         )}
@@ -425,25 +425,25 @@ export default function NovaAcaoForm({ onCriada }) {
 
       <div>
         <label className={LABEL}>Participantes</label>
-        <div className="border border-slate-100 rounded-2xl divide-y divide-slate-50">
+        <div className="border border-[var(--border-soft)] rounded-2xl divide-y divide-[var(--border-soft)]">
           {workers.map(w => {
             const sel = participantes[w.id];
             return (
-              <div key={w.id} className="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-slate-50 transition-all">
+              <div key={w.id} className="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-[var(--surface)] transition-all">
                 <button
                   type="button"
                   onClick={() => toggleParticipante(w.id)}
                   className="flex items-center gap-2 flex-1 min-w-0 text-left"
                 >
-                  <span className={`w-5 h-5 rounded-lg flex items-center justify-center shrink-0 ${sel?.selecionado ? 'bg-indigo-600 text-white' : 'bg-slate-100'}`}>
+                  <span className={`w-5 h-5 rounded-lg flex items-center justify-center shrink-0 ${sel?.selecionado ? 'bg-indigo-600 text-white' : 'bg-[var(--surface-dim)]'}`}>
                     {sel?.selecionado && <Check size={12} />}
                   </span>
-                  <span className="text-xs font-bold text-slate-700 truncate">{w.name}</span>
+                  <span className="text-xs font-bold text-[var(--ink-mid)] truncate">{w.name}</span>
                 </button>
                 {sel?.selecionado && exigeValidade && (
                   <input
                     type="date"
-                    className="px-2.5 py-1.5 rounded-lg border border-slate-200 text-[11px] font-bold text-slate-600 shrink-0"
+                    className="px-2.5 py-1.5 rounded-lg border border-[var(--border)] text-[11px] font-bold text-[var(--ink-soft)] shrink-0"
                     value={sel.data_validade}
                     onChange={e => setValidadeParticipante(w.id, e.target.value)}
                     placeholder={validadeMesesDefault ? `Auto (+${validadeMesesDefault}m)` : 'Data de validade'}
@@ -454,7 +454,7 @@ export default function NovaAcaoForm({ onCriada }) {
             );
           })}
         </div>
-        <p className="text-[10px] font-bold text-slate-400 mt-1.5">
+        <p className="text-[10px] font-bold text-[var(--slate-dim)] mt-1.5">
           {selecionadosIds.length} selecionado{selecionadosIds.length !== 1 ? 's' : ''}
           {exigeValidade && validadeMesesDefault ? ` — data de validade em branco assume automaticamente +${validadeMesesDefault} meses.` : ''}
         </p>

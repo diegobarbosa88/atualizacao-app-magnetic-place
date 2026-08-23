@@ -32,7 +32,7 @@ export default function HorasPorTrabalhadorTab() {
         <select
           value={ano}
           onChange={e => setAno(e.target.value)}
-          className="px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-600"
+          className="px-3 py-2 rounded-xl border border-[var(--border)] text-xs font-bold text-[var(--ink-soft)]"
         >
           {ANOS.map(a => <option key={a} value={a}>{a}</option>)}
         </select>
@@ -41,16 +41,16 @@ export default function HorasPorTrabalhadorTab() {
       {error && <div className="mb-4 p-3 bg-rose-50 text-rose-600 text-xs font-bold rounded-xl">{error}</div>}
 
       {loading ? (
-        <div className="flex items-center justify-center py-16 text-slate-400">
+        <div className="flex items-center justify-center py-16 text-[var(--slate-dim)]">
           <Loader2 className="animate-spin" size={24} />
         </div>
       ) : !dados?.trabalhadores?.length ? (
-        <p className="text-center py-10 text-slate-400 text-xs font-bold">Sem dados de formação para {ano}.</p>
+        <p className="text-center py-10 text-[var(--slate-dim)] text-xs font-bold">Sem dados de formação para {ano}.</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-[9px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100">
+              <tr className="text-left text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)] border-b border-[var(--border-soft)]">
                 <th className="py-2 pr-4">Trabalhador</th>
                 <th className="py-2 pr-4">Horas de Formação</th>
                 <th className="py-2 pr-4">Meta Anual</th>
@@ -61,10 +61,10 @@ export default function HorasPorTrabalhadorTab() {
               {dados.trabalhadores.map(w => {
                 const cor = corIndicador(w.horas, w.meta);
                 return (
-                  <tr key={w.worker_id} className="border-b border-slate-50">
-                    <td className="py-3 pr-4 font-bold text-slate-700">{w.nome}</td>
-                    <td className="py-3 pr-4 text-slate-600">{w.horas.toFixed(1)}h</td>
-                    <td className="py-3 pr-4 text-slate-400">{w.meta}h</td>
+                  <tr key={w.worker_id} className="border-b border-[var(--border-soft)]">
+                    <td className="py-3 pr-4 font-bold text-[var(--ink-mid)]">{w.nome}</td>
+                    <td className="py-3 pr-4 text-[var(--ink-soft)]">{w.horas.toFixed(1)}h</td>
+                    <td className="py-3 pr-4 text-[var(--slate-dim)]">{w.meta}h</td>
                     <td className="py-3">
                       <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${cor.bg} ${cor.text}`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${cor.dot}`} />

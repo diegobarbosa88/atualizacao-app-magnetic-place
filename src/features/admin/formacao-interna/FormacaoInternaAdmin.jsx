@@ -44,7 +44,7 @@ export default function FormacaoInternaAdmin() {
               key={t.id}
               onClick={() => setTab(t.id)}
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
-                tab === t.id ? 'text-white' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
+                tab === t.id ? 'text-white' : 'bg-[var(--surface-dim)] text-[var(--slate-dim)] hover:bg-[var(--border)]'
               }`}
               style={tab === t.id ? { backgroundColor: FT.navy } : {}}
             >
