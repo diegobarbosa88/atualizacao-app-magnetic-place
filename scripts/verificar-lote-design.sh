@@ -45,6 +45,20 @@ else
   printf '%-46s %s\n' "mapas de cor-à-escolha no alvo:" "nenhum"
 fi
 
+# Tinta usada como superfície. Os tokens de tinta invertem no modo escuro
+# (é o que se espera de texto); como fundo, o resultado é um fundo que
+# clareia no escuro com o texto por cima na mesma cor — no botão "gerar
+# relatório" isso deu 1,2:1. Para fundo existem --navy-solid e --navy-deep,
+# que não invertem. Esta família de erro já apareceu três vezes.
+# A lista tem de acompanhar o bloco `.dark` do index.css: só conta um token
+# que lá esteja REDEFINIDO. O `--slate` está de fora de propósito — é o único
+# da escala de tinta que não inverte (#869aaf dá 5,68:1 sobre --surface no
+# escuro e 2,9:1 sobre branco no claro, serve os dois), por isso usá-lo como
+# fundo de hover é legítimo e não deve aparecer aqui.
+printf '%-46s %s\n' "tinta usada como fundo (bg-):" \
+  "$(grep -rhoE '(hover:|focus:|group-hover:)?bg-\[var\(--(ink|ink-mid|ink-soft|navy|slate-dim)\)\]' \
+     src/features/admin src/components/admin --include=*.jsx 2>/dev/null | wc -l)"
+
 echo "── regressões globais (admin inteiro) ──"
 
 # Texto branco sobre o laranja da marca dá 2,52:1. O par correcto é navy
