@@ -9,6 +9,7 @@ import ModalShell from '../../../components/common/ModalShell';
 import { authFetch } from '../../../utils/authFetch';
 import { calcularFaturacaoCliente } from '../../../lib/faturacao/tarifaHistorica.js';
 import { verificarEstimativaParaFatura, confirmarEEmitirFatura } from '../../../lib/ajudas/emitirFaturaComAjudas.js';
+import { FT } from '../../../styles/designTokens';
 
 const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
@@ -86,7 +87,7 @@ function Toggle({ checked, onChange }) {
       type="button"
       onClick={() => onChange(!checked)}
       className="w-9 h-5 rounded-full transition-colors relative shrink-0"
-      style={{ backgroundColor: checked ? '#869AAF' : '#E2E8F0' }}
+      style={{ backgroundColor: checked ? FT.slate : '#E2E8F0' }}
     >
       <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${checked ? 'translate-x-4' : 'translate-x-0.5'}`} />
     </button>
@@ -619,7 +620,7 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
               </button>
               <button onClick={() => { if (resolucaoEscolhida) setClienteId(resolucaoEscolhida); }} disabled={!resolucaoEscolhida}
                 className="flex-1 px-3 py-2.5 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all disabled:opacity-50 shadow-md hover:opacity-90"
-                style={{ backgroundColor: '#1B3A57' }}>
+                style={{ backgroundColor: FT.navy }}>
                 Confirmar correspondência
               </button>
             </div>
@@ -748,7 +749,7 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
                 <div className="flex items-center justify-between">
                   <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Linhas da fatura</p>
                   <button onClick={handleGuardarConfig} disabled={guardandoConfig}
-                    className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-slate-100 rounded-lg transition-all disabled:opacity-50" style={{ color: '#869AAF' }}>
+                    className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-slate-100 rounded-lg transition-all disabled:opacity-50" style={{ color: FT.slate }}>
                     {guardandoConfig ? <Loader2 size={11} className="animate-spin" /> : configGuardada ? <CheckCircle size={11} className="text-emerald-500" /> : <Save size={11} />}
                     {configGuardada ? 'Guardado' : 'Guardar padrão'}
                   </button>
@@ -822,7 +823,7 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
 
                   <div className="px-3 py-2 border-t border-slate-100">
                     <button onClick={adicionarLinhaFixa}
-                      className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest hover:opacity-80 transition-colors" style={{ color: '#869AAF' }}>
+                      className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest hover:opacity-80 transition-colors" style={{ color: FT.slate }}>
                       <Plus size={11} /> Adicionar linha
                     </button>
                   </div>
@@ -978,7 +979,7 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
 
             <button onClick={() => setPasso(2)} disabled={!podeContinuar}
               className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all disabled:opacity-50 shadow-md hover:opacity-90"
-              style={{ backgroundColor: '#1B3A57' }}>
+              style={{ backgroundColor: FT.navy }}>
               Ver Preview <ChevronRight size={14} />
             </button>
           </div>
@@ -1140,7 +1141,7 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
                     <button
                       onClick={() => navigate(gateAjudas.motivo?.includes('percentagem') ? '/admin/ajudas-custo?subtab=historico' : '/admin/ajudas-custo?subtab=elegibilidade')}
                       className="flex-1 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-white rounded-lg transition-all hover:opacity-90"
-                      style={{ backgroundColor: '#1B3A57' }}>
+                      style={{ backgroundColor: FT.navy }}>
                       {gateAjudas.motivo?.includes('percentagem') ? 'Ir para Histórico' : 'Ir para Elegibilidade'}
                     </button>
                   </div>
@@ -1178,7 +1179,7 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
                       </button>
                       <button onClick={handleConfirmarEEmitir} disabled={emitindo}
                         className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-white rounded-lg transition-all disabled:opacity-60 hover:opacity-90"
-                        style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}>
+                        style={{ backgroundColor: FT.orange, color: FT.navy }}>
                         {emitindo ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle size={12} />}
                         Confirmar e Emitir
                       </button>
@@ -1195,7 +1196,7 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
                   </button>
                   <button onClick={handleIniciarEmissao} disabled={emitindo || gateAjudas?.status === 'verificando'}
                     className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all disabled:opacity-60 shadow-md hover:opacity-90"
-                    style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}>
+                    style={{ backgroundColor: FT.orange, color: FT.navy }}>
                     {(emitindo || gateAjudas?.status === 'verificando') ? <Loader2 size={13} className="animate-spin" /> : <FileText size={13} />}
                     {gateAjudas?.status === 'verificando' ? 'A verificar ajudas...' : `Emitir ${tipoDocumento}`}
                   </button>
@@ -1228,7 +1229,7 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
                   <p className="text-xs text-red-600 mt-1">{resultado.erro}</p>
                 </div>
                 <button onClick={() => { setPasso(2); setResultado(null); }}
-                  className="px-4 py-2 text-xs font-black uppercase tracking-widest hover:bg-slate-100 rounded-xl transition-all" style={{ color: '#869AAF' }}>
+                  className="px-4 py-2 text-xs font-black uppercase tracking-widest hover:bg-slate-100 rounded-xl transition-all" style={{ color: FT.slate }}>
                   Tentar novamente
                 </button>
               </div>

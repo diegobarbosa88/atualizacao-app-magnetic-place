@@ -7,6 +7,7 @@ import TOConlineRelatorios from './toconline/TOConlineRelatorios';
 import TOConlineBankAccounts from './toconline/TOConlineBankAccounts';
 import CriarDocumentoModal from './toconline/CriarDocumentoModal';
 import FaturarClienteModal from './toconline/FaturarClienteModal';
+import { FT } from '../../styles/designTokens';
 import { authFetch } from '../../utils/authFetch';
 import SectionHeaderShell from '../../components/common/SectionHeaderShell';
 
@@ -83,7 +84,7 @@ export default function TOConlineAdmin() {
                 )}
                 <div>
                   <p className="text-[8.5px] font-black uppercase tracking-widest text-slate-400">Saldo Contas</p>
-                  <p className="text-xs font-black text-[#1B3A57]">
+                  <p className="text-xs font-black text-[var(--navy)]">
                     {saldoContas != null
                       ? new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(saldoContas.total)
                       : '—'}
@@ -100,11 +101,11 @@ export default function TOConlineAdmin() {
               <div className="flex gap-2">
                 <button onClick={() => setMostrarFaturar(true)}
                   className="flex items-center gap-1.5 px-3 py-2 text-[10px] font-black uppercase tracking-wide rounded-lg transition-all shadow-sm hover:opacity-90"
-                  style={{ backgroundColor: '#EB8D00', color: '#12293e' }}>
+                  style={{ backgroundColor: FT.orange, color: '#12293e' }}>
                   <Zap size={12} /> Faturar
                 </button>
                 <button onClick={() => setMostrarCriar(true)}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 text-[#1B3A57] text-[10px] font-black uppercase tracking-wide rounded-lg transition-all hover:bg-slate-200">
+                  className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 text-[var(--navy)] text-[10px] font-black uppercase tracking-wide rounded-lg transition-all hover:bg-slate-200">
                   <Plus size={12} /> Criar
                 </button>
               </div>

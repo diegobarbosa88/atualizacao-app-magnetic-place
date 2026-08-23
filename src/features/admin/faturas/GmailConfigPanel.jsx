@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ChevronDown, ChevronUp, X, Save, Search, Loader2, Check } from 'lucide-react';
 import { DEFAULT_GMAIL_CONFIG, configParaQuery } from './faturasUtils';
+import { FT } from '../../../styles/designTokens';
 
 export default function GmailConfigPanel({
   cfg,
@@ -124,7 +125,7 @@ export default function GmailConfigPanel({
       <div className="border-t border-slate-100 pt-4 flex items-center gap-3 flex-wrap">
         <button onClick={onImport} disabled={importing}
           className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all disabled:opacity-60 border-2 hover:bg-slate-50"
-          style={{ borderColor: '#869AAF', color: '#1B3A57' }}>
+          style={{ borderColor: FT.slate, color: FT.navy }}>
           {importing ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
           Importar do Gmail
         </button>

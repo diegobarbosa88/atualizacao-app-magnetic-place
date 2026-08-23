@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ShieldCheck, Loader2, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { authFetch } from '../../../utils/authFetch';
+import { FT } from '../../../styles/designTokens';
 
 // Importa emails da Allianz (allianz.pt) recebidos em 88diegobarbosa@gmail.com
 // com o "Quadro de Pessoal Seguro" anexado, extrai a lista de segurados e compara
@@ -37,8 +38,8 @@ export default function ApoliceSegurosImportPanel() {
     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 sm:p-5">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2">
-          <ShieldCheck size={18} style={{ color: '#1B3A57' }} />
-          <h3 className="text-sm font-black uppercase tracking-wide" style={{ color: '#1B3A57' }}>
+          <ShieldCheck size={18} style={{ color: FT.navy }} />
+          <h3 className="text-sm font-black uppercase tracking-wide" style={{ color: FT.navy }}>
             Apólice de Seguros (Allianz)
           </h3>
         </div>
@@ -46,7 +47,7 @@ export default function ApoliceSegurosImportPanel() {
           onClick={importar}
           disabled={importando}
           className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all disabled:opacity-50 text-white hover:opacity-90"
-          style={{ backgroundColor: '#1B3A57' }}
+          style={{ backgroundColor: FT.navy }}
         >
           {importando ? <Loader2 size={14} className="animate-spin" /> : <ShieldCheck size={14} />}
           Importar do Gmail

@@ -4,6 +4,7 @@ import {
   Search, X, Eye, ArrowUpDown, ArrowUp, ArrowDown, RefreshCw,
 } from 'lucide-react';
 import { authFetch } from '../../../utils/authFetch';
+import { FT } from '../../../styles/designTokens';
 import { useApp } from '../../../context/AppContext';
 import { MESES, getAttrs, getNomeEntidade, getValorTotal, getIva, getDocNum } from '../toconline/utils/tocUtils';
 import { useTableFilters } from '../toconline/hooks/useTableFilters';
@@ -130,7 +131,7 @@ export default function TOConlinePanel() {
           ) : (
             <button onClick={handleLigar} disabled={ligando}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all disabled:opacity-60 text-white hover:opacity-90"
-              style={{ backgroundColor: '#EB8D00' }}>
+              style={{ backgroundColor: FT.orange }}>
               {ligando ? <Loader2 size={13} className="animate-spin" /> : <Link2 size={13} />}
               Ligar TOConline
             </button>
@@ -156,7 +157,7 @@ export default function TOConlinePanel() {
               ].map(({ key, label }) => (
                 <button key={key} onClick={() => setTipoRel(key)}
                   className="flex-1 sm:flex-none px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap"
-                  style={tipoRel === key ? { backgroundColor: 'rgba(235,141,0,0.15)', color: '#1B3A57' } : { color: '#94A3B8' }}>
+                  style={tipoRel === key ? { backgroundColor: 'rgba(235,141,0,0.15)', color: FT.navy } : { color: '#94A3B8' }}>
                   {label}
                 </button>
               ))}
@@ -175,7 +176,7 @@ export default function TOConlinePanel() {
             </div>
             <button onClick={handleCarregarRelatorio} disabled={carregandoRel}
               className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all disabled:opacity-60 w-full sm:w-auto sm:self-end text-white hover:opacity-90"
-              style={{ backgroundColor: '#EB8D00' }}>
+              style={{ backgroundColor: FT.orange }}>
               {carregandoRel ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
               Carregar
             </button>

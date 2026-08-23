@@ -4,6 +4,7 @@ import { authFetch } from '../../../utils/authFetch';
 import ModalShell from '../../../components/common/ModalShell';
 import { useApp } from '../../../context/AppContext';
 import { TOCONLINE_TIPOS_RECEITA } from '../../../lib/ajudas/faturasToConline.js';
+import { FT } from '../../../styles/designTokens';
 
 // Mesma normalização usada no gate de faturasToConline.js (buscarFaturasVendasPeriodo)
 // — lowercase+trim simples, não fuzzy. Consistência deliberada: se o nome não
@@ -90,7 +91,7 @@ function AutocompleteCliente({ value, onChange }) {
           value={query}
           onChange={e => pesquisar(e.target.value)}
           onFocus={() => resultados.length > 0 && setAberto(true)}
-          className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1B3A57]"
+          className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[var(--navy)]"
         />
         {loading && <Loader2 size={12} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-slate-400" />}
       </div>
@@ -158,7 +159,7 @@ function AutocompleteArtigo({ value, onChange }) {
         value={query}
         onChange={e => pesquisar(e.target.value)}
         onFocus={() => resultados.length > 0 && setAberto(true)}
-        className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1B3A57]"
+        className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[var(--navy)]"
       />
       {loading && <Loader2 size={12} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-slate-400" />}
       {aberto && resultados.length > 0 && (
@@ -256,19 +257,19 @@ export default function CriarDocumentoModal({ onClose, onCriado, onClienteElegiv
             <div className="space-y-1">
               <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Tipo Doc.</p>
               <select value={tipo} onChange={e => setTipo(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1B3A57]">
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[var(--navy)]">
                 {TIPOS_DOC.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
               </select>
             </div>
             <div className="space-y-1">
               <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Data</p>
               <input type="date" value={data} onChange={e => setData(e.target.value)} required
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1B3A57]" />
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[var(--navy)]" />
             </div>
             <div className="space-y-1">
               <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Série (opcional)</p>
               <input type="text" value={serie} onChange={e => setSerie(e.target.value)} placeholder="Ex: A"
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1B3A57]" />
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[var(--navy)]" />
             </div>
           </div>
 
@@ -296,11 +297,11 @@ export default function CriarDocumentoModal({ onClose, onCriado, onClienteElegiv
                 <div key={i} className="grid gap-2 items-start" style={{ gridTemplateColumns: '1fr 70px 90px 70px auto' }}>
                   <AutocompleteArtigo value={l} onChange={v => setLinhas(prev => prev.map((x, idx) => idx === i ? { ...x, ...v } : x))} />
                   <input type="number" min="0.01" step="0.01" value={l.quantidade} onChange={e => setLinha(i, 'quantidade', e.target.value)}
-                    placeholder="Qtd" className="px-2 py-2 rounded-xl border border-slate-200 text-xs text-center focus:outline-none focus:ring-2 focus:ring-[#1B3A57]" />
+                    placeholder="Qtd" className="px-2 py-2 rounded-xl border border-slate-200 text-xs text-center focus:outline-none focus:ring-2 focus:ring-[var(--navy)]" />
                   <input type="number" min="0" step="0.01" value={l.preco_unitario} onChange={e => setLinha(i, 'preco_unitario', e.target.value)}
-                    placeholder="€/un" className="px-2 py-2 rounded-xl border border-slate-200 text-xs text-center focus:outline-none focus:ring-2 focus:ring-[#1B3A57]" />
+                    placeholder="€/un" className="px-2 py-2 rounded-xl border border-slate-200 text-xs text-center focus:outline-none focus:ring-2 focus:ring-[var(--navy)]" />
                   <select value={l.taxa_iva} onChange={e => setLinha(i, 'taxa_iva', e.target.value)}
-                    className="px-2 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-[#1B3A57]">
+                    className="px-2 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-[var(--navy)]">
                     {[0, 6, 13, 23].map(v => <option key={v} value={v}>{v}%</option>)}
                   </select>
                   <button type="button" onClick={() => removeLinha(i)} disabled={linhas.length === 1}
@@ -319,7 +320,7 @@ export default function CriarDocumentoModal({ onClose, onCriado, onClienteElegiv
           <div className="space-y-1">
             <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Observações</p>
             <textarea value={observacoes} onChange={e => setObservacoes(e.target.value)} rows={2}
-              className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1B3A57] resize-none" />
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[var(--navy)] resize-none" />
           </div>
 
           {erro && <p className="text-xs text-red-600 font-semibold">{erro}</p>}
@@ -331,7 +332,7 @@ export default function CriarDocumentoModal({ onClose, onCriado, onClienteElegiv
             </button>
             <button type="submit" disabled={criando}
               className="flex-1 px-4 py-2.5 text-xs font-black uppercase tracking-widest rounded-xl transition-all disabled:opacity-60 flex items-center justify-center gap-1.5 shadow-md hover:opacity-90"
-              style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}>
+              style={{ backgroundColor: FT.orange, color: FT.navy }}>
               {criando ? <Loader2 size={13} className="animate-spin" /> : null}
               Emitir Documento
             </button>

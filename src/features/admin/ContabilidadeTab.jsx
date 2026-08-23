@@ -234,7 +234,7 @@ export default function ContabilidadeTab({ workers, supabase, systemSettings }) 
               <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-white transition-colors">
                 <ChevronLeft size={15} className="text-slate-400" />
               </button>
-              <span className="px-3 py-1 text-xs font-black text-[#1B3A57] capitalize min-w-[130px] text-center">
+              <span className="px-3 py-1 text-xs font-black text-[var(--navy)] capitalize min-w-[130px] text-center">
                 {nomeMes} {selectedYear}
               </span>
               <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-white transition-colors">

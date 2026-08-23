@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link2, RefreshCw, Copy, CheckCircle2, Loader2, AlertTriangle, Lock } from 'lucide-react';
 import AdminPasswordModal from './AdminPasswordModal';
+import { FT } from '../../styles/designTokens';
 
 async function chamarContadorAcesso(action, adminPassword) {
   const res = await fetch('/api/contador-acesso', {
@@ -102,7 +103,7 @@ export default function ContadorAcessoPanel() {
           onClick={verLink}
           disabled={loading}
           className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider text-white transition-all disabled:opacity-50 hover:opacity-90"
-          style={{ backgroundColor: '#1B3A57' }}
+          style={{ backgroundColor: FT.navy }}
         >
           {loading ? <Loader2 size={13} className="animate-spin" /> : <Lock size={13} />}
           Ver Link (pede password de admin)
@@ -113,7 +114,7 @@ export default function ContadorAcessoPanel() {
             <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Link ativo (muda o mês na URL conforme necessário)</label>
             <div className="flex gap-2">
               <input readOnly value={link || ''} className="flex-1 bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-mono text-slate-600 outline-none" />
-              <button onClick={copiar} className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 ${copiado ? 'bg-emerald-50 text-emerald-700' : 'text-white hover:opacity-90'}`} style={copiado ? {} : { backgroundColor: '#1B3A57' }}>
+              <button onClick={copiar} className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 ${copiado ? 'bg-emerald-50 text-emerald-700' : 'text-white hover:opacity-90'}`} style={copiado ? {} : { backgroundColor: FT.navy }}>
                 {copiado ? <><CheckCircle2 size={13} /> Copiado</> : <><Copy size={13} /> Copiar</>}
               </button>
             </div>

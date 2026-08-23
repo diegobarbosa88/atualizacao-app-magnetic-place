@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Search, Plus, Loader2, RefreshCw, User, Users } from 'lucide-react';
 import { authFetch } from '../../../utils/authFetch';
 import ModalShell from '../../../components/common/ModalShell';
+import { FT } from '../../../styles/designTokens';
 
 function NovoClienteModal({ onClose, onSalvo }) {
   const [form, setForm] = useState({ nome: '', nif: '', email: '', morada: '', codigo_postal: '', localidade: '' });
@@ -70,7 +71,7 @@ function NovoClienteModal({ onClose, onSalvo }) {
             </button>
             <button type="submit" disabled={salvando}
               className="flex-1 px-4 py-2 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all disabled:opacity-60 flex items-center justify-center gap-1.5 hover:opacity-90"
-              style={{ backgroundColor: '#1B3A57' }}>
+              style={{ backgroundColor: FT.navy }}>
               {salvando ? <Loader2 size={13} className="animate-spin" /> : null}
               Guardar
             </button>
@@ -123,7 +124,7 @@ export default function TOConlineClientes({ onDesligado }) {
       <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)' }}>
-            <Users size={16} style={{ color: '#869AAF' }} />
+            <Users size={16} style={{ color: FT.slate }} />
           </div>
           <span className="text-sm font-black text-slate-800">Clientes</span>
         </div>
@@ -134,7 +135,7 @@ export default function TOConlineClientes({ onDesligado }) {
           </button>
           <button onClick={() => setMostrarModal(true)}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-sm hover:opacity-90"
-            style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}>
+            style={{ backgroundColor: FT.orange, color: FT.navy }}>
             <Plus size={13} /> Novo Cliente
           </button>
         </div>

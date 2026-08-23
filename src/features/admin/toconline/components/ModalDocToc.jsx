@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Download, Loader2 } from 'lucide-react';
 import { getAttrs, getNomeEntidade, getDocNum, formatValToc, tipoDocLabel, FIELD_LABELS_TOC } from '../utils/tocUtils';
 import ModalShell from '../../../../components/common/ModalShell';
+import { FT } from '../../../../styles/designTokens';
 
 export default function ModalDocToc({ item, tipo, onClose }) {
   const [pdfUrl, setPdfUrl] = useState(null);
@@ -59,7 +60,7 @@ export default function ModalDocToc({ item, tipo, onClose }) {
             onClick={handleBaixarPdf}
             disabled={carregandoPdf}
             className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl text-sm font-black uppercase tracking-widest transition-all disabled:opacity-60 border-2 hover:bg-slate-50"
-            style={{ borderColor: '#869AAF', color: '#1B3A57' }}
+            style={{ borderColor: FT.slate, color: FT.navy }}
           >
             {carregandoPdf ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
             {pdfUrl ? 'Abrir PDF' : 'Baixar PDF Original'}

@@ -4,6 +4,7 @@ import {
   AlertTriangle, ChevronDown, ChevronUp, Send, ShieldAlert, Trash2,
 } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
+import { FT } from '../../../styles/designTokens';
 import { DEFAULT_GMAIL_CONFIG_CONTADOR, configParaQuery } from './faturasUtils';
 import GmailConfigPanel from './GmailConfigPanel';
 import ApoliceSegurosImportPanel from './ApoliceSegurosImportPanel';
@@ -266,13 +267,13 @@ export default function ContadorEmailsAdmin() {
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl sm:text-2xl font-black flex items-center gap-2" style={{ color: '#1B3A57' }}>
-          <MessageSquareText size={22} style={{ color: '#1B3A57' }} />
+        <h2 className="text-xl sm:text-2xl font-black flex items-center gap-2" style={{ color: FT.navy }}>
+          <MessageSquareText size={22} style={{ color: FT.navy }} />
           Emails do Contador
         </h2>
         <button onClick={carregar} disabled={loading}
           className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all disabled:opacity-50 text-white hover:opacity-90"
-          style={{ backgroundColor: '#1B3A57' }}>
+          style={{ backgroundColor: FT.navy }}>
           {loading ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
           <span className="hidden sm:inline">Atualizar</span>
         </button>
@@ -392,7 +393,7 @@ export default function ContadorEmailsAdmin() {
                         onClick={() => gerarRascunho(email.id)}
                         disabled={gerandoId === email.id}
                         className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-50 text-white hover:opacity-90"
-                        style={{ backgroundColor: '#EB8D00' }}
+                        style={{ backgroundColor: FT.orange }}
                       >
                         {gerandoId === email.id ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
                         Gerar Rascunho
@@ -403,7 +404,7 @@ export default function ContadorEmailsAdmin() {
                         onClick={() => { if (aberto) fecharRevisao(); gerarRascunho(email.id); }}
                         disabled={gerandoId === email.id}
                         className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-50 border-2 hover:bg-slate-50"
-                        style={{ borderColor: '#EB8D00', color: '#EB8D00' }}
+                        style={{ borderColor: FT.orange, color: FT.orange }}
                         title="Reclassifica o tipo de pedido a partir do Gmail e gera um novo rascunho, substituindo o atual"
                       >
                         {gerandoId === email.id ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
@@ -414,7 +415,7 @@ export default function ContadorEmailsAdmin() {
                       <button
                         onClick={() => aberto ? fecharRevisao() : abrirRevisao(email)}
                         className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all hover:bg-slate-50"
-                        style={{ borderColor: '#869AAF', color: '#1B3A57' }}
+                        style={{ borderColor: FT.slate, color: FT.navy }}
                       >
                         {aberto ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
                         {aberto ? 'Fechar' : 'Rever Rascunho'}
@@ -455,8 +456,8 @@ export default function ContadorEmailsAdmin() {
                 {aberto && revisao && (
                   <div className="border-t border-slate-100 p-4 sm:p-5 space-y-3 bg-slate-50/50">
                     <div className="flex items-center gap-2">
-                      <ShieldAlert size={13} style={{ color: '#869AAF' }} />
-                      <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: '#869AAF' }}>
+                      <ShieldAlert size={13} style={{ color: FT.slate }} />
+                      <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: FT.slate }}>
                         Revê o texto antes de aprovar — o envio só acontece depois de confirmares
                       </p>
                     </div>
@@ -478,8 +479,8 @@ export default function ContadorEmailsAdmin() {
                     <label className="flex items-start gap-2.5 cursor-pointer group">
                       <div
                         onClick={() => setConfirmado(v => !v)}
-                        className={`mt-0.5 w-4 h-4 rounded border-2 shrink-0 flex items-center justify-center transition-all ${confirmado ? '' : 'border-slate-300 group-hover:border-[#869AAF]'}`}
-                        style={confirmado ? { backgroundColor: '#1B3A57', borderColor: '#1B3A57' } : {}}
+                        className={`mt-0.5 w-4 h-4 rounded border-2 shrink-0 flex items-center justify-center transition-all ${confirmado ? '' : 'border-slate-300 group-hover:border-[var(--slate)]'}`}
+                        style={confirmado ? { backgroundColor: FT.navy, borderColor: FT.navy } : {}}
                       >
                         {confirmado && <CheckCircle2 size={10} className="text-white" />}
                       </div>
@@ -493,7 +494,7 @@ export default function ContadorEmailsAdmin() {
                         onClick={() => executarAcao('aprovar')}
                         disabled={!confirmado || processando}
                         className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest text-white transition-all disabled:opacity-40 hover:opacity-90"
-                        style={{ backgroundColor: '#1B3A57' }}
+                        style={{ backgroundColor: FT.navy }}
                       >
                         {processando ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
                         Aprovar e Enviar

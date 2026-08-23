@@ -4,6 +4,7 @@ import {
   Eye, ArrowUpDown, ArrowUp, ArrowDown,
 } from 'lucide-react';
 import { MESES, getAttrs, getNomeEntidade, getValorTotal, getIva, getDocNum, getObservacao } from './utils/tocUtils';
+import { FT } from '../../../styles/designTokens';
 import { useTableFilters } from './hooks/useTableFilters';
 import { useTocRelatorios } from './hooks/useTocRelatorios';
 import ModalDocToc from './components/ModalDocToc';
@@ -18,7 +19,7 @@ function ThSort({ campo, label, ordem, toggleOrdem }) {
         {label}
         {ordem.campo !== campo
           ? <ArrowUpDown size={11} className="text-slate-300" />
-          : ordem.dir === 'asc' ? <ArrowUp size={11} style={{ color: '#869AAF' }} /> : <ArrowDown size={11} style={{ color: '#869AAF' }} />
+          : ordem.dir === 'asc' ? <ArrowUp size={11} style={{ color: FT.slate }} /> : <ArrowDown size={11} style={{ color: FT.slate }} />
         }
       </span>
     </th>
@@ -70,7 +71,7 @@ export default function TOConlineRelatorios({ onDesligado }) {
               ].map(({ key, label }) => (
                 <button key={key} onClick={() => { setTipo(key); }}
                   className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${tipo === key ? '' : 'text-slate-400 hover:text-slate-600'}`}
-                  style={tipo === key ? { backgroundColor: 'rgba(235,141,0,0.15)', color: '#1B3A57' } : {}}>
+                  style={tipo === key ? { backgroundColor: 'rgba(235,141,0,0.15)', color: FT.navy } : {}}>
                   {label}
                 </button>
               ))}
@@ -91,7 +92,7 @@ export default function TOConlineRelatorios({ onDesligado }) {
 
           <button onClick={handleGerar} disabled={loading}
             className="flex items-center gap-1.5 px-4 py-2.5 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all disabled:opacity-60 shadow-sm hover:opacity-90"
-            style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}>
+            style={{ backgroundColor: FT.orange, color: FT.navy }}>
             {loading ? <Loader2 size={13} className="animate-spin" /> : <BarChart2 size={13} />}
             Carregar
           </button>
@@ -140,10 +141,10 @@ export default function TOConlineRelatorios({ onDesligado }) {
                 )}
               </div>
               <button onClick={() => setMostrarFiltros(v => !v)}
-                className={`flex items-center gap-1.5 px-4 py-2.5 rounded-2xl border text-xs font-black uppercase tracking-widest transition-all ${mostrarFiltros || filtrosAtivos ? '' : 'bg-white border-slate-200 text-slate-500 hover:text-[#869AAF] hover:border-[#869AAF]'}`}
-                style={mostrarFiltros || filtrosAtivos ? { backgroundColor: 'rgba(134,154,175,0.1)', borderColor: '#869AAF', color: '#869AAF' } : {}}>
+                className={`flex items-center gap-1.5 px-4 py-2.5 rounded-2xl border text-xs font-black uppercase tracking-widest transition-all ${mostrarFiltros || filtrosAtivos ? '' : 'bg-white border-slate-200 text-slate-500 hover:text-[var(--slate)] hover:border-[var(--slate)]'}`}
+                style={mostrarFiltros || filtrosAtivos ? { backgroundColor: 'rgba(134,154,175,0.1)', borderColor: FT.slate, color: FT.slate } : {}}>
                 {mostrarFiltros ? <ChevronUp size={13} /> : <ChevronDown size={13} />} Filtros
-                {filtrosAtivos && <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#869AAF' }} />}
+                {filtrosAtivos && <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: FT.slate }} />}
               </button>
               {filtrosAtivos && (
                 <button onClick={limparFiltros} className="flex items-center gap-1 px-3 py-2.5 text-xs font-black uppercase tracking-widest text-slate-400 hover:text-red-500 transition-colors">
@@ -185,7 +186,7 @@ export default function TOConlineRelatorios({ onDesligado }) {
           {docsFiltrados.length === 0 ? (
             <div className="text-center py-12 text-slate-400 text-sm font-semibold">
               Nenhum documento corresponde aos filtros.
-              <button onClick={limparFiltros} className="ml-2 hover:underline" style={{ color: '#869AAF' }}>Limpar filtros</button>
+              <button onClick={limparFiltros} className="ml-2 hover:underline" style={{ color: FT.slate }}>Limpar filtros</button>
             </div>
           ) : (
             <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden">
@@ -230,7 +231,7 @@ export default function TOConlineRelatorios({ onDesligado }) {
                           </td>
                           <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                             <button onClick={() => setItemDetalhe(item)}
-                              className="p-1.5 text-slate-400 hover:text-[#869AAF] transition-colors" title="Ver detalhes e descarregar PDF">
+                              className="p-1.5 text-slate-400 hover:text-[var(--slate)] transition-colors" title="Ver detalhes e descarregar PDF">
                               <Eye size={14} />
                             </button>
                           </td>
@@ -257,7 +258,7 @@ export default function TOConlineRelatorios({ onDesligado }) {
 
       {!loading && docs.length === 0 && !erro && (
         <div className="text-center py-16 text-slate-400 text-sm font-semibold">
-          Selecione o tipo e o período, depois clique em <span className="font-bold" style={{ color: '#1B3A57' }}>Carregar</span>.
+          Selecione o tipo e o período, depois clique em <span className="font-bold" style={{ color: FT.navy }}>Carregar</span>.
         </div>
       )}
 
