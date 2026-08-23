@@ -43,7 +43,7 @@ export default function UploadPreviewZone({ upload }) {
             <p className="text-xs text-slate-400">{ficheiros.map(f => f.name).join(', ')}</p>
             <div className="flex gap-2">
               <button onClick={cancelarFicheiros} className="px-4 py-2 text-xs font-bold uppercase tracking-widest border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50">Cancelar</button>
-              <button onClick={previsar} disabled={previewing} className="flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-widest bg-[var(--orange)] text-[var(--navy)] rounded-xl hover:bg-[var(--orange-deep)] disabled:opacity-50">
+              <button onClick={previsar} disabled={previewing} className="flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-widest bg-[var(--orange)] text-[var(--navy-solid)] rounded-xl hover:bg-[var(--orange-deep)] disabled:opacity-50">
                 {previewing ? <Loader2 size={13} className="animate-spin" /> : null}
                 Pré-visualizar
               </button>
@@ -101,7 +101,7 @@ export default function UploadPreviewZone({ upload }) {
           <button
             onClick={confirmarMapeamento}
             disabled={previewing || !colMap.dataCol || (!colMap.valorCol && !colMap.debitoCol) || !colMap.descricaoCol}
-            className="flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-widest bg-[var(--orange)] text-[var(--navy)] rounded-xl hover:bg-[var(--orange-deep)] disabled:opacity-50"
+            className="flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-widest bg-[var(--orange)] text-[var(--navy-solid)] rounded-xl hover:bg-[var(--orange-deep)] disabled:opacity-50"
           >
             {previewing ? <Loader2 size={13} className="animate-spin" /> : null}
             Confirmar Mapeamento

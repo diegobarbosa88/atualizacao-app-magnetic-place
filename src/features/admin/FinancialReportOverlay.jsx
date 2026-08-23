@@ -114,7 +114,7 @@ const FinancialReportOverlay = ({ logs, workers, clients, expenses, finFilter, s
                 </div>
                 <div className="p-3 sm:p-6 rounded-2xl sm:rounded-3xl bg-slate-900 text-white border border-slate-800">
                   <div className="flex items-center gap-1.5 sm:gap-2 text-amber-400 mb-2 font-black uppercase text-[8px] sm:text-[10px] tracking-widest"><Sparkles size={12} sm:size={16} /> Insights do Consultor AI</div>
-                  <button onClick={generateInsight} disabled={isAnalyzing} className="w-full bg-[var(--orange)] hover:bg-[var(--orange-deep)] px-2 py-1.5 rounded-lg text-[10px] font-bold transition-all text-[var(--navy)] whitespace-nowrap">
+                  <button onClick={generateInsight} disabled={isAnalyzing} className="w-full bg-[var(--orange)] hover:bg-[var(--orange-deep)] px-2 py-1.5 rounded-lg text-[10px] font-bold transition-all text-[var(--navy-solid)] whitespace-nowrap">
                     {isAnalyzing ? "..." : "Gerar"}
                   </button>
                   {insight && <p className="text-[8px] text-slate-400 mt-1 line-clamp-2">{insight.substring(0, 60)}...</p>}

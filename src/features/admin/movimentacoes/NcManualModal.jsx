@@ -28,7 +28,7 @@ export default function NcManualModal({ tx, faturas, loading, onClose, onSave })
             Cancelar
           </button>
           <button disabled={!selectedId || saving} onClick={handleConfirm}
-            className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest bg-[var(--orange)] text-[var(--navy)] hover:bg-[var(--orange-deep)] transition-colors disabled:opacity-40 flex items-center justify-center gap-1.5">
+            className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest bg-[var(--orange)] text-[var(--navy-solid)] hover:bg-[var(--orange-deep)] transition-colors disabled:opacity-40 flex items-center justify-center gap-1.5">
             {saving ? <Loader2 size={13} className="animate-spin" /> : null} Ligar NC
           </button>
         </div>

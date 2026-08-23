@@ -169,7 +169,7 @@ export default function MovimentacoesTab() {
         <button
           onClick={() => loadRun()}
           disabled={autoMatching}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--orange)] text-[var(--navy)] rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-sm hover:bg-[var(--orange-deep)] transition-colors disabled:opacity-50"
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--orange)] text-[var(--navy-solid)] rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-sm hover:bg-[var(--orange-deep)] transition-colors disabled:opacity-50"
         >
           {autoMatching ? (
             <><Loader2 size={11} className="animate-spin" /> A procurar...</>

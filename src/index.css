@@ -42,6 +42,14 @@
   --surface-dim: #efede7;   /* = FT.bg */
   --border-soft: #eae7df;
 
+  /* O navy no papel de SUPERFÍCIE, que nunca inverte. `--navy` acima é o
+     navy no papel de TINTA e clareia no modo escuro (ver bloco .dark) — o
+     que serve os 73 sítios onde é texto sobre fundo claro, mas partiria os
+     35 onde é o contrário: os 5 fundos sólidos da barra do trabalhador e os
+     30 botões `bg-[var(--orange)] text-[var(--navy)]`, onde clarear o texto
+     o tornaria ilegível sobre o laranja. Esses usam --navy-solid. */
+  --navy-solid: #1b3a57;
+
   --ok: #2e7d4f;
   --ok-bg: #e7f3eb;
   --ok-border: rgba(46, 125, 79, 0.3);
@@ -82,6 +90,64 @@
   @media (max-width: 1024px) {
     font-size: 15px;
   }
+}
+
+/* ─────────────────────────── MODO ESCURO ───────────────────────────
+   Redefine os TOKENS, não persegue classes. É a diferença que interessa:
+   as regras `.dark .bg-slate-50 { ... !important }` que ainda vivem no
+   App.css só apanham os elementos que continuam a usar a classe Tailwind
+   antiga — assim que um lote da migração converte esse elemento para
+   `bg-[var(--surface)]`, ele sai da cobertura e fica claro num tema escuro.
+   Foi o que aconteceu com as primeiras 313 classes convertidas.
+
+   Definindo aqui os tokens, qualquer classe convertida passa a seguir o
+   modo escuro sozinha, sem lote de manutenção nenhum.
+
+   As regras por classe no App.css ficam como PONTE, e só até a migração
+   acabar: cobrem as ~3900 classes `slate-*` que ainda não foram tocadas.
+   Quando a última for convertida, esse bloco sai inteiro. */
+.dark {
+  /* Superfícies — derivadas do navy da marca, não do slate genérico. */
+  --bg: #0e1621;
+  --panel: #16202c;
+  --surface: #16202c;
+  --surface-dim: #1c2733;
+  --border: #2a3746;
+  --border-soft: #212d3a;
+
+  /* Tinta — a escala clara inverte-se, mantendo os mesmos degraus. */
+  --ink: #ece9e1;
+  --ink-mid: #c5cbd3;
+  --ink-soft: #9aa6b4;
+  --slate-dim: #8496a8;
+  /* --slate fica: #869aaf dá 5,68:1 sobre --surface, melhor do que dá
+     sobre branco no modo claro. */
+
+  --text: #9aa6b4;
+  --text-h: #ece9e1;
+
+  /* Marca. O laranja aguenta os dois modos (6,5:1 sobre --surface) e não
+     muda. O navy clareia porque aqui é tinta; onde é superfície usa-se
+     --navy-solid, que não está redefinido neste bloco. */
+  --navy: #7fa5c8;
+  --navy-deep: #16202c;
+  --navy-soft: rgba(127, 165, 200, 0.14);
+
+  /* Estados — os tons de texto clareiam e os fundos passam a véus sobre o
+     escuro, em vez dos pastéis do modo claro, que aqui seriam manchas. */
+  --ok: #5fbe8a;
+  --ok-bg: rgba(46, 125, 79, 0.22);
+  --ok-border: rgba(95, 190, 138, 0.35);
+  --warn: #e8a85a;
+  --warn-bg: rgba(217, 138, 43, 0.22);
+  --warn-border: rgba(232, 168, 90, 0.35);
+  --bad: #e08872;
+  --bad-bg: rgba(180, 67, 47, 0.25);
+  --bad-border: rgba(224, 136, 114, 0.35);
+
+  --code-bg: #1c2733;
+  --shadow:
+    rgba(0, 0, 0, 0.5) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
 }
 
 body {

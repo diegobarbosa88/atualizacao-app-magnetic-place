@@ -386,7 +386,7 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb,
       </label>
 
       <button onClick={handleProcessar} disabled={!files.length || processando}
-        className="w-full py-3 bg-[var(--orange)] text-[var(--navy)] rounded-xl text-sm font-black uppercase tracking-widest hover:bg-slate-900 transition-all shadow-md shadow-[var(--orange)]/30 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+        className="w-full py-3 bg-[var(--orange)] text-[var(--navy-solid)] rounded-xl text-sm font-black uppercase tracking-widest hover:bg-slate-900 transition-all shadow-md shadow-[var(--orange)]/30 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
         {processando ? <Loader2 size={16} className="animate-spin" /> : <ReceiptText size={16} />}
         {processando ? 'A processar...' : files.length > 0 ? `Processar ${files.length} Ficheiro${files.length > 1 ? 's' : ''}` : 'Processar'}
       </button>
@@ -570,7 +570,7 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb,
                 <button
                   onClick={handleConfirmarEnvio}
                   disabled={enviandoRecibos || selecionadosEnvio.size === 0}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-[var(--orange)] text-[var(--navy)] rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 transition-all shadow-sm shadow-[var(--orange)]/30 disabled:opacity-40 disabled:cursor-not-allowed">
+                  className="flex items-center gap-2 px-4 py-2.5 bg-[var(--orange)] text-[var(--navy-solid)] rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 transition-all shadow-sm shadow-[var(--orange)]/30 disabled:opacity-40 disabled:cursor-not-allowed">
                   {enviandoRecibos ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
                   Confirmar Envio ({selecionadosEnvio.size})
                 </button>
@@ -583,7 +583,7 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb,
               <button
                 onClick={handleIniciarEnvio}
                 disabled={enviandoRecibos}
-                className="flex items-center gap-2 px-4 py-2.5 bg-[var(--orange)] text-[var(--navy)] rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 transition-all shadow-sm shadow-[var(--orange)]/30 disabled:opacity-40 disabled:cursor-not-allowed">
+                className="flex items-center gap-2 px-4 py-2.5 bg-[var(--orange)] text-[var(--navy-solid)] rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 transition-all shadow-sm shadow-[var(--orange)]/30 disabled:opacity-40 disabled:cursor-not-allowed">
                 {enviandoRecibos ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
                 Enviar Recibos
               </button>

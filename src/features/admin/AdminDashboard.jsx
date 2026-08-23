@@ -456,7 +456,7 @@ function AdminDashboard(props) {
             <div className="mb-8 p-6 bg-indigo-50 rounded-3xl border border-indigo-100 relative">
               <div className="flex justify-between items-center mb-2">
                 <h4 className="font-bold text-indigo-700 flex items-center gap-2"><Sparkles size={16} /> Resumo de Produtividade AI ✨</h4>
-                <button onClick={generateWorkerSummary} disabled={isSummarizing || auditedMonthLogs.length === 0} className="text-[10px] bg-[var(--orange)] text-[var(--navy)] px-4 py-1.5 rounded-full font-black uppercase">{isSummarizing ? "Gerando..." : "Gerar com IA"}</button>
+                <button onClick={generateWorkerSummary} disabled={isSummarizing || auditedMonthLogs.length === 0} className="text-[10px] bg-[var(--orange)] text-[var(--navy-solid)] px-4 py-1.5 rounded-full font-black uppercase">{isSummarizing ? "Gerando..." : "Gerar com IA"}</button>
               </div>
               <p className="text-sm text-slate-600 italic leading-relaxed">{workerAISummary || "Utilize o Gemini para resumir as atividades deste mês."}</p>
             </div>

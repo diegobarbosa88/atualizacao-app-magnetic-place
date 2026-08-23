@@ -99,7 +99,7 @@ export default function FaturaConfigPanel() {
             <button
               onClick={handleGuardar}
               disabled={guardando || !temAlteracao}
-              className="flex items-center gap-1.5 px-4 py-2.5 bg-[var(--orange)] text-[var(--navy)] rounded-xl text-xs font-black uppercase tracking-widest hover:bg-[var(--orange-deep)] transition-all disabled:opacity-50"
+              className="flex items-center gap-1.5 px-4 py-2.5 bg-[var(--orange)] text-[var(--navy-solid)] rounded-xl text-xs font-black uppercase tracking-widest hover:bg-[var(--orange-deep)] transition-all disabled:opacity-50"
             >
               {guardando ? <Loader2 size={13} className="animate-spin" /> : guardado ? <CheckCircle size={13} /> : null}
               {guardado ? 'Guardado' : 'Guardar'}

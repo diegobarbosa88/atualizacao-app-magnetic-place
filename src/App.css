@@ -10,15 +10,32 @@ input.lowercase { text-transform: lowercase !important; }
    que ainda o aplicam. */
 .text-natural, .text-natural * { text-transform: none !important; }
 
-/* Custom Scrollbar for Menu */
+/* Custom Scrollbar for Menu.
+   Era #4f46e5, o indigo do template do create-vite. Sobreviveu a todos os
+   lotes da migração porque nenhum grep de `bg-indigo-600` em JSX chega a uma
+   cor solta em CSS puro — era o último rasto conhecido do template. */
 .menu-scroll {
   overflow-x: auto;
   scrollbar-width: thin;
-  scrollbar-color: #4f46e5 transparent;
+  scrollbar-color: var(--orange) transparent;
 }
 .menu-scroll::-webkit-scrollbar { height: 3px; }
 .menu-scroll::-webkit-scrollbar-track { background: transparent; }
-.menu-scroll::-webkit-scrollbar-thumb { background: #4f46e5; border-radius: 10px; }
+.menu-scroll::-webkit-scrollbar-thumb { background: var(--orange); border-radius: 10px; }
+
+/* ── Modo escuro: regras-PONTE, temporárias ──────────────────────────────
+   O modo escuro vive agora no bloco `.dark` do index.css, que redefine os
+   TOKENS — é o que faz com que qualquer classe já convertida para
+   `bg-[var(--surface)]`, `text-[var(--ink-mid)]` e afins siga o tema escuro
+   sozinha.
+
+   As regras abaixo perseguem as classes Tailwind antigas e existem só
+   enquanto a migração de neutros não terminar: cobrem as ~3900 classes
+   `slate-*` que ainda não foram convertidas. Cada lote da migração vai
+   esvaziando este bloco de responsabilidade; quando o último `slate-*` do
+   admin desaparecer, ele sai inteiro.
+
+   NÃO acrescentar regras novas aqui — o sítio certo é o bloco de tokens. */
 
 /* Dark Mode Overrides */
 .dark body {

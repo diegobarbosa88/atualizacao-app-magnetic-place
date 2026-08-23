@@ -270,7 +270,7 @@ function SessaoRow({ sessao, onAlterarEstado, onApagarRegisto, onApagarSessao, o
                 <button
                   onClick={e => { e.stopPropagation(); handleConfirmarEnvio(); }}
                   disabled={enviandoRecibos || (selecionadosEnvio.size === 0 && selecionadosReextracao.size === 0)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--orange)] text-[var(--navy)] text-xs font-bold disabled:opacity-40 hover:bg-[var(--orange-deep)] transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--orange)] text-[var(--navy-solid)] text-xs font-bold disabled:opacity-40 hover:bg-[var(--orange-deep)] transition-colors"
                 >
                   {enviandoRecibos ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
                   Confirmar

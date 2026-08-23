@@ -336,7 +336,7 @@ export default function ResultadosTabs({
                 </label>
                 {selOrphan.size > 0 && (
                   <button onClick={() => pedirObservacaoOrphan([...selOrphan])}
-                    className="flex items-center gap-1 bg-[var(--orange)] text-[var(--navy)] rounded-xl px-4 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-[var(--orange-deep)] transition-all">
+                    className="flex items-center gap-1 bg-[var(--orange)] text-[var(--navy-solid)] rounded-xl px-4 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-[var(--orange-deep)] transition-all">
                     <CheckCircle size={12} /> Confirmar Selecionados ({selOrphan.size})
                   </button>
                 )}

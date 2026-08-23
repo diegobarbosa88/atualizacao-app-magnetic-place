@@ -94,7 +94,7 @@ export default function CsvMappingCard({ csvMapping, colMap, setColMap, previewi
 
           <div className="flex gap-2 pt-1">
             <button onClick={confirmarMapeamento} disabled={!canConfirm || previewing}
-              className="flex items-center gap-2 px-4 py-2 bg-[var(--orange)] text-[var(--navy)] rounded-xl hover:bg-[var(--orange-deep)] transition-all text-[10px] font-black uppercase tracking-widest disabled:opacity-40">
+              className="flex items-center gap-2 px-4 py-2 bg-[var(--orange)] text-[var(--navy-solid)] rounded-xl hover:bg-[var(--orange-deep)] transition-all text-[10px] font-black uppercase tracking-widest disabled:opacity-40">
               {previewing ? <Loader2 size={12} className="animate-spin" /> : <ArrowLeftRight size={12} />}
               Aplicar
             </button>

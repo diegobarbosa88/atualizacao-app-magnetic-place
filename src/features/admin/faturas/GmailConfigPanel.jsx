@@ -114,7 +114,7 @@ export default function GmailConfigPanel({
               Repor padrão
             </button>
             <button onClick={handleGuardar} disabled={guardando}
-              className="flex items-center gap-1.5 px-4 py-2 bg-[var(--orange)] text-[var(--navy)] rounded-xl text-xs font-black uppercase tracking-widest hover:bg-[var(--orange-deep)] transition-all disabled:opacity-60">
+              className="flex items-center gap-1.5 px-4 py-2 bg-[var(--orange)] text-[var(--navy-solid)] rounded-xl text-xs font-black uppercase tracking-widest hover:bg-[var(--orange-deep)] transition-all disabled:opacity-60">
               {guardando ? <Loader2 size={13} className="animate-spin" /> : guardado ? <Check size={13} /> : <Save size={13} />}
               {guardando ? 'A guardar...' : guardado ? 'Guardado' : 'Guardar'}
             </button>

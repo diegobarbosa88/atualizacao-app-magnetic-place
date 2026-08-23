@@ -63,7 +63,7 @@ export default function ReportsEmbedded({
 
       <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
         <div className="flex flex-col md:flex-row gap-3 md:gap-4">
-          <button onClick={handleGenerateClientReport} disabled={!reportFilter.month || (!reportFilter.clientId && !reportFilter.workerId)} className="flex-1 py-4 bg-[var(--orange)] text-[var(--navy)] rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-[var(--orange-deep)] shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 active:scale-95 transition-all">
+          <button onClick={handleGenerateClientReport} disabled={!reportFilter.month || (!reportFilter.clientId && !reportFilter.workerId)} className="flex-1 py-4 bg-[var(--orange)] text-[var(--navy-solid)] rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-[var(--orange-deep)] shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 active:scale-95 transition-all">
             <FileText size={18} /> Gerar Selecção
           </button>
           <button onClick={() => {

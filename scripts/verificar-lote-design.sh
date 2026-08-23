@@ -49,7 +49,9 @@ for alvo in "$@"; do
   find "$alvo" -name '*.jsx' 2>/dev/null | while read -r ff; do
     cr=$(perl -ne '$c++ if /\r\n$/; END{print $c+0}' < "$ff")
     n=$(perl -ne '$c++; END{print $c+0}' < "$ff")
-    if [ "$cr" -ne 0 ] && [ "$cr" -ne "$n" ]; then
+    # Tolera 1 linha sem CRLF: é a última, em ficheiros que não terminam em
+    # newline. Isso não é terminadores misturados, e reportá-lo só gera ruído.
+    if [ "$cr" -ne 0 ] && [ "$cr" -lt $((n - 1)) ]; then
       echo "  MISTO: $ff ($cr de $n linhas em CRLF)"
     fi
   done
