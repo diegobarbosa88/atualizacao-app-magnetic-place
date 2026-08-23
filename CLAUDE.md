@@ -344,10 +344,11 @@ perguntar. E usar sempre a mesma métrica: o script conta **ocorrências**, não
   
   ### Estado da migração (atualizar a cada lote)
 
-Total: 4.197 classes Tailwind → tokens `FT`. **Restam 614 em `src/features/admin` +
-`src/components/admin`, mas só 542 são trabalho** — e são exactamente os quatro ficheiros de
-dinheiro, isolados de propósito para o fim: `AjudasCustoAdmin` (234), `RecibosCalculadora` (197),
-`ReconciliacaoSalarialAdmin` (56) e `EntradasTab` (55). Todo o resto do admin está convertido.
+Total: 4.197 classes Tailwind → tokens `FT`. **Restam 559 em `src/features/admin` +
+`src/components/admin`, mas só 487 são trabalho** — e são exactamente os três ficheiros de
+dinheiro, isolados de propósito para o fim: `AjudasCustoAdmin` (234), `RecibosCalculadora` (197)
+e `ReconciliacaoSalarialAdmin` (56). Todo o resto do admin está convertido. O `EntradasTab` (55)
+foi apagado: nunca chegou a ser importado desde que nasceu, em 2026-05-24.
 
 As outras 72 estão fora do âmbito, cada uma com razão registada:
 
