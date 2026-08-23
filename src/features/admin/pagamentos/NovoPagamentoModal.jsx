@@ -40,18 +40,18 @@ function AutocompleteFornecedor({ value, onChange }) {
         onChange={e => { setQ(e.target.value); onChange({ nome: e.target.value }); buscar(e.target.value); setAberto(true); }}
         onFocus={() => { if (opcoes.length > 0) setAberto(true); }}
         onBlur={() => setTimeout(() => setAberto(false), 150)}
-        className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30"
+        className="w-full px-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30"
       />
-      {buscando && <Loader2 size={12} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-slate-400" />}
+      {buscando && <Loader2 size={12} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-[var(--slate)]" />}
       {aberto && opcoes.length > 0 && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+        <div className="absolute z-50 w-full mt-1 bg-white border border-[var(--border)] rounded-xl shadow-lg max-h-48 overflow-y-auto">
           {opcoes.map((f, i) => (
             <button key={i} type="button"
-              className="w-full px-3 py-2 text-left text-xs hover:bg-slate-100 transition-colors"
+              className="w-full px-3 py-2 text-left text-xs hover:bg-[var(--surface-dim)] transition-colors"
               onMouseDown={() => { onChange(f); setQ(f.nome); setAberto(false); }}>
-              <span className="font-semibold text-slate-800">{f.nome}</span>
-              {f.nif && <span className="ml-2 text-slate-400 font-mono">{f.nif}</span>}
-              {f.iban && <span className="ml-2 text-slate-400 font-mono text-[10px]">{f.iban}</span>}
+              <span className="font-semibold text-[var(--ink)]">{f.nome}</span>
+              {f.nif && <span className="ml-2 text-[var(--slate-dim)] font-mono">{f.nif}</span>}
+              {f.iban && <span className="ml-2 text-[var(--slate-dim)] font-mono text-[10px]">{f.iban}</span>}
             </button>
           ))}
         </div>
@@ -117,51 +117,51 @@ export default function NovoPagamentoModal({ onClose, onCriado }) {
     >
       <form onSubmit={handleSubmit} className="px-6 py-5 space-y-3">
           <div className="space-y-1">
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Fornecedor *</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Fornecedor *</p>
             <AutocompleteFornecedor value={{ nome: form.fornecedor_nome }} onChange={handleFornecedor} />
             {form.fornecedor_nome && (
               <input type="text" value={form.fornecedor_nome} onChange={e => set('fornecedor_nome', e.target.value)}
                 placeholder="Nome do fornecedor"
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30" />
+                className="w-full px-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30" />
             )}
           </div>
 
           <div className="space-y-1">
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">IBAN *</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">IBAN *</p>
             <input type="text" value={form.fornecedor_iban} onChange={e => set('fornecedor_iban', e.target.value.toUpperCase())}
               placeholder="PT50 0000 0000 0000 0000 0000 0"
               required
-              className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-mono text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30" />
+              className="w-full px-3 py-2 rounded-xl border border-[var(--border)] text-xs font-mono text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30" />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">NIF</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">NIF</p>
               <input type="text" value={form.fornecedor_nif} onChange={e => set('fornecedor_nif', e.target.value)}
                 placeholder="123456789"
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30" />
+                className="w-full px-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30" />
             </div>
             <div className="space-y-1">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Valor (€) *</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Valor (€) *</p>
               <input type="number" step="0.01" min="0.01" value={form.valor} onChange={e => set('valor', e.target.value)}
                 placeholder="0,00"
                 required
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30" />
+                className="w-full px-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30" />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Data *</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Data *</p>
               <input type="date" value={form.data_pagamento} onChange={e => set('data_pagamento', e.target.value)}
                 required
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30" />
+                className="w-full px-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30" />
             </div>
             <div className="space-y-1">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Referência</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Referência</p>
               <input type="text" value={form.referencia} onChange={e => set('referencia', e.target.value)}
                 placeholder="Nº fatura..."
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30" />
+                className="w-full px-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30" />
             </div>
           </div>
 
@@ -169,7 +169,7 @@ export default function NovoPagamentoModal({ onClose, onCriado }) {
 
           <div className="flex gap-2 pt-1">
             <button type="button" onClick={onClose}
-              className="flex-1 px-4 py-2.5 text-xs font-black uppercase tracking-widest text-slate-500 hover:bg-slate-100 rounded-xl transition-all">
+              className="flex-1 px-4 py-2.5 text-xs font-black uppercase tracking-widest text-[var(--slate-dim)] hover:bg-[var(--surface-dim)] rounded-xl transition-all">
               Cancelar
             </button>
             <button type="submit" disabled={criando}

@@ -25,7 +25,7 @@ function urgencyClass(dateStr) {
   const diff = (new Date(dateStr) - new Date()) / (1000 * 60 * 60 * 24);
   if (diff < 0) return 'text-red-600';
   if (diff <= 3) return 'text-orange-500';
-  return 'text-slate-500';
+  return 'text-[var(--slate-dim)]';
 }
 
 const TAB_LABELS = { pendente: 'Pendentes', exportado: 'Exportados', rejeitado: 'Rejeitados' };
@@ -42,7 +42,7 @@ function RejeitarModal({ item, onConfirm, onClose }) {
       accent="danger"
       footer={
         <div className="flex gap-2 p-6">
-          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-xs font-black bg-slate-100 text-slate-600">Cancelar</button>
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-xs font-black bg-[var(--surface-dim)] text-[var(--ink-soft)]">Cancelar</button>
           <button
             onClick={() => onConfirm(motivo)}
             className="flex-1 py-2.5 rounded-xl text-xs font-black bg-red-600 text-white hover:bg-red-700"
@@ -58,7 +58,7 @@ function RejeitarModal({ item, onConfirm, onClose }) {
           value={motivo}
           onChange={e => setMotivo(e.target.value)}
           rows={3}
-          className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-red-300"
+          className="w-full px-3 py-2 text-xs border border-[var(--border)] rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-red-300"
         />
       </div>
     </ModalShell>
@@ -285,11 +285,11 @@ export default function FilaAprovacaoTab() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h4 className="text-sm font-black text-slate-800 uppercase tracking-tight flex items-center gap-2">
+          <h4 className="text-sm font-black text-[var(--ink)] uppercase tracking-tight flex items-center gap-2">
             <ListChecks size={16} style={{ color: FT.slate }} />
             Fila de Pagamentos
           </h4>
-          <p className="text-[10px] font-semibold text-slate-400 mt-0.5">
+          <p className="text-[10px] font-semibold text-[var(--slate-dim)] mt-0.5">
             Faturas de fornecedores + impostos pendentes de pagamento
           </p>
         </div>
@@ -303,7 +303,7 @@ export default function FilaAprovacaoTab() {
           <button
             onClick={carregar}
             disabled={loading}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all disabled:opacity-60"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black bg-[var(--surface-dim)] text-[var(--ink-soft)] hover:bg-[var(--border)] transition-all disabled:opacity-60"
           >
             <RefreshCw size={13} className={loading ? 'animate-spin' : ''} /> Atualizar
           </button>
@@ -311,7 +311,7 @@ export default function FilaAprovacaoTab() {
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-2xl w-fit">
+      <div className="flex items-center gap-1 bg-[var(--surface-dim)] p-1 rounded-2xl w-fit">
         {Object.entries(TAB_LABELS).map(([key, label]) => {
           const count = key === 'pendente' ? pendenteCount
             : key === 'exportado' ? fornecedores.filter(p => p.status === 'exportado' || p.status === 'enviado').length + impostos.filter(i => i.status === 'exportado').length
@@ -321,13 +321,13 @@ export default function FilaAprovacaoTab() {
               key={key}
               onClick={() => { setTab(key); setSelecionados(new Set()); }}
               className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                tab === key ? '' : 'text-slate-400 hover:text-slate-600'
+                tab === key ? '' : 'text-[var(--slate-dim)] hover:text-[var(--ink-soft)]'
               }`}
               style={tab === key ? { backgroundColor: 'rgba(235,141,0,0.15)', color: FT.navy } : {}}
             >
               {label}
               {count > 0 && (
-                <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${tab === key ? 'bg-white text-[var(--navy)]' : 'bg-slate-200 text-slate-500'}`}>
+                <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${tab === key ? 'bg-white text-[var(--navy)]' : 'bg-[var(--border)] text-[var(--slate-dim)]'}`}>
                   {count}
                 </span>
               )}
@@ -353,7 +353,7 @@ export default function FilaAprovacaoTab() {
 
       {/* Action bar (only when pendentes selected) */}
       {tab === 'pendente' && pendentes.length > 0 && (
-        <div className="flex items-center justify-between px-4 py-3 bg-slate-50 rounded-2xl border border-slate-100">
+        <div className="flex items-center justify-between px-4 py-3 bg-[var(--surface)] rounded-2xl border border-[var(--border-soft)]">
           <div className="flex items-center gap-3">
             <input
               type="checkbox"
@@ -361,7 +361,7 @@ export default function FilaAprovacaoTab() {
               onChange={toggleAll}
               className="w-4 h-4 accent-[var(--navy)] cursor-pointer"
             />
-            <span className="text-[11px] font-black text-slate-600">
+            <span className="text-[11px] font-black text-[var(--ink-soft)]">
               {selecionados.size > 0
                 ? `${selecionados.size} selecionado${selecionados.size !== 1 ? 's' : ''} — ${fmt(totalSelecionado)}`
                 : `Selecionar todos (${pendentes.length})`
@@ -383,26 +383,26 @@ export default function FilaAprovacaoTab() {
       {/* Loading */}
       {loading && (
         <div className="flex items-center justify-center py-12">
-          <Loader2 size={24} className="animate-spin text-slate-300" />
+          <Loader2 size={24} className="animate-spin text-[var(--slate)]" />
         </div>
       )}
 
       {/* Empty */}
       {!loading && listaUnificada.length === 0 && (
         <div className="text-center py-12">
-          <ListChecks size={32} className="text-slate-200 mx-auto mb-3" />
-          <p className="text-sm font-black text-slate-400">
+          <ListChecks size={32} className="text-[var(--slate)] mx-auto mb-3" />
+          <p className="text-sm font-black text-[var(--slate-dim)]">
             {tab === 'pendente' ? 'Nenhum pagamento pendente' : tab === 'exportado' ? 'Nenhum exportado ainda' : 'Nenhum rejeitado'}
           </p>
           {tab === 'pendente' && (
-            <p className="text-[11px] text-slate-300 mt-1">Faturas pendentes e impostos importados aparecem aqui.</p>
+            <p className="text-[11px] text-[var(--slate-dim)] mt-1">Faturas pendentes e impostos importados aparecem aqui.</p>
           )}
         </div>
       )}
 
       {/* List */}
       {!loading && listaUnificada.length > 0 && (
-        <div className="border border-slate-100 rounded-2xl overflow-hidden divide-y divide-slate-50">
+        <div className="border border-[var(--border-soft)] rounded-2xl overflow-hidden divide-y divide-[var(--border-soft)]">
           {listaUnificada.map(item => {
             const isPendente = item.status === 'pendente';
             const isSel = selecionados.has(item.key);
@@ -410,7 +410,7 @@ export default function FilaAprovacaoTab() {
             return (
               <div
                 key={item.key}
-                className={`flex items-center gap-3 px-4 py-3.5 transition-colors ${isSel ? '' : 'hover:bg-slate-50/50'}`}
+                className={`flex items-center gap-3 px-4 py-3.5 transition-colors ${isSel ? '' : 'hover:bg-[var(--surface)]'}`}
                 style={isSel ? { backgroundColor: 'rgba(235,141,0,0.08)' } : {}}
               >
                 {/* Checkbox (pendente only) */}
@@ -430,21 +430,21 @@ export default function FilaAprovacaoTab() {
                   item.fonte === 'imposto'
                     ? 'bg-orange-100 text-orange-700'
                     : item.fonte === 'fatura-gmail'
-                    ? 'bg-slate-200 text-slate-700'
-                    : 'bg-slate-100 text-[var(--slate)]'
+                    ? 'bg-[var(--border)] text-[var(--ink-mid)]'
+                    : 'bg-[var(--surface-dim)] text-[var(--slate)]'
                 }`}>
                   {item.fonte === 'imposto' ? (item.subtipo || 'Imp.') : item.fonte === 'fatura-gmail' ? 'Gmail' : 'Forn.'}
                 </span>
 
                 {/* Main info */}
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-black text-slate-800 truncate">{item.label}</p>
+                  <p className="text-xs font-black text-[var(--ink)] truncate">{item.label}</p>
                   <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                     {item.referencia && (
-                      <span className="text-[10px] text-slate-400 truncate">{item.referencia}</span>
+                      <span className="text-[10px] text-[var(--slate-dim)] truncate">{item.referencia}</span>
                     )}
                     {item.iban
-                      ? <span className="text-[10px] text-slate-300">{maskIban(item.iban)}</span>
+                      ? <span className="text-[10px] text-[var(--slate-dim)]">{maskIban(item.iban)}</span>
                       : item.fonte === 'fatura-gmail' && item.nif
                         ? <button
                             onClick={() => { setIbanModal({ nif: item.nif, nome: item.label }); setIbanInputVal(''); }}
@@ -464,14 +464,14 @@ export default function FilaAprovacaoTab() {
 
                 {/* Amount */}
                 <div className="shrink-0 text-right w-24">
-                  <p className="text-sm font-black text-slate-800">{fmt(item.valor)}</p>
+                  <p className="text-sm font-black text-[var(--ink)]">{fmt(item.valor)}</p>
                 </div>
 
                 {/* Actions */}
                 <div className="flex items-center gap-1 shrink-0">
                   {item.url && (
                     <a href={item.url} target="_blank" rel="noopener noreferrer"
-                      className="p-1.5 rounded-lg text-slate-300 hover:text-[var(--slate)] hover:bg-slate-100 transition-colors"
+                      className="p-1.5 rounded-lg text-[var(--slate)] hover:text-[var(--slate)] hover:bg-[var(--surface-dim)] transition-colors"
                       title="Ver PDF">
                       <FileText size={13} />
                     </a>
@@ -479,7 +479,7 @@ export default function FilaAprovacaoTab() {
                   {isPendente && (
                     <button
                       onClick={() => setRejeitarItem(item)}
-                      className="p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors"
+                      className="p-1.5 rounded-lg text-[var(--slate)] hover:text-red-500 hover:bg-red-50 transition-colors"
                       title="Rejeitar"
                     >
                       <X size={13} />
@@ -524,7 +524,7 @@ export default function FilaAprovacaoTab() {
               </button>
               <button
                 onClick={() => setIbanModal(null)}
-                className="px-4 py-2 text-xs font-black bg-slate-100 text-slate-500 rounded-xl hover:bg-slate-200 uppercase tracking-widest"
+                className="px-4 py-2 text-xs font-black bg-[var(--surface-dim)] text-[var(--slate-dim)] rounded-xl hover:bg-[var(--border)] uppercase tracking-widest"
               >
                 Cancelar
               </button>
@@ -538,11 +538,11 @@ export default function FilaAprovacaoTab() {
               value={ibanInputVal}
               onChange={e => setIbanInputVal(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && guardarIbanInline()}
-              className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-300"
+              className="w-full border border-[var(--border)] rounded-xl px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-300"
               autoFocus
             />
             {ibanModal.nif && (
-              <p className="text-[10px] text-slate-400 mt-1">Aplicado a todas as faturas deste fornecedor (NIF: {ibanModal.nif})</p>
+              <p className="text-[10px] text-[var(--slate-dim)] mt-1">Aplicado a todas as faturas deste fornecedor (NIF: {ibanModal.nif})</p>
             )}
           </div>
         </ModalShell>
