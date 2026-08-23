@@ -5,11 +5,19 @@ export default function KpiCard({ icon, iconBg, iconColor, iconStyle = {}, value
   const trendGood = invertTrend ? trend <= 0 : trend >= 0;
   const base = dark
     ? 'shadow-xl text-white'
-    : 'bg-white shadow-sm border border-slate-100';
+    : 'bg-white shadow-sm border border-[var(--border-soft)]';
   const darkBg = dark ? { backgroundColor: FT.navy } : {};
 
+  // Este cartão renderiza-se sobre dois fundos opostos — navy fixo quando
+  // `dark`, branco quando não — e nenhum tom de neutro serve os dois:
+  // --slate dá 4,05:1 sobre o navy mas só 2,89:1 sobre branco; --slate-dim
+  // dá 5,10:1 sobre branco mas 2,30:1 sobre o navy, ilegível. Daí o ternário
+  // em cada texto: é a regra "sobre fundo escuro o texto sobe na escala"
+  // aplicada dentro de um só componente.
+  const textoNeutro = dark ? 'text-[var(--slate)]' : 'text-[var(--slate-dim)]';
+
   const badgeClass = neutralBadge
-    ? (dark ? 'bg-slate-500/20 text-slate-400' : 'bg-slate-100 text-slate-500')
+    ? (dark ? `bg-slate-500/20 ${textoNeutro}` : `bg-[var(--surface-dim)] ${textoNeutro}`)
     : dark
       ? (trendGood ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400')
       : (trendGood ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600');
@@ -25,12 +33,14 @@ export default function KpiCard({ icon, iconBg, iconColor, iconStyle = {}, value
         )}
       </div>
       <div>
-        <p className={`text-xl sm:text-3xl font-black ${dark ? '' : 'text-slate-800'}`}>{value}</p>
+        <p className={`text-xl sm:text-3xl font-black ${dark ? '' : 'text-[var(--ink)]'}`}>{value}</p>
         {subtitle && (
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{subtitle}</p>
+          // O subtítulo não tinha o ternário que o label já tinha: usava
+          // text-slate-400 nos dois cartões, o que dava 2,56:1 sobre o branco.
+          <p className={`text-[10px] font-black uppercase tracking-widest ${textoNeutro}`}>{subtitle}</p>
         )}
       </div>
-      <p className={`text-xs font-bold uppercase tracking-wider ${dark ? 'text-slate-400' : 'text-slate-500'}`}>{label}</p>
+      <p className={`text-xs font-bold uppercase tracking-wider ${textoNeutro}`}>{label}</p>
     </div>
   );
 }

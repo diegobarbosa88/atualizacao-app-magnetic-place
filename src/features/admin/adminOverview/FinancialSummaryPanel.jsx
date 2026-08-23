@@ -40,10 +40,10 @@ export default function FinancialSummaryPanel({ badgeTotals, badgeDetails, ytdTo
   };
 
   return (
-    <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
+    <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-[var(--border-soft)]">
       <div className="flex items-center gap-3 mb-6">
         <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: FT.slate }}><Wallet size={20} /></div>
-        <h3 className="font-black text-lg text-slate-800">Resumo Financeiro</h3>
+        <h3 className="font-black text-lg text-[var(--ink)]">Resumo Financeiro</h3>
       </div>
 
       {pieData.some(p => p.value > 0) && (
@@ -64,7 +64,7 @@ export default function FinancialSummaryPanel({ badgeTotals, badgeDetails, ytdTo
             </PieChart>
           </ResponsiveContainer>
           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-            <span className="text-[9px] font-black text-slate-400 uppercase">{currentMonth.getFullYear()}</span>
+            <span className="text-[9px] font-black text-[var(--slate-dim)] uppercase">{currentMonth.getFullYear()}</span>
             <span className={`text-lg font-black ${ytdResult >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
               {formatCurrency(ytdResult)}
             </span>
@@ -83,20 +83,20 @@ export default function FinancialSummaryPanel({ badgeTotals, badgeDetails, ytdTo
             <div key={tipoNome}>
               <div
                 onClick={() => toggle(tipoNome)}
-                className="flex items-center justify-between cursor-pointer hover:bg-slate-50 p-2 rounded-xl transition-colors"
+                className="flex items-center justify-between cursor-pointer hover:bg-[var(--surface)] p-2 rounded-xl transition-colors"
               >
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full" style={{ backgroundColor: tipoKey === 'credito' ? '#059669' : '#e11d48' }} />
-                  <span className="text-sm font-bold text-slate-700">{tipoNome}</span>
+                  <span className="text-sm font-bold text-[var(--ink-mid)]">{tipoNome}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-black text-slate-800">{formatCurrency(totalValue)}</span>
-                  <ChevronDown size={14} className={`text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                  <span className="text-sm font-black text-[var(--ink)]">{formatCurrency(totalValue)}</span>
+                  <ChevronDown size={14} className={`text-[var(--slate)] transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
                 </div>
               </div>
 
               {isExpanded && itemData.length > 0 && (
-                <div className="mt-2 pl-4 border-l-2 border-slate-200 space-y-2">
+                <div className="mt-2 pl-4 border-l-2 border-[var(--border)] space-y-2">
                   {itemData.map(sub => {
                     const subKey = `${tipoNome}-${sub.name}`;
                     const isSubExpanded = expandedItems.includes(subKey);
@@ -110,36 +110,36 @@ export default function FinancialSummaryPanel({ badgeTotals, badgeDetails, ytdTo
                       <div key={sub.name}>
                         <div
                           onClick={(e) => { e.stopPropagation(); toggle(subKey); }}
-                          className="flex items-center justify-between cursor-pointer hover:bg-slate-50 p-2 rounded-lg transition-colors"
+                          className="flex items-center justify-between cursor-pointer hover:bg-[var(--surface)] p-2 rounded-lg transition-colors"
                         >
                           <div className="flex items-center gap-2">
                             <div className="w-2 h-2 rounded-full" style={{ backgroundColor: sub.color }} />
-                            <span className="text-xs font-bold text-slate-600">{sub.name}</span>
+                            <span className="text-xs font-bold text-[var(--ink-soft)]">{sub.name}</span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="text-xs font-black text-slate-700">{formatCurrency(sub.value)}</span>
-                            <ChevronDown size={12} className={`text-slate-400 transition-transform ${isSubExpanded ? 'rotate-180' : ''}`} />
+                            <span className="text-xs font-black text-[var(--ink-mid)]">{formatCurrency(sub.value)}</span>
+                            <ChevronDown size={12} className={`text-[var(--slate)] transition-transform ${isSubExpanded ? 'rotate-180' : ''}`} />
                           </div>
                         </div>
 
                         {isSubExpanded && subBadgeItems.length > 0 && (
-                          <div className="mt-1 ml-4 bg-slate-50 rounded-xl overflow-x-auto">
+                          <div className="mt-1 ml-4 bg-[var(--surface)] rounded-xl overflow-x-auto">
                             <table className="w-full text-[10px]">
                               <thead>
-                                <tr className="border-b border-slate-200">
-                                  <th className="px-3 py-2 text-left font-black text-slate-500 uppercase tracking-widest">Data</th>
-                                  <th className="px-3 py-2 text-left font-black text-slate-500 uppercase tracking-widest">Descrição</th>
-                                  <th className="px-3 py-2 text-right font-black text-slate-500 uppercase tracking-widest">Valor</th>
+                                <tr className="border-b border-[var(--border)]">
+                                  <th className="px-3 py-2 text-left font-black text-[var(--slate-dim)] uppercase tracking-widest">Data</th>
+                                  <th className="px-3 py-2 text-left font-black text-[var(--slate-dim)] uppercase tracking-widest">Descrição</th>
+                                  <th className="px-3 py-2 text-right font-black text-[var(--slate-dim)] uppercase tracking-widest">Valor</th>
                                 </tr>
                               </thead>
                               <tbody>
                                 {paginatedItems.map((item, idx) => (
-                                  <tr key={idx} className="border-b border-slate-100 last:border-0">
-                                    <td className="px-3 py-2 text-slate-600 font-mono whitespace-nowrap">{item.date}</td>
-                                    <td className="px-3 py-2 text-slate-600 truncate max-w-[120px]">
+                                  <tr key={idx} className="border-b border-[var(--border-soft)] last:border-0">
+                                    <td className="px-3 py-2 text-[var(--ink-soft)] font-mono whitespace-nowrap">{item.date}</td>
+                                    <td className="px-3 py-2 text-[var(--ink-soft)] truncate max-w-[120px]">
                                       {item.clienteNome || item.workerName || item.faturaFornecedor || item.justificacao || item.descricao}
                                     </td>
-                                    <td className="px-3 py-2 text-right font-black text-slate-700">{formatCurrency(item.valor)}</td>
+                                    <td className="px-3 py-2 text-right font-black text-[var(--ink-mid)]">{formatCurrency(item.valor)}</td>
                                   </tr>
                                 ))}
                               </tbody>
@@ -149,13 +149,13 @@ export default function FinancialSummaryPanel({ badgeTotals, badgeDetails, ytdTo
                                 <button
                                   onClick={(e) => { e.stopPropagation(); setDetailsPage(p => Math.max(1, p - 1)); }}
                                   disabled={detailsPage === 1}
-                                  className="px-2 py-1 text-xs font-bold bg-slate-100 rounded-lg disabled:opacity-40 hover:bg-slate-200 transition-colors"
+                                  className="px-2 py-1 text-xs font-bold bg-[var(--surface-dim)] rounded-lg disabled:opacity-40 hover:bg-[var(--border)] transition-colors"
                                 >‹</button>
-                                <span className="px-2 py-1 text-xs font-bold text-slate-500">{detailsPage}/{totalPages}</span>
+                                <span className="px-2 py-1 text-xs font-bold text-[var(--slate-dim)]">{detailsPage}/{totalPages}</span>
                                 <button
                                   onClick={(e) => { e.stopPropagation(); setDetailsPage(p => Math.min(totalPages, p + 1)); }}
                                   disabled={detailsPage === totalPages}
-                                  className="px-2 py-1 text-xs font-bold bg-slate-100 rounded-lg disabled:opacity-40 hover:bg-slate-200 transition-colors"
+                                  className="px-2 py-1 text-xs font-bold bg-[var(--surface-dim)] rounded-lg disabled:opacity-40 hover:bg-[var(--border)] transition-colors"
                                 >›</button>
                               </div>
                             )}
@@ -171,8 +171,8 @@ export default function FinancialSummaryPanel({ badgeTotals, badgeDetails, ytdTo
         })}
       </div>
 
-      <div className="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center">
-        <span className="text-sm font-black text-slate-700">Resultado</span>
+      <div className="mt-4 pt-4 border-t border-[var(--border-soft)] flex justify-between items-center">
+        <span className="text-sm font-black text-[var(--ink-mid)]">Resultado</span>
         <span className={`text-sm font-black ${resultado >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
           {formatCurrency(resultado)}
         </span>
