@@ -32,14 +32,6 @@ const ACCENT = {
   danger:  { iconBg: 'bg-rose-50',             iconColor: 'text-rose-600'   },
 };
 
-// Nomes antigos → novos. Mantidos para nenhum call site partir durante a
-// migração dos 76 modais feitos à mão; podem sair quando ela terminar.
-const ACCENT_ALIAS = {
-  indigo: 'default', orange: 'default', slate: 'default',
-  rose: 'danger',
-  navy: 'brand', navyOrange: 'brand', navyGradient: 'brand',
-};
-
 const SIZE_MAP = {
   sm: 'sm:max-w-sm',
   md: 'sm:max-w-md',
@@ -93,9 +85,8 @@ export default function ModalShell({
   if (!isOpen) return null;
 
   const sizeClass = SIZE_MAP[size] || SIZE_MAP.lg;
-  const resolvedAccent = ACCENT_ALIAS[accent] || accent;
-  const a = ACCENT[resolvedAccent] || ACCENT.default;
-  const isBrand = resolvedAccent === 'brand';
+  const a = ACCENT[accent] || ACCENT.default;
+  const isBrand = accent === 'brand';
   const isViewer = size === 'viewer';
 
   return (
