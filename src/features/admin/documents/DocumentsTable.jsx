@@ -8,7 +8,7 @@ import { FT } from '../../../styles/designTokens';
 import SortableTh from './SortableTh';
 import { getValidadeStatus, getDiasRestantes, CATEGORIAS_RH_ACT, CATEGORIA_CONFIG, CATEGORIA_COLOR_MAP } from '../../../constants/rhCategories';
 
-const ACTION_ICON_CLS = "p-1.5 bg-white rounded-lg border border-slate-200 hover:text-white transition-all shadow-sm";
+const ACTION_ICON_CLS = "p-1.5 bg-white rounded-lg border border-[var(--border)] hover:text-white transition-all shadow-sm";
 const ACTION_ICON_STYLE = { color: FT.slate };
 
 function StateBadge({ state }) {
@@ -18,7 +18,7 @@ function StateBadge({ state }) {
     </span>
   );
   if (state === 'awaiting_admin') return (
-    <span title="Aguarda aprovação" className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-black bg-slate-100 text-[var(--navy)]">
+    <span title="Aguarda aprovação" className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-black bg-[var(--surface-dim)] text-[var(--navy)]">
       <FileSignature size={12} /> Aguarda aprovação
     </span>
   );
@@ -76,16 +76,16 @@ function CategoriaEditor({ docId, source, categoria, onSave }) {
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full mt-1 z-50 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden min-w-[220px]">
-          <div className="px-3 py-2 border-b border-slate-100">
-            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Categoria ACT</p>
+        <div className="absolute left-0 top-full mt-1 z-50 bg-white border border-[var(--border)] rounded-xl shadow-xl overflow-hidden min-w-[220px]">
+          <div className="px-3 py-2 border-b border-[var(--border-soft)]">
+            <p className="text-[9px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Categoria ACT</p>
           </div>
           <div className="py-1 max-h-64 overflow-y-auto">
             {CATEGORIAS_RH_ACT.map(c => (
               <button
                 key={c}
                 onClick={() => { onSave(docId, source, c); setOpen(false); }}
-                className={`w-full text-left px-3 py-2 text-xs font-bold hover:bg-indigo-50 hover:text-indigo-700 transition-colors ${c === categoria ? 'bg-indigo-50 text-indigo-700' : 'text-slate-700'}`}
+                className={`w-full text-left px-3 py-2 text-xs font-bold hover:bg-indigo-50 hover:text-indigo-700 transition-colors ${c === categoria ? 'bg-indigo-50 text-indigo-700' : 'text-[var(--ink-mid)]'}`}
               >
                 {c === categoria && <span className="mr-1">✓</span>}{c}
               </button>
@@ -113,7 +113,7 @@ export default function DocumentsTable({
     <div className="overflow-x-auto -mx-2">
       <table className="w-full text-left border-separate border-spacing-y-2">
         <thead>
-          <tr className="text-slate-400">
+          <tr className="text-[var(--slate-dim)]">
             <SortableTh label="Data" columnKey="createdAt" sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
             <SortableTh label="Colaborador" columnKey="workerName" sortKey={sortKey} sortDir={sortDir} onSort={onSort} className="hidden md:table-cell" />
             <SortableTh label="Documento" columnKey="title" sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
@@ -124,7 +124,7 @@ export default function DocumentsTable({
         </thead>
         <tbody>
           {loadingDocs && filteredDocs.length === 0 ? (
-            <tr><td colSpan={6} className="py-16 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-slate-300" /></td></tr>
+            <tr><td colSpan={6} className="py-16 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-[var(--slate)]" /></td></tr>
           ) : filteredDocs.length === 0 ? (
             <tr>
               <td colSpan={6} className="py-20 text-center">
@@ -141,18 +141,18 @@ export default function DocumentsTable({
               const rowHighlight = validadeStatus === 'expirado' ? 'border-l-2 border-red-300'
                 : validadeStatus === 'urgente' ? 'border-l-2 border-amber-300' : '';
               return (
-                <tr key={d.id} className={`bg-slate-50/30 hover:bg-white hover:shadow-md transition-all duration-300 ${rowHighlight}`}>
-                  <td className="px-4 py-4 rounded-l-2xl border-y border-l border-slate-100">
-                    <span className="text-xs font-bold text-slate-500 font-mono">
+                <tr key={d.id} className={`bg-[var(--surface)] hover:bg-white hover:shadow-md transition-all duration-300 ${rowHighlight}`}>
+                  <td className="px-4 py-4 rounded-l-2xl border-y border-l border-[var(--border-soft)]">
+                    <span className="text-xs font-bold text-[var(--slate-dim)] font-mono">
                       {d.createdAt ? formatDocDate(d.createdAt.toISOString(), true) : '—'}
                     </span>
                   </td>
-                  <td className="hidden md:table-cell px-4 py-4 border-y border-slate-100">
-                    <p className="text-sm font-black text-slate-800">{toSentenceCase(d.workerName)}</p>
+                  <td className="hidden md:table-cell px-4 py-4 border-y border-[var(--border-soft)]">
+                    <p className="text-sm font-black text-[var(--ink)]">{toSentenceCase(d.workerName)}</p>
                   </td>
-                  <td className="px-4 py-4 border-y border-slate-100">
-                    <p className="text-xs font-bold text-slate-700 truncate max-w-[260px]" title={d.title}>{toSentenceCaseFilename(d.title)}</p>
-                    {d.subtitle && <p className="text-[10px] text-slate-400 mt-0.5 truncate max-w-[260px]">{d.subtitle}</p>}
+                  <td className="px-4 py-4 border-y border-[var(--border-soft)]">
+                    <p className="text-xs font-bold text-[var(--ink-mid)] truncate max-w-[260px]" title={d.title}>{toSentenceCaseFilename(d.title)}</p>
+                    {d.subtitle && <p className="text-[10px] text-[var(--slate-dim)] mt-0.5 truncate max-w-[260px]">{d.subtitle}</p>}
                     {(d.signedAtWorker || d.signedAtAdmin) && (
                       <div className="mt-1 flex flex-col gap-0.5">
                         {d.signedAtWorker && <p className="text-[10px] text-emerald-600 font-bold">Trabalhador: {formatDocDate(d.signedAtWorker.toISOString(), true)}</p>}
@@ -160,8 +160,8 @@ export default function DocumentsTable({
                       </div>
                     )}
                   </td>
-                  <td className="hidden md:table-cell px-4 py-4 border-y border-slate-100">
-                    <p className="text-xs font-bold text-slate-700">{d.tipo || '—'}</p>
+                  <td className="hidden md:table-cell px-4 py-4 border-y border-[var(--border-soft)]">
+                    <p className="text-xs font-bold text-[var(--ink-mid)]">{d.tipo || '—'}</p>
                     {onEditCategoria ? (
                       <CategoriaEditor
                         docId={d.raw.id}
@@ -183,8 +183,8 @@ export default function DocumentsTable({
                     })()}
                     <ValidadeBadge dataValidade={d.data_validade} />
                   </td>
-                  <td className="px-4 py-4 border-y border-slate-100"><StateBadge state={d.state} /></td>
-                  <td className="px-4 py-4 rounded-r-2xl border-y border-r border-slate-100 text-right">
+                  <td className="px-4 py-4 border-y border-[var(--border-soft)]"><StateBadge state={d.state} /></td>
+                  <td className="px-4 py-4 rounded-r-2xl border-y border-r border-[var(--border-soft)] text-right">
                     <div className="flex justify-end items-center gap-1 flex-nowrap overflow-x-auto">
                       {d.source === 'manual' ? (
                         <>

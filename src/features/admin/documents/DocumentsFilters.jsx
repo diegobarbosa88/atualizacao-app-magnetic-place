@@ -22,7 +22,7 @@ export default function DocumentsFilters({
     <>
       {hasActiveFilter && (
         <div className="flex items-center gap-2 mb-3">
-          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">A filtrar por:</span>
+          <span className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">A filtrar por:</span>
           {stateFilter !== 'all' && (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-black bg-[#1B3A57]/5 text-[var(--navy)]">
               {{ pending: 'Pendentes', awaiting_admin: 'Aguarda aprovação', signed: 'Assinados' }[stateFilter] || stateFilter}
@@ -33,7 +33,7 @@ export default function DocumentsFilters({
           )}
           <button
             onClick={() => { setStateFilter('all'); setValidadeFilter && setValidadeFilter(''); }}
-            className="flex items-center gap-1 text-[10px] font-black text-slate-400 hover:text-slate-600 transition-colors"
+            className="flex items-center gap-1 text-[10px] font-black text-[var(--slate-dim)] hover:text-[var(--ink-soft)] transition-colors"
           >
             <X size={11} /> Limpar
           </button>
@@ -43,7 +43,7 @@ export default function DocumentsFilters({
       {/* Filtro por categoria — dropdown */}
       <div className="mb-4">
         <select
-          className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none"
+          className="w-full p-2.5 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-xs font-bold text-[var(--ink-mid)] outline-none"
           value={categoriaFilter || ''}
           onChange={(e) => setCategoriaFilter && setCategoriaFilter(e.target.value)}
         >
@@ -57,11 +57,11 @@ export default function DocumentsFilters({
       <div className="flex flex-col gap-2 mb-5">
         <div className="flex gap-2 items-center">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--slate)]" size={15} />
             <input
               type="text"
               placeholder="Pesquisar..."
-              className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none transition-all"
+              className="w-full pl-9 pr-3 py-2.5 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-sm outline-none transition-all"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -77,7 +77,7 @@ export default function DocumentsFilters({
         </div>
         <div className="flex gap-2">
           <select
-            className="flex-1 p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none"
+            className="flex-1 p-2.5 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-xs font-bold text-[var(--ink-mid)] outline-none"
             value={sourceFilter}
             onChange={(e) => setSourceFilter(e.target.value)}
           >
@@ -86,7 +86,7 @@ export default function DocumentsFilters({
             <option value="template">Template</option>
           </select>
           <select
-            className="flex-1 p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none"
+            className="flex-1 p-2.5 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-xs font-bold text-[var(--ink-mid)] outline-none"
             value={tipoFilter}
             onChange={(e) => setTipoFilter(e.target.value)}
           >

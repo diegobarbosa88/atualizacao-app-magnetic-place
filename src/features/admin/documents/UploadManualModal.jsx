@@ -40,7 +40,7 @@ export default function UploadManualModal({
           <button
             onClick={onClose}
             disabled={uploading}
-            className="px-5 py-2.5 text-xs font-black uppercase tracking-widest text-slate-600 hover:bg-slate-100 rounded-xl transition-all disabled:opacity-50"
+            className="px-5 py-2.5 text-xs font-black uppercase tracking-widest text-[var(--ink-soft)] hover:bg-[var(--surface-dim)] rounded-xl transition-all disabled:opacity-50"
           >
             Cancelar
           </button>
@@ -58,9 +58,9 @@ export default function UploadManualModal({
         <div className="space-y-4 px-6 py-5">
           {!hideWorkerSelect && (
             <div className="space-y-1">
-              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Colaborador</label>
+              <label className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest ml-1">Colaborador</label>
               <select
-                className="w-full p-3 rounded-xl border border-slate-200 bg-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
+                className="w-full p-3 rounded-xl border border-[var(--border)] bg-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
                 value={selWorker}
                 onChange={(e) => setSelWorker(e.target.value)}
                 disabled={uploading}
@@ -74,9 +74,9 @@ export default function UploadManualModal({
           )}
 
           <div className="space-y-1">
-            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Tipo</label>
+            <label className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest ml-1">Tipo</label>
             <select
-              className="w-full p-3 rounded-xl border border-slate-200 bg-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
+              className="w-full p-3 rounded-xl border border-[var(--border)] bg-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
               value={selTipo}
               onChange={(e) => handleTipoChange(e.target.value)}
               disabled={uploading}
@@ -88,11 +88,11 @@ export default function UploadManualModal({
           </div>
 
           <div className="space-y-1">
-            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">
+            <label className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest ml-1">
               Categoria RH <span className="text-indigo-500">(ACT)</span>
             </label>
             <select
-              className="w-full p-3 rounded-xl border border-slate-200 bg-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
+              className="w-full p-3 rounded-xl border border-[var(--border)] bg-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
               value={selCategoria || ''}
               onChange={(e) => setSelCategoria(e.target.value)}
               disabled={uploading}
@@ -109,7 +109,7 @@ export default function UploadManualModal({
 
           {mostraValidade && (
             <div className="space-y-1">
-              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">
+              <label className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest ml-1">
                 Data de Validade <span className="text-amber-500">⚠ recomendado para esta categoria</span>
               </label>
               <input
@@ -124,30 +124,30 @@ export default function UploadManualModal({
 
           {!mostraValidade && (
             <div className="space-y-1">
-              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">
-                Data de Validade <span className="text-slate-400">(opcional)</span>
+              <label className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest ml-1">
+                Data de Validade <span className="text-[var(--slate-dim)]">(opcional)</span>
               </label>
               <input
                 type="date"
                 value={selValidade || ''}
                 onChange={(e) => setSelValidade(e.target.value)}
-                className="w-full p-3 rounded-xl border border-slate-200 bg-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
+                className="w-full p-3 rounded-xl border border-[var(--border)] bg-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
                 disabled={uploading}
               />
             </div>
           )}
 
           <div className="space-y-1">
-            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Ficheiro (PDF)</label>
+            <label className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest ml-1">Ficheiro (PDF)</label>
             <input
               type="file"
               accept=".pdf"
-              className="w-full p-2.5 rounded-xl border border-slate-200 bg-white text-xs cursor-pointer"
+              className="w-full p-2.5 rounded-xl border border-[var(--border)] bg-white text-xs cursor-pointer"
               onChange={(e) => setSelFile(e.target.files?.[0])}
               disabled={uploading}
             />
             {selFile && (
-              <p className="text-[10px] text-slate-500 mt-1 ml-1 truncate">{selFile.name}</p>
+              <p className="text-[10px] text-[var(--slate-dim)] mt-1 ml-1 truncate">{selFile.name}</p>
             )}
           </div>
         </div>

@@ -124,7 +124,7 @@ export default function CorrectionDetail({ correction, items, onBack }) {
 
   const editorButtons = (
     <div className="flex gap-2">
-      <button onClick={onMarkResolved} disabled={busy} className="px-4 py-2.5 bg-[var(--ink-mid)] hover:bg-[var(--ink)] text-white rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-50">Marcar como Resolvido</button>
+      <button onClick={onMarkResolved} disabled={busy} className="px-4 py-2.5 bg-[var(--navy-solid)] hover:bg-[var(--navy-solid)] text-white rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-50">Marcar como Resolvido</button>
       <button onClick={onReject} disabled={busy} className="px-4 py-2.5 bg-rose-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-50">Rejeitar</button>
     </div>
   );

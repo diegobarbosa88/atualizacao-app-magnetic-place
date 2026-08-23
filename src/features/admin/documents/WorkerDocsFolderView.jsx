@@ -85,8 +85,8 @@ function ThumbImg({ url, alt, imgClassName, wrapperClassName }) {
     };
   }, [url, supabase]);
 
-  const wrapper = wrapperClassName || 'w-full h-full flex items-center justify-center bg-slate-100';
-  if (!src) return <div className={wrapper}><FileText size={22} className="text-slate-300" /></div>;
+  const wrapper = wrapperClassName || 'w-full h-full flex items-center justify-center bg-[var(--surface-dim)]';
+  if (!src) return <div className={wrapper}><FileText size={22} className="text-[var(--slate)]" /></div>;
   return <img src={src} alt={alt || ''} className={imgClassName || 'w-full h-full object-cover'} />;
 }
 
@@ -216,24 +216,24 @@ export function DocumentViewerModal({ doc, onClose }) {
       layer="viewer"
       footer={url ? (
         <div className="flex justify-end px-5 py-3">
-          <a href={url} download className="p-2 rounded-xl bg-slate-100 hover:bg-indigo-50 text-slate-500 hover:text-indigo-600 transition-colors" title="Descarregar">
+          <a href={url} download className="p-2 rounded-xl bg-[var(--surface-dim)] hover:bg-indigo-50 text-[var(--slate-dim)] hover:text-indigo-600 transition-colors" title="Descarregar">
             <Download size={14} />
           </a>
         </div>
       ) : null}
     >
         {/* Corpo */}
-        <div className="h-full bg-slate-50 flex items-center justify-center">
+        <div className="h-full bg-[var(--surface)] flex items-center justify-center">
           {loading ? (
             <div className="flex flex-col items-center gap-3 py-20 opacity-50">
               <Clock size={28} className="animate-spin text-indigo-400" />
-              <p className="text-xs font-black uppercase tracking-widest text-slate-400">A carregar...</p>
+              <p className="text-xs font-black uppercase tracking-widest text-[var(--slate-dim)]">A carregar...</p>
             </div>
           ) : !url || !content ? (
             <div className="flex flex-col items-center justify-center py-20 gap-3 opacity-40">
               <FileText size={40} />
               <p className="text-sm font-black uppercase tracking-widest">Pré-visualização não disponível</p>
-              <p className="text-xs text-slate-500">Este documento ainda não tem ficheiro associado</p>
+              <p className="text-xs text-[var(--slate-dim)]">Este documento ainda não tem ficheiro associado</p>
             </div>
           ) : content.type === 'srcDoc' ? (
             <iframe srcDoc={content.value} sandbox="allow-scripts" className="w-full min-h-[60vh] h-full border-0" title={title} />
@@ -256,36 +256,36 @@ function DocCardSingle({ d, onOpenDoc, onDelete, confirmDeleteId, setConfirmDele
   const title = buildDocTitle(d);
 
   return (
-    <div className={`rounded-xl border-2 overflow-hidden ${temExpirado ? 'border-red-200' : temUrgente ? 'border-amber-200' : 'border-slate-200'}`}>
+    <div className={`rounded-xl border-2 overflow-hidden ${temExpirado ? 'border-red-200' : temUrgente ? 'border-amber-200' : 'border-[var(--border)]'}`}>
       {/* Header */}
-      <div className="flex items-start gap-2 px-3 py-2.5 bg-slate-50">
-        <div className="p-1.5 bg-slate-200 text-slate-600 rounded-lg flex-shrink-0 mt-0.5"><FileText size={12} /></div>
+      <div className="flex items-start gap-2 px-3 py-2.5 bg-[var(--surface)]">
+        <div className="p-1.5 bg-[var(--border)] text-[var(--ink-soft)] rounded-lg flex-shrink-0 mt-0.5"><FileText size={12} /></div>
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-black text-slate-800 truncate">{title}</p>
-          {d.workerName && <p className="text-[10px] text-slate-500 font-bold truncate">{d.workerName}</p>}
+          <p className="text-xs font-black text-[var(--ink)] truncate">{title}</p>
+          {d.workerName && <p className="text-[10px] text-[var(--slate-dim)] font-bold truncate">{d.workerName}</p>}
         </div>
         {(temExpirado || temUrgente) && <AlertTriangle size={12} className={temExpirado ? 'text-red-500' : 'text-amber-500'} />}
       </div>
 
       <div className="px-3 pb-3 space-y-2.5 bg-white">
         {/* Pré-visualização */}
-        <div className="pt-2.5 rounded-lg border border-slate-200 overflow-hidden h-36">
-          <ThumbImg url={url} alt={title} imgClassName="w-full h-full object-cover" wrapperClassName="w-full h-full flex items-center justify-center bg-slate-100" />
+        <div className="pt-2.5 rounded-lg border border-[var(--border)] overflow-hidden h-36">
+          <ThumbImg url={url} alt={title} imgClassName="w-full h-full object-cover" wrapperClassName="w-full h-full flex items-center justify-center bg-[var(--surface-dim)]" />
         </div>
 
         {/* Info do documento — campos específicos da categoria */}
-        <div className="bg-slate-50 border border-slate-100 rounded-xl p-2.5 space-y-1.5">
-          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Informação do documento</p>
+        <div className="bg-[var(--surface)] border border-[var(--border-soft)] rounded-xl p-2.5 space-y-1.5">
+          <p className="text-[9px] font-black text-[var(--slate-dim)] uppercase tracking-widest mb-1.5">Informação do documento</p>
           {getCategoryFields(d).map(({ label, value }) => {
             const isValidadeField = label === 'Válido até' || label === 'Validade';
             const expiry = isValidadeField ? getExpiryRelativeLabel(d.data_validade) : null;
             return (
               <div key={label}>
-                <span className="text-[9px] text-slate-400 font-bold">{label}: </span>
+                <span className="text-[9px] text-[var(--slate-dim)] font-bold">{label}: </span>
                 {value ? (
-                  <span className="text-[10px] font-black text-slate-700">{value}</span>
+                  <span className="text-[10px] font-black text-[var(--ink-mid)]">{value}</span>
                 ) : (
-                  <span className="text-[10px] font-bold text-slate-300 italic">Não disponível</span>
+                  <span className="text-[10px] font-bold text-[var(--slate-dim)] italic">Não disponível</span>
                 )}
                 {expiry && <p className={`text-[9px] font-bold ${expiry.colorClass}`}>{expiry.label}</p>}
               </div>
@@ -303,12 +303,12 @@ function DocCardSingle({ d, onOpenDoc, onDelete, confirmDeleteId, setConfirmDele
             <p className="text-[9px] font-black text-rose-700 text-center">Apagar permanentemente?</p>
             <div className="flex gap-1.5">
               <button onClick={() => { onDelete(d); setConfirmDeleteId(null); }} className="flex-1 py-1.5 bg-rose-600 text-white text-[9px] font-black rounded-lg hover:bg-rose-700">Sim</button>
-              <button onClick={() => setConfirmDeleteId(null)} className="flex-1 py-1.5 bg-white border border-slate-200 text-slate-600 text-[9px] font-black rounded-lg">Não</button>
+              <button onClick={() => setConfirmDeleteId(null)} className="flex-1 py-1.5 bg-white border border-[var(--border)] text-[var(--ink-soft)] text-[9px] font-black rounded-lg">Não</button>
             </div>
           </div>
         ) : (
-          <div className="flex items-center justify-center gap-6 pt-2.5 border-t border-slate-100">
-            <button onClick={() => onOpenDoc(d)} title="Ver" className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors" style={{ color: FT.slateDim }}><Eye size={16} /></button>
+          <div className="flex items-center justify-center gap-6 pt-2.5 border-t border-[var(--border-soft)]">
+            <button onClick={() => onOpenDoc(d)} title="Ver" className="p-1.5 rounded-lg hover:bg-[var(--surface-dim)] transition-colors" style={{ color: FT.slateDim }}><Eye size={16} /></button>
             {d.source === 'manual' && (
               <button
                 onClick={async () => {
@@ -317,7 +317,7 @@ function DocCardSingle({ d, onOpenDoc, onDelete, confirmDeleteId, setConfirmDele
                   await supabase?.from('documents').update({ visivel_worker: next }).eq('id', d.raw.id);
                 }}
                 title={visivelWorker ? 'Visível ao trabalhador — clique para ocultar' : 'Oculto ao trabalhador — clique para tornar visível'}
-                className={`p-1.5 rounded-lg transition-colors ${visivelWorker ? 'text-emerald-600 hover:bg-emerald-50' : 'text-slate-400 hover:bg-slate-100'}`}
+                className={`p-1.5 rounded-lg transition-colors ${visivelWorker ? 'text-emerald-600 hover:bg-emerald-50' : 'text-[var(--slate)] hover:bg-[var(--surface-dim)]'}`}
               >
                 {visivelWorker ? <Eye size={16} /> : <EyeOff size={16} />}
               </button>
@@ -355,9 +355,9 @@ function DocCardPair({ pair, onOpenDoc, onDelete, confirmDeleteId, setConfirmDel
     const thumbUrl = doc?.viewUrl || doc?.signedPdfUrl || null;
     return (
       <div className="flex-1 min-w-0">
-        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center mb-1">{label}</p>
-        <div className="h-28 rounded-lg border border-slate-200 overflow-hidden">
-          <ThumbImg url={thumbUrl} alt={label} imgClassName="w-full h-full object-cover" wrapperClassName="w-full h-full flex items-center justify-center bg-slate-100" />
+        <p className="text-[9px] font-black text-[var(--slate-dim)] uppercase tracking-widest text-center mb-1">{label}</p>
+        <div className="h-28 rounded-lg border border-[var(--border)] overflow-hidden">
+          <ThumbImg url={thumbUrl} alt={label} imgClassName="w-full h-full object-cover" wrapperClassName="w-full h-full flex items-center justify-center bg-[var(--surface-dim)]" />
         </div>
       </div>
     );
@@ -384,7 +384,7 @@ function DocCardPair({ pair, onOpenDoc, onDelete, confirmDeleteId, setConfirmDel
               }
             }}
             title={visivelWorker ? 'Visível ao trabalhador — clique para ocultar' : 'Oculto ao trabalhador — clique para tornar visível'}
-            className={`p-1.5 rounded-lg transition-colors ${visivelWorker ? 'text-emerald-600 hover:bg-emerald-100' : 'text-slate-400 hover:bg-white/60'}`}
+            className={`p-1.5 rounded-lg transition-colors ${visivelWorker ? 'text-emerald-600 hover:bg-emerald-100' : 'text-[var(--slate)] hover:bg-white/60'}`}
           >
             {visivelWorker ? <Eye size={11} /> : <EyeOff size={11} />}
           </button>
@@ -399,8 +399,8 @@ function DocCardPair({ pair, onOpenDoc, onDelete, confirmDeleteId, setConfirmDel
         </div>
 
         {/* Info do documento — campos específicos da categoria */}
-        <div className="bg-slate-50 border border-slate-100 rounded-xl p-2.5 space-y-1.5">
-          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Informação do documento</p>
+        <div className="bg-[var(--surface)] border border-[var(--border-soft)] rounded-xl p-2.5 space-y-1.5">
+          <p className="text-[9px] font-black text-[var(--slate-dim)] uppercase tracking-widest mb-1.5">Informação do documento</p>
           {(() => {
             const ref = frente || verso;
             const mergedDoc = {
@@ -418,11 +418,11 @@ function DocCardPair({ pair, onOpenDoc, onDelete, confirmDeleteId, setConfirmDel
               const expiry = isValidadeField ? getExpiryRelativeLabel(validade) : null;
               return (
                 <div key={label}>
-                  <span className="text-[9px] text-slate-400 font-bold">{label}: </span>
+                  <span className="text-[9px] text-[var(--slate-dim)] font-bold">{label}: </span>
                   {value ? (
-                    <span className="text-[10px] font-black text-slate-700">{value}</span>
+                    <span className="text-[10px] font-black text-[var(--ink-mid)]">{value}</span>
                   ) : (
-                    <span className="text-[10px] font-bold text-slate-300 italic">Não disponível</span>
+                    <span className="text-[10px] font-bold text-[var(--slate-dim)] italic">Não disponível</span>
                   )}
                   {expiry && <p className={`text-[9px] font-bold ${expiry.colorClass}`}>{expiry.label}</p>}
                 </div>
@@ -436,22 +436,22 @@ function DocCardPair({ pair, onOpenDoc, onDelete, confirmDeleteId, setConfirmDel
         </div>
 
         {/* Ações por lado */}
-        <div className="grid grid-cols-2 gap-2 pt-2.5 border-t border-slate-100">
+        <div className="grid grid-cols-2 gap-2 pt-2.5 border-t border-[var(--border-soft)]">
           {[{ doc: frente, label: 'Frente' }, { doc: verso, label: 'Verso' }].map(({ doc, label }) => (
             doc ? (
               <div key={doc.id} className="space-y-1">
-                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">{label}</p>
+                <p className="text-[9px] font-black text-[var(--slate-dim)] uppercase tracking-widest text-center">{label}</p>
                 {confirmDeleteId === doc.id ? (
                   <div className="bg-rose-50 border border-rose-200 rounded-lg p-1.5 space-y-1">
                     <p className="text-[9px] font-black text-rose-700 text-center">Apagar?</p>
                     <div className="flex gap-1">
                       <button onClick={() => { onDelete(doc); setConfirmDeleteId(null); }} className="flex-1 py-1 bg-rose-600 text-white text-[9px] font-black rounded hover:bg-rose-700">Sim</button>
-                      <button onClick={() => setConfirmDeleteId(null)} className="flex-1 py-1 bg-white border border-slate-200 text-slate-600 text-[9px] font-black rounded">Não</button>
+                      <button onClick={() => setConfirmDeleteId(null)} className="flex-1 py-1 bg-white border border-[var(--border)] text-[var(--ink-soft)] text-[9px] font-black rounded">Não</button>
                     </div>
                   </div>
                 ) : (
                   <div className="flex items-center justify-center gap-4">
-                    <button onClick={() => onOpenDoc(doc)} className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors" style={{ color: FT.slateDim }} title="Ver"><Eye size={14} /></button>
+                    <button onClick={() => onOpenDoc(doc)} className="p-1.5 rounded-lg hover:bg-[var(--surface-dim)] transition-colors" style={{ color: FT.slateDim }} title="Ver"><Eye size={14} /></button>
                     <button onClick={() => setConfirmDeleteId(doc.id)} className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 transition-colors" title="Apagar"><Trash2 size={14} /></button>
                   </div>
                 )}
@@ -490,7 +490,7 @@ function SubPastaCard({ categoria, docs, onOpenDoc, onDelete }) {
 
   const temExpirado = docs.some(d => getValidadeStatus(d.data_validade) === 'expirado');
   const temUrgente  = docs.some(d => getValidadeStatus(d.data_validade) === 'urgente');
-  const alertBorder = temExpirado ? 'border-red-300' : temUrgente ? 'border-amber-300' : 'border-slate-200';
+  const alertBorder = temExpirado ? 'border-red-300' : temUrgente ? 'border-amber-300' : 'border-[var(--border)]';
   const aExpirarCount = docs.filter(d => ['expirado', 'urgente'].includes(getValidadeStatus(d.data_validade))).length;
   const validosCount = docs.length - aExpirarCount;
 
@@ -498,14 +498,14 @@ function SubPastaCard({ categoria, docs, onOpenDoc, onDelete }) {
     <>
       <button
         onClick={() => setModalOpen(true)}
-        className={`w-full flex items-center gap-2.5 px-3 py-3 text-left border rounded-xl hover:bg-slate-50 hover:shadow-sm transition-all ${alertBorder}`}
+        className={`w-full flex items-center gap-2.5 px-3 py-3 text-left border rounded-xl hover:bg-[var(--surface)] hover:shadow-sm transition-all ${alertBorder}`}
       >
         <div className={`p-1.5 rounded-lg ${colors.bg} ${colors.text} flex-shrink-0`}>
           <Icon size={14} />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-black text-slate-700 truncate">{toSentenceCase(categoria)}</p>
-          <div className="h-1 rounded-full bg-slate-100 overflow-hidden mt-1.5">
+          <p className="text-xs font-black text-[var(--ink-mid)] truncate">{toSentenceCase(categoria)}</p>
+          <div className="h-1 rounded-full bg-[var(--surface-dim)] overflow-hidden mt-1.5">
             <div
               className="h-full rounded-full transition-all"
               style={{ width: `${docs.length ? (validosCount / docs.length) * 100 : 0}%`, backgroundColor: aExpirarCount > 0 ? '#e8a317' : '#1cb476' }}
@@ -524,7 +524,7 @@ function SubPastaCard({ categoria, docs, onOpenDoc, onDelete }) {
         </div>
         {temExpirado && <AlertTriangle size={12} className="text-red-500 flex-shrink-0" />}
         {!temExpirado && temUrgente && <AlertTriangle size={12} className="text-amber-500 flex-shrink-0" />}
-        <ChevronRight size={12} className="text-slate-400 flex-shrink-0" />
+        <ChevronRight size={12} className="text-[var(--slate)] flex-shrink-0" />
       </button>
 
       {modalOpen && (
@@ -588,13 +588,13 @@ export function WorkerPastaView({ worker, docs, onBack, onOpenDoc, onDelete, onA
     <div className="space-y-4 max-w-4xl">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <button onClick={onBack} className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors">
+        <button onClick={onBack} className="p-2 rounded-xl bg-[var(--surface-dim)] hover:bg-[var(--border)] text-[var(--ink-soft)] transition-colors">
           <ArrowLeft size={16} />
         </button>
         <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-sm font-black" style={{ backgroundColor: FT.navy, color: FT.orange }}>{getInitials(worker.workerName)}</div>
         <div className="flex-1">
-          <h4 className="font-black text-slate-800 text-base">{toSentenceCase(worker.workerName)}</h4>
-          <p className="text-[10px] text-slate-400 font-bold">{docs.length} documento{docs.length !== 1 ? 's' : ''}</p>
+          <h4 className="font-black text-[var(--ink)] text-base">{toSentenceCase(worker.workerName)}</h4>
+          <p className="text-[10px] text-[var(--slate-dim)] font-bold">{docs.length} documento{docs.length !== 1 ? 's' : ''}</p>
         </div>
         {expirados > 0 && (
           <span className="flex items-center gap-1 text-xs font-black text-red-600 bg-red-50 border border-red-200 px-2.5 py-1 rounded-xl">
@@ -604,7 +604,7 @@ export function WorkerPastaView({ worker, docs, onBack, onOpenDoc, onDelete, onA
         {onScan && (
           <button
             onClick={onScan}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border-2 hover:bg-slate-50 text-xs font-black transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border-2 hover:bg-[var(--surface)] text-xs font-black transition-colors"
             style={{ borderColor: FT.slate, color: FT.slateDim }}
           >
             <ScanSearch size={13} /> Scanner
@@ -766,18 +766,18 @@ export default function WorkerDocsFolderView({ docs, onPreview, onDeleteManual, 
       {/* Pesquisa + Scanner */}
       <div className="flex items-center gap-3">
         <div className="relative flex-1">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--slate)] pointer-events-none" />
           <input
             type="text"
             placeholder="Pesquisar colaborador..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-2.5 text-xs font-bold border border-slate-200 rounded-xl bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-300 transition-all"
+            className="w-full pl-9 pr-3 py-2.5 text-xs font-bold border border-[var(--border)] rounded-xl bg-[var(--surface)] outline-none focus:ring-2 focus:ring-indigo-300 transition-all"
           />
         </div>
         <button
           onClick={() => setScannerOpen(true)}
-          className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl border-2 hover:bg-slate-50 text-xs font-black transition-colors flex-shrink-0"
+          className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl border-2 hover:bg-[var(--surface)] text-xs font-black transition-colors flex-shrink-0"
           style={{ borderColor: FT.slate, color: FT.slateDim }}
         >
           <ScanSearch size={13} /> Scanner
@@ -797,7 +797,7 @@ export default function WorkerDocsFolderView({ docs, onPreview, onDeleteManual, 
             const categorias = [...new Set(w.docs.map(d => d.categoria).filter(Boolean))];
             const alertBorder = expirados > 0 ? 'border-red-200 hover:border-red-400'
               : urgentes > 0 ? 'border-amber-200 hover:border-amber-400'
-              : 'border-slate-200 hover:border-indigo-300';
+              : 'border-[var(--border)] hover:border-indigo-300';
 
             return (
               <button
@@ -808,8 +808,8 @@ export default function WorkerDocsFolderView({ docs, onPreview, onDeleteManual, 
                 <div className="flex items-start gap-3 mb-3">
                   <AvatarRing name={w.workerName} total={w.docs.length} expirados={expirados} urgentes={urgentes} />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-black text-slate-800 truncate">{toSentenceCase(w.workerName)}</p>
-                    <p className="text-[10px] text-slate-400 font-bold mt-0.5">
+                    <p className="text-sm font-black text-[var(--ink)] truncate">{toSentenceCase(w.workerName)}</p>
+                    <p className="text-[10px] text-[var(--slate-dim)] font-bold mt-0.5">
                       {w.docs.length} doc{w.docs.length !== 1 ? 's' : ''}
                     </p>
                   </div>
@@ -831,7 +831,7 @@ export default function WorkerDocsFolderView({ docs, onPreview, onDeleteManual, 
                       );
                     })}
                     {categorias.length > 4 && (
-                      <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-slate-100 text-slate-500">
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-[var(--surface-dim)] text-[var(--slate-dim)]">
                         +{categorias.length - 4}
                       </span>
                     )}
