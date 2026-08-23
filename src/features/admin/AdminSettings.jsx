@@ -240,7 +240,7 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
               <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: FT.slate }}><ShieldCheck size={20} /></div>
               <h3 className="font-black text-lg text-slate-800">Administradores</h3>
             </div>
-            <button onClick={handleOpenAddAdmin} className="flex items-center gap-2 text-white px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all" style={{ backgroundColor: FT.orange }}>
+            <button onClick={handleOpenAddAdmin} className="flex items-center gap-2 text-[var(--navy)] px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all" style={{ backgroundColor: FT.orange }}>
               <UserPlus size={14} /> Adicionar
             </button>
           </div>
@@ -297,7 +297,7 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
               <input type="text" placeholder="Nome completo" value={adminForm.name} onChange={e => setAdminForm(p => ({ ...p, name: e.target.value }))} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-[var(--navy)]" />
               <input type="text" placeholder="Senha (NIF)" value={adminForm.nif} onChange={e => setAdminForm(p => ({ ...p, nif: e.target.value }))} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-[var(--navy)]" />
               <div className="flex gap-2">
-                <button onClick={handleSaveAdmin} className="flex-1 text-white py-3 rounded-xl font-black text-xs uppercase tracking-wider transition-all" style={{ backgroundColor: FT.orange }}>Criar</button>
+                <button onClick={handleSaveAdmin} className="flex-1 text-[var(--navy)] py-3 rounded-xl font-black text-xs uppercase tracking-wider transition-all" style={{ backgroundColor: FT.orange }}>Criar</button>
                 <button onClick={() => { setAdminFormMode(null); setAdminForm({ id: null, name: '', nif: '', selectedWorkerId: '' }); }} className="px-4 py-3 rounded-xl font-black text-xs text-slate-500 hover:bg-slate-100 transition-all">Cancelar</button>
               </div>
             </div>

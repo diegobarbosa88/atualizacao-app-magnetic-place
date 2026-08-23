@@ -172,7 +172,7 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
             <button onClick={() => setClientsView('grid')} className={`p-2 rounded-lg transition-all ${clientsView === 'grid' ? 'text-white' : 'text-[var(--slate)] hover:text-[var(--ink-soft)]'}`} style={clientsView === 'grid' ? { backgroundColor: FT.navy } : {}} title="Vista em Grade"><LayoutGrid size={18} /></button>
             <button onClick={() => setClientsView('list')} className={`p-2 rounded-lg transition-all ${clientsView === 'list' ? 'text-white' : 'text-[var(--slate)] hover:text-[var(--ink-soft)]'}`} style={clientsView === 'list' ? { backgroundColor: FT.navy } : {}} title="Vista em Lista"><List size={18} /></button>
           </div>
-          <button onClick={() => { setClientForm({ id: null, name: '', morada: '', nif: '', valorHora: '', email: '', dataAlteracao: new Date().toISOString().split('T')[0] }); setIsAddingInTab(true); }} className="px-3 sm:px-5 py-2 rounded-xl font-black text-xs uppercase shadow-lg transition-all whitespace-nowrap text-white" style={{ backgroundColor: FT.orange }}>Novo</button>
+          <button onClick={() => { setClientForm({ id: null, name: '', morada: '', nif: '', valorHora: '', email: '', dataAlteracao: new Date().toISOString().split('T')[0] }); setIsAddingInTab(true); }} className="px-3 sm:px-5 py-2 rounded-xl font-black text-xs uppercase shadow-lg transition-all whitespace-nowrap text-[var(--navy)]" style={{ backgroundColor: FT.orange }}>Novo</button>
         </div>
       </div>
 

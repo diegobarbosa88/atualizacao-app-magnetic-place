@@ -75,7 +75,7 @@ function NovaConta({ onClose, onSalva }) {
           {erro && <p className="text-xs text-red-600 font-semibold">{erro}</p>}
           <div className="flex gap-2 pt-1">
             <button type="button" onClick={onClose} className="flex-1 px-4 py-2 text-xs font-black uppercase tracking-widest text-slate-500 hover:bg-slate-100 rounded-xl transition-all">Cancelar</button>
-            <button type="submit" disabled={salvando} className="flex-1 px-4 py-2 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all disabled:opacity-60 flex items-center justify-center gap-1.5 hover:opacity-90" style={{ backgroundColor: FT.orange, color: FT.navy }}>
+            <button type="submit" disabled={salvando} className="flex-1 px-4 py-2 text-xs font-black uppercase tracking-widest rounded-xl transition-all disabled:opacity-60 flex items-center justify-center gap-1.5 hover:opacity-90" style={{ backgroundColor: FT.orange, color: FT.navy }}>
               {salvando && <Loader2 size={13} className="animate-spin" />} Guardar
             </button>
           </div>

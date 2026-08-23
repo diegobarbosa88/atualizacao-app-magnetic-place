@@ -98,7 +98,7 @@ export default function DocumentTemplatesAdmin({
           <h2 className="text-2xl font-black text-slate-800">Templates de Documentos</h2>
           <p className="text-sm text-slate-500 mt-1">Templates Word (.docx) com variáveis preenchidas automaticamente.</p>
         </div>
-        <button onClick={openCreateModal} className="flex items-center gap-2 px-4 py-2 text-white font-bold rounded-xl hover:opacity-90" style={{ backgroundColor: FT.orange, color: FT.navy }}>
+        <button onClick={openCreateModal} className="flex items-center gap-2 px-4 py-2 font-bold rounded-xl hover:opacity-90" style={{ backgroundColor: FT.orange, color: FT.navy }}>
           <Plus className="w-4 h-4" /> Novo Template
         </button>
       </div>

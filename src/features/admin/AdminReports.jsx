@@ -239,7 +239,7 @@ export default function AdminReports({ printingReport, setPrintingReport }) {
               dates: filterMode !== 'month' ? activeDates : null,
               periodLabel,
             });
-          }} disabled={!hasValidPeriod} className="px-8 py-4 text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 active:scale-95 transition-all" style={{ backgroundColor: FT.orange }}>
+          }} disabled={!hasValidPeriod} className="px-8 py-4 text-[var(--navy)] rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 active:scale-95 transition-all" style={{ backgroundColor: FT.orange }}>
             <Zap size={18} className="text-amber-400" /> Gerar Tudo do Período
           </button>
         </div>

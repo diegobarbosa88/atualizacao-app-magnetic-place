@@ -128,7 +128,7 @@ export default function FaturasTab({ supabase }) {
     <div>
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-black text-slate-700 uppercase tracking-tight">Faturas de Clientes</h3>
-        <button onClick={() => setIsAddingFatura(true)} className="flex items-center gap-1.5 px-4 py-2 text-white rounded-xl text-[10px] font-black uppercase shadow-sm transition-colors" style={{ backgroundColor: FT.orange }}>
+        <button onClick={() => setIsAddingFatura(true)} className="flex items-center gap-1.5 px-4 py-2 text-[var(--navy)] rounded-xl text-[10px] font-black uppercase shadow-sm transition-colors" style={{ backgroundColor: FT.orange }}>
           <Plus size={12} /> Inserir Fatura
         </button>
       </div>
