@@ -1,6 +1,6 @@
 import React from 'react';
 import { Loader2, Send, Users } from 'lucide-react';
-import Modal from './Modal';
+import ModalShell from '../../common/ModalShell';
 
 export default function TemplateGenerateModal({
   template,
@@ -14,11 +14,35 @@ export default function TemplateGenerateModal({
   onSubmit,
 }) {
   return (
-    <Modal
+    <ModalShell
+      isOpen
       onClose={onClose}
       title={`Gerar "${template.name}"`}
+      icon={<Send size={18} />}
+      size="lg"
+      busy={generating}
+      footer={
+        <div className="flex justify-end gap-2 px-6 py-4">
+          <button
+            onClick={onClose}
+            disabled={generating}
+            className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl disabled:opacity-50"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={onSubmit}
+            disabled={generating || selectedWorkers.length === 0}
+            className="flex items-center gap-2 px-6 py-2 text-white font-bold rounded-xl hover:opacity-90 disabled:opacity-50"
+            style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}
+          >
+            {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            Gerar {selectedWorkers.length} documento(s)
+          </button>
+        </div>
+      }
     >
-      <div className="space-y-3">
+      <div className="space-y-3 px-6 py-4">
         <p className="text-sm text-slate-600">
           Seleciona os trabalhadores que vão receber este documento. Será enviado um email se o trabalhador tiver email definido.
         </p>
@@ -83,25 +107,7 @@ export default function TemplateGenerateModal({
             </div>
           </div>
         )}
-        <div className="flex justify-end gap-2 pt-2">
-          <button
-            onClick={onClose}
-            disabled={generating}
-            className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl disabled:opacity-50"
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={onSubmit}
-            disabled={generating || selectedWorkers.length === 0}
-            className="flex items-center gap-2 px-6 py-2 text-white font-bold rounded-xl hover:opacity-90 disabled:opacity-50"
-            style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}
-          >
-            {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-            Gerar {selectedWorkers.length} documento(s)
-          </button>
-        </div>
       </div>
-    </Modal>
+    </ModalShell>
   );
 }
