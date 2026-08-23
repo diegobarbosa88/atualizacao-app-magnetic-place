@@ -217,7 +217,9 @@ novos.
   
   ### Estado da migração (atualizar a cada lote)
 
-Total: 4.197 classes Tailwind → tokens `FT`. Última contagem: **1.020 de 4.197 em 11 módulos**, mais os
+Total: 4.197 classes Tailwind → tokens `FT`. Última contagem: **1.189 convertidas em 11 módulos**
+(4.197 no início, 2.856 por converter, menos 152 que saíram com o módulo `movimentacoes` apagado),
+mais os
 dois canais de `style` inline fechados (`FT.slate` e `FT.navy`). Restam ~2.856 classes no admin.
 
 Para medir o que falta em qualquer momento, sem contar à mão:
