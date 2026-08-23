@@ -32,12 +32,12 @@ export default function AssociacaoManualModal({ tx, txValor, faturas, loading, o
           <label className="flex items-center gap-2 cursor-pointer select-none px-1">
             <input type="checkbox" checked={saveAlias} onChange={e => setSaveAlias(e.target.checked)}
               className="accent-indigo-600 w-4 h-4" />
-            <span className="text-xs text-slate-600">Guardar como alias (próximos matches automáticos)</span>
+            <span className="text-xs text-[var(--ink-soft)]">Guardar como alias (próximos matches automáticos)</span>
           </label>
 
           <button
             onClick={onClose}
-            className="w-full py-2 text-slate-500 hover:text-slate-700 text-[10px] font-black uppercase tracking-widest"
+            className="w-full py-2 text-[var(--slate-dim)] hover:text-[var(--ink-mid)] text-[10px] font-black uppercase tracking-widest"
           >
             Cancelar
           </button>
@@ -45,7 +45,7 @@ export default function AssociacaoManualModal({ tx, txValor, faturas, loading, o
       }
     >
       <div className="p-6 space-y-4">
-        <p className="text-xs text-slate-500 truncate">{tx.descricao}</p>
+        <p className="text-xs text-[var(--slate-dim)] truncate">{tx.descricao}</p>
 
         <input
           autoFocus
@@ -60,7 +60,7 @@ export default function AssociacaoManualModal({ tx, txValor, faturas, loading, o
             <div className="flex justify-center py-6"><Loader2 size={20} className="animate-spin text-indigo-400" /></div>
           )}
           {!loading && filtradas.length === 0 && (
-            <p className="text-center text-slate-400 py-6 text-sm">Nenhuma fatura encontrada.</p>
+            <p className="text-center text-[var(--slate-dim)] py-6 text-sm">Nenhuma fatura encontrada.</p>
           )}
           {!loading && filtradas.map(f => {
             const valorF = f.valor ?? f.dados?.valor_total;
@@ -74,19 +74,19 @@ export default function AssociacaoManualModal({ tx, txValor, faturas, loading, o
               >
                 <div className="flex items-center justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-slate-700 truncate">
+                    <p className="text-sm font-semibold text-[var(--ink-mid)] truncate">
                       {f.entidade || f.dados?.fornecedor || f.filename || '—'}
                     </p>
-                    <p className="text-xs text-slate-500 truncate">
+                    <p className="text-xs text-[var(--slate-dim)] truncate">
                       {f.descricao || f.dados?.numero_fatura || f.dados?.fornecedor || '—'}
                     </p>
-                    {f.data_documento && <p className="text-[10px] text-slate-400">{f.data_documento}</p>}
+                    {f.data_documento && <p className="text-[10px] text-[var(--slate-dim)]">{f.data_documento}</p>}
                   </div>
                   <div className="text-right flex-shrink-0">
-                    <p className={`text-sm font-bold ${isClose ? 'text-emerald-700' : 'text-slate-700'}`}>
+                    <p className={`text-sm font-bold ${isClose ? 'text-emerald-700' : 'text-[var(--ink-mid)]'}`}>
                       €{Number(valorF ?? 0).toFixed(2)}
                     </p>
-                    <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">{f.status || 'PENDENTE'}</span>
+                    <span className="text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)]">{f.status || 'PENDENTE'}</span>
                   </div>
                 </div>
               </button>

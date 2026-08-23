@@ -16,10 +16,10 @@ export default function HistoricoSection({
   apagarRun, reprocessarRun,
 }) {
   return (
-    <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100">
+    <div className="bg-white rounded-[2.5rem] shadow-sm border border-[var(--border-soft)]">
       <button
         onClick={() => setHistoricoAberto(v => !v)}
-        className="w-full flex items-center justify-between px-6 sm:px-8 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-700 transition-colors"
+        className="w-full flex items-center justify-between px-6 sm:px-8 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] hover:text-[var(--ink-mid)] transition-colors"
       >
         <span className="flex items-center gap-2">
           <Clock size={14} /> Histórico de Importações ({historico.length})
@@ -35,7 +35,7 @@ export default function HistoricoSection({
             </div>
           )}
           {!loadingHistorico && historico.length === 0 && (
-            <p className="text-center text-slate-400 py-4 text-sm">Nenhuma importação anterior.</p>
+            <p className="text-center text-[var(--slate-dim)] py-4 text-sm">Nenhuma importação anterior.</p>
           )}
 
           {selHistorico.size > 0 && (
@@ -45,7 +45,7 @@ export default function HistoricoSection({
               </span>
               <div className="flex gap-2">
                 <button onClick={() => setSelHistorico(new Set())}
-                  className="text-[10px] text-slate-400 hover:text-slate-600 font-black uppercase tracking-widest">
+                  className="text-[10px] text-[var(--slate-dim)] hover:text-[var(--ink-soft)] font-black uppercase tracking-widest">
                   Limpar
                 </button>
                 <button
@@ -75,7 +75,7 @@ export default function HistoricoSection({
             <div
               key={run.id}
               onClick={() => selecionarRun(run.id)}
-              className={`w-full flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 cursor-pointer ${selHistorico.has(run.id) ? 'bg-indigo-50' : ''}`}
+              className={`w-full flex items-center justify-between p-3 rounded-xl hover:bg-[var(--surface)] transition-colors border-b border-[var(--border-soft)] last:border-0 cursor-pointer ${selHistorico.has(run.id) ? 'bg-indigo-50' : ''}`}
             >
               <input
                 type="checkbox"
@@ -92,8 +92,8 @@ export default function HistoricoSection({
                 className="accent-indigo-600 w-4 h-4 flex-shrink-0 mr-2 cursor-pointer"
               />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-slate-700 truncate">{run.filename || extractMonthYearName(run.transactions_json)}</p>
-                <p className="text-[10px] text-slate-400">
+                <p className="text-sm font-semibold text-[var(--ink-mid)] truncate">{run.filename || extractMonthYearName(run.transactions_json)}</p>
+                <p className="text-[10px] text-[var(--slate-dim)]">
                   {new Date(run.created_at).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                 </p>
               </div>
@@ -103,12 +103,12 @@ export default function HistoricoSection({
                 <span className="hidden sm:inline bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full">{run.orphan_system_count} sist.</span>
                 <span className="sm:hidden bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">{run.matched_count}✓</span>
                 <button onClick={e => reprocessarRun(e, run.id)} disabled={reprocessando === run.id}
-                  className="p-1.5 rounded-lg text-slate-300 hover:text-indigo-500 hover:bg-indigo-50 transition-colors disabled:opacity-50"
+                  className="p-1.5 rounded-lg text-[var(--slate)] hover:text-indigo-500 hover:bg-indigo-50 transition-colors disabled:opacity-50"
                   title="Reprocessar extrato com faturas actuais">
                   {reprocessando === run.id ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
                 </button>
                 <button onClick={e => apagarRun(e, run.id)}
-                  className="p-1.5 rounded-lg text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-colors"
+                  className="p-1.5 rounded-lg text-[var(--slate)] hover:text-rose-500 hover:bg-rose-50 transition-colors"
                   title="Apagar importação">
                   <Trash2 size={13} />
                 </button>

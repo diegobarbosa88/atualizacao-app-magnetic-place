@@ -19,7 +19,7 @@ function getRuleTag(item) {
   if (item.rule === 'manual_split') return { label: 'split', cls: 'bg-violet-100 text-violet-600' };
   if (item.rule === 'description_match') return { label: 'descrição', cls: 'bg-emerald-100 text-emerald-600' };
   if (item.rule === 'date_proximity') return { label: 'data', cls: 'bg-sky-100 text-sky-600' };
-  if (item.rule === 'exact_value') return { label: 'valor exato', cls: 'bg-slate-100 text-slate-500' };
+  if (item.rule === 'exact_value') return { label: 'valor exato', cls: 'bg-[var(--surface-dim)] text-[var(--slate-dim)]' };
   return null;
 }
 
@@ -47,14 +47,14 @@ export default function ResultadosTabs({
   if (!displayData) return null;
 
   return (
-    <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 p-4 sm:p-8">
+    <div className="bg-white rounded-[2.5rem] shadow-sm border border-[var(--border-soft)] p-4 sm:p-8">
       {activeRun && lastCreatedRun && activeRun.id !== lastCreatedRun.id && (
         <div className="mb-4 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
           <button onClick={voltarAoRunAtual}
             className="text-indigo-600 hover:underline text-[10px] font-black uppercase tracking-widest flex-shrink-0">
             ← Voltar ao run actual
           </button>
-          <span className="text-xs text-slate-500 truncate">· a ver: {activeRun.filename} ({new Date(activeRun.created_at).toLocaleDateString('pt-PT')})</span>
+          <span className="text-xs text-[var(--slate-dim)] truncate">· a ver: {activeRun.filename} ({new Date(activeRun.created_at).toLocaleDateString('pt-PT')})</span>
         </div>
       )}
 
@@ -88,17 +88,17 @@ export default function ResultadosTabs({
               else alert('Nenhuma nova entrada com cliente identificável.');
             }}
             disabled={autoAssociando}
-            className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-emerald-100 text-slate-500 hover:text-emerald-700 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex-shrink-0 disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3 py-2 bg-[var(--surface-dim)] hover:bg-emerald-100 text-[var(--slate-dim)] hover:text-emerald-700 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex-shrink-0 disabled:opacity-50"
             title="Associar automaticamente entradas bancárias a clientes"
           >
             {autoAssociando ? <Loader2 size={13} className="animate-spin" /> : <Link2 size={13} />} Auto
           </button>
           <button onClick={() => setShowAliases(true)}
-            className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-violet-100 text-slate-500 hover:text-violet-700 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex-shrink-0">
+            className="flex items-center gap-1.5 px-3 py-2 bg-[var(--surface-dim)] hover:bg-violet-100 text-[var(--slate-dim)] hover:text-violet-700 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex-shrink-0">
             <Tag size={13} /> Aliases {aliases.length > 0 && `(${aliases.length})`}
           </button>
           <button onClick={() => setShowRelatorio(true)}
-            className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-indigo-100 text-slate-500 hover:text-indigo-700 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex-shrink-0">
+            className="flex items-center gap-1.5 px-3 py-2 bg-[var(--surface-dim)] hover:bg-indigo-100 text-[var(--slate-dim)] hover:text-indigo-700 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex-shrink-0">
             <Download size={13} /> Relatório
           </button>
         </div>
@@ -136,7 +136,7 @@ export default function ResultadosTabs({
                     <span className="text-[10px] font-black uppercase tracking-widest text-emerald-700">
                       {isInterno ? 'Transf. Interna' : item.rule === 'client_association' ? 'Banco' : item.fatura?.fonte === 'recibo' ? 'Recibo' : item.fatura?.tipo || 'Fatura'}
                     </span>
-                    <span className="text-[10px] text-slate-500">
+                    <span className="text-[10px] text-[var(--slate-dim)]">
                       {item.rule === 'internal_transfer_confirmed' ? item.pair_transacao?.descricao
                         : item.rule === 'internal_transfer_presumed' ? 'Novobanco Poupança'
                         : item.rule === 'client_association' ? item.client_name : item.fatura?.entidade}
@@ -147,7 +147,7 @@ export default function ResultadosTabs({
                   <div className="flex items-center gap-1 mt-1">
                     {editingResultDesc?.section === 'matched' && editingResultDesc?.index === i ? (
                       <input autoFocus
-                        className="flex-1 min-w-0 text-xs text-slate-700 font-medium border-b border-indigo-400 bg-transparent outline-none pb-0.5"
+                        className="flex-1 min-w-0 text-xs text-[var(--ink-mid)] font-medium border-b border-indigo-400 bg-transparent outline-none pb-0.5"
                         value={editingResultDesc.value}
                         onChange={e => setEditingResultDesc(prev => ({ ...prev, value: e.target.value }))}
                         onBlur={() => saveResultDescricao('matched', i, editingResultDesc.value)}
@@ -157,17 +157,17 @@ export default function ResultadosTabs({
                         }}
                       />
                     ) : (
-                      <p className="flex-1 min-w-0 text-xs text-slate-600 truncate font-medium">{item.transacao?.descricao}</p>
+                      <p className="flex-1 min-w-0 text-xs text-[var(--ink-soft)] truncate font-medium">{item.transacao?.descricao}</p>
                     )}
                     <button onClick={() => setEditingResultDesc({ section: 'matched', index: i, value: item.transacao?.descricao || '' })}
-                      className={`flex-shrink-0 transition-all ${editingResultDesc?.section === 'matched' && editingResultDesc?.index === i ? 'text-indigo-500' : 'text-slate-300 hover:text-indigo-400'}`}
+                      className={`flex-shrink-0 transition-all ${editingResultDesc?.section === 'matched' && editingResultDesc?.index === i ? 'text-indigo-500' : 'text-[var(--slate)] hover:text-indigo-400'}`}
                       title="Editar descrição"><Pencil size={11} /></button>
                   </div>
                   {item.fatura?.descricao && (
-                    <p className="text-xs text-slate-500 truncate">{item.fatura.entidade} · {item.fatura.descricao}</p>
+                    <p className="text-xs text-[var(--slate-dim)] truncate">{item.fatura.entidade} · {item.fatura.descricao}</p>
                   )}
                   {item.rule === 'confirmed_manual' && (item.observacao || item.classificacao) && (
-                    <p className="text-xs text-slate-500 mt-0.5 truncate">
+                    <p className="text-xs text-[var(--slate-dim)] mt-0.5 truncate">
                       {item.classificacao && <TagBadge nome={item.classificacao.nome} cor={item.classificacao.cor} />}
                       {item.observacao && <span className="italic ml-1">{item.observacao}</span>}
                     </p>
@@ -199,7 +199,7 @@ export default function ResultadosTabs({
                   ) : (
                     <button onClick={() => abrirAssociarCliente('matched', i, item.transacao)}
                       title="Associar a cliente de faturação"
-                      className="p-1.5 rounded-xl text-slate-300 hover:text-indigo-500 hover:bg-indigo-50 transition-colors">
+                      className="p-1.5 rounded-xl text-[var(--slate)] hover:text-indigo-500 hover:bg-indigo-50 transition-colors">
                       <Link2 size={13} />
                     </button>
                   );
@@ -234,12 +234,12 @@ export default function ResultadosTabs({
                   <div className="recon-row-actions">
                     <button onClick={() => desvincularMatch(item, i)} disabled={desvinculando.has(`${i}`)}
                       title="Desvincular"
-                      className="p-1.5 text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-colors disabled:opacity-50">
+                      className="p-1.5 text-[var(--slate)] hover:text-rose-500 hover:bg-rose-50 transition-colors disabled:opacity-50">
                       {desvinculando.has(`${i}`) ? <Loader2 size={13} className="animate-spin" /> : <Unlink size={13} />}
                     </button>
                     <button onClick={() => { if (window.confirm('Excluir este movimento dos resultados?')) excluirItem('matched', i); }}
                       disabled={excluindo.has(`matched_${i}`)} title="Excluir movimento"
-                      className="p-1.5 text-slate-300 hover:text-rose-600 hover:bg-rose-50 transition-colors disabled:opacity-50">
+                      className="p-1.5 text-[var(--slate)] hover:text-rose-600 hover:bg-rose-50 transition-colors disabled:opacity-50">
                       {excluindo.has(`matched_${i}`) ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
                     </button>
                   </div>
@@ -258,10 +258,10 @@ export default function ResultadosTabs({
 
         return (
           <div className="space-y-3">
-            {items.length === 0 && <p className="text-center text-slate-400 py-8 text-sm">Nenhuma transação reconciliada.</p>}
+            {items.length === 0 && <p className="text-center text-[var(--slate-dim)] py-8 text-sm">Nenhuma transação reconciliada.</p>}
             {items.length > 0 && (
               <div className="flex items-center justify-between mb-1">
-                <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500 cursor-pointer select-none">
+                <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] cursor-pointer select-none">
                   <input type="checkbox"
                     checked={allPendentes.length > 0 && selMatched.size === allPendentes.length}
                     onChange={e => setSelMatched(e.target.checked ? new Set(items.map((_, i) => i).filter(i => {
@@ -323,11 +323,11 @@ export default function ResultadosTabs({
         return (
           <div className="space-y-3">
             {allIndices.length === 0 && (displayData.orphan_bank || []).filter((_, i) => !orphanBankAssocSet.has(i)).length === 0 && (
-              <p className="text-center text-slate-400 py-8 text-sm">Sem transações sem correspondência.</p>
+              <p className="text-center text-[var(--slate-dim)] py-8 text-sm">Sem transações sem correspondência.</p>
             )}
             {allIndices.length > 0 && (
               <div className="flex items-center justify-between mb-1">
-                <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500 cursor-pointer select-none">
+                <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] cursor-pointer select-none">
                   <input type="checkbox"
                     checked={allIndices.length > 0 && selOrphan.size === allIndices.length}
                     onChange={e => setSelOrphan(e.target.checked ? new Set(allIndices) : new Set())}
@@ -364,8 +364,8 @@ export default function ResultadosTabs({
                           </div>
                         </div>
                         {orphanObservacoes[i] && (
-                          <p className="text-xs text-slate-500 mt-1 italic">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 not-italic">Obs: </span>
+                          <p className="text-xs text-[var(--slate-dim)] mt-1 italic">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] not-italic">Obs: </span>
                             {orphanObservacoes[i]}
                           </p>
                         )}
@@ -399,15 +399,15 @@ export default function ResultadosTabs({
                         </div>
                       </div>
                       {item.transacao.tipoMovimento && (
-                        <p className="text-[10px] text-slate-500 mb-1">
+                        <p className="text-[10px] text-[var(--slate-dim)] mb-1">
                           <span className="font-black uppercase tracking-widest">Tipo Movimento:</span> {item.transacao.tipoMovimento}
                         </p>
                       )}
                       <div className="flex items-center gap-1">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex-shrink-0">Descrição: </span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] flex-shrink-0">Descrição: </span>
                         {editingResultDesc?.section === 'orphan_bank' && editingResultDesc?.index === i ? (
                           <input autoFocus
-                            className="flex-1 min-w-0 text-xs text-slate-700 font-medium border-b border-indigo-400 bg-transparent outline-none pb-0.5"
+                            className="flex-1 min-w-0 text-xs text-[var(--ink-mid)] font-medium border-b border-indigo-400 bg-transparent outline-none pb-0.5"
                             value={editingResultDesc.value}
                             onChange={e => setEditingResultDesc(prev => ({ ...prev, value: e.target.value }))}
                             onBlur={() => saveResultDescricao('orphan_bank', i, editingResultDesc.value)}
@@ -417,10 +417,10 @@ export default function ResultadosTabs({
                             }}
                           />
                         ) : (
-                          <span className="flex-1 min-w-0 text-xs text-slate-700 font-medium truncate">{item.transacao.descricao || '—'}</span>
+                          <span className="flex-1 min-w-0 text-xs text-[var(--ink-mid)] font-medium truncate">{item.transacao.descricao || '—'}</span>
                         )}
                         <button onClick={() => setEditingResultDesc({ section: 'orphan_bank', index: i, value: item.transacao.descricao || '' })}
-                          className={`flex-shrink-0 transition-all ${editingResultDesc?.section === 'orphan_bank' && editingResultDesc?.index === i ? 'text-indigo-500' : 'text-slate-300 hover:text-indigo-400'}`}
+                          className={`flex-shrink-0 transition-all ${editingResultDesc?.section === 'orphan_bank' && editingResultDesc?.index === i ? 'text-indigo-500' : 'text-[var(--slate)] hover:text-indigo-400'}`}
                           title="Editar descrição"><Pencil size={11} /></button>
                       </div>
                       {item.reason === 'ambiguous' && item.candidates && (() => {
@@ -444,24 +444,24 @@ export default function ResultadosTabs({
                           ) : (
                             <button onClick={() => abrirAssociarCliente('orphan_bank', i, item.transacao)}
                               title="Associar a cliente de faturação"
-                              className="p-1.5 rounded-xl text-slate-300 hover:text-indigo-500 hover:bg-indigo-50 transition-colors">
+                              className="p-1.5 rounded-xl text-[var(--slate)] hover:text-indigo-500 hover:bg-indigo-50 transition-colors">
                               <Link2 size={13} />
                             </button>
                           );
                         })()}
                         <button onClick={() => abrirAssociarFatura(i, item.transacao)}
                           title="Associar a fatura"
-                          className="p-1.5 rounded-xl text-slate-300 hover:text-indigo-500 hover:bg-indigo-50 transition-colors">
+                          className="p-1.5 rounded-xl text-[var(--slate)] hover:text-indigo-500 hover:bg-indigo-50 transition-colors">
                           <Tag size={13} />
                         </button>
                         <button onClick={() => pedirObservacaoOrphan([i])}
                           title="Confirmar movimento"
-                          className="p-1.5 rounded-xl text-slate-300 hover:text-emerald-500 hover:bg-emerald-50 transition-colors">
+                          className="p-1.5 rounded-xl text-[var(--slate)] hover:text-emerald-500 hover:bg-emerald-50 transition-colors">
                           <CheckCircle size={13} />
                         </button>
                         <button onClick={() => { if (window.confirm('Excluir este movimento dos resultados?')) excluirItem('orphan_bank', i); }}
                           disabled={excluindo.has(`orphan_bank_${i}`)} title="Excluir movimento"
-                          className="p-1.5 rounded-xl text-slate-300 hover:text-rose-600 hover:bg-rose-50 transition-colors disabled:opacity-50">
+                          className="p-1.5 rounded-xl text-[var(--slate)] hover:text-rose-600 hover:bg-rose-50 transition-colors disabled:opacity-50">
                           {excluindo.has(`orphan_bank_${i}`) ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
                         </button>
                       </div>
@@ -478,7 +478,7 @@ export default function ResultadosTabs({
       {activeSubTab === 'orphan_system' && (
         <div className="space-y-3">
           {(displayData.orphan_system || []).length === 0 && (
-            <p className="text-center text-slate-400 py-8 text-sm">Todas as faturas têm correspondência.</p>
+            <p className="text-center text-[var(--slate-dim)] py-8 text-sm">Todas as faturas têm correspondência.</p>
           )}
           {(displayData.orphan_system || []).map((item, i) => (
             <div key={i} className="recon-txn-row ambiguous flex items-center gap-3">
@@ -490,11 +490,11 @@ export default function ResultadosTabs({
                     <span className="recon-amount-col recon-font-mono">€{Number(item.fatura.valor).toFixed(2)}</span>
                   </div>
                 </div>
-                <p className="text-xs text-slate-600 truncate">{item.fatura.entidade} · {item.fatura.descricao}</p>
+                <p className="text-xs text-[var(--ink-soft)] truncate">{item.fatura.entidade} · {item.fatura.descricao}</p>
               </div>
               <button onClick={() => { if (window.confirm('Remover esta fatura dos resultados?')) excluirItem('orphan_system', i); }}
                 disabled={excluindo.has(`orphan_system_${i}`)} title="Excluir da lista"
-                className="flex-shrink-0 p-1.5 rounded-xl text-slate-300 hover:text-rose-600 hover:bg-rose-50 transition-colors disabled:opacity-50">
+                className="flex-shrink-0 p-1.5 rounded-xl text-[var(--slate)] hover:text-rose-600 hover:bg-rose-50 transition-colors disabled:opacity-50">
                 {excluindo.has(`orphan_system_${i}`) ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
               </button>
             </div>

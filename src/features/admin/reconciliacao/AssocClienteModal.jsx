@@ -37,7 +37,7 @@ export default function AssocClienteModal({ modal, clients, onClose, onSave }) {
           </button>
           <button
             onClick={onClose}
-            className="px-4 py-2.5 text-slate-500 hover:text-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest border border-slate-200 hover:border-slate-300 transition-all"
+            className="px-4 py-2.5 text-[var(--slate-dim)] hover:text-[var(--ink-mid)] rounded-xl text-[10px] font-black uppercase tracking-widest border border-slate-200 hover:border-slate-300 transition-all"
           >
             Cancelar
           </button>
@@ -45,15 +45,15 @@ export default function AssocClienteModal({ modal, clients, onClose, onSave }) {
       }
     >
       <div className="p-6 space-y-5">
-        <p className="text-[10px] text-slate-400 truncate">{modal.tx?.descricao}</p>
+        <p className="text-[10px] text-[var(--slate-dim)] truncate">{modal.tx?.descricao}</p>
 
         <div className="space-y-3">
           <div className="space-y-1">
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Cliente</label>
+            <label className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Cliente</label>
             <select
               value={clienteId}
               onChange={e => setClienteId(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-300"
+              className="w-full bg-[var(--surface)] border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-300"
             >
               <option value="">Selecionar cliente...</option>
               {(clients || []).sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(c => (
@@ -62,12 +62,12 @@ export default function AssocClienteModal({ modal, clients, onClose, onSave }) {
             </select>
           </div>
           <div className="space-y-1">
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Período (AAAA-MM)</label>
+            <label className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Período (AAAA-MM)</label>
             <input
               type="month"
               value={periodo}
               onChange={e => setPeriodo(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-300"
+              className="w-full bg-[var(--surface)] border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-300"
             />
           </div>
         </div>

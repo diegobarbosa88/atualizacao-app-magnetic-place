@@ -351,7 +351,7 @@ export default function ReconciliacaoAdmin() {
             <select
               value={run.activeRun?.id || ''}
               onChange={e => { if (e.target.value) run.selecionarRun(e.target.value); }}
-              className="border border-slate-200 rounded-2xl px-4 py-2 text-[11px] font-black tracking-widest text-slate-600 bg-white hover:bg-slate-50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30"
+              className="border border-slate-200 rounded-2xl px-4 py-2 text-[11px] font-black tracking-widest text-[var(--ink-soft)] bg-white hover:bg-[var(--surface)] cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30"
               style={{ textTransform: 'uppercase' }}
             >
               {!run.activeRun && <option value="">Selecionar período…</option>}
@@ -361,7 +361,7 @@ export default function ReconciliacaoAdmin() {
             </select>
           )}
           <button onClick={() => setShowForm(v => !v)}
-            className="flex items-center gap-2 px-4 py-2 bg-slate-100 rounded-2xl border border-slate-200 hover:bg-slate-200 transition-all text-[10px] font-black uppercase tracking-widest"
+            className="flex items-center gap-2 px-4 py-2 bg-[var(--surface-dim)] rounded-2xl border border-slate-200 hover:bg-slate-200 transition-all text-[10px] font-black uppercase tracking-widest"
             style={{ color: FT.slateDim }}>
             <Plus size={14} /> Inserir Fatura Manual
           </button>
@@ -399,11 +399,11 @@ export default function ReconciliacaoAdmin() {
 
       {/* Formulário inserção manual */}
       {showForm && (
-        <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 p-6 space-y-4">
-          <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500">Nova Fatura / Recibo</h3>
+        <div className="bg-white rounded-[2.5rem] shadow-sm border border-[var(--border-soft)] p-6 space-y-4">
+          <h3 className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Nova Fatura / Recibo</h3>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Tipo</label>
+              <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-1">Tipo</label>
               <select value={formData.tipo} onChange={e => setFormData(p => ({...p, tipo: e.target.value}))}
                 className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
                 <option value="fatura">Fatura</option>
@@ -411,22 +411,22 @@ export default function ReconciliacaoAdmin() {
               </select>
             </div>
             <div>
-              <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Valor (€)</label>
+              <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-1">Valor (€)</label>
               <input type="number" step="0.01" value={formData.valor} onChange={e => setFormData(p => ({...p, valor: e.target.value}))}
                 className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" placeholder="0.00" />
             </div>
             <div>
-              <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Data Documento</label>
+              <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-1">Data Documento</label>
               <input type="date" value={formData.data_documento} onChange={e => setFormData(p => ({...p, data_documento: e.target.value}))}
                 className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
             </div>
             <div>
-              <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Entidade (nome/NIF)</label>
+              <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-1">Entidade (nome/NIF)</label>
               <input type="text" value={formData.entidade} onChange={e => setFormData(p => ({...p, entidade: e.target.value}))}
                 className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" placeholder="Nome ou NIF" />
             </div>
             <div className="md:col-span-2">
-              <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Descrição</label>
+              <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-1">Descrição</label>
               <input type="text" value={formData.descricao} onChange={e => setFormData(p => ({...p, descricao: e.target.value}))}
                 className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" placeholder="Descrição opcional" />
             </div>
@@ -438,7 +438,7 @@ export default function ReconciliacaoAdmin() {
               {savingFatura ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle size={12} />} Guardar
             </button>
             <button onClick={() => setShowForm(false)}
-              className="px-4 py-2 text-slate-500 hover:text-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest">
+              className="px-4 py-2 text-[var(--slate-dim)] hover:text-[var(--ink-mid)] rounded-xl text-[10px] font-black uppercase tracking-widest">
               Cancelar
             </button>
           </div>
@@ -446,7 +446,7 @@ export default function ReconciliacaoAdmin() {
       )}
 
       {/* Seletor de origem — simétrico, sem acordeão escondido */}
-      <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 p-6 sm:p-8 space-y-5">
+      <div className="bg-white rounded-[2.5rem] shadow-sm border border-[var(--border-soft)] p-6 sm:p-8 space-y-5">
         <div className="recon-segmented">
           {[
             { key: 'toconline', label: 'TOConline', icon: Zap },
@@ -468,10 +468,10 @@ export default function ReconciliacaoAdmin() {
             )}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Conta</label>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-1">Conta</label>
                 <select value={tocContaId} onChange={e => setTocContaId(e.target.value)}
                   disabled={!contasDisponiveis.length}
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-300 disabled:opacity-50">
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-emerald-300 disabled:opacity-50">
                   {contasDisponiveis.map(c => {
                     const a = c.attributes || c;
                     return <option key={c.id} value={c.id}>{a.name} {a.iban ? `— ${a.iban.slice(-6)}` : ''}</option>;
@@ -479,14 +479,14 @@ export default function ReconciliacaoAdmin() {
                 </select>
               </div>
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">De (mês)</label>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-1">De (mês)</label>
                 <input type="month" value={tocDe} onChange={e => setTocDe(e.target.value)}
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-300" />
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-emerald-300" />
               </div>
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Até (mês)</label>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-1">Até (mês)</label>
                 <input type="month" value={tocAte} onChange={e => setTocAte(e.target.value)}
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-300" />
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-emerald-300" />
               </div>
             </div>
             {tocErro && (
@@ -509,7 +509,7 @@ export default function ReconciliacaoAdmin() {
               onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}
               onClick={() => inputRef.current?.click()}
               className={`border-2 border-dashed rounded-2xl p-5 sm:p-8 text-center cursor-pointer transition-all ${
-                dragging ? 'border-[var(--slate)] bg-slate-50' : 'border-slate-200 hover:border-[var(--slate)] hover:bg-slate-50'
+                dragging ? 'border-[var(--slate)] bg-[var(--surface)]' : 'border-slate-200 hover:border-[var(--slate)] hover:bg-[var(--surface)]'
               }`}
             >
               <input ref={inputRef} type="file" accept=".csv,.ofx,.qfx,.pdf" multiple className="hidden" onChange={handleFileChange} />
@@ -519,9 +519,9 @@ export default function ReconciliacaoAdmin() {
                   {ficheiros.map((f, idx) => (
                     <div key={idx} className="flex items-center justify-center gap-2">
                       <FileText size={14} style={{ color: FT.slate }} className="flex-shrink-0" />
-                      <span className="text-sm font-medium text-slate-700 truncate max-w-xs">{f.name}</span>
+                      <span className="text-sm font-medium text-[var(--ink-mid)] truncate max-w-xs">{f.name}</span>
                       <button onClick={() => setFicheiros(prev => prev.filter((_, i) => i !== idx))}
-                        className="text-slate-400 hover:text-rose-500 flex-shrink-0"><X size={13} /></button>
+                        className="text-[var(--slate)] hover:text-rose-500 flex-shrink-0"><X size={13} /></button>
                     </div>
                   ))}
                   <p className="text-[10px] font-bold uppercase tracking-widest pt-1 cursor-pointer hover:underline" style={{ color: FT.slateDim }}
@@ -531,8 +531,8 @@ export default function ReconciliacaoAdmin() {
                 </div>
               ) : (
                 <>
-                  <p className="text-slate-500 font-medium">Arraste ficheiros CSV, OFX ou PDF aqui</p>
-                  <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-widest">ou clique para escolher (múltiplos permitidos)</p>
+                  <p className="text-[var(--slate-dim)] font-medium">Arraste ficheiros CSV, OFX ou PDF aqui</p>
+                  <p className="text-[10px] text-[var(--slate-dim)] mt-1 uppercase tracking-widest">ou clique para escolher (múltiplos permitidos)</p>
                 </>
               )}
             </div>
@@ -592,15 +592,15 @@ export default function ReconciliacaoAdmin() {
         const allVisible = visibleIndices.map(x => x.i);
         const allVisibleSelected = allVisible.length > 0 && allVisible.every(i => selTransacoes.has(i));
         return (
-          <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 p-6 sm:p-8 space-y-4">
+          <div className="bg-white rounded-[2.5rem] shadow-sm border border-[var(--border-soft)] p-6 sm:p-8 space-y-4">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div>
-                <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500">Seleccionar Movimentos</h3>
-                <p className="text-xs text-slate-400 mt-0.5">{selTransacoes.size} de {previewTransacoes.length} seleccionados · fontes: {previewFontes.join(', ')}</p>
+                <h3 className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Seleccionar Movimentos</h3>
+                <p className="text-xs text-[var(--slate-dim)] mt-0.5">{selTransacoes.size} de {previewTransacoes.length} seleccionados · fontes: {previewFontes.join(', ')}</p>
               </div>
               <div className="flex gap-2">
                 <button onClick={limparPreview}
-                  className="px-3 py-1.5 text-slate-400 hover:text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest border border-slate-200 hover:border-slate-300 transition-all">
+                  className="px-3 py-1.5 text-[var(--slate-dim)] hover:text-[var(--ink-soft)] rounded-xl text-[10px] font-black uppercase tracking-widest border border-slate-200 hover:border-slate-300 transition-all">
                   <X size={11} className="inline mr-1" />Limpar tudo
                 </button>
                 <button onClick={processar} disabled={processando || selTransacoes.size === 0}
@@ -623,8 +623,8 @@ export default function ReconciliacaoAdmin() {
                     txTipoFiltro === key
                       ? key === 'debito' ? 'bg-rose-100 text-rose-700 ring-2 ring-rose-300'
                         : key === 'credito' ? 'bg-emerald-100 text-emerald-700 ring-2 ring-emerald-300'
-                        : 'bg-slate-200 text-slate-700 ring-2 ring-slate-300'
-                      : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                        : 'bg-slate-200 text-[var(--ink-mid)] ring-2 ring-slate-300'
+                      : 'bg-[var(--surface-dim)] text-[var(--slate-dim)] hover:bg-slate-200'
                   }`}>{label}</button>
               ))}
             </div>
@@ -634,7 +634,7 @@ export default function ReconciliacaoAdmin() {
               className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30" />
 
             <div className="flex items-center gap-3 px-1">
-              <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500 cursor-pointer select-none">
+              <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] cursor-pointer select-none">
                 <input type="checkbox" checked={allVisibleSelected}
                   onChange={e => setSelTransacoes(prev => {
                     const s = new Set(prev);
@@ -648,36 +648,36 @@ export default function ReconciliacaoAdmin() {
 
             <div className="space-y-1.5 max-h-96 overflow-y-auto pr-1">
               {visibleIndices.length === 0 && (
-                <p className="text-center text-slate-400 py-6 text-sm">Nenhum movimento corresponde ao filtro.</p>
+                <p className="text-center text-[var(--slate-dim)] py-6 text-sm">Nenhum movimento corresponde ao filtro.</p>
               )}
               {visibleIndices.map(({ tx, i }) => (
-                <div key={i} className={`flex items-center gap-3 p-3 rounded-xl transition-all border ${selTransacoes.has(i) ? 'border-transparent' : 'bg-slate-50 border-transparent hover:bg-slate-100'}`}
+                <div key={i} className={`flex items-center gap-3 p-3 rounded-xl transition-all border ${selTransacoes.has(i) ? 'border-transparent' : 'bg-[var(--surface)] border-transparent hover:bg-[var(--surface-dim)]'}`}
                   style={selTransacoes.has(i) ? { backgroundColor: 'rgba(235,141,0,0.08)' } : {}}>
                   <input type="checkbox" checked={selTransacoes.has(i)}
                     onChange={e => setSelTransacoes(prev => { const s = new Set(prev); e.target.checked ? s.add(i) : s.delete(i); return s; })}
                     className="accent-[var(--navy)] w-4 h-4 flex-shrink-0 cursor-pointer" />
                   <div className="flex-1 min-w-0">
-                    {tx._source && <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 truncate mb-0.5">{tx._source}</p>}
+                    {tx._source && <p className="text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)] truncate mb-0.5">{tx._source}</p>}
                     {editingTxIdx === i ? (
                       <input autoFocus
-                        className="w-full text-xs text-slate-700 font-medium border-b border-[var(--navy)] bg-transparent outline-none pb-0.5"
+                        className="w-full text-xs text-[var(--ink-mid)] font-medium border-b border-[var(--navy)] bg-transparent outline-none pb-0.5"
                         value={tx.descricao}
                         onChange={e => setPreviewTransacoes(prev => prev.map((t, j) => j === i ? { ...t, descricao: e.target.value } : t))}
                         onBlur={() => setEditingTxIdx(null)}
                         onKeyDown={e => { if (e.key === 'Enter' || e.key === 'Escape') setEditingTxIdx(null); }}
                       />
                     ) : (
-                      <p className="text-xs text-slate-700 font-medium truncate">{tx.descricao || '—'}</p>
+                      <p className="text-xs text-[var(--ink-mid)] font-medium truncate">{tx.descricao || '—'}</p>
                     )}
-                    <p className="text-[10px] text-slate-400">{tx.data}</p>
+                    <p className="text-[10px] text-[var(--slate-dim)]">{tx.data}</p>
                   </div>
                   <button onClick={() => setEditingTxIdx(editingTxIdx === i ? null : i)}
-                    className={`flex-shrink-0 transition-all ${editingTxIdx === i ? '' : 'text-slate-300 hover:text-[var(--slate)]'}`}
+                    className={`flex-shrink-0 transition-all ${editingTxIdx === i ? '' : 'text-[var(--slate)] hover:text-[var(--slate)]'}`}
                     style={editingTxIdx === i ? { color: FT.slate } : {}}
                     title="Editar descrição"><Pencil size={12} /></button>
                   <div className="text-right flex-shrink-0 flex items-center gap-2">
                     <TipoBadge tipo={tx.tipo} />
-                    <span className="text-sm font-bold text-slate-700">€{Number(tx.valor).toFixed(2)}</span>
+                    <span className="text-sm font-bold text-[var(--ink-mid)]">€{Number(tx.valor).toFixed(2)}</span>
                   </div>
                 </div>
               ))}
