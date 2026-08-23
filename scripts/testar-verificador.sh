@@ -72,6 +72,41 @@ verifica "laranja+navy (par correcto) não acusa" "$base" "$d"
 
 rm -f "$CASO"
 
+# ── 8: cobertura do mapa do conversor.
+#    O conversor não reconhecia `divide-slate-50` e deixou duas classes por
+#    converter no lote 21D — silenciosamente, porque quando não há destino no
+#    mapa ele reescreve a classe original. Este teste compara as variantes
+#    `<prop>-slate-<tom>` que existem MESMO no repo com as chaves do mapa, e
+#    falha à primeira que não tenha destino.
+echo
+echo "── cobertura do mapa do conversor ──"
+faltam=$(perl -e '
+  my %mapa;
+  open my $s, "<", "scripts/converter-neutros.pl" or die "sem conversor\n";
+  while (<$s>) { while (/'"'"'((?:bg|text|border|divide|ring)-\d{2,3})'"'"'\s*=>/g) { $mapa{$1} = 1 } }
+  close $s;
+  my %vistos;
+  for my $f (split /\n/, `find src/features/admin src/components/admin -name "*.jsx"`) {
+    open my $fh, "<:raw", $f or next; local $/; my $c = <$fh>; close $fh;
+    while ($c =~ /(bg|text|border|divide|ring)-slate-(\d{2,3})/g) { $vistos{"$1-$2"} = 1 }
+  }
+  # text-300/400 sao resolvidos pela classificacao icone/texto, nao pelo mapa
+  # bg-500 e border-800 ficam DELIBERADAMENTE fora: o bg-500 so existe dentro de
+  # mapas de cor-a-escolha (TagBadge, OrfaoBancoModal) e num /20 sobre Tailwind,
+  # e o border-800 sao as bordas dos recibos impressos, onde passar de quase-preto
+  # a navy se ve no documento. Ambos sao decisao em contexto, nao mecanica.
+  delete $vistos{"text-300"}; delete $vistos{"text-400"};
+  delete $vistos{"bg-500"};   delete $vistos{"border-800"};
+  my @f = grep { !$mapa{$_} } sort keys %vistos;
+  print join(" ", @f);
+')
+if [ -z "$faltam" ]; then
+  printf '  ok    %-52s %s\n' "todas as variantes do repo têm destino" "-"
+else
+  printf '  FALHA %-52s %s\n' "variantes sem destino no mapa" "$faltam"
+  falhas=$((falhas + 1))
+fi
+
 echo
 if [ "$falhas" -eq 0 ]; then
   echo "  todos os casos passaram"
