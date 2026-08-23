@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useApp } from '../../../context/AppContext';
+import { FT } from '../../../styles/designTokens';
 import { Users, Eye, CheckCircle, XCircle, Loader2, RefreshCw, Clock, AlertCircle, ShieldCheck } from 'lucide-react';
 import ModalShell from '../../../components/common/ModalShell';
 import SelectProfissaoEmpresa from '../../../components/SelectProfissaoEmpresa';
@@ -20,7 +21,7 @@ const ADMIN_FIELDS_VAZIO = {
 };
 
 const labelCls = 'block text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1';
-const inputCls = 'w-full bg-white border border-slate-200 rounded-lg py-[3px] px-2.5 text-sm font-semibold text-slate-800 outline-none focus:border-[#1B3A57] focus:ring-2 focus:ring-[#1B3A57]/10 transition-all';
+const inputCls = 'w-full bg-white border border-slate-200 rounded-lg py-[3px] px-2.5 text-sm font-semibold text-slate-800 outline-none focus:border-[var(--navy)] focus:ring-2 focus:ring-[#1B3A57]/10 transition-all';
 
 function Row({ label, value }) {
   if (!value) return null;
@@ -162,7 +163,7 @@ export default function OnboardingPendentes() {
 
   if (loading) return (
     <div className="flex items-center justify-center py-16">
-      <Loader2 className="text-[#869AAF] animate-spin" size={24} />
+      <Loader2 className="text-[var(--slate)] animate-spin" size={24} />
     </div>
   );
 
@@ -176,7 +177,7 @@ export default function OnboardingPendentes() {
             <p className="text-[10px] text-slate-400 font-bold">Formulários de onboarding aguardando aprovação</p>
           </div>
         </div>
-        <button onClick={loadSubmissions} className="p-2 text-slate-400 hover:text-[#869AAF] hover:bg-slate-100 rounded-xl transition-all" title="Atualizar">
+        <button onClick={loadSubmissions} className="p-2 text-slate-400 hover:text-[var(--slate)] hover:bg-slate-100 rounded-xl transition-all" title="Atualizar">
           <RefreshCw size={16} />
         </button>
       </div>
@@ -220,7 +221,7 @@ export default function OnboardingPendentes() {
                     <button
                       onClick={() => openModal(s)}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase text-white hover:opacity-90 transition-all ml-auto"
-                      style={{ backgroundColor: '#1B3A57' }}
+                      style={{ backgroundColor: FT.navy }}
                     >
                       <Eye size={12} /> Rever
                     </button>
@@ -294,7 +295,7 @@ export default function OnboardingPendentes() {
                   key={t}
                   onClick={() => setModalTab(t)}
                   className={`px-4 py-2 -mb-px border-b-2 text-[11px] font-black uppercase tracking-wide transition-all
-                    ${modalTab === t ? 'border-[#EB8D00] text-[#1B3A57]' : 'border-transparent text-slate-400 hover:text-[#1B3A57]'}`}
+                    ${modalTab === t ? 'border-[var(--orange)] text-[var(--navy)]' : 'border-transparent text-slate-400 hover:text-[var(--navy)]'}`}
                 >
                   {t === 'dados' ? 'Dados submetidos' : 'Completar registo'}
                 </button>

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Search, FileText, CreditCard, TrendingUp, AlertCircle, CheckCircle, Info } from 'lucide-react';
 import { authFetch } from '../../../utils/authFetch';
 import SubTabBar from '../../../components/common/SubTabBar';
+import { FT } from '../../../styles/designTokens';
 
 const CURRENT_YEAR = new Date().getFullYear();
 
@@ -57,14 +58,14 @@ function ComprovativosSection() {
             min={2020}
             max={CURRENT_YEAR}
             onChange={e => setAno(e.target.value)}
-            className="border border-gray-300 rounded px-2 py-1.5 text-sm w-24 focus:outline-none focus:ring-1 focus:ring-[#1B3A57]"
+            className="border border-gray-300 rounded px-2 py-1.5 text-sm w-24 focus:outline-none focus:ring-1 focus:ring-[var(--navy)]"
           />
         </div>
         <button
           onClick={consultar}
           disabled={estado?.loading}
           className="flex items-center gap-1.5 px-3 py-1.5 border rounded text-sm disabled:opacity-50 hover:bg-slate-50 transition-colors"
-          style={{ borderColor: '#869AAF', color: '#869AAF' }}
+          style={{ borderColor: FT.slate, color: FT.slate }}
         >
           <Search size={13} />
           {estado?.loading ? 'A consultar…' : 'Consultar'}
@@ -124,7 +125,7 @@ function DocumentosPagamentoSection() {
           onClick={consultar}
           disabled={estado?.loading}
           className="flex items-center gap-1.5 px-3 py-1.5 border rounded text-sm disabled:opacity-50 hover:bg-slate-50 transition-colors"
-          style={{ borderColor: '#869AAF', color: '#869AAF' }}
+          style={{ borderColor: FT.slate, color: FT.slate }}
         >
           <Search size={13} />
           {estado?.loading ? 'A consultar…' : 'Consultar Documentos'}
@@ -202,25 +203,25 @@ function RemuneracoesSection() {
             placeholder="ex: 12345678901, 10987654321"
             value={form.nissTrabalhadores}
             onChange={e => setForm(f => ({ ...f, nissTrabalhadores: e.target.value }))}
-            className="border border-gray-300 rounded px-2 py-1.5 text-sm w-full focus:outline-none focus:ring-1 focus:ring-[#1B3A57]"
+            className="border border-gray-300 rounded px-2 py-1.5 text-sm w-full focus:outline-none focus:ring-1 focus:ring-[var(--navy)]"
           />
         </div>
         <div>
           <label className="block text-xs text-gray-500 mb-1">Data início</label>
           <input type="date" value={form.dataInicio} onChange={e => setForm(f => ({ ...f, dataInicio: e.target.value }))}
-            className="border border-gray-300 rounded px-2 py-1.5 text-sm w-full focus:outline-none focus:ring-1 focus:ring-[#1B3A57]" />
+            className="border border-gray-300 rounded px-2 py-1.5 text-sm w-full focus:outline-none focus:ring-1 focus:ring-[var(--navy)]" />
         </div>
         <div>
           <label className="block text-xs text-gray-500 mb-1">Data fim</label>
           <input type="date" value={form.dataFim} onChange={e => setForm(f => ({ ...f, dataFim: e.target.value }))}
-            className="border border-gray-300 rounded px-2 py-1.5 text-sm w-full focus:outline-none focus:ring-1 focus:ring-[#1B3A57]" />
+            className="border border-gray-300 rounded px-2 py-1.5 text-sm w-full focus:outline-none focus:ring-1 focus:ring-[var(--navy)]" />
         </div>
         <div className="flex items-end gap-2">
           <button
             onClick={consultar}
             disabled={estado?.loading}
             className="flex items-center gap-1.5 px-3 py-1.5 border rounded text-sm disabled:opacity-50 hover:bg-slate-50 transition-colors"
-          style={{ borderColor: '#869AAF', color: '#869AAF' }}
+          style={{ borderColor: FT.slate, color: FT.slate }}
           >
             <Search size={13} />
             {estado?.loading ? 'A consultar…' : 'Consultar'}

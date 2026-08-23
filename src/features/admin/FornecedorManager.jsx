@@ -4,6 +4,7 @@ import { FornecedorProvider, useFornecedor } from './contexts/FornecedorContext'
 import FornecedorForm from './fornecedores/FornecedorForm';
 import FornecedorList from './fornecedores/FornecedorList';
 import ModalShell from '../../components/common/ModalShell';
+import { FT } from '../../styles/designTokens';
 import SectionHeaderShell from '../../components/common/SectionHeaderShell';
 
 function FornecedorManagerContent() {
@@ -23,7 +24,7 @@ function FornecedorManagerContent() {
             <button
               onClick={carregar}
               disabled={loading}
-              className="p-2 text-slate-400 hover:text-[#1B3A57] hover:bg-slate-100 rounded-lg transition-colors"
+              className="p-2 text-slate-400 hover:text-[var(--navy)] hover:bg-slate-100 rounded-lg transition-colors"
               title="Actualizar"
             >
               <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
@@ -31,7 +32,7 @@ function FornecedorManagerContent() {
             <button
               onClick={novoFornecedor}
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[10px] font-black uppercase tracking-wide transition-colors shadow-sm"
-              style={{ backgroundColor: '#EB8D00', color: '#12293e' }}
+              style={{ backgroundColor: FT.orange, color: '#12293e' }}
             >
               <Plus size={13} />
               Novo Fornecedor

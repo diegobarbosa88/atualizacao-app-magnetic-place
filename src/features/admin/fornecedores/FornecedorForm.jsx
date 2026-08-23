@@ -1,6 +1,7 @@
 import React from 'react';
 import { Building2, CreditCard, FileText, Loader2, Save } from 'lucide-react';
 import { useFornecedor } from '../contexts/FornecedorContext';
+import { FT } from '../../../styles/designTokens';
 
 function Field({ label, children }) {
   return (
@@ -11,7 +12,7 @@ function Field({ label, children }) {
   );
 }
 
-const inputCls = 'border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-[#1B3A57] focus:ring-2 focus:ring-[#1B3A57]/10 transition-all w-full bg-white';
+const inputCls = 'border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-[var(--navy)] focus:ring-2 focus:ring-[#1B3A57]/10 transition-all w-full bg-white';
 
 export default function FornecedorForm() {
   const { form, setForm, saving, guardar, cancelar } = useFornecedor();
@@ -90,7 +91,7 @@ export default function FornecedorForm() {
           <button
             onClick={tog('debito_automatico')}
             className="relative w-12 h-6 rounded-full transition-colors shrink-0 ml-3"
-            style={{ backgroundColor: form.debito_automatico ? '#1B3A57' : '#CBD5E1' }}
+            style={{ backgroundColor: form.debito_automatico ? FT.navy : '#CBD5E1' }}
           >
             <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-all ${form.debito_automatico ? 'left-7' : 'left-1'}`} />
           </button>
@@ -118,7 +119,7 @@ export default function FornecedorForm() {
           onClick={guardar}
           disabled={saving}
           className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-colors disabled:opacity-60"
-          style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}
+          style={{ backgroundColor: FT.orange, color: FT.navy }}
         >
           {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
           {saving ? 'A guardar...' : 'Guardar Fornecedor'}

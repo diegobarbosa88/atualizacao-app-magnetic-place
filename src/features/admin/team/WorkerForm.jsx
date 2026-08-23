@@ -11,6 +11,7 @@ import SelectProfissaoEmpresa from '../../../components/SelectProfissaoEmpresa';
 import { findProfissaoByCodigo } from '../../../data/profissoesEmpresa';
 import { authFetch } from '../../../utils/authFetch';
 import SSComunicacaoModal from './SSComunicacaoModal';
+import { FT } from '../../../styles/designTokens';
 
 const fmtTs = iso => {
   if (!iso) return null;
@@ -18,7 +19,7 @@ const fmtTs = iso => {
   return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
 };
 
-const inp = 'w-full bg-white border border-slate-200 rounded-lg py-[3px] px-2.5 text-sm font-semibold outline-none focus:border-[#1B3A57] focus:ring-2 focus:ring-[#1B3A57]/10 transition-all';
+const inp = 'w-full bg-white border border-slate-200 rounded-lg py-[3px] px-2.5 text-sm font-semibold outline-none focus:border-[var(--navy)] focus:ring-2 focus:ring-[#1B3A57]/10 transition-all';
 const fmtDate = iso => { if (!iso) return 'atual'; const p = iso.split('T')[0].split('-'); return `${p[2]}/${p[1]}/${p[0].slice(2)}`; };
 const lbl = 'block text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1';
 
@@ -61,7 +62,7 @@ function VinculoTimeline({ workerForm, apoliceSeguro, onAbrirSS, ssFlag }) {
               : ssFlag?.prioridade === 'presa' ? 'bg-orange-500 border-orange-500 text-white'
               : admissaoFeita ? 'bg-emerald-500 border-emerald-500 text-white'
               : temInicio ? 'text-white' : 'bg-white border-slate-200 text-slate-300'
-            }`} style={!admissaoFeita && temInicio && !ssFlag ? { backgroundColor: '#1B3A57', borderColor: '#1B3A57' } : {}}>
+            }`} style={!admissaoFeita && temInicio && !ssFlag ? { backgroundColor: FT.navy, borderColor: FT.navy } : {}}>
               {ssFlag?.prioridade === 'rejeitada' ? <AlertTriangle size={12} /> : admissaoFeita ? <Check size={13} /> : <Circle size={11} fill="currentColor" />}
             </div>
             <div className="h-[2.5px] flex-1" style={{ background: temInicio ? '#10b981' : undefined, backgroundImage: !temInicio ? 'repeating-linear-gradient(90deg, #e2e8f0 0 6px, transparent 6px 11px)' : undefined }} />
@@ -103,7 +104,7 @@ function VinculoTimeline({ workerForm, apoliceSeguro, onAbrirSS, ssFlag }) {
         {/* Hoje */}
         <div className="flex flex-col items-center text-center flex-1 shrink-0">
           <div className="flex items-center w-full">
-            <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 border-2 z-10 text-white" style={{ backgroundColor: temInicio ? '#1B3A57' : '#cbd5e1', borderColor: temInicio ? '#1B3A57' : '#cbd5e1' }}>
+            <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 border-2 z-10 text-white" style={{ backgroundColor: temInicio ? FT.navy : '#cbd5e1', borderColor: temInicio ? FT.navy : '#cbd5e1' }}>
               <Circle size={9} fill="currentColor" />
             </div>
             <div className="h-[2.5px] flex-1" style={{ backgroundImage: 'repeating-linear-gradient(90deg, #e2e8f0 0 6px, transparent 6px 11px)' }} />
@@ -123,7 +124,7 @@ function VinculoTimeline({ workerForm, apoliceSeguro, onAbrirSS, ssFlag }) {
         <div className="flex flex-col items-center text-center w-[120px] sm:w-[150px] shrink-0">
           <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 border-2" style={
             cessacaoFeita ? { backgroundColor: '#10b981', borderColor: '#10b981', color: '#fff' }
-            : temFim ? { backgroundColor: '#1B3A57', borderColor: '#1B3A57', color: '#fff' }
+            : temFim ? { backgroundColor: FT.navy, borderColor: FT.navy, color: '#fff' }
             : { backgroundColor: '#fff', borderColor: '#e2e8f0', color: '#cbd5e1' }
           }>
             {cessacaoFeita ? <Check size={13} /> : <Circle size={11} fill="currentColor" />}
@@ -261,11 +262,11 @@ const WorkerForm = () => {
             type="button"
             onClick={() => setActiveTab(key)}
             className={`flex items-center gap-2 px-3.5 py-3 -mb-px whitespace-nowrap transition-all ${
-              activeTab === key ? 'text-[#1B3A57]' : 'text-slate-400 hover:text-[#1B3A57]'
+              activeTab === key ? 'text-[var(--navy)]' : 'text-slate-400 hover:text-[var(--navy)]'
             }`}
             style={{
               fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.01em',
-              borderBottom: activeTab === key ? '2.5px solid #EB8D00' : '2.5px solid transparent',
+              borderBottom: activeTab === key ? `2.5px solid ${FT.orange}` : '2.5px solid transparent',
             }}
           >
             <Icon size={14} /> {label}
@@ -327,9 +328,9 @@ const WorkerForm = () => {
                 </div>
                 <div>
                   <label className={lbl}>Admin</label>
-                  <button type="button" onClick={tog('isAdmin')} className={`w-full flex items-center justify-between p-2.5 rounded-lg border text-xs font-semibold transition-all ${workerForm.isAdmin ? '' : 'bg-white border-slate-200 text-slate-500'}`} style={workerForm.isAdmin ? { backgroundColor: 'rgba(27,58,87,0.06)', borderColor: 'rgba(27,58,87,0.25)', color: '#1B3A57' } : {}}>
+                  <button type="button" onClick={tog('isAdmin')} className={`w-full flex items-center justify-between p-2.5 rounded-lg border text-xs font-semibold transition-all ${workerForm.isAdmin ? '' : 'bg-white border-slate-200 text-slate-500'}`} style={workerForm.isAdmin ? { backgroundColor: 'rgba(27,58,87,0.06)', borderColor: 'rgba(27,58,87,0.25)', color: FT.navy } : {}}>
                     <span>Admin</span>
-                    <div className="w-8 h-4 rounded-full relative transition-all" style={{ backgroundColor: workerForm.isAdmin ? '#1B3A57' : '#E2E8F0' }}>
+                    <div className="w-8 h-4 rounded-full relative transition-all" style={{ backgroundColor: workerForm.isAdmin ? FT.navy : '#E2E8F0' }}>
                       <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full shadow transition-all ${workerForm.isAdmin ? 'left-4' : 'left-0.5'}`} />
                     </div>
                   </button>
@@ -381,7 +382,7 @@ const WorkerForm = () => {
                           }));
                         }}
                         className="w-full text-[10px] font-bold uppercase tracking-wide px-2.5 py-2 rounded-lg border border-dashed transition-all hover:bg-slate-50"
-                        style={{ color: '#1B3A57', borderColor: '#1B3A57' }}
+                        style={{ color: FT.navy, borderColor: FT.navy }}
                         title="Fecha o período atual (guarda no histórico ao gravar) e prepara um novo período em aberto — limpa também as comunicações de admissão/cessação à SS para poderes comunicar de novo."
                       >
                         ↻ Iniciar Novo Período (reentrada)
@@ -398,7 +399,7 @@ const WorkerForm = () => {
                     <div className="col-span-2 border-l-2 border-slate-100 pl-2 space-y-0.5">
                       {employmentHistory.map(p => (
                         <p key={p.id} className="text-[9px] text-slate-400 font-mono leading-tight">
-                          {fmtDate(p.data_inicio)} → {p.data_fim ? fmtDate(p.data_fim) : <span className="font-bold" style={{ color: '#1B3A57' }}>atual</span>}
+                          {fmtDate(p.data_inicio)} → {p.data_fim ? fmtDate(p.data_fim) : <span className="font-bold" style={{ color: FT.navy }}>atual</span>}
                         </p>
                       ))}
                     </div>
@@ -574,7 +575,7 @@ const WorkerForm = () => {
       </div>
 
       {/* Gravar — sempre visível, independente da aba */}
-      <button onClick={handleSaveWorker} className="w-full mt-5 p-3 rounded-xl font-black text-xs uppercase shadow-lg transition-all flex items-center justify-center gap-2" style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}>
+      <button onClick={handleSaveWorker} className="w-full mt-5 p-3 rounded-xl font-black text-xs uppercase shadow-lg transition-all flex items-center justify-center gap-2" style={{ backgroundColor: FT.orange, color: FT.navy }}>
         <Save size={14} /> Gravar Colaborador
       </button>
 
@@ -602,7 +603,7 @@ function AfetacaoCards({
       {/* CARD: Clientes */}
       <div className="rounded-xl border border-slate-200 overflow-hidden">
         <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 border-b border-slate-100">
-          <Building2 size={12} className="text-[#869AAF]" />
+          <Building2 size={12} className="text-[var(--slate)]" />
           <span className="text-[10px] font-black uppercase tracking-widest text-slate-600">Clientes</span>
         </div>
         <div className="max-h-[150px] overflow-y-auto p-2 space-y-0.5 bg-white">
@@ -610,28 +611,28 @@ function AfetacaoCards({
             const isAssigned = workerForm.assignedClients?.includes(c.id);
             return (
               <label key={c.id} className={`flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer transition-all ${isAssigned ? '' : 'hover:bg-slate-50'}`} style={isAssigned ? { backgroundColor: 'rgba(27,58,87,0.05)' } : {}}>
-                <div className={`w-3.5 h-3.5 rounded flex items-center justify-center border shrink-0 ${isAssigned ? '' : 'border-slate-300'}`} style={isAssigned ? { backgroundColor: '#1B3A57', borderColor: '#1B3A57' } : {}}>
+                <div className={`w-3.5 h-3.5 rounded flex items-center justify-center border shrink-0 ${isAssigned ? '' : 'border-slate-300'}`} style={isAssigned ? { backgroundColor: FT.navy, borderColor: FT.navy } : {}}>
                   {isAssigned && <CheckCircle size={9} className="text-white" />}
                 </div>
                 <input type="checkbox" className="hidden" checked={isAssigned} onChange={() => {
                   const current = workerForm.assignedClients || [];
                   setWorkerForm(prev => ({ ...prev, assignedClients: current.includes(c.id) ? current.filter(id => id !== c.id) : [...current, c.id] }));
                 }} />
-                <span className="text-[10px] font-bold truncate" style={{ color: isAssigned ? '#1B3A57' : '#475569' }}>{c.name}</span>
+                <span className="text-[10px] font-bold truncate" style={{ color: isAssigned ? FT.navy : '#475569' }}>{c.name}</span>
               </label>
             );
           })}
         </div>
         <div className="px-2 py-2 border-t border-slate-100 bg-slate-50/50">
           <label className="text-[9px] font-bold uppercase text-slate-400 block mb-1">Padrão</label>
-          <select value={workerForm.defaultClientId || ''} onChange={e => setWorkerForm(prev => ({ ...prev, defaultClientId: e.target.value }))} className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs font-semibold outline-none focus:border-[#1B3A57] transition-all">
+          <select value={workerForm.defaultClientId || ''} onChange={e => setWorkerForm(prev => ({ ...prev, defaultClientId: e.target.value }))} className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs font-semibold outline-none focus:border-[var(--navy)] transition-all">
             <option value="">Selecionar</option>
             {clients.filter(c => workerForm.assignedClients?.includes(c.id)).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </div>
         {(workerForm.assignedClients?.length > 0) && <>
           <div className="flex items-center gap-1.5 px-3 py-1.5 border-t border-slate-100 bg-slate-50">
-            <CalendarRange size={9} className="text-[#869AAF]" />
+            <CalendarRange size={9} className="text-[var(--slate)]" />
             <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Períodos</span>
             {!workerForm.id && <span className="ml-auto text-[9px] text-amber-500 font-bold">Guarde primeiro</span>}
           </div>
@@ -642,7 +643,7 @@ function AfetacaoCards({
               return (
                 <div key={c.id} className="border border-slate-100 rounded-lg overflow-hidden">
                   <button type="button" onClick={() => setExpandedClientPeriods(prev => ({ ...prev, [c.id]: !prev[c.id] }))} className="w-full flex items-center justify-between px-2.5 py-1.5 hover:bg-slate-50 transition-colors">
-                    <span className="text-[9px] font-black uppercase truncate" style={{ color: '#1B3A57' }}>{c.name}</span>
+                    <span className="text-[9px] font-black uppercase truncate" style={{ color: FT.navy }}>{c.name}</span>
                     <ChevronDown size={11} className={`text-slate-400 shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
                   </button>
                   {isOpen && (
@@ -650,15 +651,15 @@ function AfetacaoCards({
                       <div className="grid grid-cols-2 gap-1.5">
                         <div>
                           <label className="text-[8px] font-bold uppercase text-slate-400 block mb-0.5">Início</label>
-                          <input type="date" value={dates.dataInicio || ''} onChange={e => setWorkerForm(prev => ({ ...prev, assignedClientDates: { ...(prev.assignedClientDates || {}), [c.id]: { ...dates, dataInicio: e.target.value } } }))} className="w-full bg-white border border-slate-200 rounded p-1.5 text-[10px] font-bold outline-none focus:border-[#1B3A57] transition-all" />
+                          <input type="date" value={dates.dataInicio || ''} onChange={e => setWorkerForm(prev => ({ ...prev, assignedClientDates: { ...(prev.assignedClientDates || {}), [c.id]: { ...dates, dataInicio: e.target.value } } }))} className="w-full bg-white border border-slate-200 rounded p-1.5 text-[10px] font-bold outline-none focus:border-[var(--navy)] transition-all" />
                         </div>
                         <div>
                           <label className="text-[8px] font-bold uppercase text-slate-400 block mb-0.5">Fim</label>
-                          <input type="date" value={dates.dataFim || ''} onChange={e => setWorkerForm(prev => ({ ...prev, assignedClientDates: { ...(prev.assignedClientDates || {}), [c.id]: { ...dates, dataFim: e.target.value } } }))} className="w-full bg-white border border-slate-200 rounded p-1.5 text-[10px] font-bold outline-none focus:border-[#1B3A57] transition-all" />
+                          <input type="date" value={dates.dataFim || ''} onChange={e => setWorkerForm(prev => ({ ...prev, assignedClientDates: { ...(prev.assignedClientDates || {}), [c.id]: { ...dates, dataFim: e.target.value } } }))} className="w-full bg-white border border-slate-200 rounded p-1.5 text-[10px] font-bold outline-none focus:border-[var(--navy)] transition-all" />
                         </div>
                       </div>
                       {workerForm.id && (
-                        <button onClick={() => handleSaveClientDates(c.id, dates.dataInicio || new Date().toISOString().split('T')[0], dates.dataFim || '')} className={`w-full flex items-center justify-center gap-1 py-1 rounded text-[9px] font-black uppercase transition-all text-white ${saveSuccessClientId === c.id ? 'bg-emerald-500' : ''}`} style={saveSuccessClientId === c.id ? {} : { backgroundColor: '#1B3A57' }}>
+                        <button onClick={() => handleSaveClientDates(c.id, dates.dataInicio || new Date().toISOString().split('T')[0], dates.dataFim || '')} className={`w-full flex items-center justify-center gap-1 py-1 rounded text-[9px] font-black uppercase transition-all text-white ${saveSuccessClientId === c.id ? 'bg-emerald-500' : ''}`} style={saveSuccessClientId === c.id ? {} : { backgroundColor: FT.navy }}>
                           {saveSuccessClientId === c.id ? <><CheckCircle2 size={9} /> Gravado</> : <><Save size={9} /> Gravar</>}
                         </button>
                       )}
@@ -674,7 +675,7 @@ function AfetacaoCards({
       {/* CARD: Horários */}
       <div className="rounded-xl border border-slate-200 overflow-hidden">
         <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 border-b border-slate-100">
-          <Timer size={12} className="text-[#869AAF]" />
+          <Timer size={12} className="text-[var(--slate)]" />
           <span className="text-[10px] font-black uppercase tracking-widest text-slate-600">Horários</span>
         </div>
         <div className="max-h-[150px] overflow-y-auto p-2 space-y-0.5 bg-white">
@@ -682,28 +683,28 @@ function AfetacaoCards({
             const isAssigned = workerForm.assignedSchedules?.includes(s.id);
             return (
               <label key={s.id} className={`flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer transition-all ${isAssigned ? '' : 'hover:bg-slate-50'}`} style={isAssigned ? { backgroundColor: 'rgba(27,58,87,0.05)' } : {}}>
-                <div className={`w-3.5 h-3.5 rounded flex items-center justify-center border shrink-0 ${isAssigned ? '' : 'border-slate-300'}`} style={isAssigned ? { backgroundColor: '#1B3A57', borderColor: '#1B3A57' } : {}}>
+                <div className={`w-3.5 h-3.5 rounded flex items-center justify-center border shrink-0 ${isAssigned ? '' : 'border-slate-300'}`} style={isAssigned ? { backgroundColor: FT.navy, borderColor: FT.navy } : {}}>
                   {isAssigned && <CheckCircle size={9} className="text-white" />}
                 </div>
                 <input type="checkbox" className="hidden" checked={isAssigned} onChange={() => {
                   const current = workerForm.assignedSchedules || [];
                   setWorkerForm(prev => ({ ...prev, assignedSchedules: current.includes(s.id) ? current.filter(id => id !== s.id) : [...current, s.id] }));
                 }} />
-                <span className="text-[10px] font-bold truncate" style={{ color: isAssigned ? '#1B3A57' : '#475569' }}>{s.name}</span>
+                <span className="text-[10px] font-bold truncate" style={{ color: isAssigned ? FT.navy : '#475569' }}>{s.name}</span>
               </label>
             );
           })}
         </div>
         <div className="px-2 py-2 border-t border-slate-100 bg-slate-50/50">
           <label className="text-[9px] font-bold uppercase text-slate-400 block mb-1">Padrão</label>
-          <select value={workerForm.defaultScheduleId || ''} onChange={e => setWorkerForm(prev => ({ ...prev, defaultScheduleId: e.target.value }))} className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs font-semibold outline-none focus:border-[#1B3A57] transition-all">
+          <select value={workerForm.defaultScheduleId || ''} onChange={e => setWorkerForm(prev => ({ ...prev, defaultScheduleId: e.target.value }))} className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs font-semibold outline-none focus:border-[var(--navy)] transition-all">
             <option value="">Selecionar</option>
             {schedules.filter(s => workerForm.assignedSchedules?.includes(s.id)).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
         </div>
         {(workerForm.assignedSchedules?.length > 0) && <>
           <div className="flex items-center gap-1.5 px-3 py-1.5 border-t border-slate-100 bg-slate-50">
-            <CalendarRange size={9} className="text-[#869AAF]" />
+            <CalendarRange size={9} className="text-[var(--slate)]" />
             <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Períodos</span>
             {!workerForm.id && <span className="ml-auto text-[9px] text-amber-500 font-bold">Guarde primeiro</span>}
           </div>
@@ -714,7 +715,7 @@ function AfetacaoCards({
               return (
                 <div key={s.id} className="border border-slate-100 rounded-lg overflow-hidden">
                   <button type="button" onClick={() => setExpandedSchedulePeriods(prev => ({ ...prev, [s.id]: !prev[s.id] }))} className="w-full flex items-center justify-between px-2.5 py-1.5 hover:bg-slate-50 transition-colors">
-                    <span className="text-[9px] font-black uppercase truncate" style={{ color: '#1B3A57' }}>{s.name}</span>
+                    <span className="text-[9px] font-black uppercase truncate" style={{ color: FT.navy }}>{s.name}</span>
                     <ChevronDown size={11} className={`text-slate-400 shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
                   </button>
                   {isOpen && (
@@ -722,15 +723,15 @@ function AfetacaoCards({
                       <div className="grid grid-cols-2 gap-1.5">
                         <div>
                           <label className="text-[8px] font-bold uppercase text-slate-400 block mb-0.5">Início</label>
-                          <input type="date" value={dates.dataInicio || ''} onChange={e => setWorkerForm(prev => ({ ...prev, assignedScheduleDates: { ...(prev.assignedScheduleDates || {}), [s.id]: { ...dates, dataInicio: e.target.value } } }))} className="w-full bg-white border border-slate-200 rounded p-1.5 text-[10px] font-bold outline-none focus:border-[#1B3A57] transition-all" />
+                          <input type="date" value={dates.dataInicio || ''} onChange={e => setWorkerForm(prev => ({ ...prev, assignedScheduleDates: { ...(prev.assignedScheduleDates || {}), [s.id]: { ...dates, dataInicio: e.target.value } } }))} className="w-full bg-white border border-slate-200 rounded p-1.5 text-[10px] font-bold outline-none focus:border-[var(--navy)] transition-all" />
                         </div>
                         <div>
                           <label className="text-[8px] font-bold uppercase text-slate-400 block mb-0.5">Fim</label>
-                          <input type="date" value={dates.dataFim || ''} onChange={e => setWorkerForm(prev => ({ ...prev, assignedScheduleDates: { ...(prev.assignedScheduleDates || {}), [s.id]: { ...dates, dataFim: e.target.value } } }))} className="w-full bg-white border border-slate-200 rounded p-1.5 text-[10px] font-bold outline-none focus:border-[#1B3A57] transition-all" />
+                          <input type="date" value={dates.dataFim || ''} onChange={e => setWorkerForm(prev => ({ ...prev, assignedScheduleDates: { ...(prev.assignedScheduleDates || {}), [s.id]: { ...dates, dataFim: e.target.value } } }))} className="w-full bg-white border border-slate-200 rounded p-1.5 text-[10px] font-bold outline-none focus:border-[var(--navy)] transition-all" />
                         </div>
                       </div>
                       {workerForm.id && (
-                        <button onClick={() => handleSaveScheduleDates(s.id, dates.dataInicio || new Date().toISOString().split('T')[0], dates.dataFim || '')} className={`w-full flex items-center justify-center gap-1 py-1 rounded text-[9px] font-black uppercase transition-all text-white ${saveSuccessScheduleId === s.id ? 'bg-emerald-500' : ''}`} style={saveSuccessScheduleId === s.id ? {} : { backgroundColor: '#1B3A57' }}>
+                        <button onClick={() => handleSaveScheduleDates(s.id, dates.dataInicio || new Date().toISOString().split('T')[0], dates.dataFim || '')} className={`w-full flex items-center justify-center gap-1 py-1 rounded text-[9px] font-black uppercase transition-all text-white ${saveSuccessScheduleId === s.id ? 'bg-emerald-500' : ''}`} style={saveSuccessScheduleId === s.id ? {} : { backgroundColor: FT.navy }}>
                           {saveSuccessScheduleId === s.id ? <><CheckCircle2 size={9} /> Gravado</> : <><Save size={9} /> Gravar</>}
                         </button>
                       )}

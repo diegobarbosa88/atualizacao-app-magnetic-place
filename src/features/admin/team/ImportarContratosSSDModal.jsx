@@ -4,6 +4,7 @@ import {
   HelpCircle, Loader2, ArrowRight,
 } from 'lucide-react';
 import ModalShell from '../../../components/common/ModalShell';
+import { FT } from '../../../styles/designTokens';
 import { PROFISSOES_EMPRESA, findProfissaoByCodigo } from '../../../data/profissoesEmpresa';
 import { CNP_PROFISSOES } from '../../../data/cnpProfissoes';
 
@@ -354,7 +355,7 @@ export default function ImportarContratosSSDModal({ workers, onClose, onImportad
     }
     if (alt.acao === 'atualizar') {
       return (
-        <span className="flex items-center gap-1 font-bold text-[10px]" style={{ color: '#869AAF' }}>
+        <span className="flex items-center gap-1 font-bold text-[10px]" style={{ color: FT.slate }}>
           <ArrowRight size={11} /> Atualizar
         </span>
       );
@@ -366,7 +367,7 @@ export default function ImportarContratosSSDModal({ workers, onClose, onImportad
         <button
           onClick={() => setDecisao(workerId, alt.campo, 'aplicar')}
           className={`px-2 py-0.5 rounded text-[10px] font-black transition-all ${decisao === 'aplicar' ? 'text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
-          style={decisao === 'aplicar' ? { backgroundColor: '#1B3A57' } : {}}
+          style={decisao === 'aplicar' ? { backgroundColor: FT.navy } : {}}
         >
           Usar CSV
         </button>
@@ -409,7 +410,7 @@ export default function ImportarContratosSSDModal({ workers, onClose, onImportad
                 onClick={handleGuardar}
                 disabled={salvando || totalAplicar === 0}
                 className="flex items-center gap-2 px-5 py-2.5 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-2xl text-sm font-black uppercase tracking-widest transition-all"
-                style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}
+                style={{ backgroundColor: FT.orange, color: FT.navy }}
               >
                 {salvando
                   ? <><Loader2 size={14} className="animate-spin" /> A guardar…</>
@@ -436,7 +437,7 @@ export default function ImportarContratosSSDModal({ workers, onClose, onImportad
           {passo === 'upload' && (
             <div className="px-8 py-14 flex flex-col items-center gap-5">
               <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ backgroundColor: 'rgba(134,154,175,0.15)' }}>
-                <Upload size={28} style={{ color: '#869AAF' }} />
+                <Upload size={28} style={{ color: FT.slate }} />
               </div>
               <div className="text-center space-y-1.5">
                 <p className="text-base font-bold text-slate-700">CSV exportado da Segurança Social Direta</p>
@@ -446,7 +447,7 @@ export default function ImportarContratosSSDModal({ workers, onClose, onImportad
               <button
                 onClick={() => fileRef.current?.click()}
                 className="px-7 py-3 text-white rounded-2xl text-sm font-black uppercase tracking-widest transition-all hover:opacity-90"
-                style={{ backgroundColor: '#1B3A57' }}
+                style={{ backgroundColor: FT.navy }}
               >
                 Selecionar ficheiro .csv
               </button>
@@ -484,8 +485,8 @@ export default function ImportarContratosSSDModal({ workers, onClose, onImportad
                   <div key={worker.id} className="border-b border-slate-100 last:border-0">
                     {/* Nome / NISS */}
                     <div className="px-5 py-2 bg-slate-50/70 flex items-center gap-2.5">
-                      <div className="w-5 h-5 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: '#1B3A57' }}>
-                        <span className="text-[8px] font-black uppercase" style={{ color: '#EB8D00' }}>{worker.name.charAt(0)}</span>
+                      <div className="w-5 h-5 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: FT.navy }}>
+                        <span className="text-[8px] font-black uppercase" style={{ color: FT.orange }}>{worker.name.charAt(0)}</span>
                       </div>
                       <p className="text-xs font-black text-slate-700">{worker.name}</p>
                       <span className="text-[10px] text-slate-400 font-mono">· {worker.nis}</span>

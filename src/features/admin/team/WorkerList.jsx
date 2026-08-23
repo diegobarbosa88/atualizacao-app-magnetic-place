@@ -4,6 +4,7 @@ import { authFetch } from '../../../utils/authFetch';
 import { impersonarTrabalhador } from '../../../utils/impersonateWorker';
 import { Search, Edit2, Trash2, CheckCircle, ShieldCheck, ShieldOff, MoreVertical, FolderOpen, SendHorizonal, AlertTriangle, Shield } from 'lucide-react';
 import SSComunicacaoModal from './SSComunicacaoModal';
+import { FT } from '../../../styles/designTokens';
 import Card from '../../../components/common/Card';
 import { FONT_TITLE, FONT_MONO } from '../../../styles/designTokens';
 
@@ -59,7 +60,7 @@ function MiniTimeline({ w, ssFlag }) {
     <div className="flex items-center gap-1" title={label}>
       <span className={`w-[7px] h-[7px] rounded-full shrink-0 ${dotCls(admissaoState)}`} />
       <span className={`w-3 h-[2px] shrink-0 ${admissaoState === 'done' ? 'bg-emerald-500' : 'bg-slate-200'}`} />
-      <span className="w-[7px] h-[7px] rounded-full shrink-0" style={{ backgroundColor: '#1B3A57' }} />
+      <span className="w-[7px] h-[7px] rounded-full shrink-0" style={{ backgroundColor: FT.navy }} />
       <span className={`w-3 h-[2px] shrink-0 ${cessacaoState === 'done' ? 'bg-emerald-500' : 'bg-slate-200'}`} />
       <span className={`w-[7px] h-[7px] rounded-full shrink-0 ${dotCls(cessacaoState)}`} />
       <span className={`text-[9px] font-black uppercase tracking-wide ml-1 truncate ${labelCls}`}>{label}</span>
@@ -213,7 +214,7 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                   {/* Colaborador */}
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-black" style={{ backgroundColor: '#1B3A57', color: '#EB8D00' }}>{getInitials(w.name)}</div>
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-black" style={{ backgroundColor: FT.navy, color: FT.orange }}>{getInitials(w.name)}</div>
                       <div className="min-w-0">
                         <p className="font-black text-slate-800 text-sm truncate">{w.name}</p>
                         <p className="text-xs text-slate-400 truncate">{w.profissao || 'Staff'}</p>
@@ -275,7 +276,7 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                               onClick={() => { verPortal(w); setOpenMenuId(null); }}
                               className="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-slate-50 group transition-colors"
                             >
-                              <span className="flex items-center justify-center w-6 h-6 rounded-md bg-slate-100 group-hover:bg-slate-200 transition-colors shrink-0" style={{ color: '#869AAF' }}><Search size={11} /></span>
+                              <span className="flex items-center justify-center w-6 h-6 rounded-md bg-slate-100 group-hover:bg-slate-200 transition-colors shrink-0" style={{ color: FT.slate }}><Search size={11} /></span>
                               <span className="text-[11px] font-semibold text-slate-700 group-hover:text-slate-800">Ver Portal</span>
                             </button>
                             <button
@@ -389,7 +390,7 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                 {w.status === 'inativo' ? 'Inativo' : 'Ativo'}
               </div>
               <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
-                <button onClick={() => verPortal(w)} className="p-1 hover:bg-slate-50 rounded-md transition-all border border-slate-100" style={{ color: '#869AAF' }} title="Ver Portal"><Search size={10} /></button>
+                <button onClick={() => verPortal(w)} className="p-1 hover:bg-slate-50 rounded-md transition-all border border-slate-100" style={{ color: FT.slate }} title="Ver Portal"><Search size={10} /></button>
                 <button onClick={() => onEdit(w)} className="p-1 text-amber-600 hover:bg-amber-50 rounded-md transition-all border border-amber-100" title="Editar"><Edit2 size={10} /></button>
                 <button onClick={() => onVerPasta?.(w.id)} className="p-1 text-emerald-600 hover:bg-emerald-50 rounded-md transition-all border border-emerald-100" title="Ver Pasta de Documentos"><FolderOpen size={10} /></button>
                 {w.status === 'ativo' && !w.ss_admissao_comunicada_em && (
@@ -409,7 +410,7 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
               </div>
             </div>
             <div className="flex items-center gap-2 mb-2">
-              <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-[10px] font-black" style={{ backgroundColor: '#1B3A57', color: '#EB8D00' }}>{getInitials(w.name)}</div>
+              <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-[10px] font-black" style={{ backgroundColor: FT.navy, color: FT.orange }}>{getInitials(w.name)}</div>
               <div className="min-w-0">
                 <h4 className="text-[0.95rem] font-bold leading-[1.15] text-[#28323c] truncate" style={{ fontFamily: FONT_TITLE }} title={w.name}>{w.name}</h4>
                 <p className="text-[9.5px] text-slate-400 font-semibold truncate" style={{ fontFamily: FONT_MONO }}>{w.profissao || 'Staff'}</p>

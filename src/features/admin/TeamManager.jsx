@@ -7,6 +7,7 @@ import WorkerForm from './team/WorkerForm';
 import WorkerList from './team/WorkerList';
 import ModalShell from '../../components/common/ModalShell';
 import SectionHeaderShell from '../../components/common/SectionHeaderShell';
+import { FT } from '../../styles/designTokens';
 import ChangeRequestsPanel from './team/ChangeRequestsPanel';
 import AbsenceRequestsPanel from './team/AbsenceRequestsPanel';
 import WorkerValorHoraHistoryModal from './team/WorkerValorHoraHistoryModal';
@@ -170,7 +171,7 @@ const TeamManagerContent = ({ onLogin }) => {
         activeTab={teamSubTab}
         onTabChange={setTeamSubTab}
         stats={[
-          { label: 'Colaboradores', value: workers.length, colorText: '#1B3A57', dotColor: '#869AAF' },
+          { label: 'Colaboradores', value: workers.length, colorText: FT.navy, dotColor: FT.slate },
           { label: 'Ativos', value: workers.length - inactiveCount, colorText: '#0d7a4b', dotColor: '#1cb476' },
           { label: 'Inativos', value: inactiveCount, colorText: '#516375', dotColor: '#94a3b8' },
           { label: 'Onboarding pendente', value: pendingOnboardingCount, colorText: '#92660a', dotColor: '#e8a317' },
@@ -217,13 +218,13 @@ const TeamManagerContent = ({ onLogin }) => {
             </label>
           )}
           <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl p-1">
-            <button onClick={() => setWorkersView('grid')} className={`p-2 rounded-lg transition-all ${workersView === 'grid' ? 'text-white' : 'text-slate-400 hover:text-slate-600'}`} style={workersView === 'grid' ? { backgroundColor: '#1B3A57' } : {}} title="Vista em Grade"><LayoutGrid size={18} /></button>
-            <button onClick={() => setWorkersView('list')} className={`p-2 rounded-lg transition-all ${workersView === 'list' ? 'text-white' : 'text-slate-400 hover:text-slate-600'}`} style={workersView === 'list' ? { backgroundColor: '#1B3A57' } : {}} title="Vista em Lista"><List size={18} /></button>
+            <button onClick={() => setWorkersView('grid')} className={`p-2 rounded-lg transition-all ${workersView === 'grid' ? 'text-white' : 'text-slate-400 hover:text-slate-600'}`} style={workersView === 'grid' ? { backgroundColor: FT.navy } : {}} title="Vista em Grade"><LayoutGrid size={18} /></button>
+            <button onClick={() => setWorkersView('list')} className={`p-2 rounded-lg transition-all ${workersView === 'list' ? 'text-white' : 'text-slate-400 hover:text-slate-600'}`} style={workersView === 'list' ? { backgroundColor: FT.navy } : {}} title="Vista em Lista"><List size={18} /></button>
           </div>
           <button
             onClick={() => { setInviteEmail(''); setGeneratedLink(''); setInviteModal(true); }}
             className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl font-black text-xs uppercase transition-all whitespace-nowrap border-2 hover:bg-slate-50"
-            style={{ borderColor: '#869AAF', color: '#869AAF' }}
+            style={{ borderColor: FT.slate, color: FT.slate }}
             title="Convidar novo colaborador via link de onboarding"
           >
             <UserPlus size={14} /> Convidar
@@ -231,7 +232,7 @@ const TeamManagerContent = ({ onLogin }) => {
           <button
             onClick={() => setScannerOpen(true)}
             className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl font-black text-xs uppercase transition-all whitespace-nowrap border-2 hover:bg-slate-50"
-            style={{ borderColor: '#869AAF', color: '#869AAF' }}
+            style={{ borderColor: FT.slate, color: FT.slate }}
             title="Scanner de Documentos com IA"
           >
             <ScanSearch size={14} /> Scanner
@@ -242,7 +243,7 @@ const TeamManagerContent = ({ onLogin }) => {
               setIsAddingInTab(true);
             }}
             className="px-3 sm:px-5 py-2 rounded-xl font-black text-xs uppercase shadow-lg transition-all whitespace-nowrap text-white"
-            style={{ backgroundColor: '#EB8D00' }}
+            style={{ backgroundColor: FT.orange }}
           >
             Novo
           </button>
