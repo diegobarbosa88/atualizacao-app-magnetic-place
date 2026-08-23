@@ -91,10 +91,16 @@ faltam=$(perl -e '
     while ($c =~ /(bg|text|border|divide|ring)-slate-(\d{2,3})/g) { $vistos{"$1-$2"} = 1 }
   }
   # text-300/400 sao resolvidos pela classificacao icone/texto, nao pelo mapa
-  # bg-500 e border-800 ficam DELIBERADAMENTE fora: o bg-500 so existe dentro de
-  # mapas de cor-a-escolha (TagBadge, OrfaoBancoModal) e num /20 sobre Tailwind,
-  # e o border-800 sao as bordas dos recibos impressos, onde passar de quase-preto
-  # a navy se ve no documento. Ambos sao decisao em contexto, nao mecanica.
+  # bg-500 e border-800 ficam DELIBERADAMENTE fora, por razoes DIFERENTES:
+  #   bg-500     so existe dentro de mapas de cor-a-escolha (TagBadge,
+  #              OrfaoBancoModal) e num /20 sobre classe Tailwind. Ali a cor e
+  #              dado escolhido pelo utilizador, nao tom semantico.
+  #   border-800 sao as bordas da PRE-VISUALIZACAO do recibo no ecra. Foram
+  #              verificadas: estao todas depois do ultimo doc.save, e os PDFs
+  #              deste ficheiro sao jsPDF programatico, imune a CSS — ou seja
+  #              NAO ha risco de export. Ficam fora so porque o destino depende
+  #              de o fundo da pre-visualizacao inverter no modo escuro, e isso
+  #              decide-se no lote 21K com o ficheiro aberto.
   delete $vistos{"text-300"}; delete $vistos{"text-400"};
   delete $vistos{"bg-500"};   delete $vistos{"border-800"};
   my @f = grep { !$mapa{$_} } sort keys %vistos;

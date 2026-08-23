@@ -277,6 +277,12 @@ perguntar. E usar sempre a mesma métrica: o script conta **ocorrências**, não
   linhas — passou de 0 para 34 sem nada ter mudado no código. Vale como regra geral: **quando uma
   verificação dá zero num defeito que já apareceu antes, desconfiar do instrumento antes de assumir
   que está limpo.** Os 34 ficam por tratar, em lote próprio.
+  **Mas a janela de 3 linhas troca falsos negativos por falsos positivos:** ela vê o `text-white` e
+  um `FT.orange` por perto, e assume que um é fundo do outro. Nem sempre é — em
+  `FinancialReportOverlay.jsx:115` o `text-white` assenta em `bg-slate-900` (hoje `--navy-solid`) e
+  dá 11,74:1, com o laranja a pertencer a um elemento vizinho. **O lote dos 34 precisa de
+  confirmação caso a caso do fundo real, não de conversão em massa** — o script lista candidatos,
+  não confirmações. Medir o fundo computado de cada um no browser antes de lhe tocar.
 - **`constants/rhCategories.js:139`** — a entrada `amberCustom` usa `text-[#854F0B]` sobre
   `bg-[rgba(235,141,0,0.15)]`: 1,73:1 no modo escuro, porque nenhum dos dois hex inverte. É um mapa
   de cor-à-escolha (categorias de documentos), por isso não se converte às cegas — fica com as
