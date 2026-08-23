@@ -52,40 +52,40 @@ export default function FaturaConfigPanel() {
 
   const Field = ({ label, field, placeholder, type = 'text' }) => (
     <div className="space-y-1">
-      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</p>
+      <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">{label}</p>
       <input
         type={type}
         value={form[field]}
         onChange={e => setForm(prev => ({ ...prev, [field]: e.target.value }))}
         placeholder={placeholder}
-        className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
+        className="w-full px-3 py-2 rounded-xl border border-[var(--border)] text-sm text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
       />
     </div>
   );
 
   return (
-    <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-5 space-y-4">
+    <div className="bg-white rounded-[2rem] border border-[var(--border-soft)] shadow-sm p-5 space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Building2 size={16} className="text-indigo-500" />
           <div>
-            <p className="text-xs font-black uppercase tracking-widest text-slate-400 mb-0.5">Dados da Empresa</p>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs font-black uppercase tracking-widest text-[var(--slate-dim)] mb-0.5">Dados da Empresa</p>
+            <p className="text-xs text-[var(--slate-dim)]">
               {systemSettings?.companyName || 'Nome não definido'}
-              {systemSettings?.companyNif ? <span className="ml-2 text-slate-400">· NIF {systemSettings.companyNif}</span> : null}
+              {systemSettings?.companyNif ? <span className="ml-2 text-[var(--slate-dim)]">· NIF {systemSettings.companyNif}</span> : null}
             </p>
           </div>
         </div>
         <button
           onClick={handleAbrir}
-          className="flex items-center gap-1 px-3 py-2 text-xs font-black uppercase tracking-widest text-slate-500 hover:text-indigo-600 transition-colors"
+          className="flex items-center gap-1 px-3 py-2 text-xs font-black uppercase tracking-widest text-[var(--slate-dim)] hover:text-indigo-600 transition-colors"
         >
           {aberto ? <ChevronUp size={14} /> : <ChevronDown size={14} />} Configurar
         </button>
       </div>
 
       {aberto && (
-        <div className="border-t border-slate-100 pt-4 space-y-4">
+        <div className="border-t border-[var(--border-soft)] pt-4 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Nome da Empresa" field="companyName" placeholder="Magnetic Place, Lda." />
             <Field label="NIF" field="companyNif" placeholder="500 000 000" />

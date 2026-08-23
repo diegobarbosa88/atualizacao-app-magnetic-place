@@ -35,7 +35,7 @@ export default function ApoliceSegurosImportPanel() {
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 sm:p-5">
+    <div className="bg-white rounded-2xl border border-[var(--border-soft)] shadow-sm p-4 sm:p-5">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2">
           <ShieldCheck size={18} style={{ color: 'var(--navy)' }} />
@@ -53,7 +53,7 @@ export default function ApoliceSegurosImportPanel() {
           Importar do Gmail
         </button>
       </div>
-      <p className="text-xs text-slate-400 font-semibold mt-2">
+      <p className="text-xs text-[var(--slate-dim)] font-semibold mt-2">
         Procura emails da Allianz (allianz.pt) em 88diegobarbosa@gmail.com, extrai o Quadro de Pessoal Seguro e compara com o sistema.
       </p>
 

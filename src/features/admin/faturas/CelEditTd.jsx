@@ -37,7 +37,7 @@ export default function CelEditTd({
             style={{ minWidth: 80 }} />
           <button onClick={onSave} disabled={salvandoCell}
             className="p-1 text-emerald-600 hover:text-emerald-700 disabled:opacity-50"><Check size={13} /></button>
-          <button onClick={onCancel} className="p-1 text-slate-400 hover:text-slate-600"><X size={13} /></button>
+          <button onClick={onCancel} className="p-1 text-[var(--slate)] hover:text-[var(--ink-soft)]"><X size={13} /></button>
         </div>
       </td>
     );
@@ -49,10 +49,10 @@ export default function CelEditTd({
       <span className="cursor-default">
         {valor !== null && valor !== undefined && valor !== ''
           ? valor
-          : <span className="text-slate-300">—</span>}
+          : <span className="text-[var(--slate)]">—</span>}
       </span>
       <button onClick={e => onOpen(e, fatura, campo, valor)}
-        className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity p-1 text-slate-300 hover:text-indigo-500">
+        className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity p-1 text-[var(--slate)] hover:text-indigo-500">
         <Pencil size={11} />
       </button>
     </td>

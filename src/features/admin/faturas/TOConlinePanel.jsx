@@ -11,7 +11,7 @@ import { useTableFilters } from '../toconline/hooks/useTableFilters';
 import { useTocRelatorios } from '../toconline/hooks/useTocRelatorios';
 import ModalDocToc from '../toconline/components/ModalDocToc';
 
-const selectClass = "w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white";
+const selectClass = "w-full px-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white";
 
 export default function TOConlinePanel() {
   const { supabase } = useApp();
@@ -99,12 +99,12 @@ export default function TOConlinePanel() {
   };
 
   const ThSortRel = ({ campo, label }) => (
-    <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 cursor-pointer select-none hover:text-slate-600 transition-colors"
+    <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] cursor-pointer select-none hover:text-[var(--ink-soft)] transition-colors"
       onClick={() => toggleOrdemRel(campo)}>
       <span className="flex items-center gap-1">
         {label}
         {ordemRel.campo !== campo
-          ? <ArrowUpDown size={11} className="text-slate-300" />
+          ? <ArrowUpDown size={11} className="text-[var(--slate)]" />
           : ordemRel.dir === 'asc' ? <ArrowUp size={11} className="text-blue-500" /> : <ArrowDown size={11} className="text-blue-500" />
         }
       </span>
@@ -112,20 +112,20 @@ export default function TOConlinePanel() {
   );
 
   return (
-    <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-5 space-y-4">
+    <div className="bg-white rounded-[2rem] border border-[var(--border-soft)] shadow-sm p-5 space-y-4">
       {/* Header de conexão */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className={`w-2 h-2 rounded-full ${ligado ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+          <div className={`w-2 h-2 rounded-full ${ligado ? 'bg-emerald-500' : 'bg-[var(--slate)]'}`} />
           <div>
-            <p className="text-xs font-black uppercase tracking-widest text-slate-400 mb-0.5">TOConline</p>
-            <p className="text-xs text-slate-500">{ligado ? 'Ligado — pronto a usar' : 'Não ligado'}</p>
+            <p className="text-xs font-black uppercase tracking-widest text-[var(--slate-dim)] mb-0.5">TOConline</p>
+            <p className="text-xs text-[var(--slate-dim)]">{ligado ? 'Ligado — pronto a usar' : 'Não ligado'}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           {ligado ? (
             <button onClick={handleDesligar}
-              className="flex items-center gap-1 px-3 py-1.5 text-xs font-black uppercase tracking-widest text-slate-400 hover:text-red-500 transition-colors">
+              className="flex items-center gap-1 px-3 py-1.5 text-xs font-black uppercase tracking-widest text-[var(--slate-dim)] hover:text-red-500 transition-colors">
               <Link2Off size={13} /> Desligar
             </button>
           ) : (
@@ -147,9 +147,9 @@ export default function TOConlinePanel() {
 
       {/* ── Relatórios ── */}
       {ligado && (
-        <div className="border-t border-slate-100 pt-4 space-y-4">
+        <div className="border-t border-[var(--border-soft)] pt-4 space-y-4">
           <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:items-end">
-            <div className="flex gap-1 bg-slate-100 p-1 rounded-2xl w-full sm:w-auto overflow-x-auto">
+            <div className="flex gap-1 bg-[var(--surface-dim)] p-1 rounded-2xl w-full sm:w-auto overflow-x-auto">
               {[
                 { key: 'vendas', label: 'Vendas' },
                 { key: 'compras', label: 'Compras' },
@@ -164,14 +164,14 @@ export default function TOConlinePanel() {
             </div>
             <div className="flex gap-2 w-full sm:w-auto sm:flex-1 sm:min-w-0">
               <div className="space-y-0.5 flex-1 min-w-0">
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">De</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">De</p>
                 <input type="date" value={dataDeRel} onChange={e => setDataDeRel(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                  className="w-full px-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-blue-300" />
               </div>
               <div className="space-y-0.5 flex-1 min-w-0">
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Até</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Até</p>
                 <input type="date" value={dataAteRel} onChange={e => setDataAteRel(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                  className="w-full px-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-blue-300" />
               </div>
             </div>
             <button onClick={handleCarregarRelatorio} disabled={carregandoRel}
@@ -191,41 +191,41 @@ export default function TOConlinePanel() {
               <div className="space-y-3">
                 <div className="flex gap-2 items-center">
                   <div className="relative flex-1">
-                    <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--slate)]" />
                     <input value={pesquisaRel} onChange={e => setPesquisaRel(e.target.value)}
                       placeholder="Pesquisar por entidade ou nº documento..."
-                      className="w-full pl-9 pr-4 py-2.5 rounded-2xl border border-slate-200 text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-300" />
-                    {pesquisaRel && <button onClick={() => setPesquisaRel('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"><X size={13} /></button>}
+                      className="w-full pl-9 pr-4 py-2.5 rounded-2xl border border-[var(--border)] text-sm text-[var(--ink-mid)] placeholder-[var(--slate)] focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                    {pesquisaRel && <button onClick={() => setPesquisaRel('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--slate)] hover:text-[var(--ink-soft)]"><X size={13} /></button>}
                   </div>
                   <button onClick={() => setMostrarFiltrosRel(v => !v)}
-                    className={`flex items-center gap-1.5 px-4 py-2.5 rounded-2xl border text-xs font-black uppercase tracking-widest transition-all ${mostrarFiltrosRel || filtrosRelAtivos ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-white border-slate-200 text-slate-500 hover:text-blue-600 hover:border-blue-200'}`}>
+                    className={`flex items-center gap-1.5 px-4 py-2.5 rounded-2xl border text-xs font-black uppercase tracking-widest transition-all ${mostrarFiltrosRel || filtrosRelAtivos ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-white border-[var(--border)] text-[var(--slate-dim)] hover:text-blue-600 hover:border-blue-200'}`}>
                     {mostrarFiltrosRel ? <ChevronUp size={13} /> : <ChevronDown size={13} />} Filtros
                     {filtrosRelAtivos && <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />}
                   </button>
                   {filtrosRelAtivos && (
-                    <button onClick={limparFiltrosRel} className="flex items-center gap-1 px-3 py-2.5 text-xs font-black uppercase tracking-widest text-slate-400 hover:text-red-500 transition-colors">
+                    <button onClick={limparFiltrosRel} className="flex items-center gap-1 px-3 py-2.5 text-xs font-black uppercase tracking-widest text-[var(--slate-dim)] hover:text-red-500 transition-colors">
                       <X size={12} /> Limpar
                     </button>
                   )}
                 </div>
                 {mostrarFiltrosRel && (
-                  <div className="bg-slate-50 rounded-2xl border border-slate-100 p-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="bg-[var(--surface)] rounded-2xl border border-[var(--border-soft)] p-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div className="space-y-1">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Ano</label>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Ano</label>
                       <select value={filtroAnoRel} onChange={e => setFiltroAnoRel(e.target.value)} className={selectClass}>
                         <option value="">Todos</option>
                         {anosDisponiveisRel.map(a => <option key={a} value={a}>{a}</option>)}
                       </select>
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Mês</label>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Mês</label>
                       <select value={filtroMesRel} onChange={e => setFiltroMesRel(e.target.value)} className={selectClass}>
                         <option value="">Todos</option>
                         {MESES.map(m => <option key={m.val} value={m.val}>{m.label}</option>)}
                       </select>
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">{tipoRel === 'compras' ? 'Fornecedor' : 'Cliente'}</label>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">{tipoRel === 'compras' ? 'Fornecedor' : 'Cliente'}</label>
                       <select value={filtroEntidadeRel} onChange={e => setFiltroEntidadeRel(e.target.value)} className={selectClass}>
                         <option value="">Todos</option>
                         {entidadesDisponiveisRel.map(e => <option key={e} value={e}>{e}</option>)}
@@ -235,17 +235,17 @@ export default function TOConlinePanel() {
                 )}
               </div>
 
-              <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden">
+              <div className="bg-white rounded-[2rem] border border-[var(--border-soft)] shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="border-b border-slate-100 bg-slate-50">
-                        <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Nº Doc</th>
+                      <tr className="border-b border-[var(--border-soft)] bg-[var(--surface)]">
+                        <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Nº Doc</th>
                         <ThSortRel campo="entidade" label={tipoRel === 'compras' ? 'Fornecedor' : 'Cliente'} />
                         <ThSortRel campo="date" label="Data" />
                         <ThSortRel campo="total" label="Total" />
-                        <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400">IVA</th>
-                        <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Ações</th>
+                        <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">IVA</th>
+                        <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Ações</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -256,20 +256,20 @@ export default function TOConlinePanel() {
                         const iva = getIva(a);
                         return (
                           <tr key={doc.id}
-                            className={`border-b border-slate-50 transition-colors cursor-pointer ${i % 2 === 0 ? 'hover:bg-slate-50' : 'bg-slate-50/40 hover:bg-slate-100/60'}`}
+                            className={`border-b border-[var(--border-soft)] transition-colors cursor-pointer ${i % 2 === 0 ? 'hover:bg-[var(--surface)]' : 'bg-[var(--surface)] hover:bg-[var(--surface-dim)]'}`}
                             onClick={() => setDocDetalhe(doc)}>
-                            <td className="px-4 py-3 text-xs font-mono text-slate-600 whitespace-nowrap">{getDocNum(doc, a) || `#${doc.id}`}</td>
-                            <td className="px-4 py-3 text-xs text-slate-700 max-w-[160px] truncate">{entidade || '—'}</td>
-                            <td className="px-4 py-3 text-xs text-slate-500 whitespace-nowrap">{a.date || '—'}</td>
-                            <td className="px-4 py-3 text-xs font-semibold text-slate-700 whitespace-nowrap">
+                            <td className="px-4 py-3 text-xs font-mono text-[var(--ink-soft)] whitespace-nowrap">{getDocNum(doc, a) || `#${doc.id}`}</td>
+                            <td className="px-4 py-3 text-xs text-[var(--ink-mid)] max-w-[160px] truncate">{entidade || '—'}</td>
+                            <td className="px-4 py-3 text-xs text-[var(--slate-dim)] whitespace-nowrap">{a.date || '—'}</td>
+                            <td className="px-4 py-3 text-xs font-semibold text-[var(--ink-mid)] whitespace-nowrap">
                               {total != null ? Number(total).toFixed(2) + ' €' : '—'}
                             </td>
-                            <td className="px-4 py-3 text-xs text-slate-500 whitespace-nowrap">
+                            <td className="px-4 py-3 text-xs text-[var(--slate-dim)] whitespace-nowrap">
                               {iva != null ? Number(iva).toFixed(2) + ' €' : '—'}
                             </td>
                             <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                               <button onClick={() => setDocDetalhe(doc)}
-                                className="p-1.5 text-slate-400 hover:text-blue-600 transition-colors" title="Ver detalhes e descarregar PDF">
+                                className="p-1.5 text-[var(--slate)] hover:text-blue-600 transition-colors" title="Ver detalhes e descarregar PDF">
                                 <Eye size={14} />
                               </button>
                             </td>
@@ -279,7 +279,7 @@ export default function TOConlinePanel() {
                     </tbody>
                   </table>
                 </div>
-                <div className="px-4 py-3 text-xs text-slate-400 font-semibold border-t border-slate-50 flex items-center justify-between gap-2 flex-wrap">
+                <div className="px-4 py-3 text-xs text-[var(--slate-dim)] font-semibold border-t border-[var(--border-soft)] flex items-center justify-between gap-2 flex-wrap">
                   <span>
                     {docsFiltrados.length !== docsRel.length
                       ? `${docsFiltrados.length} de ${docsRel.length} documento(s)`
@@ -287,7 +287,7 @@ export default function TOConlinePanel() {
                     {temMais && docsRel.length === docsFiltrados.length && ' · pode haver mais'}
                   </span>
                   {temMais && (
-                    <span className="text-[10px] text-slate-400">Mostrando os primeiros 50 resultados — afine as datas para reduzir.</span>
+                    <span className="text-[10px] text-[var(--slate-dim)]">Mostrando os primeiros 50 resultados — afine as datas para reduzir.</span>
                   )}
                 </div>
               </div>
@@ -295,7 +295,7 @@ export default function TOConlinePanel() {
           )}
 
           {!carregandoRel && docsRel.length === 0 && !erroRel && (
-            <div className="text-center py-10 text-slate-400 text-sm font-semibold">
+            <div className="text-center py-10 text-[var(--slate-dim)] text-sm font-semibold">
               Selecione o tipo e o período, depois clique em <span className="text-blue-500">Carregar</span>.
             </div>
           )}

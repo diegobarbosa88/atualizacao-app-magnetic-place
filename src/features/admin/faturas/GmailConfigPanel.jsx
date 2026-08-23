@@ -40,40 +40,40 @@ export default function GmailConfigPanel({
   const removeAssunto = (a) => onCfgChange(prev => ({ ...prev, assuntos: prev.assuntos.filter(x => x !== a) }));
 
   return (
-    <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-5 space-y-4">
+    <div className="bg-white rounded-[2rem] border border-[var(--border-soft)] shadow-sm p-5 space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-xs font-black uppercase tracking-widest text-slate-400 mb-1">Pesquisa Gmail activa</p>
-          <p className="text-xs font-mono text-slate-500 break-all">{query}</p>
+          <p className="text-xs font-black uppercase tracking-widest text-[var(--slate-dim)] mb-1">Pesquisa Gmail activa</p>
+          <p className="text-xs font-mono text-[var(--slate-dim)] break-all">{query}</p>
         </div>
         <button onClick={() => setMostrarConfig(v => !v)}
-          className="flex items-center gap-1 px-3 py-2 text-xs font-black uppercase tracking-widest text-slate-500 hover:text-indigo-600 transition-colors shrink-0">
+          className="flex items-center gap-1 px-3 py-2 text-xs font-black uppercase tracking-widest text-[var(--slate-dim)] hover:text-indigo-600 transition-colors shrink-0">
           {mostrarConfig ? <ChevronUp size={14} /> : <ChevronDown size={14} />} Configurar
         </button>
       </div>
 
       {mostrarConfig && (
-        <div className="border-t border-slate-100 pt-4 space-y-4">
+        <div className="border-t border-[var(--border-soft)] pt-4 space-y-4">
           <div className="space-y-1.5">
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Estado dos emails</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Estado dos emails</p>
             <div className="flex gap-3 flex-wrap">
               {[{ key: 'naoLidos', label: 'Sem ler' }, { key: 'lidos', label: 'Lidos' }].map(({ key, label }) => (
                 <label key={key} className="flex items-center gap-2 cursor-pointer select-none">
                   <input type="checkbox" checked={cfg[key]} onChange={e => setCfgField(key, e.target.checked)}
-                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-300 cursor-pointer" />
-                  <span className="text-xs font-black uppercase tracking-widest text-slate-600">{label}</span>
+                    className="rounded border-[var(--border)] text-indigo-600 focus:ring-indigo-300 cursor-pointer" />
+                  <span className="text-xs font-black uppercase tracking-widest text-[var(--ink-soft)]">{label}</span>
                 </label>
               ))}
               <label className="flex items-center gap-2 cursor-pointer select-none">
                 <input type="checkbox" checked={cfg.temAnexo} onChange={e => setCfgField('temAnexo', e.target.checked)}
-                  className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-300 cursor-pointer" />
-                <span className="text-xs font-black uppercase tracking-widest text-slate-600">Tem anexo</span>
+                  className="rounded border-[var(--border)] text-indigo-600 focus:ring-indigo-300 cursor-pointer" />
+                <span className="text-xs font-black uppercase tracking-widest text-[var(--ink-soft)]">Tem anexo</span>
               </label>
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Palavras no assunto</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Palavras no assunto</p>
             <div className="flex flex-wrap gap-1.5 mb-2">
               {cfg.assuntos.map(a => (
                 <span key={a} className="flex items-center gap-1 px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-semibold">
@@ -86,7 +86,7 @@ export default function GmailConfigPanel({
               <input value={assuntoInput} onChange={e => setAssuntoInput(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addAssunto(); } }}
                 placeholder="ex: recibo, nota de crédito..."
-                className="flex-1 px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                className="flex-1 px-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-indigo-300" />
               <button onClick={addAssunto}
                 className="px-3 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-xs font-black hover:bg-indigo-100 transition-colors">
                 Adicionar
@@ -95,22 +95,22 @@ export default function GmailConfigPanel({
           </div>
 
           <div className="space-y-1.5">
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Remetente (from:)</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Remetente (from:)</p>
             <input value={cfg.remetente} onChange={e => setCfgField('remetente', e.target.value)}
               placeholder="ex: fornecedor@empresa.pt"
-              className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+              className="w-full px-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-indigo-300" />
           </div>
 
           <div className="space-y-1.5">
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Outros filtros (sintaxe Gmail)</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Outros filtros (sintaxe Gmail)</p>
             <input value={cfg.palavras} onChange={e => setCfgField('palavras', e.target.value)}
               placeholder='ex: larger:1M after:2024/01/01'
-              className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-mono text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+              className="w-full px-3 py-2 rounded-xl border border-[var(--border)] text-xs font-mono text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-indigo-300" />
           </div>
 
           <div className="flex items-center gap-2 justify-end pt-1">
             <button onClick={() => onCfgChange(() => ({ ...DEFAULT_GMAIL_CONFIG }))}
-              className="px-3 py-2 text-xs font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors">
+              className="px-3 py-2 text-xs font-black uppercase tracking-widest text-[var(--slate-dim)] hover:text-[var(--ink-soft)] transition-colors">
               Repor padrão
             </button>
             <button onClick={handleGuardar} disabled={guardando}
@@ -122,9 +122,9 @@ export default function GmailConfigPanel({
         </div>
       )}
 
-      <div className="border-t border-slate-100 pt-4 flex items-center gap-3 flex-wrap">
+      <div className="border-t border-[var(--border-soft)] pt-4 flex items-center gap-3 flex-wrap">
         <button onClick={onImport} disabled={importing}
-          className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all disabled:opacity-60 border-2 hover:bg-slate-50"
+          className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all disabled:opacity-60 border-2 hover:bg-[var(--surface)]"
           style={{ borderColor: FT.slate, color: 'var(--navy)' }}>
           {importing ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
           Importar do Gmail
