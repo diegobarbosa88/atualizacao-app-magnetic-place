@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Loader2, Upload, FileDown, Trash2 } from 'lucide-react';
 import { STATUS_DOC } from '../../utils/validacaoHelpers';
 import { useApp } from '../../context/AppContext';
+import { FT } from '../../styles/designTokens';
 
 // ─── Modo Documentos ──────────────────────────────────────────────────────────
 const ModoDocumentos = ({ workers }) => {
@@ -71,12 +72,12 @@ const ModoDocumentos = ({ workers }) => {
       <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
         <div className="flex flex-col sm:flex-row gap-2">
           <select value={filtroWorker} onChange={e => setFiltroWorker(e.target.value)}
-            className="text-[10px] font-black uppercase tracking-widest border border-slate-200 rounded-xl px-3 py-2 bg-white text-slate-600 focus:outline-none focus:border-[#1B3A57]">
+            className="text-[10px] font-black uppercase tracking-widest border border-slate-200 rounded-xl px-3 py-2 bg-white text-slate-600 focus:outline-none focus:border-[var(--navy)]">
             <option value="">Todos os trabalhadores</option>
             {workersComDocs.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
           </select>
           <select value={filtroStatus} onChange={e => setFiltroStatus(e.target.value)}
-            className="text-[10px] font-black uppercase tracking-widest border border-slate-200 rounded-xl px-3 py-2 bg-white text-slate-600 focus:outline-none focus:border-[#1B3A57]">
+            className="text-[10px] font-black uppercase tracking-widest border border-slate-200 rounded-xl px-3 py-2 bg-white text-slate-600 focus:outline-none focus:border-[var(--navy)]">
             <option value="">Todos os estados</option>
             {Object.entries(STATUS_DOC).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
           </select>
@@ -85,7 +86,7 @@ const ModoDocumentos = ({ workers }) => {
           {selecionados.size > 0 && (
             <button onClick={enviarSelecionados} disabled={enviandoLote}
               className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-white px-3 py-2 rounded-xl transition-colors disabled:opacity-40 hover:opacity-90"
-              style={{ backgroundColor: '#1B3A57' }}>
+              style={{ backgroundColor: FT.navy }}>
               {enviandoLote ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
               Enviar ({selecionados.size})
             </button>

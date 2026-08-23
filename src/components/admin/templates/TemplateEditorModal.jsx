@@ -10,6 +10,7 @@ import { convertDocxToPdf } from '../../../utils/pdfCoService';
 import { PDFDocument } from 'pdf-lib';
 import ModalShell from '../../common/ModalShell';
 import FieldBadge from './FieldBadge';
+import { FT } from '../../../styles/designTokens';
 
 const PRESETS = [
   { label: 'Inferior Direito', x: 130, y: 30 },
@@ -138,7 +139,7 @@ export default function TemplateEditorModal({ template, supabase, onClose, onSav
           <button onClick={onClose} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl">Cancelar</button>
           <button onClick={handleSubmit} disabled={submitting || saving || (!isEditing && !file)}
             className="flex items-center gap-2 px-6 py-2 text-white font-bold rounded-xl hover:opacity-90 disabled:opacity-50"
-            style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}>
+            style={{ backgroundColor: FT.orange, color: FT.navy }}>
             {(submitting || saving) ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
             {isEditing ? 'Guardar Alterações' : 'Criar Template'}
           </button>
@@ -151,12 +152,12 @@ export default function TemplateEditorModal({ template, supabase, onClose, onSav
           <div>
             <label className="text-xs font-bold text-slate-600 uppercase">Nome</label>
             <input value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Contrato de Trabalho"
-              className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#1B3A57]" />
+              className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[var(--navy)]" />
           </div>
           <div>
             <label className="text-xs font-bold text-slate-600 uppercase">Descrição (opcional)</label>
             <input value={description} onChange={e => setDescription(e.target.value)} placeholder="Curta descrição interna"
-              className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#1B3A57]" />
+              className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[var(--navy)]" />
           </div>
           <div>
             <label className="text-xs font-bold text-slate-600 uppercase">
@@ -218,8 +219,8 @@ export default function TemplateEditorModal({ template, supabase, onClose, onSav
                 const isCopied = copiedTag === f.name;
                 return (
                   <button type="button" key={f.name} onClick={copy} title={`Copiar ${tag}`}
-                    className={`flex items-center gap-2 text-xs text-left px-2 py-1 rounded-md border transition-all ${isCopied ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-slate-200 hover:border-[#869AAF] hover:bg-slate-50'}`}>
-                    <code className={isCopied ? 'font-mono text-emerald-700' : 'font-mono'} style={isCopied ? {} : { color: '#869AAF' }}>{tag}</code>
+                    className={`flex items-center gap-2 text-xs text-left px-2 py-1 rounded-md border transition-all ${isCopied ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-slate-200 hover:border-[var(--slate)] hover:bg-slate-50'}`}>
+                    <code className={isCopied ? 'font-mono text-emerald-700' : 'font-mono'} style={isCopied ? {} : { color: FT.slate }}>{tag}</code>
                     <span className="text-slate-500 truncate flex-1">{f.label}</span>
                     <span className={`text-[10px] font-black uppercase tracking-widest ${isCopied ? 'text-emerald-600' : 'text-slate-300'}`}>
                       {isCopied ? 'Copiado' : 'Copiar'}

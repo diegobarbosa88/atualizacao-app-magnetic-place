@@ -7,6 +7,7 @@ import {
   Upload, Coins, Trash2, ScanSearch, ReceiptText, Files, Settings,
 } from 'lucide-react';
 import ModalShell from '../common/ModalShell';
+import { FT } from '../../styles/designTokens';
 import {
   MESES_PT,
   mesesDisponiveis,
@@ -44,10 +45,10 @@ function ExportModal({ show, onClose, onExportPdf, onExportCsv, exportFilters, s
       closeOnOverlay={false}
       footer={
         <div className="flex gap-2 p-6">
-          <button onClick={onExportPdf} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 border rounded-xl text-xs font-bold hover:bg-slate-50 transition-colors" style={{ borderColor: '#869AAF', color: '#869AAF' }}>
+          <button onClick={onExportPdf} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 border rounded-xl text-xs font-bold hover:bg-slate-50 transition-colors" style={{ borderColor: FT.slate, color: FT.slate }}>
             <FileDown size={14} /> PDF
           </button>
-          <button onClick={onExportCsv} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 border rounded-xl text-xs font-bold hover:bg-slate-50 transition-colors" style={{ borderColor: '#869AAF', color: '#869AAF' }}>
+          <button onClick={onExportCsv} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 border rounded-xl text-xs font-bold hover:bg-slate-50 transition-colors" style={{ borderColor: FT.slate, color: FT.slate }}>
             <FileDown size={14} /> CSV
           </button>
           <button onClick={onClose} className="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-200 transition-colors">
@@ -484,7 +485,7 @@ const ModoHistorico = ({ workers, logs = [], saveToDb, systemSettings, saveSyste
           className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors"
         >
           <div className="flex items-center gap-2">
-            <ReceiptText size={15} style={{ color: '#869AAF' }} />
+            <ReceiptText size={15} style={{ color: FT.slate }} />
             <span className="text-sm font-black text-slate-700">Processar novos recibos</span>
           </div>
           <ChevronRight size={15} className={`text-slate-400 transition-transform ${uploadAberto ? 'rotate-90' : ''}`} />
@@ -495,7 +496,7 @@ const ModoHistorico = ({ workers, logs = [], saveToDb, systemSettings, saveSyste
             {/* Tolerâncias */}
             <div className="flex justify-end">
               <button onClick={() => setConfigAberto(o => !o)}
-                className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-[#869AAF] transition-colors">
+                className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-[var(--slate)] transition-colors">
                 <Settings size={12} /> Tolerâncias
                 <ChevronRight size={11} className={`transition-transform ${configAberto ? 'rotate-90' : ''}`} />
               </button>
@@ -520,7 +521,7 @@ const ModoHistorico = ({ workers, logs = [], saveToDb, systemSettings, saveSyste
             )}
 
             {/* Upload */}
-            <label className="flex flex-col items-center justify-center gap-2 p-6 bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl cursor-pointer hover:border-[#869AAF] hover:bg-slate-100 transition-all">
+            <label className="flex flex-col items-center justify-center gap-2 p-6 bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl cursor-pointer hover:border-[var(--slate)] hover:bg-slate-100 transition-all">
               <Files size={24} className="text-slate-300" />
               <span className="text-sm font-bold text-slate-500">
                 {files.length > 0
@@ -533,7 +534,7 @@ const ModoHistorico = ({ workers, logs = [], saveToDb, systemSettings, saveSyste
 
             <button onClick={handleProcessar} disabled={!files.length || processando}
               className="w-full py-3 text-white rounded-xl text-sm font-black uppercase tracking-widest transition-all shadow-md disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 hover:opacity-90"
-              style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}>
+              style={{ backgroundColor: FT.orange, color: FT.navy }}>
               {processando ? <Loader2 size={16} className="animate-spin" /> : <ReceiptText size={16} />}
               {processando ? 'A processar e guardar...' : files.length > 0 ? `Processar ${files.length} ficheiro${files.length > 1 ? 's' : ''}` : 'Processar'}
             </button>
@@ -553,12 +554,12 @@ const ModoHistorico = ({ workers, logs = [], saveToDb, systemSettings, saveSyste
           ))}
         </select>
         <button onClick={carregar} disabled={carregando}
-          className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-500 hover:text-[#869AAF] hover:border-[#869AAF] transition-all disabled:opacity-40">
+          className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-500 hover:text-[var(--slate)] hover:border-[var(--slate)] transition-all disabled:opacity-40">
           <RefreshCw size={15} className={carregando ? 'animate-spin' : ''} />
         </button>
         <div className="relative">
           <button onClick={() => setShowExportMenu(o => !o)}
-            className="p-2.5 bg-slate-100 border border-slate-200 rounded-xl hover:bg-slate-200 transition-all" style={{ color: '#869AAF' }}>
+            className="p-2.5 bg-slate-100 border border-slate-200 rounded-xl hover:bg-slate-200 transition-all" style={{ color: FT.slate }}>
             <Download size={15} />
           </button>
           {showExportMenu && (
@@ -573,7 +574,7 @@ const ModoHistorico = ({ workers, logs = [], saveToDb, systemSettings, saveSyste
       </div>
 
       {/* ── Tabela de recibos ── */}
-      {carregando && <div className="flex justify-center py-10"><Loader2 size={22} className="animate-spin" style={{ color: '#869AAF' }} /></div>}
+      {carregando && <div className="flex justify-center py-10"><Loader2 size={22} className="animate-spin" style={{ color: FT.slate }} /></div>}
 
       {!carregando && registosFiltrados.length === 0 && (
         <p className="text-center text-sm text-slate-400 py-10">Nenhum recibo guardado. Processe os PDFs acima para começar.</p>

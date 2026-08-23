@@ -59,7 +59,7 @@ const EntryForm = ({ data = {}, clients, assignedClients, onChange, onSave, onCa
         <div className="grid grid-cols-1 md:grid-cols-4 gap-2 sm:gap-4">
           <div className={`${showDate ? 'md:col-span-3' : 'md:col-span-4'} space-y-0.5 sm:space-y-1`}>
             <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Cliente / Unidade</label>
-            <select className="w-full bg-slate-50 border border-slate-200 rounded-lg sm:rounded-xl p-2 sm:p-3 text-sm focus:ring-2 focus:ring-[#EB8D00]/40 focus:border-[#EB8D00] outline-none appearance-none shadow-sm text-slate-900" value={data.clientId || ''} onChange={(e) => onChange({ ...data, clientId: e.target.value })}>
+            <select className="w-full bg-slate-50 border border-slate-200 rounded-lg sm:rounded-xl p-2 sm:p-3 text-sm focus:ring-2 focus:ring-[#EB8D00]/40 focus:border-[var(--orange)] outline-none appearance-none shadow-sm text-slate-900" value={data.clientId || ''} onChange={(e) => onChange({ ...data, clientId: e.target.value })}>
               <option value="">Selecione o Cliente...</option>
               {filteredClients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
@@ -67,7 +67,7 @@ const EntryForm = ({ data = {}, clients, assignedClients, onChange, onSave, onCa
           {showDate && (
             <div className="space-y-0.5 sm:space-y-1">
               <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Data</label>
-              <input type="date" className="w-full bg-white border border-slate-200 rounded-lg sm:rounded-xl p-2 sm:p-3 text-sm focus:ring-2 focus:ring-[#EB8D00]/40 focus:border-[#EB8D00] outline-none shadow-sm text-slate-900" value={data.date || ''} onChange={(e) => onChange({ ...data, date: e.target.value })} />
+              <input type="date" className="w-full bg-white border border-slate-200 rounded-lg sm:rounded-xl p-2 sm:p-3 text-sm focus:ring-2 focus:ring-[#EB8D00]/40 focus:border-[var(--orange)] outline-none shadow-sm text-slate-900" value={data.date || ''} onChange={(e) => onChange({ ...data, date: e.target.value })} />
             </div>
           )}
         </div>
@@ -103,7 +103,7 @@ const EntryForm = ({ data = {}, clients, assignedClients, onChange, onSave, onCa
           </div>
         ) : (
           <div>
-            <button onClick={(e) => { e.preventDefault(); setShowComments(true); }} className="text-[10px] font-bold text-slate-400 hover:text-[#1B3A57] transition-colors flex items-center gap-1 bg-slate-50 hover:bg-[#1B3A57]/5 px-3 py-1.5 rounded-lg border border-slate-200 border-dashed w-max">
+            <button onClick={(e) => { e.preventDefault(); setShowComments(true); }} className="text-[10px] font-bold text-slate-400 hover:text-[var(--navy)] transition-colors flex items-center gap-1 bg-slate-50 hover:bg-[#1B3A57]/5 px-3 py-1.5 rounded-lg border border-slate-200 border-dashed w-max">
               <Plus size={12} /> Adicionar Comentários
             </button>
           </div>

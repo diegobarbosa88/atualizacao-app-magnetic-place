@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Loader2, Scissors, Upload, Save, FileDown, Coins, ChevronRight, TriangleAlert } from 'lucide-react';
+import { FT } from '../../styles/designTokens';
 import {
   parseReciboTOConline,
 } from '../../utils/validarReciboTOConline';
@@ -206,12 +207,12 @@ const ModoBursting = ({ workers, logs, systemSettings, saveToDb, workerRateHisto
   return (
     <div className="space-y-5">
       {/* Upload */}
-      <div className="bg-white border-2 border-dashed border-slate-200 rounded-2xl p-8 flex flex-col items-center gap-3 hover:border-[#869AAF] transition-colors">
+      <div className="bg-white border-2 border-dashed border-slate-200 rounded-2xl p-8 flex flex-col items-center gap-3 hover:border-[var(--slate)] transition-colors">
         <Scissors size={28} className="text-slate-300" />
         <p className="text-[11px] font-black text-slate-400 tracking-widest">PDF AGREGADO TOCONLINE</p>
         <label className="cursor-pointer">
           <input type="file" accept="application/pdf" className="hidden" onChange={handleFicheiro} />
-          <span className="flex items-center gap-2 px-4 py-2 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-colors" style={{ backgroundColor: '#1B3A57' }}>
+          <span className="flex items-center gap-2 px-4 py-2 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-colors" style={{ backgroundColor: FT.navy }}>
             <Upload size={12} /> Selecionar PDF
           </span>
         </label>
@@ -224,7 +225,7 @@ const ModoBursting = ({ workers, logs, systemSettings, saveToDb, workerRateHisto
       {ficheiro && !resultado && (
         <button onClick={handleBurst} disabled={processando}
           className="w-full flex items-center justify-center gap-2 py-3 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-50 hover:opacity-90"
-          style={{ backgroundColor: '#1B3A57' }}>
+          style={{ backgroundColor: FT.navy }}>
           {processando
             ? <><Loader2 size={13} className="animate-spin" /> A separar... {progresso.total > 0 ? `${progresso.atual}/${progresso.total} páginas` : ''}</>
             : <><Scissors size={13} /> Separar Recibos</>
@@ -235,7 +236,7 @@ const ModoBursting = ({ workers, logs, systemSettings, saveToDb, workerRateHisto
       {/* Barra de progresso */}
       {processando && progresso.total > 0 && (
         <div className="w-full bg-slate-100 rounded-full h-1.5">
-          <div className="h-1.5 rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: '#1B3A57' }} />
+          <div className="h-1.5 rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: FT.navy }} />
         </div>
       )}
 
@@ -249,27 +250,27 @@ const ModoBursting = ({ workers, logs, systemSettings, saveToDb, workerRateHisto
               {selecionados.size > 0 && ` · ${selecionados.size} SEL.`}
             </p>
             <button onClick={handleGuardarValidacoes} disabled={guardando || guardados}
-              className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:border-[#869AAF] hover:text-[#869AAF] transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+              className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:border-[var(--slate)] hover:text-[var(--slate)] transition-all disabled:opacity-40 disabled:cursor-not-allowed">
               {guardando ? <Loader2 size={11} className="animate-spin" /> : <Save size={11} />}
               {guardados ? 'Guardado' : 'Guardar'}
             </button>
             <button onClick={handleAdicionarACustosBurst} disabled={adicionando || adicionado}
-              className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:border-[#869AAF] hover:text-[#869AAF] transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+              className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:border-[var(--slate)] hover:text-[var(--slate)] transition-all disabled:opacity-40 disabled:cursor-not-allowed">
               {adicionando ? <Loader2 size={11} className="animate-spin" /> : <Coins size={11} />}
               {adicionado ? 'Adicionado' : 'A Custos'}
             </button>
             <button onClick={downloadTodos}
-              className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:border-[#869AAF] hover:text-[#869AAF] transition-all">
+              className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:border-[var(--slate)] hover:text-[var(--slate)] transition-all">
               <FileDown size={11} /> PDF
             </button>
             <button onClick={handleGuardarNoPortal} disabled={guardandoPortal || guardadosPortal}
-              className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:border-[#869AAF] hover:text-[#869AAF] transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+              className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:border-[var(--slate)] hover:text-[var(--slate)] transition-all disabled:opacity-40 disabled:cursor-not-allowed">
               {guardandoPortal ? <Loader2 size={11} className="animate-spin" /> : <Save size={11} />}
               {guardadosPortal ? 'Guardado' : 'Guardar no Portal'}
             </button>
             <button onClick={handleEnviarSelecionados} disabled={enviando || selecionados.size === 0}
               className="flex items-center gap-1.5 px-3 py-2 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90"
-              style={{ backgroundColor: '#1B3A57' }}>
+              style={{ backgroundColor: FT.navy }}>
               {enviando ? <Loader2 size={11} className="animate-spin" /> : <Upload size={11} />}
               {selecionados.size > 0 ? `Enviar ${selecionados.size}` : 'Enviar'}
             </button>
@@ -290,7 +291,7 @@ const ModoBursting = ({ workers, logs, systemSettings, saveToDb, workerRateHisto
                 })));
               }
             }}
-              className="text-[10px] font-black uppercase tracking-widest border border-slate-200 rounded-xl px-3 py-2 bg-white text-slate-600 focus:outline-none focus:border-[#1B3A57]">
+              className="text-[10px] font-black uppercase tracking-widest border border-slate-200 rounded-xl px-3 py-2 bg-white text-slate-600 focus:outline-none focus:border-[var(--navy)]">
               {['Recibo de Vencimento','Mapa de Ajudas de Custo','Mapa de Deslocamento','Contrato de Trabalho','Outro'].map(t => (
                 <option key={t} value={t}>{t}</option>
               ))}
@@ -299,11 +300,11 @@ const ModoBursting = ({ workers, logs, systemSettings, saveToDb, workerRateHisto
               value={prefixo}
               onChange={e => setPrefixo(e.target.value)}
               placeholder="Nome base (ex: Mapa de Ajuda de Custo)"
-              className="flex-1 text-[10px] border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-[#1B3A57] bg-white text-slate-700 placeholder:text-slate-300"
+              className="flex-1 text-[10px] border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-[var(--navy)] bg-white text-slate-700 placeholder:text-slate-300"
             />
             <button onClick={aplicarPrefixo} disabled={!prefixo.trim()}
               className="flex items-center gap-1.5 px-3 py-2 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors disabled:opacity-40 hover:opacity-90"
-              style={{ backgroundColor: '#1B3A57' }}>
+              style={{ backgroundColor: FT.navy }}>
               Aplicar a todos
             </button>
           </div>
@@ -314,7 +315,7 @@ const ModoBursting = ({ workers, logs, systemSettings, saveToDb, workerRateHisto
                 <tr>
                   <th className="px-3 py-2.5">
                     <input type="checkbox" checked={todosSelected} onChange={() => toggleTodos(nifsTodos)}
-                      className="rounded accent-[#1B3A57] cursor-pointer" />
+                      className="rounded accent-[var(--navy)] cursor-pointer" />
                   </th>
                   {['Trabalhador','Mês','Nome do ficheiro',''].map(h => (
                     <th key={h} className="px-3 py-2.5 text-left font-black text-slate-400 tracking-widest">{h}</th>
@@ -331,7 +332,7 @@ const ModoBursting = ({ workers, logs, systemSettings, saveToDb, workerRateHisto
                       style={selecionado ? { backgroundColor: 'rgba(235,141,0,0.08)' } : {}}>
                       <td className="px-3 py-2.5">
                         <input type="checkbox" checked={selecionado} readOnly disabled={enviado}
-                          className="rounded accent-[#1B3A57] pointer-events-none" />
+                          className="rounded accent-[var(--navy)] pointer-events-none" />
                       </td>
                       <td className="px-3 py-2.5">
                         {r.worker
@@ -344,14 +345,14 @@ const ModoBursting = ({ workers, logs, systemSettings, saveToDb, workerRateHisto
                           <input
                             value={nomes.get(r.nif) ?? ''}
                             onChange={e => setNomes(prev => { const next = new Map(prev); next.set(r.nif, e.target.value); return next; })}
-                            className="text-[10px] text-slate-700 border border-slate-200 rounded-lg px-2 py-1 w-48 focus:outline-none focus:border-[#1B3A57] bg-white"
+                            className="text-[10px] text-slate-700 border border-slate-200 rounded-lg px-2 py-1 w-48 focus:outline-none focus:border-[var(--navy)] bg-white"
                           />
                           <span className="text-[10px] text-slate-400">.pdf</span>
                         </div>
                       </td>
                       <td className="px-3 py-2.5" onClick={e => e.stopPropagation()}>
                         <button onClick={() => downloadPdf(r)} title="Guardar PDF"
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-[#869AAF] hover:bg-slate-100 transition-colors">
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-[var(--slate)] hover:bg-slate-100 transition-colors">
                           <FileDown size={13} />
                         </button>
                       </td>
