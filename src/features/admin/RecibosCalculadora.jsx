@@ -95,11 +95,11 @@ function LabelInput({ label, children, hint, badge }) {
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center gap-1 ml-1">
-        <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{label}</label>
-        {badge && <span className="text-[8px] font-black uppercase tracking-wide text-[var(--slate)] bg-[#EEF1F5] px-1.5 py-0.5 rounded">{badge}</span>}
+        <label className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-wider">{label}</label>
+        {badge && <span className="text-[8px] font-black uppercase tracking-wide text-[var(--ink-soft)] bg-[var(--surface-dim)] px-1.5 py-0.5 rounded">{badge}</span>}
       </div>
       {children}
-      {hint && <span className="text-[10px] text-slate-400 ml-1">{hint}</span>}
+      {hint && <span className="text-[10px] text-[var(--slate-dim)] ml-1">{hint}</span>}
     </div>
   );
 }
@@ -111,8 +111,8 @@ function TextInput({ value, onChange, type = 'text', readOnly, step, min, max, c
       <input
         type={type} value={value} onChange={onChange} readOnly={readOnly}
         step={step} min={min} max={max} placeholder={placeholder}
-        className={`w-full bg-transparent border-0 border-b border-slate-200 rounded-none pl-0 py-1.5 text-sm font-bold outline-none transition-all
-          ${readOnly ? 'text-slate-400 cursor-default' : 'focus:border-[var(--navy)]'}
+        className={`w-full bg-transparent border-0 border-b border-[var(--border)] rounded-none pl-0 py-1.5 text-sm font-bold outline-none transition-all
+          ${readOnly ? 'text-[var(--slate-dim)] cursor-default' : 'focus:border-[var(--navy)]'}
           ${className}`}
       />
     );
@@ -121,8 +121,8 @@ function TextInput({ value, onChange, type = 'text', readOnly, step, min, max, c
     <input
       type={type} value={value} onChange={onChange} readOnly={readOnly}
       step={step} min={min} max={max} placeholder={placeholder}
-      className={`w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold outline-none shadow-sm transition-all
-        ${readOnly ? 'bg-slate-50 text-slate-400 cursor-default' : 'focus:border-[var(--navy)] focus:ring-2 focus:ring-[#1B3A57]/10'}
+      className={`w-full bg-white border border-[var(--border)] rounded-xl px-3 py-2.5 text-sm font-bold outline-none shadow-sm transition-all
+        ${readOnly ? 'bg-[var(--surface)] text-[var(--slate-dim)] cursor-default' : 'focus:border-[var(--navy)] focus:ring-2 focus:ring-[#1B3A57]/10'}
         ${className}`}
     />
   );
@@ -134,7 +134,7 @@ function SelectInput({ value, onChange, children }) {
     return (
       <select
         value={value} onChange={onChange}
-        className="w-full bg-transparent border-0 border-b border-slate-200 rounded-none px-0 py-1.5 text-sm font-bold outline-none transition-all focus:border-[var(--navy)] lowercase"
+        className="w-full bg-transparent border-0 border-b border-[var(--border)] rounded-none px-0 py-1.5 text-sm font-bold outline-none transition-all focus:border-[var(--navy)] lowercase"
       >
         {children}
       </select>
@@ -144,7 +144,7 @@ function SelectInput({ value, onChange, children }) {
     <select
       value={value}
       onChange={onChange}
-      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold outline-none shadow-sm focus:border-[var(--navy)] focus:ring-2 focus:ring-[#1B3A57]/10 transition-all lowercase"
+      className="w-full bg-white border border-[var(--border)] rounded-xl px-3 py-2.5 text-sm font-bold outline-none shadow-sm focus:border-[var(--navy)] focus:ring-2 focus:ring-[#1B3A57]/10 transition-all lowercase"
     >
       {children}
     </select>
@@ -153,7 +153,7 @@ function SelectInput({ value, onChange, children }) {
 
 function Card({ children, className = '' }) {
   return (
-    <div className={`bg-white rounded-2xl border border-slate-100 shadow-sm ${className}`}>
+    <div className={`bg-white rounded-2xl border border-[var(--border-soft)] shadow-sm ${className}`}>
       {children}
     </div>
   );
@@ -176,7 +176,7 @@ function MobileMapaCard({ row, vdl, updateRow, removeRow }) {
   const tipoBg    = row.tipo === 'Partida' ? '#dce6f0' : row.tipo === 'Chegada' ? '#fef0d5' : '#edf0f3';
   const tipoColor = row.tipo === 'Partida' ? FT.navy : row.tipo === 'Chegada' ? '#c57800' : '#6B7A8D';
   return (
-    <div className="border border-slate-200 rounded-xl overflow-hidden bg-white">
+    <div className="border border-[var(--border)] rounded-xl overflow-hidden bg-white">
       {/* Cabeçalho — sempre visível, clicável */}
       <div
         className="flex items-center justify-between gap-2 px-3 py-2.5 cursor-pointer select-none"
@@ -187,7 +187,7 @@ function MobileMapaCard({ row, vdl, updateRow, removeRow }) {
             type="date" value={row.dia}
             onChange={e => updateRow(row.id, 'dia', e.target.value)}
             onClick={e => e.stopPropagation()}
-            className="text-sm font-bold text-slate-800 bg-transparent border-none outline-none min-w-0 shrink"
+            className="text-sm font-bold text-[var(--ink)] bg-transparent border-none outline-none min-w-0 shrink"
           />
           <span style={{ background: tipoBg, color: tipoColor, borderRadius: 20, padding: '2px 8px', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em', flexShrink: 0 }}>
             {row.tipo}
@@ -195,40 +195,40 @@ function MobileMapaCard({ row, vdl, updateRow, removeRow }) {
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <span className="text-sm font-black text-[var(--navy)] tabular-nums">{eur(valor)}</span>
-          <ChevronDown size={14} className="text-slate-400 transition-transform" style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }} />
+          <ChevronDown size={14} className="text-[var(--slate)] transition-transform" style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }} />
         </div>
       </div>
       {/* Corpo — colapsável */}
       {open && (
-        <div className="border-t border-slate-100 px-3 pb-3 pt-2 space-y-2.5">
+        <div className="border-t border-[var(--border-soft)] px-3 pb-3 pt-2 space-y-2.5">
           {[
             { label: 'Serviço',    field: 'servico',    type: 'text' },
             { label: 'Cliente',    field: 'cliente',    type: 'text' },
             { label: 'Localidade', field: 'localidade', type: 'text' },
           ].map(({ label, field }) => (
             <div key={field}>
-              <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">{label}</div>
+              <div className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-wider mb-1">{label}</div>
               <input
                 type="text" value={row[field]}
                 onChange={e => updateRow(row.id, field, e.target.value)}
-                className="w-full border-b border-slate-200 py-1 text-sm font-bold outline-none focus:border-[var(--navy)] bg-transparent"
+                className="w-full border-b border-[var(--border)] py-1 text-sm font-bold outline-none focus:border-[var(--navy)] bg-transparent"
                 style={{ overflowWrap: 'break-word', wordBreak: 'break-word' }}
               />
             </div>
           ))}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Território</div>
+              <div className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-wider mb-1">Território</div>
               <select value={row.territorio} onChange={e => updateRow(row.id, 'territorio', e.target.value)}
-                className="w-full border-b border-slate-200 py-1 text-sm font-bold outline-none focus:border-[var(--navy)] bg-transparent">
+                className="w-full border-b border-[var(--border)] py-1 text-sm font-bold outline-none focus:border-[var(--navy)] bg-transparent">
                 <option value="Internacional">Internacional</option>
                 <option value="Nacional">Nacional</option>
               </select>
             </div>
             <div>
-              <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Tipo</div>
+              <div className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-wider mb-1">Tipo</div>
               <select value={row.tipo} onChange={e => updateRow(row.id, 'tipo', e.target.value)}
-                className="w-full border-b border-slate-200 py-1 text-sm font-bold outline-none focus:border-[var(--navy)] bg-transparent">
+                className="w-full border-b border-[var(--border)] py-1 text-sm font-bold outline-none focus:border-[var(--navy)] bg-transparent">
                 <option value="Partida">Partida</option>
                 <option value="Consecutivo">Consecutivo</option>
                 <option value="Chegada">Chegada</option>
@@ -237,15 +237,15 @@ function MobileMapaCard({ row, vdl, updateRow, removeRow }) {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Hora</div>
+              <div className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-wider mb-1">Hora</div>
               <input type="time" value={row.hora} onChange={e => updateRow(row.id, 'hora', e.target.value)}
-                className="w-full border-b border-slate-200 py-1 text-sm font-bold outline-none focus:border-[var(--navy)] bg-transparent" />
+                className="w-full border-b border-[var(--border)] py-1 text-sm font-bold outline-none focus:border-[var(--navy)] bg-transparent" />
             </div>
             <div>
-              <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">% Ajuda</div>
+              <div className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-wider mb-1">% Ajuda</div>
               <input type="number" value={row.pct} min="0" max="100" step="5"
                 onChange={e => updateRow(row.id, 'pct', parseFloat(e.target.value) || 0)}
-                className="w-full border-b border-slate-200 py-1 text-sm font-bold outline-none focus:border-[var(--navy)] bg-transparent" />
+                className="w-full border-b border-[var(--border)] py-1 text-sm font-bold outline-none focus:border-[var(--navy)] bg-transparent" />
             </div>
           </div>
           <button onClick={() => removeRow(row.id)}
@@ -2359,22 +2359,22 @@ ${hdrRow}${bodyRows}${totRow}
             subtitle="Estimativas salariais"
             rightSlot={(
               <div className="flex items-center gap-3 flex-wrap">
-                <div className="flex items-center gap-1 rounded-xl bg-slate-100 px-1 py-0.5">
+                <div className="flex items-center gap-1 rounded-xl bg-[var(--surface-dim)] px-1 py-0.5">
                   <button onClick={() => navMes(-1)} className="p-1.5 rounded-lg hover:bg-white transition-colors">
-                    <ChevronLeft size={15} className="text-slate-400" />
+                    <ChevronLeft size={15} className="text-[var(--slate)]" />
                   </button>
                   <span className="px-3 py-1 text-xs font-black min-w-[130px] text-center text-[var(--navy)]">
                     {MESES_PT[parseInt(inputs.mes, 10)] || ''} {inputs.ano}
                   </span>
                   <button onClick={() => navMes(1)} className="p-1.5 rounded-lg hover:bg-white transition-colors">
-                    <ChevronRight size={15} className="text-slate-400" />
+                    <ChevronRight size={15} className="text-[var(--slate)]" />
                   </button>
                 </div>
 
                 <div className="flex items-center gap-2 flex-wrap">
                   <button
                     onClick={gerarRecibosBatchPDF}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider border border-slate-200 bg-white hover:bg-slate-50 transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider border border-[var(--border)] bg-white hover:bg-[var(--surface)] transition-colors"
                     style={{ color: 'var(--navy)' }}
                     title="PDF dos recibos de vencimento — todos os trabalhadores"
                   >
@@ -2382,7 +2382,7 @@ ${hdrRow}${bodyRows}${totRow}
                   </button>
                   <button
                     onClick={exportRecibosBatchXLS}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider border border-slate-200 bg-white hover:bg-slate-50 transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider border border-[var(--border)] bg-white hover:bg-[var(--surface)] transition-colors"
                     style={{ color: 'var(--navy)' }}
                     title="Excel dos recibos de vencimento — todos os trabalhadores"
                   >
@@ -2390,7 +2390,7 @@ ${hdrRow}${bodyRows}${totRow}
                   </button>
                   <button
                     onClick={gerarMapasAjudasPDF}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider border border-slate-200 bg-white hover:bg-slate-50 transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider border border-[var(--border)] bg-white hover:bg-[var(--surface)] transition-colors"
                     style={{ color: 'var(--navy)' }}
                     title="PDF dos mapas de ajudas de custo — todos os trabalhadores"
                   >
@@ -2419,7 +2419,7 @@ ${hdrRow}${bodyRows}${totRow}
         {/* Header: label + badge de estado + mês */}
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
-            <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Trabalhador</span>
+            <span className="text-[9px] font-black text-[var(--slate-dim)] uppercase tracking-wider">Trabalhador</span>
             {selectedWorkerId && (
               <span className="text-[8px] font-black uppercase tracking-wide px-2 py-0.5 rounded"
                 style={isValidado
@@ -2430,7 +2430,7 @@ ${hdrRow}${bodyRows}${totRow}
             )}
           </div>
           {selectedWorkerId && (
-            <span className="text-[10px] font-bold text-slate-400">
+            <span className="text-[10px] font-bold text-[var(--slate-dim)]">
               {MESES_PT[parseInt(inputs.mes, 10)] || ''} {inputs.ano}
             </span>
           )}
@@ -2456,7 +2456,7 @@ ${hdrRow}${bodyRows}${totRow}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-black uppercase transition-all border
                   ${saveStatus === 'saved'  ? 'border-emerald-200 text-emerald-600' :
                     saveStatus === 'error'  ? 'border-rose-200 text-rose-600' :
-                                             'border-slate-200 text-slate-400 hover:border-slate-300 hover:text-slate-600'}`}
+                                             'border-[var(--border)] text-[var(--slate-dim)] hover:border-[var(--border)] hover:text-[var(--ink-soft)]'}`}
                 title="Guarda vencimento base, subsídio alimentação, tipo, tabela IRS e nº dependentes no perfil do trabalhador"
               >
                 <Save size={12} />
@@ -2519,40 +2519,40 @@ ${hdrRow}${bodyRows}${totRow}
           {/* Documentos */}
           <div className="grid sm:grid-cols-2 gap-5 items-start">
             {/* ── Recibo ── */}
-            <div className="bg-white rounded-2xl border border-slate-200 p-5" style={{ borderTop: `4px solid ${FT.navy}` }}>
+            <div className="bg-white rounded-2xl border border-[var(--border)] p-5" style={{ borderTop: `4px solid ${FT.navy}` }}>
               <p className="text-[10px] font-black uppercase tracking-wider mb-3" style={{ color: 'var(--slate-dim)' }}>Recibo de Vencimento</p>
               {r ? (
                 <>
                   <div className="space-y-2 text-sm mb-4">
                     <div className="flex justify-between">
-                      <span className="text-slate-500">Vencimento base</span>
-                      <span className="font-black text-slate-800">{eur(n(inputs.vencimentoBase))}</span>
+                      <span className="text-[var(--slate-dim)]">Vencimento base</span>
+                      <span className="font-black text-[var(--ink)]">{eur(n(inputs.vencimentoBase))}</span>
                     </div>
                     {r.subsAlimTotal > 0 && (
                       <div className="flex justify-between">
-                        <span className="text-slate-500">Sub. alimentação</span>
-                        <span className="font-black text-slate-800">{eur(r.subsAlimTotal)}</span>
+                        <span className="text-[var(--slate-dim)]">Sub. alimentação</span>
+                        <span className="font-black text-[var(--ink)]">{eur(r.subsAlimTotal)}</span>
                       </div>
                     )}
                     {n(inputs.premios) > 0 && (
                       <div className="flex justify-between">
-                        <span className="text-slate-500">Prémios / bónus</span>
-                        <span className="font-black text-slate-800">{eur(n(inputs.premios))}</span>
+                        <span className="text-[var(--slate-dim)]">Prémios / bónus</span>
+                        <span className="font-black text-[var(--ink)]">{eur(n(inputs.premios))}</span>
                       </div>
                     )}
                     {r.subsFerias > 0 && (
                       <div className="flex justify-between">
-                        <span className="text-slate-500">Sub. férias (duo.)</span>
-                        <span className="font-black text-slate-800">{eur(r.subsFerias)}</span>
+                        <span className="text-[var(--slate-dim)]">Sub. férias (duo.)</span>
+                        <span className="font-black text-[var(--ink)]">{eur(r.subsFerias)}</span>
                       </div>
                     )}
                     {r.subsNatal > 0 && (
                       <div className="flex justify-between">
-                        <span className="text-slate-500">Sub. natal (duo.)</span>
-                        <span className="font-black text-slate-800">{eur(r.subsNatal)}</span>
+                        <span className="text-[var(--slate-dim)]">Sub. natal (duo.)</span>
+                        <span className="font-black text-[var(--ink)]">{eur(r.subsNatal)}</span>
                       </div>
                     )}
-                    <div className="border-t border-slate-100 pt-2 flex justify-between">
+                    <div className="border-t border-[var(--border-soft)] pt-2 flex justify-between">
                       <span className="text-rose-500">IRS</span>
                       <span className="font-black text-rose-600">−{eur(r.irsTotal)}</span>
                     </div>
@@ -2561,13 +2561,13 @@ ${hdrRow}${bodyRows}${totRow}
                       <span className="font-black text-rose-600">−{eur(r.ssTrabalhador)}</span>
                     </div>
                   </div>
-                  <div className="rounded-xl px-4 py-3 mb-4" style={{ background: '#EEF1F5' }}>
+                  <div className="rounded-xl px-4 py-3 mb-4" style={{ background: 'var(--surface-dim)' }}>
                     <p className="text-[9px] font-black uppercase tracking-wider mb-0.5" style={{ color: 'var(--slate-dim)' }}>Líquido a receber</p>
                     <p className="text-xl font-black" style={{ color: 'var(--navy)' }}>{eur(liquidoDisplay)}</p>
                   </div>
                 </>
               ) : (
-                <p className="text-sm text-slate-400 mb-4">Sem dados de recibo.</p>
+                <p className="text-sm text-[var(--slate-dim)] mb-4">Sem dados de recibo.</p>
               )}
               <button
                 onClick={gerarReciboPDF}
@@ -2582,7 +2582,7 @@ ${hdrRow}${bodyRows}${totRow}
             </div>
 
             {/* ── Mapa de Ajudas ── */}
-            <div className="bg-white rounded-2xl border border-slate-200 p-5" style={{ borderTop: `4px solid ${FT.orange}` }}>
+            <div className="bg-white rounded-2xl border border-[var(--border)] p-5" style={{ borderTop: `4px solid ${FT.orange}` }}>
               <p className="text-[10px] font-black uppercase tracking-wider mb-3" style={{ color: 'var(--slate-dim)' }}>Mapa de Ajudas de Custo</p>
               {mapaRows.length > 0 ? (
                 <>
@@ -2594,31 +2594,31 @@ ${hdrRow}${bodyRows}${totRow}
                         <>
                           {pRow && (
                             <div className="flex justify-between">
-                              <span className="text-slate-500">Partida</span>
-                              <span className="font-black text-slate-800">{pRow.dia}</span>
+                              <span className="text-[var(--slate-dim)]">Partida</span>
+                              <span className="font-black text-[var(--ink)]">{pRow.dia}</span>
                             </div>
                           )}
                           {cRow && (
                             <div className="flex justify-between">
-                              <span className="text-slate-500">Chegada</span>
-                              <span className="font-black text-slate-800">{cRow.dia}</span>
+                              <span className="text-[var(--slate-dim)]">Chegada</span>
+                              <span className="font-black text-[var(--ink)]">{cRow.dia}</span>
                             </div>
                           )}
                         </>
                       );
                     })()}
                     <div className="flex justify-between">
-                      <span className="text-slate-500">Nº dias</span>
-                      <span className="font-black text-slate-800">{mapaRows.length}</span>
+                      <span className="text-[var(--slate-dim)]">Nº dias</span>
+                      <span className="font-black text-[var(--ink)]">{mapaRows.length}</span>
                     </div>
-                    <div className="border-t border-slate-100 pt-2 flex justify-between">
-                      <span className="text-slate-500">Ajudas de custo</span>
-                      <span className="font-black text-slate-800">{eur(mapaTotal)}</span>
+                    <div className="border-t border-[var(--border-soft)] pt-2 flex justify-between">
+                      <span className="text-[var(--slate-dim)]">Ajudas de custo</span>
+                      <span className="font-black text-[var(--ink)]">{eur(mapaTotal)}</span>
                     </div>
                     {subsAlimMapaLive > 0 && (
                       <div className="flex justify-between">
-                        <span className="text-slate-500">Sub. alim. (dias úteis)</span>
-                        <span className="font-black text-slate-800">−{eur(subsAlimMapaLive)}</span>
+                        <span className="text-[var(--slate-dim)]">Sub. alim. (dias úteis)</span>
+                        <span className="font-black text-[var(--ink)]">−{eur(subsAlimMapaLive)}</span>
                       </div>
                     )}
                   </div>
@@ -2628,7 +2628,7 @@ ${hdrRow}${bodyRows}${totRow}
                   </div>
                 </>
               ) : (
-                <p className="text-sm text-slate-400 mb-4">Sem mapa preenchido.</p>
+                <p className="text-sm text-[var(--slate-dim)] mb-4">Sem mapa preenchido.</p>
               )}
               <button
                 onClick={gerarPDF}
@@ -2652,7 +2652,7 @@ ${hdrRow}${bodyRows}${totRow}
           <Card className="p-6">
 
             {/* 1 - Dados do Trabalhador */}
-            <div className="pb-5 mb-5 border-b border-slate-100">
+            <div className="pb-5 mb-5 border-b border-[var(--border-soft)]">
               <SectionHeader n="1" label="Dados do Trabalhador" />
               <div className="grid grid-cols-2 gap-x-6 gap-y-4 mb-4">
                 <LabelInput label="Nome" badge={camposAuto.nome ? 'auto' : null}>
@@ -2702,7 +2702,7 @@ ${hdrRow}${bodyRows}${totRow}
             )}
 
             {/* 2 - Retribuição Base */}
-            <div className="pb-5 mb-5 border-b border-slate-100">
+            <div className="pb-5 mb-5 border-b border-[var(--border-soft)]">
               <SectionHeader n="2" label="Retribuição Base" />
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-4 mb-4">
                 <LabelInput label="Vencimento Base (€/mês)" badge={camposAuto.vencimentoBase ? 'auto' : null}>
@@ -2716,17 +2716,17 @@ ${hdrRow}${bodyRows}${totRow}
                 </LabelInput>
               </div>
               <div className="flex flex-col gap-2 mb-4">
-                <label className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer">
+                <label className="flex items-center gap-2 text-xs font-bold text-[var(--ink-soft)] cursor-pointer">
                   <input type="checkbox" checked={inputs.incluirFerias} onChange={e => set('incluirFerias', e.target.checked)} className="w-4 h-4 accent-[var(--navy)]" />
                   Incluir Subsídio de Férias
                 </label>
-                <label className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer">
+                <label className="flex items-center gap-2 text-xs font-bold text-[var(--ink-soft)] cursor-pointer">
                   <input type="checkbox" checked={inputs.incluirNatal} onChange={e => set('incluirNatal', e.target.checked)} className="w-4 h-4 accent-[var(--navy)]" />
                   Incluir Subsídio de Natal
                 </label>
                 {(inputs.incluirFerias || inputs.incluirNatal) && (
                   <div className="mt-1 flex flex-wrap items-center gap-2">
-                    <span className="text-xs text-slate-500 shrink-0">Método IRS subsídios:</span>
+                    <span className="text-xs text-[var(--slate-dim)] shrink-0">Método IRS subsídios:</span>
                     <div className="flex-1 min-w-[180px]">
                       <SelectInput
                         value={inputs.subsidiosMetodo}
@@ -2737,7 +2737,7 @@ ${hdrRow}${bodyRows}${totRow}
                       </SelectInput>
                     </div>
                     {camposAuto.subsidiosMetodo && (
-                      <span className="text-[10px] font-bold text-[var(--navy)] bg-[#EEF1F5] px-2 py-0.5 rounded-full shrink-0">auto</span>
+                      <span className="text-[10px] font-bold text-[var(--navy)] bg-[var(--surface-dim)] px-2 py-0.5 rounded-full shrink-0">auto</span>
                     )}
                   </div>
                 )}
@@ -2774,7 +2774,7 @@ ${hdrRow}${bodyRows}${totRow}
             </div>
 
             {/* 3 - IRS */}
-            <div className="pb-5 mb-5 border-b border-slate-100">
+            <div className="pb-5 mb-5 border-b border-[var(--border-soft)]">
               <SectionHeader n="3" label="IRS — Situação Fiscal" />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
                 <LabelInput label="Tabela de retenção" badge={camposAuto.tabelaKey ? 'auto' : null}>
@@ -2807,7 +2807,7 @@ ${hdrRow}${bodyRows}${totRow}
                     />
                     {brutoAlvoEditado && (
                       <button type="button" onClick={resetBrutoAlvoAuto}
-                        className="absolute right-0 top-1/2 -translate-y-1/2 text-[9px] font-bold text-amber-500 hover:text-slate-500 leading-none cursor-pointer"
+                        className="absolute right-0 top-1/2 -translate-y-1/2 text-[9px] font-bold text-amber-500 hover:text-[var(--slate-dim)] leading-none cursor-pointer"
                         title="Repor valor automático dos registos de horas"
                       >repor ×</button>
                     )}
@@ -2858,16 +2858,16 @@ ${hdrRow}${bodyRows}${totRow}
         {/* ── COLUNA PREVIEW ── */}
         <div>
           {r ? (
-            <div className="bg-white rounded-2xl border border-slate-200 p-5" style={{ borderTop: `4px solid ${FT.navy}` }}>
+            <div className="bg-white rounded-2xl border border-[var(--border)] p-5" style={{ borderTop: `4px solid ${FT.navy}` }}>
               {/* Cabeçalho do recibo */}
-              <div className="flex justify-between items-start border-b-2 border-slate-800 pb-3 mb-4 gap-3">
+              <div className="flex justify-between items-start border-b-2 border-[var(--ink)] pb-3 mb-4 gap-3">
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-black text-slate-800">{inputs.nome || '—'}</p>
-                  <p className="text-[10px] text-slate-500 font-bold">NIF: {inputs.nif || '—'} · Profissão: {inputs.categoria || '—'}</p>
-                  <p className="text-[10px] text-slate-500 font-bold">Vencimento: {eur(n(inputs.vencimentoBase))} · Hora: {eur(r.salarioHora)}</p>
+                  <p className="text-sm font-black text-[var(--ink)]">{inputs.nome || '—'}</p>
+                  <p className="text-[10px] text-[var(--slate-dim)] font-bold">NIF: {inputs.nif || '—'} · Profissão: {inputs.categoria || '—'}</p>
+                  <p className="text-[10px] text-[var(--slate-dim)] font-bold">Vencimento: {eur(n(inputs.vencimentoBase))} · Hora: {eur(r.salarioHora)}</p>
                 </div>
                 <div className="flex flex-col items-end gap-2 shrink-0">
-                  <p className="font-black text-lg text-slate-800">{MESES_PT[parseInt(inputs.mes, 10)] || ''} {inputs.ano}</p>
+                  <p className="font-black text-lg text-[var(--ink)]">{MESES_PT[parseInt(inputs.mes, 10)] || ''} {inputs.ano}</p>
                 </div>
               </div>
 
@@ -2875,15 +2875,15 @@ ${hdrRow}${bodyRows}${totRow}
               <div className="overflow-x-auto">
                 <table className="w-full text-xs border-collapse">
                   <thead>
-                    <tr className="border-b border-slate-200">
-                      <th className="text-left py-1.5 px-1 text-[10px] font-black text-slate-400 uppercase tracking-wider">Descrição</th>
-                      <th className="text-right py-1.5 px-1 text-[10px] font-black text-slate-400 uppercase tracking-wider">Qtd</th>
-                      <th className="text-right py-1.5 px-1 text-[10px] font-black text-slate-400 uppercase tracking-wider">V.Unit.</th>
-                      <th className="text-right py-1.5 px-1 text-[10px] font-black text-slate-400 uppercase tracking-wider">Abonos</th>
-                      <th className="text-right py-1.5 px-1 text-[10px] font-black text-slate-400 uppercase tracking-wider">Descontos</th>
+                    <tr className="border-b border-[var(--border)]">
+                      <th className="text-left py-1.5 px-1 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-wider">Descrição</th>
+                      <th className="text-right py-1.5 px-1 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-wider">Qtd</th>
+                      <th className="text-right py-1.5 px-1 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-wider">V.Unit.</th>
+                      <th className="text-right py-1.5 px-1 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-wider">Abonos</th>
+                      <th className="text-right py-1.5 px-1 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-wider">Descontos</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-50">
+                  <tbody className="divide-y divide-[var(--border-soft)]">
                     {/* A001 mantém sempre o valor contratual completo (formato TOConline) */}
                     <ReciboLinha desc="A001 - Vencimento Base" abono={r.salarioHora > 0 ? (mesParcialDados ? mesParcialDados.vencBaseOriginal : n(inputs.vencimentoBase)) : null} />
                     {/* D001 — desconto por dias não trabalhados (linha informativa; não soma em Total Descontos) */}
@@ -2898,7 +2898,7 @@ ${hdrRow}${bodyRows}${totRow}
                     {r.subsNatal > 0 && <ReciboLinha desc={`A021 - ${inputs.subsidiosMetodo === 'valor' ? 'Subs. Natal (Valor)' : 'Subs. Natal (100% c/duodécimos)'}`} abono={r.subsNatal} />}
                     {ajudasDisplayRecibo > 0 && (
                       <tr className="bg-orange-50">
-                        <td className="py-1.5 px-1 border-l-2 border-orange-400 font-bold text-slate-700">A082 - Ajudas de Custo Internacional <span className="text-[9px] text-orange-600 font-black ml-1">NÃO TRIBUTADO</span></td>
+                        <td className="py-1.5 px-1 border-l-2 border-orange-400 font-bold text-[var(--ink-mid)]">A082 - Ajudas de Custo Internacional <span className="text-[9px] text-orange-600 font-black ml-1">NÃO TRIBUTADO</span></td>
                         <td className="py-1.5 px-1 text-right" />
                         <td className="py-1.5 px-1 text-right" />
                         <td className="py-1.5 px-1 text-right font-bold">{eur(ajudasDisplayRecibo)}</td>
@@ -2908,7 +2908,7 @@ ${hdrRow}${bodyRows}${totRow}
                     <ReciboLinha desc={`T001 - IRS (Incidência ${eur(r.incidenciaSS)} ; Taxa IRS ${((r.irsVencResult?.taxaMarginal ?? r.taxaRegular) * 100).toFixed(1)}% ; Parcela a abater ${eur(r.irsVencResult?.parcelaAbater ?? 0)})`} desconto={r.irsTotal} />
                     <ReciboLinha desc="T003 - Seg. Social (11%)" desconto={r.ssTrabalhador} />
                     {/* Total — soma directa de todas as linhas; D001 cancela-se → Líquido = BrutoAlvo − IRS − SS */}
-                    <tr className="border-t-2 border-slate-800 font-black">
+                    <tr className="border-t-2 border-[var(--ink)] font-black">
                       <td className="py-2 px-1">Total</td>
                       <td className="py-2 px-1" />
                       <td className="py-2 px-1" />
@@ -2920,7 +2920,7 @@ ${hdrRow}${bodyRows}${totRow}
               </div>
 
               {/* Notas de taxas */}
-              <div className="mt-3 bg-slate-50 rounded-xl p-3 text-[10px] text-slate-500 font-bold space-y-0.5">
+              <div className="mt-3 bg-[var(--surface)] rounded-xl p-3 text-[10px] text-[var(--slate-dim)] font-bold space-y-0.5">
                 <p>IRS — Taxa efetiva (Vencimento e restantes abonos): {eur(r.incidenciaRegular)} · {(r.irsVencResult?.taxaEfetiva ?? r.taxaRegular * 100).toFixed(2)}%</p>
                 {r.subsFerias > 0 && <p>IRS — Taxa efetiva (Subsídio de Férias): {(r.irsFeriasResult?.taxaEfetiva ?? r.taxaSubsidios * 100).toFixed(2)}%</p>}
                 {r.subsNatal  > 0 && <p>IRS — Taxa efetiva (Subsídio de Natal): {(r.irsNatalResult?.taxaEfetiva ?? r.taxaSubsidios * 100).toFixed(2)}%</p>}
@@ -2933,13 +2933,13 @@ ${hdrRow}${bodyRows}${totRow}
               </div>
 
               {/* Resumo — Líquido = Bruto Alvo − IRS − SS SEMPRE | Total Abonos = Bruto Alvo + D001 (mês parcial) */}
-              <div className="mt-3 pt-3 border-t-2 border-slate-800 space-y-2">
+              <div className="mt-3 pt-3 border-t-2 border-[var(--ink)] space-y-2">
                 <div className="grid grid-cols-2 gap-2">
-                  <div className="bg-slate-50 rounded-xl px-3 py-2">
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Total Abonos</p>
-                    <p className="text-base font-black text-slate-800">{eur(totalAbonosDisplay)}</p>
+                  <div className="bg-[var(--surface)] rounded-xl px-3 py-2">
+                    <p className="text-[9px] font-black text-[var(--slate-dim)] uppercase tracking-wider">Total Abonos</p>
+                    <p className="text-base font-black text-[var(--ink)]">{eur(totalAbonosDisplay)}</p>
                     {n(inputs.brutoAlvo) > 0 && (
-                      <p className="text-[9px] text-slate-400 mt-0.5">
+                      <p className="text-[9px] text-[var(--slate-dim)] mt-0.5">
                         {descontoD001 > 0 ? '= Bruto Alvo + D001' : '= Bruto Alvo'}
                       </p>
                     )}
@@ -2949,45 +2949,45 @@ ${hdrRow}${bodyRows}${totRow}
                     <p className="text-base font-black text-emerald-700">{eur(liquidoDisplay)}</p>
                   </div>
                 </div>
-                <div className="bg-slate-50 rounded-xl px-3 py-1.5 text-[10px] text-slate-500 flex justify-between">
+                <div className="bg-[var(--surface)] rounded-xl px-3 py-1.5 text-[10px] text-[var(--slate-dim)] flex justify-between">
                   <span><span className="font-black">IRS:</span> {eur(r.irsTotal)} · <span className="font-black">SS:</span> {eur(r.ssTrabalhador)}</span>
                   <span><span className="font-black">Custo empresa (c/ TSU 23,75%):</span> {eur(custoEmpDisplay)}</span>
                 </div>
               </div>
             </div>
           ) : (
-            <div className="bg-white rounded-2xl border border-slate-200 p-10 flex flex-col items-center justify-center text-center gap-3 min-h-[200px]" style={{ borderTop: `4px solid ${FT.navy}` }}>
-              <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center">
-                <RefreshCw size={22} className="text-slate-400" />
+            <div className="bg-white rounded-2xl border border-[var(--border)] p-10 flex flex-col items-center justify-center text-center gap-3 min-h-[200px]" style={{ borderTop: `4px solid ${FT.navy}` }}>
+              <div className="w-12 h-12 rounded-2xl bg-[var(--surface-dim)] flex items-center justify-center">
+                <RefreshCw size={22} className="text-[var(--slate)]" />
               </div>
-              <p className="text-sm font-black text-slate-400 uppercase tracking-wide">Preencha o vencimento base</p>
-              <p className="text-xs font-bold text-slate-300">O preview do recibo aparece aqui</p>
+              <p className="text-sm font-black text-[var(--slate-dim)] uppercase tracking-wide">Preencha o vencimento base</p>
+              <p className="text-xs font-bold text-[var(--slate-dim)]">O preview do recibo aparece aqui</p>
             </div>
           )}
         </div>
       </div>
 
       {/* ── MAPA DE AJUDAS DE CUSTO ── */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-5" style={{ borderTop: `4px solid ${FT.orange}` }}>
+      <div className="bg-white rounded-2xl border border-[var(--border)] p-5" style={{ borderTop: `4px solid ${FT.orange}` }}>
         <div className="flex items-center justify-between mb-5">
           <p className="text-[10px] font-black uppercase tracking-wider" style={{ color: FT.orange }}>Mapa de Ajudas de Custo</p>
           <div className="flex items-center gap-1">
             <button
               onClick={() => { setMapaRows([]); setAutoFillInfo(null); }}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all"
+              className="p-1.5 rounded-lg text-[var(--slate)] hover:text-[var(--ink-soft)] hover:bg-[var(--surface-dim)] transition-all"
               title="Limpar mapa"
             >
               <Trash2 size={14} />
             </button>
             <button
               onClick={() => addRow()}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-black text-slate-500 hover:bg-slate-100 transition-all"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-black text-[var(--slate-dim)] hover:bg-[var(--surface-dim)] transition-all"
             >
               <Plus size={12} /> Linha
             </button>
             <button
               onClick={gerarMapasAjudasPDF}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-black hover:bg-slate-100 transition-all"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-black hover:bg-[var(--surface-dim)] transition-all"
               style={{ color: 'var(--slate-dim)' }}
               title="PDF com todos os trabalhadores"
             >
@@ -3017,14 +3017,14 @@ ${hdrRow}${bodyRows}${totRow}
         />
 
         {/* Toolbar de preenchimento automático */}
-        <div className="flex gap-3 flex-wrap items-end mb-4 pb-4 border-b border-slate-100">
+        <div className="flex gap-3 flex-wrap items-end mb-4 pb-4 border-b border-[var(--border-soft)]">
           <LabelInput label="Data de início" badge={!mapa.dataInicio ? 'Auto' : null}>
             <input
               ref={dataInicioInputRef}
               type="date"
               value={mapa.dataInicio}
               onChange={e => setMapa(p => ({ ...p, dataInicio: e.target.value }))}
-              className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-[var(--navy)] focus:ring-2 focus:ring-[#1B3A57]/10 lowercase"
+              className="bg-white border border-[var(--border)] rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-[var(--navy)] focus:ring-2 focus:ring-[#1B3A57]/10 lowercase"
             />
           </LabelInput>
           <LabelInput label="Hora partida">
@@ -3032,7 +3032,7 @@ ${hdrRow}${bodyRows}${totRow}
               type="time"
               value={mapa.horaPartida}
               onChange={e => setMapa(p => ({ ...p, horaPartida: e.target.value }))}
-              className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-[var(--navy)] focus:ring-2 focus:ring-[#1B3A57]/10 lowercase"
+              className="bg-white border border-[var(--border)] rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-[var(--navy)] focus:ring-2 focus:ring-[#1B3A57]/10 lowercase"
             />
           </LabelInput>
           <LabelInput label="Hora chegada">
@@ -3040,7 +3040,7 @@ ${hdrRow}${bodyRows}${totRow}
               type="time"
               value={mapa.horaChegada}
               onChange={e => setMapa(p => ({ ...p, horaChegada: e.target.value }))}
-              className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-[var(--navy)] focus:ring-2 focus:ring-[#1B3A57]/10 lowercase"
+              className="bg-white border border-[var(--border)] rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-[var(--navy)] focus:ring-2 focus:ring-[#1B3A57]/10 lowercase"
             />
           </LabelInput>
           <LabelInput label="Complementar via">
@@ -3085,37 +3085,37 @@ ${hdrRow}${bodyRows}${totRow}
           <div className="hidden sm:block overflow-x-auto">
             <table className="w-full border-collapse text-xs">
               <thead>
-                <tr className="bg-[#EEF1F5] border-b border-[#E3E7EC]">
+                <tr className="bg-[var(--surface-dim)] border-b border-[#E3E7EC]">
                   {['Dia', 'Serviço', 'Cliente', 'Localidade', 'Território', 'Tipo', 'Hora', '%', 'Valor', ''].map(h => (
                     <th key={h} className="px-2 py-2 text-left text-[10px] font-black uppercase tracking-wider text-[var(--slate)] first:rounded-tl-xl last:rounded-tr-xl">{h}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-[var(--border-soft)]">
                 {mapaRows.map(row => {
                   const limite = row.territorio === 'Nacional' ? LIMITES.ajudaNacional : n(inputs.vdl);
                   const valor = limite * (row.pct / 100);
                   return (
-                    <tr key={row.id} className="hover:bg-slate-50 transition-colors">
+                    <tr key={row.id} className="hover:bg-[var(--surface)] transition-colors">
                       <td className="px-1 py-1">
                         <input type="date" value={row.dia} onChange={e => updateRow(row.id, 'dia', e.target.value)}
-                          className="w-full border border-transparent rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none hover:border-slate-200 focus:border-[var(--navy)]" />
+                          className="w-full border border-transparent rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none hover:border-[var(--border)] focus:border-[var(--navy)]" />
                       </td>
                       <td className="px-1 py-1">
                         <input type="text" value={row.servico} onChange={e => updateRow(row.id, 'servico', e.target.value)}
-                          className="w-full border border-transparent rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none hover:border-slate-200 focus:border-[var(--navy)]" />
+                          className="w-full border border-transparent rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none hover:border-[var(--border)] focus:border-[var(--navy)]" />
                       </td>
                       <td className="px-1 py-1">
                         <input type="text" value={row.cliente} onChange={e => updateRow(row.id, 'cliente', e.target.value)}
-                          className="w-full border border-transparent rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none hover:border-slate-200 focus:border-[var(--navy)]" />
+                          className="w-full border border-transparent rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none hover:border-[var(--border)] focus:border-[var(--navy)]" />
                       </td>
                       <td className="px-1 py-1">
                         <input type="text" value={row.localidade} onChange={e => updateRow(row.id, 'localidade', e.target.value)}
-                          className="w-full border border-transparent rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none hover:border-slate-200 focus:border-[var(--navy)]" />
+                          className="w-full border border-transparent rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none hover:border-[var(--border)] focus:border-[var(--navy)]" />
                       </td>
                       <td className="px-1 py-1">
                         <select value={row.territorio} onChange={e => updateRow(row.id, 'territorio', e.target.value)}
-                          className="w-full border border-transparent rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none hover:border-slate-200 focus:border-[var(--navy)]">
+                          className="w-full border border-transparent rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none hover:border-[var(--border)] focus:border-[var(--navy)]">
                           <option value="Internacional">Internacional</option>
                           <option value="Nacional">Nacional</option>
                         </select>
@@ -3141,16 +3141,16 @@ ${hdrRow}${bodyRows}${totRow}
                       </td>
                       <td className="px-1 py-1">
                         <input type="time" value={row.hora} onChange={e => updateRow(row.id, 'hora', e.target.value)}
-                          className="w-full border border-transparent rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none hover:border-slate-200 focus:border-[var(--navy)]" />
+                          className="w-full border border-transparent rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none hover:border-[var(--border)] focus:border-[var(--navy)]" />
                       </td>
                       <td className="px-1 py-1">
                         <input type="number" value={row.pct} min="0" max="100" step="5"
                           onChange={e => updateRow(row.id, 'pct', parseFloat(e.target.value) || 0)}
-                          className="w-16 border border-transparent rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none hover:border-slate-200 focus:border-[var(--navy)]" />
+                          className="w-16 border border-transparent rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none hover:border-[var(--border)] focus:border-[var(--navy)]" />
                       </td>
                       <td className="px-2 py-1 text-right font-black text-[var(--navy)] tabular-nums">{eur(valor)}</td>
                       <td className="px-1 py-1 text-center">
-                        <button onClick={() => removeRow(row.id)} className="p-1 text-slate-300 hover:text-red-400 hover:bg-red-50 rounded-lg transition-all">
+                        <button onClick={() => removeRow(row.id)} className="p-1 text-[var(--slate-dim)] hover:text-red-400 hover:bg-red-50 rounded-lg transition-all">
                           <X size={13} />
                         </button>
                       </td>
@@ -3162,28 +3162,28 @@ ${hdrRow}${bodyRows}${totRow}
           </div>
           </>
         ) : (
-          <div className="py-10 text-center text-slate-400">
+          <div className="py-10 text-center text-[var(--slate-dim)]">
             <p className="text-xs font-bold">Sem linhas — use "Preencher automaticamente" ou adicione manualmente.</p>
           </div>
         )}
 
         {/* Totais do mapa */}
         {mapaRows.length > 0 && (
-          <div className="mt-3 pt-3 border-t border-slate-100 flex items-baseline gap-4 flex-wrap text-sm">
+          <div className="mt-3 pt-3 border-t border-[var(--border-soft)] flex items-baseline gap-4 flex-wrap text-sm">
             <span>
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-wide mr-1.5">Total</span>
-              <span className="font-black text-slate-800">{eur(mapaTotal)}</span>
+              <span className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-wide mr-1.5">Total</span>
+              <span className="font-black text-[var(--ink)]">{eur(mapaTotal)}</span>
             </span>
             {r && (
               <>
-                <span className="text-slate-300 select-none">·</span>
+                <span className="text-[var(--slate-dim)] select-none">·</span>
                 <span>
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wide mr-1.5">Necessário</span>
-                  <span className="font-black text-slate-800">{eur(r.ajudaCustoNecessaria)}</span>
+                  <span className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-wide mr-1.5">Necessário</span>
+                  <span className="font-black text-[var(--ink)]">{eur(r.ajudaCustoNecessaria)}</span>
                 </span>
-                <span className="text-slate-300 select-none">·</span>
+                <span className="text-[var(--slate-dim)] select-none">·</span>
                 <span>
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wide mr-1.5">Dif.</span>
+                  <span className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-wide mr-1.5">Dif.</span>
                   <span className={`font-black ${Math.abs(mapaDiff) < 0.5 ? 'text-emerald-600' : 'text-rose-600'}`}>
                     {mapaDiff >= 0 ? '+' : ''}{eur(mapaDiff)}
                   </span>
@@ -3208,7 +3208,7 @@ ${hdrRow}${bodyRows}${totRow}
       </div>))}
 
       {/* Rodapé de compliance */}
-      <p className="text-center text-[10px] text-slate-400 font-bold leading-none py-0.5">
+      <p className="text-center text-[10px] text-[var(--ink-soft)] font-bold leading-none py-0.5">
         <AlertTriangle size={10} className="inline mr-1 text-amber-400" />
         Estimativa não oficial · IRS 2026 (Desp. 233-A/2026) · TSU em vigor · Confirme sempre no TOConline · Ajudas de custo isentas só com deslocações documentadas
       </p>
@@ -3218,11 +3218,11 @@ ${hdrRow}${bodyRows}${totRow}
 
 function ReciboLinha({ desc, qtd, vUnit, abono, desconto }) {
   return (
-    <tr className="hover:bg-slate-50 transition-colors">
-      <td className="py-1.5 px-1 text-slate-700 font-bold">{desc}</td>
-      <td className="py-1.5 px-1 text-right text-slate-500">{qtd || ''}</td>
-      <td className="py-1.5 px-1 text-right text-slate-500">{vUnit != null ? eur(vUnit) : ''}</td>
-      <td className="py-1.5 px-1 text-right font-bold text-slate-800">{abono != null ? eur(abono) : ''}</td>
+    <tr className="hover:bg-[var(--surface)] transition-colors">
+      <td className="py-1.5 px-1 text-[var(--ink-mid)] font-bold">{desc}</td>
+      <td className="py-1.5 px-1 text-right text-[var(--slate-dim)]">{qtd || ''}</td>
+      <td className="py-1.5 px-1 text-right text-[var(--slate-dim)]">{vUnit != null ? eur(vUnit) : ''}</td>
+      <td className="py-1.5 px-1 text-right font-bold text-[var(--ink)]">{abono != null ? eur(abono) : ''}</td>
       <td className="py-1.5 px-1 text-right font-bold text-rose-600">{desconto != null ? eur(desconto) : ''}</td>
     </tr>
   );
@@ -3290,7 +3290,7 @@ function CopiarLinkBtn({ mesStr }) {
     <div className="flex flex-col items-end gap-1">
       <button
         onClick={copiar}
-        className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black uppercase transition-all border shadow-sm ${copiado ? 'bg-emerald-50 text-emerald-700 border-emerald-300' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400 hover:text-slate-800'}`}
+        className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black uppercase transition-all border shadow-sm ${copiado ? 'bg-emerald-50 text-emerald-700 border-emerald-300' : 'bg-white text-[var(--ink-soft)] border-[var(--border)] hover:border-[var(--slate)] hover:text-[var(--ink)]'}`}
         title="Copiar link partilhável para o contabilista (com token de acesso)"
       >
         {copiado ? (
@@ -3700,30 +3700,30 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
         {onBack && (
           <button
             onClick={onBack}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[11px] font-black text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all shrink-0"
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[11px] font-black text-[var(--ink-soft)] hover:text-[var(--ink-mid)] hover:bg-[var(--surface-dim)] transition-all shrink-0"
           >
             <ChevronLeft size={13} /> Calculadora
           </button>
         )}
-        {onBack && <div className="w-px h-4 bg-slate-200 shrink-0" />}
-        <h3 className="text-sm font-black text-slate-700 uppercase tracking-wide whitespace-nowrap">Resumo Mensal</h3>
+        {onBack && <div className="w-px h-4 bg-[var(--border)] shrink-0" />}
+        <h3 className="text-sm font-black text-[var(--ink-mid)] uppercase tracking-wide whitespace-nowrap">Resumo Mensal</h3>
         {onNavMes && (
-          <div className="flex items-center gap-0.5 bg-slate-100 rounded-xl p-0.5">
+          <div className="flex items-center gap-0.5 bg-[var(--surface-dim)] rounded-xl p-0.5">
             <button onClick={() => onNavMes(-1)} className="p-1 rounded-lg hover:bg-white transition-colors">
-              <ChevronLeft size={13} className="text-slate-500" />
+              <ChevronLeft size={13} className="text-[var(--slate-dim)]" />
             </button>
-            <span className="px-2 text-xs font-black text-slate-700 min-w-[110px] text-center">{mesLabel}</span>
+            <span className="px-2 text-xs font-black text-[var(--ink-mid)] min-w-[110px] text-center">{mesLabel}</span>
             <button onClick={() => onNavMes(1)} className="p-1 rounded-lg hover:bg-white transition-colors">
-              <ChevronRight size={13} className="text-slate-500" />
+              <ChevronRight size={13} className="text-[var(--slate-dim)]" />
             </button>
           </div>
         )}
         {rows.length > 0 && (
-          <span className="text-[10px] font-black text-slate-400 bg-slate-100 px-2 py-0.5 rounded-lg">
+          <span className="text-[10px] font-black text-[var(--ink-soft)] bg-[var(--surface-dim)] px-2 py-0.5 rounded-lg">
             {filteredRows.length} {filteredRows.length !== rows.length ? `de ${rows.length} ` : ''}trabalhadores
           </span>
         )}
-        {saveStatus === 'saving' && <span className="text-[10px] text-slate-400 animate-pulse">A guardar…</span>}
+        {saveStatus === 'saving' && <span className="text-[10px] text-[var(--slate-dim)] animate-pulse">A guardar…</span>}
         {saveStatus === 'ok'     && <span className="text-[10px] text-emerald-600 font-black">✓ Guardado</span>}
         {saveStatus === 'error'  && <span className="text-[10px] text-red-600 font-black">✗ Erro ao guardar</span>}
 
@@ -3732,7 +3732,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
           <div className="relative">
             <button
               onClick={() => { setShowWorkerPicker(p => !p); setShowColPicker(false); }}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black uppercase transition-all border shadow-sm ${showWorkerPicker ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400 hover:text-slate-800'}`}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black uppercase transition-all border shadow-sm ${showWorkerPicker ? 'bg-[var(--navy-solid)] text-white border-[var(--navy-solid)]' : 'bg-white text-[var(--ink-soft)] border-[var(--border)] hover:border-[var(--slate)] hover:text-[var(--ink)]'}`}
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
@@ -3740,16 +3740,16 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
               </svg>
               Trabalhadores
               {selectedWorkers.size > 0 && (
-                <span className="bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded-md text-[9px] font-black">
+                <span className="bg-[var(--border)] text-[var(--ink-mid)] px-1.5 py-0.5 rounded-md text-[9px] font-black">
                   {selectedWorkers.size}/{rows.length}
                 </span>
               )}
             </button>
 
             {showWorkerPicker && (
-              <div className="absolute right-0 top-full mt-2 z-50 bg-white border border-slate-200 rounded-2xl shadow-xl p-4 w-72">
+              <div className="absolute right-0 top-full mt-2 z-50 bg-white border border-[var(--border)] rounded-2xl shadow-xl p-4 w-72">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs font-black text-slate-700 uppercase tracking-wide">Trabalhadores visíveis</span>
+                  <span className="text-xs font-black text-[var(--ink-mid)] uppercase tracking-wide">Trabalhadores visíveis</span>
                   <div className="flex gap-2">
                     <button
                       onClick={() => setSelectedWorkers(new Set())}
@@ -3757,10 +3757,10 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                     >
                       Todos
                     </button>
-                    <span className="text-slate-300">·</span>
+                    <span className="text-[var(--slate-dim)]">·</span>
                     <button
                       onClick={() => setSelectedWorkers(new Set(rows.map(r => r.nome)))}
-                      className="text-[10px] font-black text-slate-400 hover:text-slate-600 uppercase tracking-wide"
+                      className="text-[10px] font-black text-[var(--slate-dim)] hover:text-[var(--ink-soft)] uppercase tracking-wide"
                     >
                       Nenhum
                     </button>
@@ -3770,7 +3770,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                   {rows.map(r => (
                     <label
                       key={r.nome}
-                      className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors"
+                      className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg cursor-pointer hover:bg-[var(--surface)] transition-colors"
                     >
                       <input
                         type="checkbox"
@@ -3783,15 +3783,15 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                             toggleWorker(r.nome);
                           }
                         }}
-                        className="w-3.5 h-3.5 accent-slate-700 shrink-0"
+                        className="w-3.5 h-3.5 accent-[var(--navy)] shrink-0"
                       />
-                      <span className="text-[11px] font-bold text-slate-700 truncate">{r.nome}</span>
+                      <span className="text-[11px] font-bold text-[var(--ink-mid)] truncate">{r.nome}</span>
                     </label>
                   ))}
                 </div>
                 <button
                   onClick={() => setShowWorkerPicker(false)}
-                  className="mt-3 w-full py-1.5 text-[10px] font-black uppercase text-slate-400 hover:text-slate-600 tracking-wide"
+                  className="mt-3 w-full py-1.5 text-[10px] font-black uppercase text-[var(--slate-dim)] hover:text-[var(--ink-soft)] tracking-wide"
                 >
                   Fechar
                 </button>
@@ -3803,7 +3803,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
           <div className="relative">
             <button
               onClick={() => { setShowColPicker(p => !p); setShowWorkerPicker(false); }}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black uppercase transition-all border shadow-sm ${showColPicker ? 'text-white' : 'bg-white text-slate-600 border-slate-200 hover:border-[var(--slate)] hover:text-[var(--navy)]'}`}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black uppercase transition-all border shadow-sm ${showColPicker ? 'text-white' : 'bg-white text-[var(--ink-soft)] border-[var(--border)] hover:border-[var(--slate)] hover:text-[var(--navy)]'}`}
               style={showColPicker ? { backgroundColor: FT.navy, borderColor: FT.navy } : {}}
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -3811,15 +3811,15 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                 <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
               </svg>
               Colunas
-              <span className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded-md text-[9px] font-black">
+              <span className="bg-[var(--surface-dim)] text-[var(--ink-mid)] px-1.5 py-0.5 rounded-md text-[9px] font-black">
                 {visibleCols.size}/{RESUMO_COLS.length}
               </span>
             </button>
 
             {showColPicker && (
-              <div className="absolute right-0 top-full mt-2 z-50 bg-white border border-slate-200 rounded-2xl shadow-xl p-4 w-[520px]">
+              <div className="absolute right-0 top-full mt-2 z-50 bg-white border border-[var(--border)] rounded-2xl shadow-xl p-4 w-[520px]">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs font-black text-slate-700 uppercase tracking-wide">Colunas visíveis</span>
+                  <span className="text-xs font-black text-[var(--ink-mid)] uppercase tracking-wide">Colunas visíveis</span>
                   <div className="flex gap-2">
                     <button
                       onClick={() => setVisibleCols(new Set(RESUMO_COLS.map((_, i) => i)))}
@@ -3827,10 +3827,10 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                     >
                       Todas
                     </button>
-                    <span className="text-slate-300">·</span>
+                    <span className="text-[var(--slate-dim)]">·</span>
                     <button
                       onClick={() => setVisibleCols(new Set([0]))}
-                      className="text-[10px] font-black text-slate-400 hover:text-slate-600 uppercase tracking-wide"
+                      className="text-[10px] font-black text-[var(--slate-dim)] hover:text-[var(--ink-soft)] uppercase tracking-wide"
                     >
                       Mínimo
                     </button>
@@ -3840,7 +3840,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                   {RESUMO_COLS.map((col, ci) => (
                     <label
                       key={ci}
-                      className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg cursor-pointer transition-colors ${ci === 0 ? 'opacity-50 cursor-default' : 'hover:bg-slate-50'}`}
+                      className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg cursor-pointer transition-colors ${ci === 0 ? 'opacity-50 cursor-default' : 'hover:bg-[var(--surface)]'}`}
                     >
                       <input
                         type="checkbox"
@@ -3849,7 +3849,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                         disabled={ci === 0}
                         className="w-3.5 h-3.5 accent-[var(--navy)] shrink-0"
                       />
-                      <span className={`text-[11px] font-bold truncate ${col.highlight ? 'text-emerald-700' : 'text-slate-600'}`}>
+                      <span className={`text-[11px] font-bold truncate ${col.highlight ? 'text-emerald-700' : 'text-[var(--ink-soft)]'}`}>
                         {col.label}
                       </span>
                     </label>
@@ -3857,7 +3857,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                 </div>
                 <button
                   onClick={() => setShowColPicker(false)}
-                  className="mt-3 w-full py-1.5 text-[10px] font-black uppercase text-slate-400 hover:text-slate-600 tracking-wide"
+                  className="mt-3 w-full py-1.5 text-[10px] font-black uppercase text-[var(--slate-dim)] hover:text-[var(--ink-soft)] tracking-wide"
                 >
                   Fechar
                 </button>
@@ -3880,13 +3880,13 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
       </div>
 
       {rows.length === 0 ? (
-        <div className="flex-1 flex items-center justify-center text-slate-400 bg-white rounded-2xl border border-slate-100">
+        <div className="flex-1 flex items-center justify-center text-[var(--slate-dim)] bg-white rounded-2xl border border-[var(--border-soft)]">
           <p className="text-sm font-black uppercase tracking-wide">Sem trabalhadores activos com vencimento base</p>
         </div>
       ) : (
         <div
           ref={tableScrollRef}
-          className="scroll-marca flex-1 min-h-0 overflow-auto rounded-2xl border border-slate-200 shadow-sm"
+          className="scroll-marca flex-1 min-h-0 overflow-auto rounded-2xl border border-[var(--border)] shadow-sm"
           {...dragProps}
         >
           <table
@@ -3948,7 +3948,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
               {displayRows.map((row, ri) => (
                 <tr
                   key={ri}
-                  className={`group/row transition-colors ${row.completo ? 'bg-emerald-50 hover:bg-emerald-100' : ri % 2 === 0 ? 'bg-white hover:bg-slate-100' : 'bg-slate-50 hover:bg-slate-100'}`}
+                  className={`group/row transition-colors ${row.completo ? 'bg-emerald-50 hover:bg-emerald-100' : ri % 2 === 0 ? 'bg-white hover:bg-[var(--surface-dim)]' : 'bg-[var(--surface)] hover:bg-[var(--surface-dim)]'}`}
                 >
                   {activeCols.map(({ col, ci }, ai) => {
                     const isLastInGroup = ai === activeCols.length - 1 || (activeCols[ai + 1]?.col.group || 'obs') !== (col.group || 'obs');
@@ -3964,7 +3964,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                         key={ci}
                         onClick={canCopy ? e => handleCellClick(e, ri, ci, row[col.key]) : undefined}
                         title={canCopy ? (isCopied ? 'Copiado!' : 'Clique para copiar') : undefined}
-                        className={`px-2 py-0.5 font-bold ${col.highlight ? hlCell(col.highlight) : 'text-slate-700'} ${canCopy ? 'cursor-pointer' : ''}`}
+                        className={`px-2 py-0.5 font-bold ${col.highlight ? hlCell(col.highlight) : 'text-[var(--ink-mid)]'} ${canCopy ? 'cursor-pointer' : ''}`}
                         style={{
                           position: 'relative',
                           whiteSpace: 'nowrap',
@@ -3990,7 +3990,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                             value={ajustes[row.workerId] ?? ''}
                             onChange={e => updateAjuste(row.workerId, e.target.value)}
                             placeholder="0"
-                            className="w-full bg-transparent outline-none text-center text-xs font-bold placeholder:text-slate-300 px-1 py-1 rounded-lg hover:bg-amber-50 focus:bg-white focus:ring-2 focus:ring-amber-200 transition-all"
+                            className="w-full bg-transparent outline-none text-center text-xs font-bold placeholder:text-[var(--slate-dim)] px-1 py-1 rounded-lg hover:bg-amber-50 focus:bg-white focus:ring-2 focus:ring-amber-200 transition-all"
                             style={{ color: (ajustes[row.workerId] || 0) < 0 ? '#dc2626' : (ajustes[row.workerId] || 0) > 0 ? '#16a34a' : '#64748b' }}
                           />
                         ) : col.tipo === 'toggle' ? (
@@ -4001,7 +4001,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                               className={`w-4 h-4 rounded-full flex items-center justify-center transition-all ${
                                 row.completo
                                   ? 'bg-emerald-500 text-white hover:bg-red-400 shadow-sm'
-                                  : 'bg-white border-2 border-slate-300 text-transparent hover:border-emerald-400 hover:text-emerald-400'
+                                  : 'bg-white border-2 border-[var(--border)] text-transparent hover:border-emerald-400 hover:text-emerald-400'
                               }`}
                             >
                               <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
@@ -4015,7 +4015,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                             value={observacoes[row.workerId] || ''}
                             onChange={e => updateObs(row.workerId, e.target.value)}
                             placeholder="—"
-                            className="w-full min-w-36 bg-transparent outline-none text-center text-xs font-bold text-slate-700 placeholder:text-slate-300 px-2 py-1 rounded-lg hover:bg-slate-100 focus:bg-white focus:ring-2 focus:ring-[#1B3A57]/20 transition-all"
+                            className="w-full min-w-36 bg-transparent outline-none text-center text-xs font-bold text-[var(--ink-mid)] placeholder:text-[var(--slate-dim)] px-2 py-1 rounded-lg hover:bg-[var(--surface-dim)] focus:bg-white focus:ring-2 focus:ring-[#1B3A57]/20 transition-all"
                           />
                         ) : isNome ? (
                           <span>{row[col.key]}</span>
@@ -4048,7 +4048,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                   return (
                     <td
                       key={ci}
-                      className={`px-2 py-2.5 text-[11px] font-black whitespace-nowrap text-center ${col.highlight ? hlFoot(col.highlight) : 'bg-slate-100'}`}
+                      className={`px-2 py-2.5 text-[11px] font-black whitespace-nowrap text-center ${col.highlight ? hlFoot(col.highlight) : 'bg-[var(--surface-dim)]'}`}
                       style={{
                         ...(col.highlight ? {} : { color: 'var(--navy)' }),
                         ...(ai === 0 ? { position: 'sticky', left: 0, zIndex: 5, background: '#eef2ff', color: '#4338ca' } : {}),
