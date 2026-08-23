@@ -204,6 +204,12 @@ novos.
   imports em todo o `src/`, quem consome os subcomponentes, e presença de strings únicas no `dist/`
   do build. Ver histórico do git para saber se foi desligado por decisão consciente antes de propor
   apagar.
+  **A sonda tem de ser uma string genuinamente única.** Ao verificar o `AdminTopbar`, a primeira
+  tentativa usou `"Administração"` e deu *presente* no bundle — é palavra comum, reutilizada noutros
+  componentes, e teria levado à conclusão errada de que o ficheiro estava vivo. Com `"Voltar à
+  equipa"`, que só existe nesse ficheiro, deu *ausente* e confirmou o diagnóstico. Escolher sempre
+  uma frase que não possa aparecer noutro sítio, e confirmar isso com um grep ao `src/` antes de a
+  usar como prova.
 - Ordem de lotes: do módulo mais pequeno para o maior, um commit por módulo, checkpoint no browser
   antes de avançar para o seguinte.
 
