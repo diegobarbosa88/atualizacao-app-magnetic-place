@@ -217,10 +217,10 @@ novos.
   
   ### Estado da migração (atualizar a cada lote)
 
-Total: 4.197 classes Tailwind → tokens `FT`. Última contagem: **1.189 convertidas em 11 módulos**
-(4.197 no início, 2.856 por converter, menos 152 que saíram com o módulo `movimentacoes` apagado),
+Total: 4.197 classes Tailwind → tokens `FT`. Última contagem: **1.293 convertidas em 12 módulos**
+(4.197 no início, 2.752 por converter, menos 152 que saíram com o módulo `movimentacoes` apagado),
 mais os
-dois canais de `style` inline fechados (`FT.slate` e `FT.navy`). Restam ~2.856 classes no admin.
+dois canais de `style` inline fechados (`FT.slate` e `FT.navy`). Restam ~2.752 classes no admin.
 
 Para medir o que falta em qualquer momento, sem contar à mão:
 `sh scripts/verificar-lote-design.sh src/features/admin src/components/admin`
@@ -243,7 +243,7 @@ Para medir o que falta em qualquer momento, sem contar à mão:
 | Canal inline (`color: FT.navy`) | 108 (72 convertidos, 36 sobre laranja ficam) | ✅ fechado | `de236ab` |
 | `faturas`                 | 125          | ✅ feito                         | `74e4d8a`  |
 | `cost-reports` (8 de 9 ficheiros) | 180  | ✅ feito                         | `e039edc`  |
-| `cost-reports/AjudasCalculadora.jsx` | 104 | ⏳ próximo — lote próprio, dinheiro | —      |
+| `cost-reports/AjudasCalculadora.jsx` | 104 | ✅ feito — lote próprio, dinheiro | `f336916` |
 | `toconline`                | 355          | não iniciado                     | —          |
 | `team`                     | 463          | não iniciado                     | —          |
 | *(restantes módulos ainda não medidos individualmente)* | — | não iniciado | — |
@@ -274,7 +274,20 @@ para quem um dia a tomar não ter de as redescobrir:
   navy (`de236ab`) e ali a conversão **não teve efeito** — o `var(--navy)` resolve para o #1B3A57
   fixo do mockup, não para o global que clareia. Não é regressão nem bug: o mockup fixa fundo *e*
   texto, e a faixa dá 11,74:1 nos dois modos. É só a mesma ilha clara das outras pendências.
-- Colisão de `#1B3A57` ainda hardcoded em 87 ficheiros, contra 29 usos do token — resolver por
-  código, não à mão.
+**Cor de marca fora do alcance dos tokens.** Categoria à parte das anteriores: aqui o problema não é
+uma variável que colide, é cor que os tokens não conseguem alcançar de todo. Não se resolve com mais
+lotes de conversão.
+
+- **`#1B3A57` literal: 31 ficheiros, 115 ocorrências** (a nota anterior dizia 87 ficheiros — estava
+  desactualizada, a fase 5 reduziu-a). **105 dessas são `/NN`** (`ring-[#1B3A57]/30`,
+  `bg-[#1B3A57]/5`…) e ficam de propósito: o modificador de opacidade sobre `var()` compila para
+  `color-mix`, cujo fallback é a cor a 100%. As 10 restantes são legítimas ou já conhecidas —
+  `designTokens.js:7` e `reconciliacao-mockup.css:13` são as *definições*, e 4 estão no
+  `SSComunicacaoModal`, que está fora da migração por decisão registada.
+- **O export de ajudas de custo usa paleta própria.** `AjudasCalculadora.jsx:580` gera um `.xls` a
+  partir de uma string HTML com CSS embutido, e o cabeçalho e faixas são `#4F46E5` (o indigo do
+  `create-vite`) e `#7C3AED`. O ficheiro que o cliente recebe não se parece com a Magnetic Place.
+  Está fora do alcance dos tokens por ser string, não classe — e mudá-lo é decisão de marca sobre
+  material que sai da empresa, não housekeeping de UI.
 - `pill de estado` no modal de cliente (`clients.status`: pendente/enviado) e `Badge.jsx` — decisão
   de design ainda por tomar.
