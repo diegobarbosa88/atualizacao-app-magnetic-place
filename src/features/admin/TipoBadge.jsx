@@ -1,15 +1,15 @@
 import React from 'react';
 import { ArrowDownLeft, ArrowUpRight } from 'lucide-react';
+import Badge from '../../components/common/Badge';
 
+// Primeiro consumidor real do Badge/TONES partilhados (fase 4 do plano de
+// design) — mantém a API pública (`tipo`) para não tocar nos 4 call sites em
+// ReconciliacaoAdmin.jsx e ResultadosTabs.jsx.
 export default function TipoBadge({ tipo }) {
   if (tipo === 'credito') return (
-    <span className="flex items-center gap-0.5 text-[9px] font-black uppercase tracking-widest bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
-      <ArrowDownLeft size={10} /> Entrada
-    </span>
+    <Badge tone="success" icon={ArrowDownLeft}>Entrada</Badge>
   );
   return (
-    <span className="flex items-center gap-0.5 text-[9px] font-black uppercase tracking-widest bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full">
-      <ArrowUpRight size={10} /> Saída
-    </span>
+    <Badge tone="danger" icon={ArrowUpRight}>Saída</Badge>
   );
 }

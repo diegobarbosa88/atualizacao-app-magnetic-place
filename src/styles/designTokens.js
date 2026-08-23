@@ -49,12 +49,17 @@ export const FONT_MONO = "'IBM Plex Mono', monospace";
  * usavam a escala -50 e outras a -100.
  */
 export const TONES = {
-  neutral: { bg: 'bg-slate-100',   text: 'text-slate-500',   border: 'border-slate-200' },
-  success: { bg: 'bg-emerald-50',  text: 'text-emerald-700', border: 'border-emerald-100' },
-  warning: { bg: 'bg-amber-50',    text: 'text-amber-700',   border: 'border-amber-100' },
-  danger:  { bg: 'bg-rose-50',     text: 'text-rose-700',    border: 'border-rose-100' },
-  info:    { bg: 'bg-indigo-50',   text: 'text-indigo-700',  border: 'border-indigo-100' },
-  pending: { bg: 'bg-teal-50',     text: 'text-teal-700',    border: 'border-teal-100' },
+  neutral: { bg: 'bg-slate-100',            text: 'text-slate-500',        border: 'border-slate-200' },
+  // success/warning/danger derivam de FT.ok/warn/bad (via as variáveis CSS
+  // --ok/--warn/--bad em index.css) em vez de emerald/amber/rose do
+  // Tailwind. Eram dois sistemas paralelos com valores que não coincidiam
+  // para o mesmo conceito — FT.ok/warn/bad é o que já está em uso real,
+  // em 10 ficheiros do dashboard do trabalhador.
+  success: { bg: 'bg-[var(--ok-bg)]',       text: 'text-[var(--ok)]',      border: 'border-[var(--ok-border)]' },
+  warning: { bg: 'bg-[var(--warn-bg)]',     text: 'text-[var(--warn)]',    border: 'border-[var(--warn-border)]' },
+  danger:  { bg: 'bg-[var(--bad-bg)]',      text: 'text-[var(--bad)]',     border: 'border-[var(--bad-border)]' },
+  info:    { bg: 'bg-indigo-50',            text: 'text-indigo-700',       border: 'border-indigo-100' },
+  pending: { bg: 'bg-teal-50',              text: 'text-teal-700',         border: 'border-teal-100' },
 };
 
 /**

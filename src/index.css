@@ -20,6 +20,20 @@
   --orange-deep: #c97600;
   --slate: #869aaf;
 
+  /* Tons de estado — espelham FT.ok/warn/bad em designTokens.js. Existem como
+     variáveis porque o Tailwind precisa de classes estáticas; TONES (mesmo
+     ficheiro) usa-as para deixar de ter valores de verde/amarelo/vermelho
+     diferentes dos que já estão em uso real no dashboard do trabalhador. */
+  --ok: #2e7d4f;
+  --ok-bg: #e7f3eb;
+  --ok-border: rgba(46, 125, 79, 0.3);
+  --warn: #d98a2b;
+  --warn-bg: #fbf0de;
+  --warn-border: rgba(217, 138, 43, 0.3);
+  --bad: #b4432f;
+  --bad-bg: #fbeae6;
+  --bad-border: rgba(180, 67, 47, 0.3);
+
   --text: #51606e;
   --text-h: #1b3a57;
   --bg: #fff;
