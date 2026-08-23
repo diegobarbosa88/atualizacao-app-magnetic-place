@@ -24,7 +24,7 @@ function FornecedorManagerContent() {
             <button
               onClick={carregar}
               disabled={loading}
-              className="p-2 text-slate-400 hover:text-[var(--navy)] hover:bg-slate-100 rounded-lg transition-colors"
+              className="p-2 text-[var(--slate)] hover:text-[var(--navy)] hover:bg-[var(--surface-dim)] rounded-lg transition-colors"
               title="Actualizar"
             >
               <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />

@@ -6,13 +6,13 @@ import { FT } from '../../../styles/designTokens';
 function Field({ label, children }) {
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</label>
+      <label className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">{label}</label>
       {children}
     </div>
   );
 }
 
-const inputCls = 'border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-[var(--navy)] focus:ring-2 focus:ring-[#1B3A57]/10 transition-all w-full bg-white';
+const inputCls = 'border border-[var(--border)] rounded-xl px-3 py-2.5 text-sm font-bold text-[var(--ink-mid)] outline-none focus:border-[var(--navy)] focus:ring-2 focus:ring-[#1B3A57]/10 transition-all w-full bg-white';
 
 export default function FornecedorForm() {
   const { form, setForm, saving, guardar, cancelar } = useFornecedor();
@@ -23,10 +23,10 @@ export default function FornecedorForm() {
   return (
     <div className="p-6 space-y-5">
       {/* Secção 1 — Dados da Empresa */}
-      <div className="bg-slate-50/60 p-4 rounded-2xl border border-slate-100 space-y-3">
+      <div className="bg-[var(--surface)] p-4 rounded-2xl border border-[var(--border-soft)] space-y-3">
         <div className="flex items-center gap-2 mb-1">
-          <Building2 size={12} className="text-slate-500" />
-          <span className="text-[10px] font-black tracking-widest text-slate-500">Dados da empresa</span>
+          <Building2 size={12} className="text-[var(--slate-dim)]" />
+          <span className="text-[10px] font-black tracking-widest text-[var(--slate-dim)]">Dados da empresa</span>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="md:col-span-2">
@@ -55,10 +55,10 @@ export default function FornecedorForm() {
       </div>
 
       {/* Secção 2 — Dados Bancários */}
-      <div className="bg-slate-50/60 p-4 rounded-2xl border border-slate-100 space-y-3">
+      <div className="bg-[var(--surface)] p-4 rounded-2xl border border-[var(--border-soft)] space-y-3">
         <div className="flex items-center gap-2 mb-1">
-          <CreditCard size={12} className="text-slate-500" />
-          <span className="text-[10px] font-black tracking-widest text-slate-500">Dados bancários</span>
+          <CreditCard size={12} className="text-[var(--slate-dim)]" />
+          <span className="text-[10px] font-black tracking-widest text-[var(--slate-dim)]">Dados bancários</span>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="md:col-span-2">
@@ -83,10 +83,10 @@ export default function FornecedorForm() {
         </div>
 
         {/* Débito Automático toggle */}
-        <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">
+        <div className="flex items-center justify-between p-3 bg-[var(--surface)] rounded-xl border border-[var(--border-soft)]">
           <div>
-            <p className="text-xs font-black text-slate-700">Débito automático</p>
-            <p className="text-[10px] text-slate-400 mt-0.5">As faturas deste fornecedor são pagas por débito direto — excluídas da Fila de Pagamentos</p>
+            <p className="text-xs font-black text-[var(--ink-mid)]">Débito automático</p>
+            <p className="text-[10px] text-[var(--slate-dim)] mt-0.5">As faturas deste fornecedor são pagas por débito direto — excluídas da Fila de Pagamentos</p>
           </div>
           <button
             onClick={tog('debito_automatico')}
@@ -99,10 +99,10 @@ export default function FornecedorForm() {
       </div>
 
       {/* Secção 3 — Notas */}
-      <div className="bg-slate-50/60 p-4 rounded-2xl border border-slate-100">
+      <div className="bg-[var(--surface)] p-4 rounded-2xl border border-[var(--border-soft)]">
         <div className="flex items-center gap-2 mb-2">
-          <FileText size={12} className="text-slate-500" />
-          <span className="text-[10px] font-black tracking-widest text-slate-500">Notas</span>
+          <FileText size={12} className="text-[var(--slate-dim)]" />
+          <span className="text-[10px] font-black tracking-widest text-[var(--slate-dim)]">Notas</span>
         </div>
         <textarea
           value={form.notas}
@@ -126,7 +126,7 @@ export default function FornecedorForm() {
         </button>
         <button
           onClick={cancelar}
-          className="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-black uppercase tracking-widest transition-colors"
+          className="px-6 py-3 bg-[var(--surface-dim)] hover:bg-[var(--border)] text-[var(--ink-soft)] rounded-xl text-xs font-black uppercase tracking-widest transition-colors"
         >
           Cancelar
         </button>
