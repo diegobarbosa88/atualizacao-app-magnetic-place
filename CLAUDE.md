@@ -346,9 +346,10 @@ Para medir o que falta em qualquer momento, sem contar à mão:
 | `faturas`                 | 125          | ✅ feito                         | `74e4d8a`  |
 | `cost-reports` (8 de 9 ficheiros) | 180  | ✅ feito                         | `e039edc`  |
 | `cost-reports/AjudasCalculadora.jsx` | 104 | ✅ feito — lote próprio, dinheiro | `f336916` |
-| `toconline`                | 355          | não iniciado                     | —          |
+| `toconline`                | 355          | ✅ feito (lotes 12 e 13)          | `6f0ab78` / `c8cb698` |
 | `team`                     | 463 (434 + 29 fora) | ✅ feito em 2 lotes            | `4f4cb1b` / — |
-| *(restantes módulos ainda não medidos individualmente)* | — | não iniciado | — |
+| raiz de `features/admin`   | 1.028        | a seguir                         | —          |
+| `components/admin`         | 117          | a seguir, com a raiz             | —          |
 
 **Ambos os canais de `style` inline estão fechados.** Critério, que difere entre eles: no `FT.slate`
 a pergunta foi *ícone ou texto?* (o slate serve os dois modos, só o contraste variava); no `FT.navy`
