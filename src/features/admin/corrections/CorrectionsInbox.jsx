@@ -74,10 +74,10 @@ function ClientCorrectionsPanel({ filtered, clients, workers, itemsByCorrection,
     const isResolved = g.corrections.every((c) => c.status === 'applied' || c.status === 'rejected');
 
     return (
-      <div key={groupKey} className={`bg-white border rounded-2xl overflow-hidden ${isPending ? 'border-orange-200 shadow-sm' : 'border-slate-200'}`}>
+      <div key={groupKey} className={`bg-white border rounded-2xl overflow-hidden ${isPending ? 'border-orange-200 shadow-sm' : 'border-[var(--border)]'}`}>
         <button
           onClick={() => setExpandedCards((prev) => ({ ...prev, [groupKey]: !prev[groupKey] }))}
-          className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors"
+          className="w-full flex items-center justify-between p-4 hover:bg-[var(--surface)] transition-colors"
         >
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-xs font-black" style={{ backgroundColor: FT.navy, color: FT.orange }}>
@@ -85,22 +85,22 @@ function ClientCorrectionsPanel({ filtered, clients, workers, itemsByCorrection,
             </div>
             <div className="text-left min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-bold text-slate-700 text-sm truncate">{client?.name || g.clientId || 'Cliente'}</span>
-                <span className="text-xs font-mono text-slate-400">{g.month}</span>
+                <span className="font-bold text-[var(--ink-mid)] text-sm truncate">{client?.name || g.clientId || 'Cliente'}</span>
+                <span className="text-xs font-mono text-[var(--slate-dim)]">{g.month}</span>
               </div>
-              <span className="text-xs text-slate-400">
+              <span className="text-xs text-[var(--slate-dim)]">
                 {g.corrections.length} pedido{g.corrections.length !== 1 ? 's' : ''} • {pendingCount > 0 ? `${pendingCount} pendente${pendingCount !== 1 ? 's' : ''}` : 'resolvido'}
               </span>
             </div>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
-            {isResolved && <span className="text-[10px] font-black px-3 py-1.5 rounded-xl bg-slate-100 text-slate-500">Resolvido</span>}
-            <ChevronDown size={16} className={`text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+            {isResolved && <span className="text-[10px] font-black px-3 py-1.5 rounded-xl bg-[var(--surface-dim)] text-[var(--slate-dim)]">Resolvido</span>}
+            <ChevronDown size={16} className={`text-[var(--slate)] transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
           </div>
         </button>
 
         {isExpanded && (
-          <div className="px-4 pb-4 border-t border-slate-100">
+          <div className="px-4 pb-4 border-t border-[var(--border-soft)]">
             <div className="pt-4 space-y-3">
               {g.corrections.map((correction) => {
                 const corrItems = itemsByCorrection.get(correction.id) || [];
@@ -159,11 +159,11 @@ function ClientCorrectionsPanel({ filtered, clients, workers, itemsByCorrection,
                                 </span>
                                 <span className={`font-mono font-black text-xs ${corrIsPending ? 'text-orange-800' : corrIsApplied ? 'text-emerald-800' : 'text-rose-800'}`}>{item.date}</span>
                               </div>
-                              <div className="flex items-center gap-2 text-slate-500 text-xs">
-                                <span className="text-[10px] font-black uppercase tracking-widest w-20 flex-shrink-0 text-slate-400">Original</span>
+                              <div className="flex items-center gap-2 text-[var(--slate-dim)] text-xs">
+                                <span className="text-[10px] font-black uppercase tracking-widest w-20 flex-shrink-0 text-[var(--slate-dim)]">Original</span>
                                 {hasBefore
-                                  ? <><span className="font-mono">{item.before.startTime} → {item.before.endTime}</span>{hasBreak(item.before) && <span className="text-slate-400">· pausa {item.before.breakStart || '--:--'}–{item.before.breakEnd || '--:--'}</span>}</>
-                                  : <span className="italic text-slate-300">Sem registo anterior</span>}
+                                  ? <><span className="font-mono">{item.before.startTime} → {item.before.endTime}</span>{hasBreak(item.before) && <span className="text-[var(--slate)]">· pausa {item.before.breakStart || '--:--'}–{item.before.breakEnd || '--:--'}</span>}</>
+                                  : <span className="italic text-[var(--slate-dim)]">Sem registo anterior</span>}
                               </div>
                               <div className={`flex items-center gap-2 font-bold text-xs ${corrIsPending ? 'text-orange-800' : corrIsApplied ? 'text-emerald-800' : 'text-rose-800'}`}>
                                 <span className={`text-[10px] font-black uppercase tracking-widest w-20 flex-shrink-0 ${corrIsPending ? 'text-orange-600' : corrIsApplied ? 'text-emerald-600' : 'text-rose-600'}`}>Solicitado</span>
@@ -174,7 +174,7 @@ function ClientCorrectionsPanel({ filtered, clients, workers, itemsByCorrection,
                             </div>
                           );
                         })}
-                        {corrItems.length === 0 && <p className="text-xs text-slate-400 italic">Sem itens registados.</p>}
+                        {corrItems.length === 0 && <p className="text-xs text-[var(--slate-dim)] italic">Sem itens registados.</p>}
                       </div>
                     )}
                   </div>
@@ -229,10 +229,10 @@ function WorkerCorrectionsPanel({ filtered, clients, workers, itemsByCorrection,
     const isResolved = g.corrections.every((c) => c.status === 'applied' || c.status === 'rejected');
 
     return (
-      <div key={groupKey} className={`bg-white border rounded-2xl overflow-hidden ${isPending ? 'border-amber-200 shadow-sm' : 'border-slate-200'}`}>
+      <div key={groupKey} className={`bg-white border rounded-2xl overflow-hidden ${isPending ? 'border-amber-200 shadow-sm' : 'border-[var(--border)]'}`}>
         <button
           onClick={() => setExpandedCards((prev) => ({ ...prev, [groupKey]: !prev[groupKey] }))}
-          className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors"
+          className="w-full flex items-center justify-between p-4 hover:bg-[var(--surface)] transition-colors"
         >
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-xs font-black" style={{ backgroundColor: FT.navy, color: FT.orange }}>
@@ -240,23 +240,23 @@ function WorkerCorrectionsPanel({ filtered, clients, workers, itemsByCorrection,
             </div>
             <div className="text-left min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-bold text-slate-700 text-sm truncate">{client?.name || g.clientId || 'Cliente'}</span>
-                <span className="text-xs font-mono text-slate-400">{g.month}</span>
+                <span className="font-bold text-[var(--ink-mid)] text-sm truncate">{client?.name || g.clientId || 'Cliente'}</span>
+                <span className="text-xs font-mono text-[var(--slate-dim)]">{g.month}</span>
               </div>
-              <span className="text-xs text-slate-400">
+              <span className="text-xs text-[var(--slate-dim)]">
                 {allItemCount} item{allItemCount !== 1 ? 's' : ''} • {pendingCount > 0 ? `${pendingCount} pendente${pendingCount !== 1 ? 's' : ''}` : 'resolvido'}
               </span>
             </div>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             {isResolved && (
-              <span className="text-[10px] font-black px-3 py-1.5 rounded-xl bg-slate-100 text-slate-500">Resolvido</span>
+              <span className="text-[10px] font-black px-3 py-1.5 rounded-xl bg-[var(--surface-dim)] text-[var(--slate-dim)]">Resolvido</span>
             )}
-            <ChevronDown size={16} className={`text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+            <ChevronDown size={16} className={`text-[var(--slate)] transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
           </div>
         </button>
         {isExpanded && (
-          <div className="px-4 pb-4 border-t border-slate-100">
+          <div className="px-4 pb-4 border-t border-[var(--border-soft)]">
             <div className="pt-4 space-y-3">
               {g.corrections.map((correction) => {
                 const corrItems = itemsByCorrection.get(correction.id) || [];
@@ -312,18 +312,18 @@ function WorkerCorrectionsPanel({ filtered, clients, workers, itemsByCorrection,
                               </span>
                               <span className={`font-mono text-xs ${corrIsPending ? 'text-amber-700' : corrIsApplied ? 'text-emerald-700' : 'text-rose-700'}`}>{item.date}</span>
                               {hasProposed && !isOpen && (
-                                <span className="font-mono text-[10px] text-slate-400 ml-auto">{item.proposed.startTime}–{item.proposed.endTime}</span>
+                                <span className="font-mono text-[10px] text-[var(--slate-dim)] ml-auto">{item.proposed.startTime}–{item.proposed.endTime}</span>
                               )}
-                              <ChevronDown size={12} className={`ml-auto flex-shrink-0 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                              <ChevronDown size={12} className={`ml-auto flex-shrink-0 text-[var(--slate)] transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                             </button>
                             {/* Log de alterações expandido */}
                             {isOpen && (
                               <div className="px-2.5 pb-2.5 border-t border-white/60 pt-2 space-y-1">
-                                <div className="flex items-center gap-2 text-slate-500 text-xs">
-                                  <span className="text-[10px] font-black uppercase tracking-widest w-20 flex-shrink-0 text-slate-400">Original</span>
+                                <div className="flex items-center gap-2 text-[var(--slate-dim)] text-xs">
+                                  <span className="text-[10px] font-black uppercase tracking-widest w-20 flex-shrink-0 text-[var(--slate-dim)]">Original</span>
                                   {hasBefore
-                                    ? <><span className="font-mono">{item.before.startTime} → {item.before.endTime}</span>{hasBreak(item.before) && <span className="text-slate-400 ml-1">· pausa {item.before.breakStart || '--:--'}–{item.before.breakEnd || '--:--'}</span>}</>
-                                    : <span className="italic text-slate-300">Sem registo anterior</span>}
+                                    ? <><span className="font-mono">{item.before.startTime} → {item.before.endTime}</span>{hasBreak(item.before) && <span className="text-[var(--slate)] ml-1">· pausa {item.before.breakStart || '--:--'}–{item.before.breakEnd || '--:--'}</span>}</>
+                                    : <span className="italic text-[var(--slate-dim)]">Sem registo anterior</span>}
                                 </div>
                                 <div className={`flex items-center gap-2 font-bold text-xs ${corrIsPending ? 'text-amber-800' : corrIsApplied ? 'text-emerald-800' : 'text-rose-800'}`}>
                                   <span className={`text-[10px] font-black uppercase tracking-widest w-20 flex-shrink-0 ${corrIsPending ? 'text-amber-600' : corrIsApplied ? 'text-emerald-600' : 'text-rose-600'}`}>Solicitado</span>
@@ -474,7 +474,7 @@ const CorrectionsInbox = ({ initialCorrectionId, onCorrectionNavigated, forcedSo
     <div className="p-6 md:p-8">
       <header className="mb-8 flex items-center gap-3">
         <div className="bg-amber-50 p-2 rounded-xl text-amber-600"><AlertCircle size={20} /></div>
-        <h3 className="font-black text-base sm:text-xl text-slate-800 uppercase tracking-tight">Inbox de Correções</h3>
+        <h3 className="font-black text-base sm:text-xl text-[var(--ink)] uppercase tracking-tight">Inbox de Correções</h3>
       </header>
 
       {/* Source selector — hidden when forcedSource is set */}
@@ -491,16 +491,16 @@ const CorrectionsInbox = ({ initialCorrectionId, onCorrectionNavigated, forcedSo
       )}
 
       {/* Status filter tabs */}
-      <div className="flex overflow-x-auto gap-1 mb-6 bg-slate-100 p-1 rounded-2xl w-full">
+      <div className="flex overflow-x-auto gap-1 mb-6 bg-[var(--surface-dim)] p-1 rounded-2xl w-full">
         {[
           ['open',     AlertCircle, 'text-amber-500',  totalOpenCount],
           ['applied',  CheckCircle, 'text-emerald-500', counts.applied],
           ['rejected', XCircle,     'text-rose-500',    counts.rejected],
-          ['all',      LayoutList,  'text-slate-500',   null],
+          ['all',      LayoutList,  'text-[var(--slate-dim)]',   null],
         ].map(([k, Icon, iconColor, count]) => (
-          <button key={k} onClick={() => setFilter(k)} className={`flex-shrink-0 relative flex items-center justify-center gap-1 py-2 rounded-xl transition-all ${filter === k ? 'bg-white shadow-sm' : 'hover:text-slate-600'}`}>
-            <Icon size={13} className={filter === k ? iconColor : 'text-slate-400'} />
-            <span className={`text-[9px] font-black uppercase whitespace-nowrap ${filter === k ? iconColor : 'text-slate-400'}`}>
+          <button key={k} onClick={() => setFilter(k)} className={`flex-shrink-0 relative flex items-center justify-center gap-1 py-2 rounded-xl transition-all ${filter === k ? 'bg-white shadow-sm' : 'hover:text-[var(--ink-soft)]'}`}>
+            <Icon size={13} className={filter === k ? iconColor : 'text-[var(--slate)]'} />
+            <span className={`text-[9px] font-black uppercase whitespace-nowrap ${filter === k ? iconColor : 'text-[var(--slate-dim)]'}`}>
               {k === 'open' ? 'Abertas' : k === 'applied' ? 'Aplicadas' : k === 'rejected' ? 'Rejeitadas' : 'Todas'}
               {count !== null && count > 0 ? ` (${count})` : ''}
             </span>
@@ -511,10 +511,10 @@ const CorrectionsInbox = ({ initialCorrectionId, onCorrectionNavigated, forcedSo
       {/* List */}
       <div className="grid gap-3">
         {filtered.length === 0 && (
-          <div className="text-center py-20 bg-white rounded-3xl border border-slate-100">
-            <div className="w-16 h-16 bg-slate-50 text-slate-300 rounded-2xl flex items-center justify-center mx-auto mb-4"><CheckCircle size={32} /></div>
-            <h3 className="text-lg font-black text-slate-700">Nada por aqui</h3>
-            <p className="text-slate-400 text-sm font-medium">Sem correções neste filtro.</p>
+          <div className="text-center py-20 bg-white rounded-3xl border border-[var(--border-soft)]">
+            <div className="w-16 h-16 bg-[var(--surface)] text-[var(--slate)] rounded-2xl flex items-center justify-center mx-auto mb-4"><CheckCircle size={32} /></div>
+            <h3 className="text-lg font-black text-[var(--ink-mid)]">Nada por aqui</h3>
+            <p className="text-[var(--slate-dim)] text-sm font-medium">Sem correções neste filtro.</p>
           </div>
         )}
 

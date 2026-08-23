@@ -124,28 +124,28 @@ export default function CorrectionDetail({ correction, items, onBack }) {
 
   const editorButtons = (
     <div className="flex gap-2">
-      <button onClick={onMarkResolved} disabled={busy} className="px-4 py-2.5 bg-slate-700 hover:bg-slate-800 text-white rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-50">Marcar como Resolvido</button>
+      <button onClick={onMarkResolved} disabled={busy} className="px-4 py-2.5 bg-[var(--ink-mid)] hover:bg-[var(--ink)] text-white rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-50">Marcar como Resolvido</button>
       <button onClick={onReject} disabled={busy} className="px-4 py-2.5 bg-rose-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-50">Rejeitar</button>
     </div>
   );
 
   return (
     <div className="space-y-6">
-      <button onClick={onBack} className="flex items-center gap-2 text-slate-500 hover:text-slate-800 font-black text-[10px] uppercase tracking-widest">
+      <button onClick={onBack} className="flex items-center gap-2 text-[var(--slate-dim)] hover:text-[var(--ink)] font-black text-[10px] uppercase tracking-widest">
         <ChevronLeft size={16} /> Voltar à inbox
       </button>
 
-      <header className="bg-white rounded-3xl border border-slate-100 p-6 shadow-sm">
+      <header className="bg-white rounded-3xl border border-[var(--border-soft)] p-6 shadow-sm">
         <div className="flex items-start justify-between flex-wrap gap-4">
           <div>
-            <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tight">{clientName}</h2>
-            <p className="text-sm text-slate-500 font-medium mt-1">Mês {correction.month} • Tipo {TYPE_LABEL[correction.type]?.label || correction.type}</p>
+            <h2 className="text-2xl font-black text-[var(--ink)] uppercase tracking-tight">{clientName}</h2>
+            <p className="text-sm text-[var(--slate-dim)] font-medium mt-1">Mês {correction.month} • Tipo {TYPE_LABEL[correction.type]?.label || correction.type}</p>
             <span className={`mt-2 inline-block text-[10px] font-black px-2 py-1 rounded-md ${STATUS_LABEL[correction.status]?.cls}`}>{STATUS_LABEL[correction.status]?.label}</span>
           </div>
           <div className="text-right flex gap-6">
             <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Resolução</p>
-              <p className="text-3xl font-black text-slate-800">{resolved}/{total}</p>
+              <p className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Resolução</p>
+              <p className="text-3xl font-black text-[var(--ink)]">{resolved}/{total}</p>
               <div className="flex gap-2 mt-2 justify-end text-[10px] font-black flex-wrap">
                 {kindCounts.edit   > 0 && <span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700">{kindCounts.edit} ajuste(s)</span>}
                 {kindCounts.new    > 0 && <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700">{kindCounts.new} novo(s)</span>}
@@ -153,13 +153,13 @@ export default function CorrectionDetail({ correction, items, onBack }) {
               </div>
             </div>
             <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Diferença mês</p>
-              <p className={`text-3xl font-black ${monthDelta > 0 ? 'text-emerald-600' : monthDelta < 0 ? 'text-rose-600' : 'text-slate-400'}`}>{fmtDelta(monthDelta)}</p>
+              <p className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Diferença mês</p>
+              <p className={`text-3xl font-black ${monthDelta > 0 ? 'text-emerald-600' : monthDelta < 0 ? 'text-rose-600' : 'text-[var(--slate-dim)]'}`}>{fmtDelta(monthDelta)}</p>
             </div>
           </div>
         </div>
         {correction.justification && (
-          <p className="mt-4 text-sm text-slate-600 italic border-l-4 border-slate-200 pl-3">"{correction.justification}"</p>
+          <p className="mt-4 text-sm text-[var(--ink-soft)] italic border-l-4 border-[var(--border)] pl-3">"{correction.justification}"</p>
         )}
       </header>
 
@@ -171,16 +171,16 @@ export default function CorrectionDetail({ correction, items, onBack }) {
               <div className="w-10 h-10 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center"><MessageCircle size={20} /></div>
               <div>
                 <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest">Mensagem do cliente</p>
-                <p className="text-xs text-slate-500">{clientName} • {correction.submitted_at?.slice(0, 16).replace('T', ' ')}</p>
+                <p className="text-xs text-[var(--slate-dim)]">{clientName} • {correction.submitted_at?.slice(0, 16).replace('T', ' ')}</p>
               </div>
             </div>
-            <p className="text-sm text-slate-700 font-medium whitespace-pre-wrap">{correction.justification || '(sem texto)'}</p>
+            <p className="text-sm text-[var(--ink-mid)] font-medium whitespace-pre-wrap">{correction.justification || '(sem texto)'}</p>
           </div>
-          <div className="bg-white rounded-3xl border border-slate-100 p-4">
+          <div className="bg-white rounded-3xl border border-[var(--border-soft)] p-4">
             <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
               <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Editor</p>
-                <p className="text-sm text-slate-600">Faça as alterações que considera correctas e aplique ao relatório.</p>
+                <p className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Editor</p>
+                <p className="text-sm text-[var(--ink-soft)]">Faça as alterações que considera correctas e aplique ao relatório.</p>
               </div>
               {editorButtons}
             </div>
@@ -191,11 +191,11 @@ export default function CorrectionDetail({ correction, items, onBack }) {
 
       {/* Precision correction — editor */}
       {correction.type === 'precision' && !isClosed && (
-        <div className="bg-white rounded-3xl border border-slate-100 p-4">
+        <div className="bg-white rounded-3xl border border-[var(--border-soft)] p-4">
           <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
             <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Editor</p>
-              <p className="text-sm text-slate-600">As alterações do cliente estão pré-carregadas. Pode modificar antes de aplicar.</p>
+              <p className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Editor</p>
+              <p className="text-sm text-[var(--ink-soft)]">As alterações do cliente estão pré-carregadas. Pode modificar antes de aplicar.</p>
             </div>
             {editorButtons}
           </div>
@@ -207,7 +207,7 @@ export default function CorrectionDetail({ correction, items, onBack }) {
       {isClosed && (
         <div className="space-y-3">
           {items.length === 0 && (
-            <div className="bg-white rounded-2xl border border-slate-100 p-6 text-sm text-slate-500">
+            <div className="bg-white rounded-2xl border border-[var(--border-soft)] p-6 text-sm text-[var(--slate-dim)]">
               {correction.type === 'quick' ? 'Correção rápida sem alterações aplicadas (apenas mensagem do cliente).'
                 : correction.type === 'creation_request' ? 'Pedido de criação de registo.'
                 : 'Sem items detalhados.'}
@@ -224,17 +224,17 @@ export default function CorrectionDetail({ correction, items, onBack }) {
             <div className="w-10 h-10 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center"><FileText size={20} /></div>
             <div>
               <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest">Pedido de Registo</p>
-              <p className="text-xs text-slate-500">{clientName} • {correction.submitted_at?.slice(0, 16).replace('T', ' ')}</p>
+              <p className="text-xs text-[var(--slate-dim)]">{clientName} • {correction.submitted_at?.slice(0, 16).replace('T', ' ')}</p>
             </div>
           </div>
           {items.map(it => (
             <div key={it.id} className="bg-white rounded-xl p-4 mb-3 border border-amber-100">
-              <p className="text-[10px] font-black text-slate-400 uppercase mb-2">{it.worker_name} • {it.date}</p>
-              {it.before && <div className="mb-2"><p className="text-[9px] font-black text-rose-500 uppercase mb-1">Original:</p><div className="flex gap-4 text-xs font-bold text-slate-600"><span>Entrada: {it.before.startTime || '--:--'}</span><span>Saída: {it.before.endTime || '--:--'}</span>{it.before.breakStart && <span>Pausa: {it.before.breakStart} - {it.before.breakEnd}</span>}</div></div>}
-              {it.proposed && <div><p className="text-[9px] font-black text-emerald-600 uppercase mb-1">Proposto:</p><div className="flex gap-4 text-xs font-bold text-slate-800"><span>Entrada: {it.proposed.startTime || '--:--'}</span><span>Saída: {it.proposed.endTime || '--:--'}</span>{it.proposed.breakStart && <span>Pausa: {it.proposed.breakStart} - {it.proposed.breakEnd}</span>}</div></div>}
+              <p className="text-[10px] font-black text-[var(--slate-dim)] uppercase mb-2">{it.worker_name} • {it.date}</p>
+              {it.before && <div className="mb-2"><p className="text-[9px] font-black text-rose-500 uppercase mb-1">Original:</p><div className="flex gap-4 text-xs font-bold text-[var(--ink-soft)]"><span>Entrada: {it.before.startTime || '--:--'}</span><span>Saída: {it.before.endTime || '--:--'}</span>{it.before.breakStart && <span>Pausa: {it.before.breakStart} - {it.before.breakEnd}</span>}</div></div>}
+              {it.proposed && <div><p className="text-[9px] font-black text-emerald-600 uppercase mb-1">Proposto:</p><div className="flex gap-4 text-xs font-bold text-[var(--ink)]"><span>Entrada: {it.proposed.startTime || '--:--'}</span><span>Saída: {it.proposed.endTime || '--:--'}</span>{it.proposed.breakStart && <span>Pausa: {it.proposed.breakStart} - {it.proposed.breakEnd}</span>}</div></div>}
             </div>
           ))}
-          {correction.justification && <p className="text-sm text-slate-600 italic border-l-4 border-amber-200 pl-3 mt-3">"{correction.justification}"</p>}
+          {correction.justification && <p className="text-sm text-[var(--ink-soft)] italic border-l-4 border-amber-200 pl-3 mt-3">"{correction.justification}"</p>}
           <div className="flex gap-2 mt-4 pt-4 border-t border-amber-200">
             <button onClick={onApproveCreationRequest} disabled={busy} className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-50">Aprovar</button>
             <button onClick={onReject} disabled={busy} className="px-4 py-2.5 bg-rose-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-50">Rejeitar</button>
@@ -249,10 +249,10 @@ export default function CorrectionDetail({ correction, items, onBack }) {
             <div className="w-10 h-10 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center"><Plus size={20} /></div>
             <div>
               <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest">Pedido de Criação</p>
-              <p className="text-xs text-slate-500">{clientName} • {correction.submitted_at?.slice(0, 16).replace('T', ' ')}</p>
+              <p className="text-xs text-[var(--slate-dim)]">{clientName} • {correction.submitted_at?.slice(0, 16).replace('T', ' ')}</p>
             </div>
           </div>
-          <p className="text-sm text-slate-700 font-medium whitespace-pre-wrap">{correction.justification || '(sem descrição)'}</p>
+          <p className="text-sm text-[var(--ink-mid)] font-medium whitespace-pre-wrap">{correction.justification || '(sem descrição)'}</p>
           <div className="flex gap-2 mt-4 pt-4 border-t border-amber-200">
             <button onClick={onMarkResolved} disabled={busy} className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-50">Aprovar Criação</button>
             <button onClick={onReject} disabled={busy} className="px-4 py-2.5 bg-rose-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-50">Rejeitar</button>
@@ -267,19 +267,19 @@ export default function CorrectionDetail({ correction, items, onBack }) {
             <div className="w-10 h-10 bg-rose-100 text-rose-600 rounded-xl flex items-center justify-center"><Trash2 size={20} /></div>
             <div>
               <p className="text-[10px] font-black text-rose-600 uppercase tracking-widest">Pedido de Eliminação</p>
-              <p className="text-xs text-slate-500">{clientName} • {correction.submitted_at?.slice(0, 16).replace('T', ' ')}</p>
+              <p className="text-xs text-[var(--slate-dim)]">{clientName} • {correction.submitted_at?.slice(0, 16).replace('T', ' ')}</p>
             </div>
           </div>
           {items.map(it => (
             <div key={it.id} className="bg-white rounded-xl p-4 mb-3 border border-rose-100">
-              <p className="text-[10px] font-black text-slate-400 uppercase mb-2">{it.worker_name} • {it.date}</p>
-              {it.before && <div className="mb-2"><p className="text-[9px] font-black text-rose-500 uppercase mb-1">A eliminar:</p><div className="flex gap-4 text-xs font-bold text-slate-800"><span>Entrada: {it.before.startTime || '--:--'}</span><span>Saída: {it.before.endTime || '--:--'}</span>{it.before.breakStart && <span>Pausa: {it.before.breakStart} - {it.before.breakEnd}</span>}</div></div>}
+              <p className="text-[10px] font-black text-[var(--slate-dim)] uppercase mb-2">{it.worker_name} • {it.date}</p>
+              {it.before && <div className="mb-2"><p className="text-[9px] font-black text-rose-500 uppercase mb-1">A eliminar:</p><div className="flex gap-4 text-xs font-bold text-[var(--ink)]"><span>Entrada: {it.before.startTime || '--:--'}</span><span>Saída: {it.before.endTime || '--:--'}</span>{it.before.breakStart && <span>Pausa: {it.before.breakStart} - {it.before.breakEnd}</span>}</div></div>}
             </div>
           ))}
-          {correction.justification && <p className="text-sm text-slate-600 italic border-l-4 border-rose-200 pl-3 mt-3">"{correction.justification}"</p>}
+          {correction.justification && <p className="text-sm text-[var(--ink-soft)] italic border-l-4 border-rose-200 pl-3 mt-3">"{correction.justification}"</p>}
           <div className="flex gap-2 mt-4 pt-4 border-t border-rose-200">
             <button onClick={onApproveCreationRequest} disabled={busy} className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-50">Confirmar Eliminação</button>
-            <button onClick={onReject} disabled={busy} className="px-4 py-2.5 bg-slate-200 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-300 transition-colors disabled:opacity-50">Cancelar</button>
+            <button onClick={onReject} disabled={busy} className="px-4 py-2.5 bg-[var(--surface-dim)] text-[var(--ink-soft)] rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[var(--border)] transition-colors disabled:opacity-50">Cancelar</button>
           </div>
         </div>
       )}
@@ -291,13 +291,13 @@ export default function CorrectionDetail({ correction, items, onBack }) {
             <div className="w-10 h-10 bg-rose-100 text-rose-600 rounded-xl flex items-center justify-center"><Trash2 size={20} /></div>
             <div>
               <p className="text-[10px] font-black text-rose-600 uppercase tracking-widest">Pedido de Eliminação</p>
-              <p className="text-xs text-slate-500">{clientName} • {correction.submitted_at?.slice(0, 16).replace('T', ' ')}</p>
+              <p className="text-xs text-[var(--slate-dim)]">{clientName} • {correction.submitted_at?.slice(0, 16).replace('T', ' ')}</p>
             </div>
           </div>
-          <p className="text-sm text-slate-700 font-medium whitespace-pre-wrap">{correction.justification || '(sem descrição)'}</p>
+          <p className="text-sm text-[var(--ink-mid)] font-medium whitespace-pre-wrap">{correction.justification || '(sem descrição)'}</p>
           <div className="flex gap-2 mt-4 pt-4 border-t border-rose-200">
             <button onClick={onMarkResolved} disabled={busy} className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-50">Confirmar Eliminação</button>
-            <button onClick={onReject} disabled={busy} className="px-4 py-2.5 bg-slate-200 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-300 transition-colors disabled:opacity-50">Cancelar</button>
+            <button onClick={onReject} disabled={busy} className="px-4 py-2.5 bg-[var(--surface-dim)] text-[var(--ink-soft)] rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[var(--border)] transition-colors disabled:opacity-50">Cancelar</button>
           </div>
         </div>
       )}
