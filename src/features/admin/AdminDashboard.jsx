@@ -32,7 +32,7 @@ function LogSourceBadge({ log }) {
         </span>
       )}
       {log.edited_at && (
-        <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest bg-slate-100 text-slate-500">
+        <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest bg-[var(--surface-dim)] text-[var(--slate-dim)]">
           <Pencil size={8} /> Editado
         </span>
       )}
@@ -435,8 +435,8 @@ function AdminDashboard(props) {
         return (
           <div className="mb-6 bg-white rounded-2xl sm:rounded-[3rem] p-4 sm:p-8 lg:p-10 shadow-2xl border-4 border-indigo-500/20 animate-in slide-in-from-top-8 duration-500">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 md:mb-10 gap-3 md:gap-6">
-              <div className="flex items-center gap-3 sm:gap-6"><div className="bg-slate-900 p-3 sm:p-5 rounded-2xl sm:rounded-3xl text-white shadow-xl"><Settings2 size={28} className="sm:hidden" /><Settings2 size={40} className="hidden sm:block" /></div><div><h2 className="text-xl sm:text-3xl font-black uppercase">Audit: {auditedWorker?.name}</h2><p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest mt-1">Controlo Mensal Detalhado</p></div></div>
-              <div className="flex items-center gap-4 bg-slate-50 p-2 rounded-[2.5rem] border border-slate-200">
+              <div className="flex items-center gap-3 sm:gap-6"><div className="bg-[var(--navy-solid)] p-3 sm:p-5 rounded-2xl sm:rounded-3xl text-white shadow-xl"><Settings2 size={28} className="sm:hidden" /><Settings2 size={40} className="hidden sm:block" /></div><div><h2 className="text-xl sm:text-3xl font-black uppercase">Audit: {auditedWorker?.name}</h2><p className="text-[var(--slate-dim)] font-bold uppercase text-[10px] tracking-widest mt-1">Controlo Mensal Detalhado</p></div></div>
+              <div className="flex items-center gap-4 bg-[var(--surface)] p-2 rounded-[2.5rem] border border-[var(--border)]">
                 {currentApproval && (
                   <div className="bg-emerald-50 text-emerald-600 px-6 py-3 rounded-[2rem] shadow-sm flex items-center gap-4 border border-emerald-200">
                     <div className="flex items-center gap-2">
@@ -449,7 +449,7 @@ function AdminDashboard(props) {
                     <button onClick={() => handleDelete('approvals', currentApproval.id)} className="bg-white p-2 rounded-full text-rose-500 hover:bg-rose-500 hover:text-white transition-all shadow-sm border border-rose-100" title="Desbloquear Mês para o Trabalhador"><Unlock size={14} /></button>
                   </div>
                 )}
-                <div className="bg-slate-900 text-white px-8 py-3 rounded-[2rem] shadow-lg flex flex-col items-center"><span className="text-[8px] font-black uppercase opacity-70">Total Mês</span><span className="text-xl font-black">{formatHours(auditedMonthLogs.reduce((a, b) => a + b.hours, 0))}</span></div>
+                <div className="bg-[var(--navy-solid)] text-white px-8 py-3 rounded-[2rem] shadow-lg flex flex-col items-center"><span className="text-[8px] font-black uppercase opacity-70">Total Mês</span><span className="text-xl font-black">{formatHours(auditedMonthLogs.reduce((a, b) => a + b.hours, 0))}</span></div>
                 <button onClick={() => setAuditWorkerId(null)} className="p-4 bg-white text-red-500 rounded-full border border-red-100 shadow-md"><X size={28} /></button>
               </div>
             </div>
@@ -458,11 +458,11 @@ function AdminDashboard(props) {
                 <h4 className="font-bold text-indigo-700 flex items-center gap-2"><Sparkles size={16} /> Resumo de Produtividade AI ✨</h4>
                 <button onClick={generateWorkerSummary} disabled={isSummarizing || auditedMonthLogs.length === 0} className="text-[10px] bg-[var(--orange)] text-[var(--navy-solid)] px-4 py-1.5 rounded-full font-black uppercase">{isSummarizing ? "Gerando..." : "Gerar com IA"}</button>
               </div>
-              <p className="text-sm text-slate-600 italic leading-relaxed">{workerAISummary || "Utilize o Gemini para resumir as atividades deste mês."}</p>
+              <p className="text-sm text-[var(--ink-soft)] italic leading-relaxed">{workerAISummary || "Utilize o Gemini para resumir as atividades deste mês."}</p>
             </div>
-            <div className="overflow-x-auto rounded-[3rem] border border-slate-100 bg-white shadow-inner"><table className="w-full text-left border-collapse">
-              <thead className="bg-slate-50 border-b border-slate-100"><tr><th className="px-4 sm:px-10 py-4 sm:py-6 text-[10px] font-black uppercase tracking-widest w-16 sm:w-32">Dia</th><th className="px-4 sm:px-10 py-4 sm:py-6 text-[10px] font-black uppercase tracking-widest">Actividades</th><th className="px-4 sm:px-10 py-4 sm:py-6 text-[10px] font-black uppercase tracking-widest text-right">Acção</th></tr></thead>
-              <tbody className="divide-y divide-slate-50">
+            <div className="overflow-x-auto rounded-[3rem] border border-[var(--border-soft)] bg-white shadow-inner"><table className="w-full text-left border-collapse">
+              <thead className="bg-[var(--surface)] border-b border-[var(--border-soft)]"><tr><th className="px-4 sm:px-10 py-4 sm:py-6 text-[10px] font-black uppercase tracking-widest w-16 sm:w-32">Dia</th><th className="px-4 sm:px-10 py-4 sm:py-6 text-[10px] font-black uppercase tracking-widest">Actividades</th><th className="px-4 sm:px-10 py-4 sm:py-6 text-[10px] font-black uppercase tracking-widest text-right">Acção</th></tr></thead>
+              <tbody className="divide-y divide-[var(--border-soft)]">
                 {daysInMonthList.map(ds => {
                   const dayLogs = logs.filter(l => l.workerId === auditWorkerId && l.date === ds);
                   const isCurrentInline = inlineEditingDate === ds;
@@ -665,12 +665,12 @@ function AdminDashboard(props) {
       )}
 
       {showNotifDropdown && (
-        <div ref={notifDropdownRef} className="fixed top-[6.5rem] right-3 sm:right-6 z-[200] w-80 sm:w-96 max-w-[calc(100vw-1.5rem)] bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden animate-in slide-in-from-top-2 duration-150">
-          <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-600">Notificações</h3>
-            <button onClick={() => setShowNotifDropdown(false)} className="p-1 text-slate-300 hover:text-slate-600 transition-colors"><X size={14} /></button>
+        <div ref={notifDropdownRef} className="fixed top-[6.5rem] right-3 sm:right-6 z-[200] w-80 sm:w-96 max-w-[calc(100vw-1.5rem)] bg-white rounded-2xl shadow-2xl border border-[var(--border-soft)] overflow-hidden animate-in slide-in-from-top-2 duration-150">
+          <div className="px-4 py-3 border-b border-[var(--border-soft)] flex items-center justify-between">
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-[var(--ink-soft)]">Notificações</h3>
+            <button onClick={() => setShowNotifDropdown(false)} className="p-1 text-[var(--slate)] hover:text-[var(--ink-soft)] transition-colors"><X size={14} /></button>
           </div>
-          <div className="max-h-[60vh] overflow-y-auto divide-y divide-slate-50">
+          <div className="max-h-[60vh] overflow-y-auto divide-y divide-[var(--border-soft)]">
             {notificacoesDeCorrecao.filter(n => !isViewed(n)).map(corr => {
               const client = clients.find(c => String(c.id) === String(corr.client_id));
               return (
@@ -678,9 +678,9 @@ function AdminDashboard(props) {
                   <div className="p-2 rounded-xl bg-orange-100 text-orange-600 shrink-0 mt-0.5"><FileText size={14} /></div>
                   <div className="min-w-0 flex-1">
                     <span className="text-[8px] font-black uppercase tracking-widest text-orange-500 block">Report de Cliente</span>
-                    <p className="text-xs font-black text-slate-800 truncate">{client?.name || 'Cliente'}</p>
-                    <p className="text-[10px] text-slate-500 mt-0.5">Mês <span className="font-bold">{corr.month}</span></p>
-                    {corr.submitted_at && <p className="text-[9px] text-slate-400 mt-0.5">{new Date(corr.submitted_at).toLocaleString('pt-PT')}</p>}
+                    <p className="text-xs font-black text-[var(--ink)] truncate">{client?.name || 'Cliente'}</p>
+                    <p className="text-[10px] text-[var(--slate-dim)] mt-0.5">Mês <span className="font-bold">{corr.month}</span></p>
+                    {corr.submitted_at && <p className="text-[9px] text-[var(--slate-dim)] mt-0.5">{new Date(corr.submitted_at).toLocaleString('pt-PT')}</p>}
                   </div>
                 </button>
               );
@@ -692,9 +692,9 @@ function AdminDashboard(props) {
                   <div className="p-2 rounded-xl bg-amber-100 text-amber-600 shrink-0 mt-0.5"><Users size={14} /></div>
                   <div className="min-w-0 flex-1">
                     <span className="text-[8px] font-black uppercase tracking-widest text-amber-500 block">Alteração de Dados</span>
-                    <p className="text-xs font-black text-slate-800 truncate">{worker?.name || 'Trabalhador'}</p>
-                    <p className="text-[10px] text-slate-500 mt-0.5">Campo: <span className="font-bold">{req.field_label}</span></p>
-                    <p className="text-[9px] text-slate-400 mt-0.5">{new Date(req.created_at).toLocaleString('pt-PT')}</p>
+                    <p className="text-xs font-black text-[var(--ink)] truncate">{worker?.name || 'Trabalhador'}</p>
+                    <p className="text-[10px] text-[var(--slate-dim)] mt-0.5">Campo: <span className="font-bold">{req.field_label}</span></p>
+                    <p className="text-[9px] text-[var(--slate-dim)] mt-0.5">{new Date(req.created_at).toLocaleString('pt-PT')}</p>
                   </div>
                 </button>
               );
@@ -704,9 +704,9 @@ function AdminDashboard(props) {
                 <div className="p-2 rounded-xl bg-amber-100 text-amber-600 shrink-0 mt-0.5"><CalendarX size={14} /></div>
                 <div className="min-w-0 flex-1">
                   <span className="text-[8px] font-black uppercase tracking-widest text-amber-500 block">Pedido de Ausência</span>
-                  <p className="text-xs font-black text-slate-800 truncate">{req.worker_name || 'Trabalhador'}</p>
-                  {req.dates?.length > 0 && <p className="text-[10px] text-slate-500 mt-0.5">{req.dates.slice(0, 2).join(', ')}{req.dates.length > 2 ? ` +${req.dates.length - 2}` : ''}</p>}
-                  {req.created_at && <p className="text-[9px] text-slate-400 mt-0.5">{new Date(req.created_at).toLocaleString('pt-PT')}</p>}
+                  <p className="text-xs font-black text-[var(--ink)] truncate">{req.worker_name || 'Trabalhador'}</p>
+                  {req.dates?.length > 0 && <p className="text-[10px] text-[var(--slate-dim)] mt-0.5">{req.dates.slice(0, 2).join(', ')}{req.dates.length > 2 ? ` +${req.dates.length - 2}` : ''}</p>}
+                  {req.created_at && <p className="text-[9px] text-[var(--slate-dim)] mt-0.5">{new Date(req.created_at).toLocaleString('pt-PT')}</p>}
                 </div>
               </button>
             ))}
@@ -735,9 +735,9 @@ function AdminDashboard(props) {
                     <div className="p-2 rounded-xl bg-orange-100 text-orange-600 shrink-0 mt-0.5"><FileText size={14} /></div>
                     <div className="min-w-0 flex-1">
                       <span className="text-[8px] font-black uppercase tracking-widest text-orange-500 block">Report de Cliente</span>
-                      <p className="text-xs font-black text-slate-800 truncate">{client?.name || corr?.client_id || 'Cliente'}</p>
-                      {corr?.month && <p className="text-[10px] text-slate-500 mt-0.5">Mês <span className="font-bold">{corr.month}</span></p>}
-                      {n.created_at && <p className="text-[9px] text-slate-400 mt-0.5">{new Date(n.created_at).toLocaleString('pt-PT')}</p>}
+                      <p className="text-xs font-black text-[var(--ink)] truncate">{client?.name || corr?.client_id || 'Cliente'}</p>
+                      {corr?.month && <p className="text-[10px] text-[var(--slate-dim)] mt-0.5">Mês <span className="font-bold">{corr.month}</span></p>}
+                      {n.created_at && <p className="text-[9px] text-[var(--slate-dim)] mt-0.5">{new Date(n.created_at).toLocaleString('pt-PT')}</p>}
                     </div>
                   </button>
                 );
@@ -767,17 +767,17 @@ function AdminDashboard(props) {
                 const workerNameFallback = n.title?.split('·').slice(-1)[0]?.trim() || 'Trabalhador';
                 const isExpanded = expandedCards[n.id];
                 return (
-                  <div key={n.id} className={`px-4 py-3 ${badge.resolved ? 'bg-slate-50' : 'hover:bg-amber-50'} transition-colors`}>
+                  <div key={n.id} className={`px-4 py-3 ${badge.resolved ? 'bg-[var(--surface)]' : 'hover:bg-amber-50'} transition-colors`}>
                     <div className="flex items-start gap-3">
-                      <div className={`p-2 rounded-xl shrink-0 mt-0.5 ${badge.resolved ? 'bg-slate-100 text-slate-400' : 'bg-amber-100 text-amber-600'}`}><FileText size={14} /></div>
+                      <div className={`p-2 rounded-xl shrink-0 mt-0.5 ${badge.resolved ? 'bg-[var(--surface-dim)] text-[var(--ink-soft)]' : 'bg-amber-100 text-amber-600'}`}><FileText size={14} /></div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-2">
-                          <span className={`text-[8px] font-black uppercase tracking-widest block ${badge.resolved ? 'text-slate-400' : 'text-amber-500'}`}>Submissão Trabalhador</span>
-                          {badge.resolved && <span className="text-[8px] font-black text-slate-400">{badge.label}</span>}
+                          <span className={`text-[8px] font-black uppercase tracking-widest block ${badge.resolved ? 'text-[var(--slate-dim)]' : 'text-amber-500'}`}>Submissão Trabalhador</span>
+                          {badge.resolved && <span className="text-[8px] font-black text-[var(--slate-dim)]">{badge.label}</span>}
                         </div>
-                        <p className="text-xs font-black text-slate-800 truncate">{worker?.name || workerNameFallback}</p>
-                        {corr?.month && <p className="text-[10px] text-slate-500 mt-0.5">Mês <span className="font-bold">{corr.month}</span></p>}
-                        {n.created_at && <p className="text-[9px] text-slate-400 mt-0.5">{new Date(n.created_at).toLocaleString('pt-PT')}</p>}
+                        <p className="text-xs font-black text-[var(--ink)] truncate">{worker?.name || workerNameFallback}</p>
+                        {corr?.month && <p className="text-[10px] text-[var(--slate-dim)] mt-0.5">Mês <span className="font-bold">{corr.month}</span></p>}
+                        {n.created_at && <p className="text-[9px] text-[var(--slate-dim)] mt-0.5">{new Date(n.created_at).toLocaleString('pt-PT')}</p>}
                       </div>
                     </div>
                     {!badge.resolved && (
@@ -788,7 +788,7 @@ function AdminDashboard(props) {
                           navigate('/admin/team?source=workers');
                           setShowNotifDropdown(false);
                         }} className="flex-1 py-1.5 text-[10px] font-black bg-amber-600 text-white rounded-lg hover:bg-amber-700 uppercase tracking-widest">Ver</button>
-                        <button onClick={() => { markNotifRead(n.id); handleDismissAdminNotif(n.id); }} className="px-3 py-1.5 text-[10px] font-black bg-slate-100 text-slate-500 rounded-lg hover:bg-slate-200 uppercase tracking-widest">Ignorar</button>
+                        <button onClick={() => { markNotifRead(n.id); handleDismissAdminNotif(n.id); }} className="px-3 py-1.5 text-[10px] font-black bg-[var(--surface-dim)] text-[var(--slate-dim)] rounded-lg hover:bg-[var(--border)] uppercase tracking-widest">Ignorar</button>
                       </div>
                     )}
                   </div>
@@ -806,19 +806,19 @@ function AdminDashboard(props) {
               return appNotifs.map(n => {
                 if (n.payload?.kind === 'sepa_pronto') {
                   return (
-                    <div key={n.id} className="px-4 py-3 hover:bg-slate-50 transition-colors flex items-start gap-3">
+                    <div key={n.id} className="px-4 py-3 hover:bg-[var(--surface)] transition-colors flex items-start gap-3">
                       <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600 shrink-0 mt-0.5"><FileDown size={14} /></div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-xs font-black text-slate-800">{n.title || 'SEPA XML Pronto'}</p>
-                        {n.body && <p className="text-[10px] text-slate-500 mt-0.5">{n.body}</p>}
-                        {n.created_at && <p className="text-[9px] text-slate-400 mt-0.5">{new Date(n.created_at).toLocaleString('pt-PT')}</p>}
+                        <p className="text-xs font-black text-[var(--ink)]">{n.title || 'SEPA XML Pronto'}</p>
+                        {n.body && <p className="text-[10px] text-[var(--slate-dim)] mt-0.5">{n.body}</p>}
+                        {n.created_at && <p className="text-[9px] text-[var(--slate-dim)] mt-0.5">{new Date(n.created_at).toLocaleString('pt-PT')}</p>}
                         <div className="flex gap-2 mt-2">
                           <button onClick={() => { markNotifRead(n.id); navigate('/admin/pagamentos/fila'); setShowNotifDropdown(false); }}
                             className="flex-1 py-1.5 text-[10px] font-black bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 uppercase tracking-widest">
                             Ver Fila
                           </button>
                           <button onClick={() => { markNotifRead(n.id); handleDismissAdminNotif(n.id); }}
-                            className="px-3 py-1.5 text-[10px] font-black bg-slate-100 text-slate-500 rounded-lg hover:bg-slate-200 uppercase tracking-widest">
+                            className="px-3 py-1.5 text-[10px] font-black bg-[var(--surface-dim)] text-[var(--slate-dim)] rounded-lg hover:bg-[var(--border)] uppercase tracking-widest">
                             Ignorar
                           </button>
                         </div>
@@ -827,23 +827,23 @@ function AdminDashboard(props) {
                   );
                 }
                 return (
-                  <div key={n.id} className="px-4 py-3 hover:bg-slate-50 transition-colors flex items-start gap-3">
+                  <div key={n.id} className="px-4 py-3 hover:bg-[var(--surface)] transition-colors flex items-start gap-3">
                     <div className="p-2 rounded-xl shrink-0 mt-0.5" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: FT.slate }}><Bell size={14} /></div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-black text-slate-800">{n.title || 'Notificação'}</p>
-                      {(n.message || n.body) && <p className="text-[10px] text-slate-500 mt-0.5 truncate">{n.message || n.body}</p>}
-                      {n.created_at && <p className="text-[9px] text-slate-400 mt-0.5">{new Date(n.created_at).toLocaleString('pt-PT')}</p>}
+                      <p className="text-xs font-black text-[var(--ink)]">{n.title || 'Notificação'}</p>
+                      {(n.message || n.body) && <p className="text-[10px] text-[var(--slate-dim)] mt-0.5 truncate">{n.message || n.body}</p>}
+                      {n.created_at && <p className="text-[9px] text-[var(--slate-dim)] mt-0.5">{new Date(n.created_at).toLocaleString('pt-PT')}</p>}
                     </div>
-                    <button onClick={() => { markNotifRead(n.id); handleDismissAdminNotif(n.id); }} className="p-1 text-slate-300 hover:text-slate-500 shrink-0"><X size={12} /></button>
+                    <button onClick={() => { markNotifRead(n.id); handleDismissAdminNotif(n.id); }} className="p-1 text-[var(--slate)] hover:text-[var(--slate-dim)] shrink-0"><X size={12} /></button>
                   </div>
                 );
               });
             })()}
             {unreadCount === 0 && notificacoesDeCorrecao.filter(n => !isViewed(n)).length === 0 && (
-              <div className="px-4 py-8 text-center text-slate-400 text-xs font-bold">Sem notificações novas</div>
+              <div className="px-4 py-8 text-center text-[var(--slate-dim)] text-xs font-bold">Sem notificações novas</div>
             )}
           </div>
-          <button onClick={() => { setActiveTab('notificacoes'); setShowNotifDropdown(false); }} className="w-full text-center text-[10px] font-black uppercase tracking-widest py-1.5 hover:bg-slate-50 rounded-xl transition-colors" style={{ color: 'var(--navy)' }}>
+          <button onClick={() => { setActiveTab('notificacoes'); setShowNotifDropdown(false); }} className="w-full text-center text-[10px] font-black uppercase tracking-widest py-1.5 hover:bg-[var(--surface)] rounded-xl transition-colors" style={{ color: 'var(--navy)' }}>
             Ver Todas as Notificações
           </button>
         </div>

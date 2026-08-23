@@ -83,12 +83,12 @@ echo "── cobertura do mapa do conversor ──"
 faltam=$(perl -e '
   my %mapa;
   open my $s, "<", "scripts/converter-neutros.pl" or die "sem conversor\n";
-  while (<$s>) { while (/'"'"'((?:bg|text|border|divide|ring)-\d{2,3})'"'"'\s*=>/g) { $mapa{$1} = 1 } }
+  while (<$s>) { while (/'"'"'((?:bg|text|border|divide|ring|placeholder)-\d{2,3})'"'"'\s*=>/g) { $mapa{$1} = 1 } }
   close $s;
   my %vistos;
   for my $f (split /\n/, `find src/features/admin src/components/admin -name "*.jsx"`) {
     open my $fh, "<:raw", $f or next; local $/; my $c = <$fh>; close $fh;
-    while ($c =~ /(bg|text|border|divide|ring)-slate-(\d{2,3})/g) { $vistos{"$1-$2"} = 1 }
+    while ($c =~ /(bg|text|border|divide|ring|placeholder)-slate-(\d{2,3})/g) { $vistos{"$1-$2"} = 1 }
   }
   # text-300/400 sao resolvidos pela classificacao icone/texto, nao pelo mapa
   # bg-500 e border-800 ficam DELIBERADAMENTE fora, por razoes DIFERENTES:

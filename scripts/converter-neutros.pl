@@ -22,6 +22,7 @@ my %mapa = (
   'bg-600'=>'navy-solid', 'bg-700'=>'navy-solid', 'bg-800'=>'navy-solid', 'bg-900'=>'navy-solid',
   'ring-300'=>'border', 'ring-400'=>'slate', 'ring-500'=>'slate', 'border-400'=>'slate',
   'border-50'=>'border-soft', 'border-100'=>'border-soft', 'border-200'=>'border', 'border-300'=>'border',
+  'placeholder-300'=>'slate', 'placeholder-400'=>'slate-dim', 'placeholder-500'=>'slate-dim',
   'divide-50'=>'border-soft', 'divide-100'=>'border-soft', 'divide-200'=>'border',
 );
 open my $in, "<:raw", $file or die "$file: $!";
@@ -31,7 +32,7 @@ for my $i (0..$#l) {
   my $ln = $i+1;
   $l[$i] =~ s{
     ((?:hover|focus|group-hover|disabled|placeholder|active):)?
-    (bg|text|border|divide|ring)-slate-(\d{2,3})
+    (bg|text|border|divide|ring|placeholder)-slate-(\d{2,3})
   }{
     my ($pfx, $prop, $tom) = ($1 // '', $2, $3);
     my $tok;
