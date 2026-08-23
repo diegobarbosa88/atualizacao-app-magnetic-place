@@ -230,15 +230,15 @@ export default function ContabilidadeTab({ workers, supabase, systemSettings }) 
         rightSlot={(
           <div className="flex flex-wrap items-center gap-3">
             {/* Navegação mês */}
-            <div className="flex items-center gap-1 bg-slate-100 rounded-xl p-1">
+            <div className="flex items-center gap-1 bg-[var(--surface-dim)] rounded-xl p-1">
               <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-white transition-colors">
-                <ChevronLeft size={15} className="text-slate-400" />
+                <ChevronLeft size={15} className="text-[var(--slate)]" />
               </button>
               <span className="px-3 py-1 text-xs font-black text-[var(--navy)] capitalize min-w-[130px] text-center">
                 {nomeMes} {selectedYear}
               </span>
               <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-white transition-colors">
-                <ChevronRight size={15} className="text-slate-400" />
+                <ChevronRight size={15} className="text-[var(--slate)]" />
               </button>
             </div>
 
@@ -270,52 +270,52 @@ export default function ContabilidadeTab({ workers, supabase, systemSettings }) 
       />
 
       {/* TABELA */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl border border-[var(--border-soft)] shadow-sm overflow-hidden">
         {isLoading ? (
-          <div className="flex items-center justify-center py-16 gap-3 text-slate-400">
+          <div className="flex items-center justify-center py-16 gap-3 text-[var(--slate-dim)]">
             <Loader2 size={22} className="animate-spin" />
             <span className="text-sm font-bold">A carregar dados…</span>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm border-collapse">
-              <thead className="sticky top-0 z-10 bg-slate-50 border-b-2 border-slate-200">
+              <thead className="sticky top-0 z-10 bg-[var(--surface)] border-b-2 border-[var(--border)]">
                 <tr>
-                  <th className="text-left px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider whitespace-nowrap">Colaborador</th>
-                  <th className="text-right px-3 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider whitespace-nowrap">Salário Base (€)</th>
-                  <th className="text-center px-3 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider whitespace-nowrap">Dias</th>
-                  <th className="text-right px-3 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider whitespace-nowrap">Sub. Alimentação (€)</th>
-                  <th className="text-right px-3 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider whitespace-nowrap">Ajudas / Outros (€)</th>
+                  <th className="text-left px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-wider whitespace-nowrap">Colaborador</th>
+                  <th className="text-right px-3 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-wider whitespace-nowrap">Salário Base (€)</th>
+                  <th className="text-center px-3 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-wider whitespace-nowrap">Dias</th>
+                  <th className="text-right px-3 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-wider whitespace-nowrap">Sub. Alimentação (€)</th>
+                  <th className="text-right px-3 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-wider whitespace-nowrap">Ajudas / Outros (€)</th>
                   <th className="text-right px-3 py-3 text-[10px] font-black text-emerald-700 uppercase tracking-wider whitespace-nowrap bg-emerald-50">Ordenado Bruto (€)</th>
-                  <th className="text-left px-3 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider">Observações</th>
+                  <th className="text-left px-3 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-wider">Observações</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-[var(--border-soft)]">
                 {rows.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="text-center py-10 text-slate-400 text-sm">
+                    <td colSpan={7} className="text-center py-10 text-[var(--slate-dim)] text-sm">
                       Nenhum colaborador ativo encontrado.
                     </td>
                   </tr>
                 )}
                 {rows.map(r => (
-                  <tr key={r.worker.id} className="hover:bg-slate-50/60 transition-colors">
+                  <tr key={r.worker.id} className="hover:bg-[var(--surface)] transition-colors">
 
                     {/* Nome */}
                     <td className="px-4 py-2.5">
-                      <div className="font-bold text-slate-800 leading-tight">{r.worker.name}</div>
-                      {r.worker.nif && <div className="text-[10px] text-slate-400 font-mono">{r.worker.nif}</div>}
+                      <div className="font-bold text-[var(--ink)] leading-tight">{r.worker.name}</div>
+                      {r.worker.nif && <div className="text-[10px] text-[var(--slate-dim)] font-mono">{r.worker.nif}</div>}
                     </td>
 
                     {/* Salário Base (= Bruto − Sub. Alimentação − Ajudas) */}
-                    <td className="px-3 py-2.5 text-right font-bold text-slate-700 whitespace-nowrap tabular-nums">
+                    <td className="px-3 py-2.5 text-right font-bold text-[var(--ink-mid)] whitespace-nowrap tabular-nums">
                       {fmtEur(r.salarioBase)}
                     </td>
 
                     {/* Dias trabalhados (editável) */}
                     <td className="px-2 py-2.5 w-16 text-center">
                       {savingId === r.worker.id
-                        ? <Loader2 size={12} className="animate-spin mx-auto text-slate-300" />
+                        ? <Loader2 size={12} className="animate-spin mx-auto text-[var(--slate)]" />
                         : (
                           <input
                             type="number"
@@ -330,7 +330,7 @@ export default function ContabilidadeTab({ workers, supabase, systemSettings }) 
                     </td>
 
                     {/* Sub. Alimentação (dias × subsidio_alimentacao_dia do perfil) */}
-                    <td className="px-3 py-2.5 text-right text-slate-600 whitespace-nowrap tabular-nums">
+                    <td className="px-3 py-2.5 text-right text-[var(--ink-soft)] whitespace-nowrap tabular-nums">
                       {fmtEur(r.mealTotal)}
                       {!Number(r.worker.subsidio_alimentacao_dia) && (
                         <span className="ml-1 text-amber-500 text-[9px]" title="Subsídio/dia não definido no perfil">!</span>
@@ -338,7 +338,7 @@ export default function ContabilidadeTab({ workers, supabase, systemSettings }) 
                     </td>
 
                     {/* Ajudas / Outros (calculado: Bruto − Salário Base − Sub. Alimentação) */}
-                    <td className="px-3 py-2.5 text-right text-slate-600 whitespace-nowrap tabular-nums">
+                    <td className="px-3 py-2.5 text-right text-[var(--ink-soft)] whitespace-nowrap tabular-nums">
                       {fmtEur(r.ajudas)}
                     </td>
 
@@ -362,7 +362,7 @@ export default function ContabilidadeTab({ workers, supabase, systemSettings }) 
                 ))}
               </tbody>
               {rows.length > 0 && (
-                <tfoot className="bg-slate-800 text-white">
+                <tfoot className="bg-[var(--navy-solid)] text-white">
                   <tr>
                     <td className="px-4 py-3 font-black text-[11px] uppercase tracking-wider">TOTAIS</td>
                     <td className="px-3 py-3 text-right font-black tabular-nums">{fmtEur(totals.salarioBase)}</td>
@@ -392,11 +392,11 @@ export default function ContabilidadeTab({ workers, supabase, systemSettings }) 
                 {geminiError ? 'Erro IA' : 'Análise Fiscal — Gemini AI'}
               </span>
             </div>
-            <button onClick={() => { setGeminiAnalysis(''); setGeminiError(''); }} className="text-slate-400 hover:text-slate-600">
+            <button onClick={() => { setGeminiAnalysis(''); setGeminiError(''); }} className="text-[var(--slate-dim)] hover:text-[var(--ink-soft)]">
               <X size={14} />
             </button>
           </div>
-          <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
+          <p className="text-sm text-[var(--ink-mid)] whitespace-pre-wrap leading-relaxed">
             {geminiError || geminiAnalysis}
           </p>
         </div>
@@ -431,20 +431,20 @@ export default function ContabilidadeTab({ workers, supabase, systemSettings }) 
           }
         >
           <div className="p-6">
-            <p className="text-sm text-slate-500 mb-4">
+            <p className="text-sm text-[var(--slate-dim)] mb-4">
               Enviar notificação da folha de <strong>{nomeMes} {selectedYear}</strong> por e-mail ou copiar o link do portal.
             </p>
 
             <div className="mb-4">
-              <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1 block">Link do Portal</label>
+              <label className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-wider mb-1 block">Link do Portal</label>
               <div className="flex gap-2">
-                <div className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-600 font-mono truncate">
+                <div className="flex-1 bg-[var(--surface)] border border-[var(--border)] rounded-xl px-3 py-2.5 text-sm text-[var(--ink-soft)] font-mono truncate">
                   {import.meta.env.VITE_ACCOUNTANT_PORTAL_URL || window.location.origin}
                 </div>
                 <button
                   onClick={handleCopyLink}
                   className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-colors ${
-                    copyOk ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    copyOk ? 'bg-emerald-100 text-emerald-700' : 'bg-[var(--surface-dim)] text-[var(--ink-soft)] hover:bg-[var(--border)]'
                   }`}
                 >
                   {copyOk ? <CheckCircle size={14} /> : <Copy size={14} />}
@@ -454,12 +454,12 @@ export default function ContabilidadeTab({ workers, supabase, systemSettings }) 
             </div>
 
             <div>
-              <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1 block">E-mail da Contabilista</label>
+              <label className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-wider mb-1 block">E-mail da Contabilista</label>
               <input
                 type="email"
                 value={shareEmail}
                 onChange={e => setShareEmail(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-50 transition-all"
+                className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl px-3 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-50 transition-all"
                 placeholder="contabilidade@empresa.pt"
               />
             </div>

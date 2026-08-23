@@ -76,14 +76,14 @@ export default function TOConlineAdmin() {
         rightSlot={
           <div className="flex items-center gap-2.5 flex-wrap">
             {ligado && (
-              <div className="flex items-center gap-2.5 bg-slate-100 rounded-xl px-3 py-1.5">
+              <div className="flex items-center gap-2.5 bg-[var(--surface-dim)] rounded-xl px-3 py-1.5">
                 {saldoLoading ? (
-                  <Loader2 size={13} className="text-slate-400 animate-spin" />
+                  <Loader2 size={13} className="text-[var(--slate)] animate-spin" />
                 ) : (
-                  <TrendingUp size={14} className="text-slate-400 shrink-0" />
+                  <TrendingUp size={14} className="text-[var(--slate)] shrink-0" />
                 )}
                 <div>
-                  <p className="text-[8.5px] font-black uppercase tracking-widest text-slate-400">Saldo Contas</p>
+                  <p className="text-[8.5px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Saldo Contas</p>
                   <p className="text-xs font-black text-[var(--navy)]">
                     {saldoContas != null
                       ? new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(saldoContas.total)
@@ -91,7 +91,7 @@ export default function TOConlineAdmin() {
                   </p>
                 </div>
                 {saldoContas && (
-                  <span className="text-[9px] text-slate-400 font-semibold self-end pb-0.5">
+                  <span className="text-[9px] text-[var(--slate-dim)] font-semibold self-end pb-0.5">
                     {saldoContas.n} conta{saldoContas.n !== 1 ? 's' : ''}
                   </span>
                 )}
@@ -105,7 +105,7 @@ export default function TOConlineAdmin() {
                   <Zap size={12} /> Faturar
                 </button>
                 <button onClick={() => setMostrarCriar(true)}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 text-[var(--navy)] text-[10px] font-black uppercase tracking-wide rounded-lg transition-all hover:bg-slate-200">
+                  className="flex items-center gap-1.5 px-3 py-2 bg-[var(--surface-dim)] text-[var(--navy)] text-[10px] font-black uppercase tracking-wide rounded-lg transition-all hover:bg-[var(--border)]">
                   <Plus size={12} /> Criar
                 </button>
               </div>
@@ -116,7 +116,7 @@ export default function TOConlineAdmin() {
 
       <div>
         {verificando ? (
-          <div className="flex items-center justify-center py-16 text-slate-300">
+          <div className="flex items-center justify-center py-16 text-[var(--slate-dim)]">
             <Loader2 size={24} className="animate-spin" />
           </div>
         ) : (
@@ -172,9 +172,9 @@ export default function TOConlineAdmin() {
 function NaoLigado() {
   return (
     <div className="text-center py-16 space-y-3">
-      <Link2 size={32} className="mx-auto text-slate-300" />
-      <p className="text-sm font-black text-slate-400 uppercase tracking-widest">TOConline não ligado</p>
-      <p className="text-xs text-slate-400">Vai ao separador <strong>Documentos</strong> para autenticar</p>
+      <Link2 size={32} className="mx-auto text-[var(--slate)]" />
+      <p className="text-sm font-black text-[var(--slate-dim)] uppercase tracking-widest">TOConline não ligado</p>
+      <p className="text-xs text-[var(--slate-dim)]">Vai ao separador <strong>Documentos</strong> para autenticar</p>
     </div>
   );
 }

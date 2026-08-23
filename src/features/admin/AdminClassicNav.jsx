@@ -41,7 +41,7 @@ export default function AdminClassicNav({
   };
 
   return (
-    <nav className="bg-white border-b border-slate-200 min-h-[4rem] sticky top-0 z-40 shadow-sm py-3 px-4 md:px-0">
+    <nav className="bg-white border-b border-[var(--border)] min-h-[4rem] sticky top-0 z-40 shadow-sm py-3 px-4 md:px-0">
       <div
         className="mx-auto md:px-10 lg:px-16 flex flex-col md:flex-row items-center justify-between gap-2 md:gap-6"
         style={{ maxWidth: `var(--app-max-width)` }}
@@ -78,7 +78,7 @@ export default function AdminClassicNav({
             >
               <BarChart3 size={18} />
             </button>
-            <button onClick={onLogout} className="p-2 text-slate-400">
+            <button onClick={onLogout} className="p-2 text-[var(--slate)]">
               <LogOut size={18} />
             </button>
           </div>
@@ -87,7 +87,7 @@ export default function AdminClassicNav({
         <div className="flex-1 flex justify-center w-full md:w-auto relative">
           <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white/80 to-transparent z-10 rounded-r-2xl md:hidden" />
           <div
-            className="flex menu-scroll w-full md:w-auto items-center gap-1 bg-slate-100 p-1 rounded-2xl border border-slate-200 overflow-x-auto"
+            className="flex menu-scroll w-full md:w-auto items-center gap-1 bg-[var(--surface-dim)] p-1 rounded-2xl border border-[var(--border)] overflow-x-auto"
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
             {ADMIN_SECTIONS.map(t => {
@@ -99,7 +99,7 @@ export default function AdminClassicNav({
                   onClick={() => { setActiveTab(t.id); setAuditWorkerId(null); }}
                   aria-current={isActive ? 'page' : undefined}
                   className={`flex-shrink-0 whitespace-nowrap px-3 sm:px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all relative ${
-                    isActive ? 'bg-white text-indigo-600 shadow-md scale-105' : 'text-slate-400 hover:text-slate-600'
+                    isActive ? 'bg-white text-indigo-600 shadow-md scale-105' : 'text-[var(--slate-dim)] hover:text-[var(--ink-soft)]'
                   }`}
                 >
                   {t.id === 'settings' ? <Settings size={14} /> : badge > 0 ? (
@@ -143,7 +143,7 @@ export default function AdminClassicNav({
           )}
           <button
             onClick={onLogout}
-            className="p-1 text-slate-400 hover:text-red-500 transition-colors"
+            className="p-1 text-[var(--slate)] hover:text-red-500 transition-colors"
           >
             <LogOut size={20} />
           </button>
@@ -151,7 +151,7 @@ export default function AdminClassicNav({
       </div>
 
       {activeSubtabs.length > 0 && (
-        <div className="border-t border-slate-100">
+        <div className="border-t border-[var(--border-soft)]">
           <div
             className="mx-auto md:px-10 lg:px-16 flex items-center overflow-x-auto"
             style={{ maxWidth: `var(--app-max-width)`, scrollbarWidth: 'none', msOverflowStyle: 'none' }}
@@ -167,7 +167,7 @@ export default function AdminClassicNav({
                   className={`flex-shrink-0 whitespace-nowrap px-4 py-2 text-[10px] font-bold uppercase tracking-wider transition-all border-b-2 ${
                     isActive
                       ? 'text-indigo-600 border-indigo-500'
-                      : 'text-slate-400 border-transparent hover:text-slate-600 hover:border-slate-300'
+                      : 'text-[var(--slate-dim)] border-transparent hover:text-[var(--ink-soft)] hover:border-[var(--border)]'
                   }`}
                 >
                   {badge > 0 ? (

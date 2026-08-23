@@ -31,14 +31,14 @@ export default function AdminPasswordModal({ open, title, onConfirm, onClose, lo
         onSubmit={handleSubmit}
         className="p-6"
       >
-        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-1.5">Password de Administrador</label>
+        <label className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] block mb-1.5">Password de Administrador</label>
         <input
           type="password"
           autoFocus
           value={password}
           onChange={e => setPassword(e.target.value)}
           placeholder="••••••••"
-          className="w-full p-3 rounded-xl border border-slate-200 text-sm outline-none focus:border-slate-400 transition-all font-medium"
+          className="w-full p-3 rounded-xl border border-[var(--border)] text-sm outline-none focus:border-[var(--slate)] transition-all font-medium"
         />
 
         {error && <p className="text-xs text-rose-600 font-bold mt-2">{error}</p>}
@@ -47,7 +47,7 @@ export default function AdminPasswordModal({ open, title, onConfirm, onClose, lo
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-500 text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-all"
+            className="flex-1 py-2.5 rounded-xl border border-[var(--border)] text-[var(--slate-dim)] text-xs font-black uppercase tracking-widest hover:bg-[var(--surface)] transition-all"
           >
             Cancelar
           </button>

@@ -9,14 +9,14 @@ import { FT } from '../../styles/designTokens';
 const SEVERIDADE_CFG = {
   alta:  { label: 'Alta',  order: 0, bg: 'bg-rose-50',   text: 'text-rose-600',   dot: 'bg-rose-500' },
   media: { label: 'Média', order: 1, bg: 'bg-amber-50',  text: 'text-amber-600',  dot: 'bg-amber-500' },
-  baixa: { label: 'Baixa', order: 2, bg: 'bg-slate-100', text: 'text-slate-500',  dot: 'bg-slate-400' },
+  baixa: { label: 'Baixa', order: 2, bg: 'bg-[var(--surface-dim)]', text: 'text-[var(--slate-dim)]',  dot: 'bg-[var(--slate)]' },
 };
 
 const STATUS_CFG = {
   pendente:  { label: 'Pendente',  bg: 'bg-amber-50',   text: 'text-amber-600' },
   visto:     { label: 'Visto',     bg: 'bg-blue-50',    text: 'text-blue-600' },
   resolvido: { label: 'Resolvido', bg: 'bg-emerald-50', text: 'text-emerald-600' },
-  ignorado:  { label: 'Ignorado',  bg: 'bg-slate-100',  text: 'text-slate-400' },
+  ignorado:  { label: 'Ignorado',  bg: 'bg-[var(--surface-dim)]',  text: 'text-[var(--slate-dim)]' },
 };
 
 const STATUS_FILTERS = ['pendente', 'visto', 'resolvido', 'ignorado', 'todos'];
@@ -129,7 +129,7 @@ export default function AlertasAdmin() {
             key={s}
             onClick={() => setStatusFilter(s)}
             className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
-              statusFilter === s ? 'text-white' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
+              statusFilter === s ? 'text-white' : 'bg-[var(--surface-dim)] text-[var(--slate-dim)] hover:bg-[var(--border)]'
             }`}
             style={statusFilter === s ? { backgroundColor: FT.navy } : {}}
           >
@@ -139,11 +139,11 @@ export default function AlertasAdmin() {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-16 text-slate-400">
+        <div className="flex items-center justify-center py-16 text-[var(--slate-dim)]">
           <Loader2 className="animate-spin" size={24} />
         </div>
       ) : alertasOrdenados.length === 0 ? (
-        <p className="text-center py-10 text-slate-400 text-xs font-bold">Nenhum alerta {statusFilter !== 'todos' ? `com estado "${STATUS_CFG[statusFilter]?.label}"` : ''}.</p>
+        <p className="text-center py-10 text-[var(--slate-dim)] text-xs font-bold">Nenhum alerta {statusFilter !== 'todos' ? `com estado "${STATUS_CFG[statusFilter]?.label}"` : ''}.</p>
       ) : (
         <div className="space-y-3">
           {alertasOrdenados.map(alerta => {
@@ -151,7 +151,7 @@ export default function AlertasAdmin() {
             const statCfg = STATUS_CFG[alerta.status] || STATUS_CFG.pendente;
             const isBusy = busyId === alerta.id;
             return (
-              <div key={alerta.id} className="p-4 rounded-3xl border border-slate-100 bg-white shadow-sm hover:shadow-md transition-all">
+              <div key={alerta.id} className="p-4 rounded-3xl border border-[var(--border-soft)] bg-white shadow-sm hover:shadow-md transition-all">
                 <div className="flex items-start gap-3">
                   <div className={`p-3 rounded-2xl ${sevCfg.bg} ${sevCfg.text} shrink-0`}>
                     <AlertOctagon size={18} />
@@ -161,21 +161,21 @@ export default function AlertasAdmin() {
                       <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest ${sevCfg.bg} ${sevCfg.text}`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${sevCfg.dot}`} /> {sevCfg.label}
                       </span>
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest bg-slate-100 text-slate-500">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest bg-[var(--surface-dim)] text-[var(--slate-dim)]">
                         {alerta.tipo}
                       </span>
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest ${statCfg.bg} ${statCfg.text}`}>
                         {statCfg.label}
                       </span>
                     </div>
-                    <p className="text-sm font-black text-slate-800">{alerta.titulo}</p>
+                    <p className="text-sm font-black text-[var(--ink)]">{alerta.titulo}</p>
                     {alerta.descricao && (
-                      <p className="text-xs text-slate-500 mt-1 leading-relaxed">{alerta.descricao}</p>
+                      <p className="text-xs text-[var(--slate-dim)] mt-1 leading-relaxed">{alerta.descricao}</p>
                     )}
                     {alerta.acao_sugerida && (
-                      <div className="mt-3 p-3 rounded-2xl bg-slate-50/70 border border-slate-100">
-                        <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest mb-1">Ação Sugerida</p>
-                        <p className="text-xs text-slate-600 leading-relaxed">{alerta.acao_sugerida}</p>
+                      <div className="mt-3 p-3 rounded-2xl bg-[var(--surface)] border border-[var(--border-soft)]">
+                        <p className="text-[9px] font-black uppercase text-[var(--slate-dim)] tracking-widest mb-1">Ação Sugerida</p>
+                        <p className="text-xs text-[var(--ink-soft)] leading-relaxed">{alerta.acao_sugerida}</p>
                       </div>
                     )}
 
@@ -217,7 +217,7 @@ export default function AlertasAdmin() {
                         <button
                           onClick={() => setConfirmIgnorar(alerta)}
                           disabled={isBusy}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider bg-slate-100 text-slate-400 hover:bg-slate-200 transition-all disabled:opacity-50"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider bg-[var(--surface-dim)] text-[var(--slate-dim)] hover:bg-[var(--border)] transition-all disabled:opacity-50"
                         >
                           <XCircle size={12} /> Ignorar
                         </button>
@@ -240,10 +240,10 @@ export default function AlertasAdmin() {
         accent="danger"
         size="sm"
         footer={
-          <div className="flex gap-2 p-4 border-t border-slate-100">
+          <div className="flex gap-2 p-4 border-t border-[var(--border-soft)]">
             <button
               onClick={() => setConfirmIgnorar(null)}
-              className="flex-1 py-3 border border-slate-200 rounded-2xl font-black text-xs uppercase tracking-widest text-slate-500 hover:bg-slate-50 transition-all"
+              className="flex-1 py-3 border border-[var(--border)] rounded-2xl font-black text-xs uppercase tracking-widest text-[var(--slate-dim)] hover:bg-[var(--surface)] transition-all"
             >
               Cancelar
             </button>
@@ -256,7 +256,7 @@ export default function AlertasAdmin() {
           </div>
         }
       >
-        <p className="p-4 text-xs text-slate-500 leading-relaxed">
+        <p className="p-4 text-xs text-[var(--slate-dim)] leading-relaxed">
           Este alerta deixará de aparecer na lista de pendentes. Podes voltar a vê-lo filtrando por "Ignorado".
         </p>
       </ModalShell>

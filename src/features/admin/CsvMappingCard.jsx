@@ -12,7 +12,7 @@ export default function CsvMappingCard({ csvMapping, colMap, setColMap, previewi
     <select
       value={colMap[field]}
       onChange={e => setColMap(p => ({ ...p, [field]: e.target.value }))}
-      className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+      className="w-full border border-[var(--border)] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
     >
       <option value="">— não usar —</option>
       {cols.map(c => {
@@ -26,22 +26,22 @@ export default function CsvMappingCard({ csvMapping, colMap, setColMap, previewi
     <div className="bg-white rounded-[2.5rem] shadow-sm border border-amber-100 p-6 sm:p-8 space-y-5">
       <div>
         <h3 className="text-[10px] font-black uppercase tracking-widest text-amber-600">Mapear Colunas do CSV</h3>
-        <p className="text-xs text-slate-400 mt-0.5">As colunas deste ficheiro não foram reconhecidas automaticamente. Indica qual coluna corresponde a cada campo.</p>
+        <p className="text-xs text-[var(--slate-dim)] mt-0.5">As colunas deste ficheiro não foram reconhecidas automaticamente. Indica qual coluna corresponde a cada campo.</p>
       </div>
 
       {/* Layout: prévia à esquerda, dropdowns à direita */}
       <div className="flex flex-col lg:flex-row gap-6">
 
         {/* Prévia da tabela — sempre visível enquanto mapeia */}
-        <div className="lg:flex-1 overflow-auto max-h-80 rounded-xl border border-slate-100">
+        <div className="lg:flex-1 overflow-auto max-h-80 rounded-xl border border-[var(--border-soft)]">
           <table className="text-[11px] w-full">
-            <thead className="bg-slate-50 sticky top-0">
-              <tr>{cols.map(c => <th key={c} className="px-3 py-2 text-left text-slate-500 font-black uppercase tracking-widest whitespace-nowrap">{c}</th>)}</tr>
+            <thead className="bg-[var(--surface)] sticky top-0">
+              <tr>{cols.map(c => <th key={c} className="px-3 py-2 text-left text-[var(--slate-dim)] font-black uppercase tracking-widest whitespace-nowrap">{c}</th>)}</tr>
             </thead>
             <tbody>
               {csvMapping.preview.map((row, i) => (
-                <tr key={i} className="border-t border-slate-50">
-                  {cols.map(c => <td key={c} className="px-3 py-2 text-slate-600 whitespace-nowrap">{row[c]}</td>)}
+                <tr key={i} className="border-t border-[var(--border-soft)]">
+                  {cols.map(c => <td key={c} className="px-3 py-2 text-[var(--ink-soft)] whitespace-nowrap">{row[c]}</td>)}
                 </tr>
               ))}
             </tbody>
@@ -54,40 +54,40 @@ export default function CsvMappingCard({ csvMapping, colMap, setColMap, previewi
           <div className="flex gap-2 flex-wrap">
             {[{ k: 'valor', l: 'Valor único' }, { k: 'debcred', l: 'Déb + Créd' }].map(({ k, l }) => (
               <button key={k} onClick={() => setColMap(p => ({ ...p, modo: k }))}
-                className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${colMap.modo === k ? 'bg-indigo-100 text-indigo-700 ring-2 ring-indigo-300' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
+                className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${colMap.modo === k ? 'bg-indigo-100 text-indigo-700 ring-2 ring-indigo-300' : 'bg-[var(--surface-dim)] text-[var(--slate-dim)] hover:bg-[var(--border)]'}`}>
                 {l}
               </button>
             ))}
           </div>
 
           <div>
-            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Data <span className="text-rose-400">*</span></label>
+            <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-1">Data <span className="text-rose-400">*</span></label>
             {mkSelect('dataCol')}
           </div>
           {colMap.modo === 'valor' ? (
             <div>
-              <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Valor <span className="text-rose-400">*</span></label>
+              <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-1">Valor <span className="text-rose-400">*</span></label>
               {mkSelect('valorCol')}
             </div>
           ) : (
             <>
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Débito (saída)</label>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-1">Débito (saída)</label>
                 {mkSelect('debitoCol')}
               </div>
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Crédito (entrada)</label>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-1">Crédito (entrada)</label>
                 {mkSelect('creditoCol')}
               </div>
             </>
           )}
           <div>
-            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Descrição</label>
+            <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-1">Descrição</label>
             {mkSelect('descricaoCol')}
           </div>
           {colMap.modo === 'valor' && (
             <div>
-              <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Tipo (C/D, Entrada/Saída)</label>
+              <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-1">Tipo (C/D, Entrada/Saída)</label>
               {mkSelect('tipoCol')}
             </div>
           )}
@@ -99,7 +99,7 @@ export default function CsvMappingCard({ csvMapping, colMap, setColMap, previewi
               Aplicar
             </button>
             <button onClick={onCancel}
-              className="px-4 py-2 text-slate-400 hover:text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest">
+              className="px-4 py-2 text-[var(--slate-dim)] hover:text-[var(--ink-soft)] rounded-xl text-[10px] font-black uppercase tracking-widest">
               Cancelar
             </button>
           </div>

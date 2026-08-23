@@ -116,7 +116,7 @@ export default function DocumentsAdmin() {
               onShowUpload={() => a.setShowUploadModal(true)}
             />
 
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">
+            <p className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest mb-4">
               {a.filteredDocs.length} documento{a.filteredDocs.length !== 1 ? 's' : ''}
             </p>
 

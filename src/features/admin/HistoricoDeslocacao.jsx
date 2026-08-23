@@ -53,7 +53,7 @@ function WorkerRow({ worker, isOpen, onToggle, onUsarData, onEditarManualmente }
     >
       <button
         onClick={onToggle}
-        className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-slate-50 transition-colors text-left"
+        className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-[var(--surface)] transition-colors text-left"
         style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}
       >
         <div className="flex items-center gap-3">
@@ -70,7 +70,7 @@ function WorkerRow({ worker, isOpen, onToggle, onUsarData, onEditarManualmente }
 
         <div className="flex items-center gap-2.5">
           {semHist && (
-            <span className="text-xs text-slate-400">Sem mês anterior</span>
+            <span className="text-xs text-[var(--slate-dim)]">Sem mês anterior</span>
           )}
           {isFerias && (
             <span
@@ -192,7 +192,7 @@ function WorkerRow({ worker, isOpen, onToggle, onUsarData, onEditarManualmente }
             </button>
             <button
               onClick={onEditarManualmente}
-              className="text-xs font-bold px-3.5 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
+              className="text-xs font-bold px-3.5 py-2 rounded-lg border border-[var(--border)] hover:bg-[var(--surface)] transition-colors"
               style={{ color: 'var(--navy)', background: 'transparent' }}
             >
               Editar manualmente
@@ -240,11 +240,11 @@ export default function HistoricoDeslocacao({ supabase, workers, mesStr, setMapa
 
   if (!historico || workerIds.length === 0) {
     return (
-      <div className="mb-4 px-3.5 py-3 rounded-xl border border-dashed border-slate-200 bg-slate-50">
-        <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-0.5">
+      <div className="mb-4 px-3.5 py-3 rounded-xl border border-dashed border-[var(--border)] bg-[var(--surface)]">
+        <p className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-wider mb-0.5">
           Histórico de deslocação
         </p>
-        <p className="text-xs text-slate-400 leading-relaxed">
+        <p className="text-xs text-[var(--slate-dim)] leading-relaxed">
           {historico === null
             ? 'A carregar histórico…'
             : 'Sem registos para os meses anteriores. Ao validar e concluir o processamento deste trabalhador, o histórico fica guardado automaticamente.'}

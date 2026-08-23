@@ -173,12 +173,12 @@ export default function AdminOverview({ currentMonth, setCurrentMonth }) {
         icon={<LayoutGrid size={18} />}
         title="Dashboard Geral"
         rightSlot={
-          <div className="flex items-center gap-1 bg-slate-100 rounded-xl p-1">
-            <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))} className="p-1.5 hover:bg-white rounded-lg text-slate-400 hover:text-[var(--navy)] transition-colors"><ChevronLeft size={15} /></button>
+          <div className="flex items-center gap-1 bg-[var(--surface-dim)] rounded-xl p-1">
+            <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))} className="p-1.5 hover:bg-white rounded-lg text-[var(--slate)] hover:text-[var(--navy)] transition-colors"><ChevronLeft size={15} /></button>
             <span className="font-bold text-xs min-w-[110px] text-center text-[var(--navy)]">
               {currentMonth.toLocaleDateString('pt-PT', { month: 'short', year: 'numeric' })}
             </span>
-            <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))} className="p-1.5 hover:bg-white rounded-lg text-slate-400 hover:text-[var(--navy)] transition-colors"><ChevronRight size={15} /></button>
+            <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))} className="p-1.5 hover:bg-white rounded-lg text-[var(--slate)] hover:text-[var(--navy)] transition-colors"><ChevronRight size={15} /></button>
           </div>
         }
       />
@@ -214,10 +214,10 @@ export default function AdminOverview({ currentMonth, setCurrentMonth }) {
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
         {/* Area Chart */}
-        <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
+        <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-[var(--border-soft)]">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(235,141,0,0.12)', color: FT.orange }}><TrendingUp size={20} /></div>
-            <h3 className="font-medium text-base text-slate-700">Fluxo de Faturamento Diário</h3>
+            <h3 className="font-medium text-base text-[var(--ink-mid)]">Fluxo de Faturamento Diário</h3>
           </div>
           {areaData.length > 0 ? (
             <ResponsiveContainer width="100%" height={220}>
@@ -239,7 +239,7 @@ export default function AdminOverview({ currentMonth, setCurrentMonth }) {
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-[280px] flex items-center justify-center text-slate-400 text-sm">
+            <div className="h-[280px] flex items-center justify-center text-[var(--slate-dim)] text-sm">
               Sem dados de faturação para exibir
             </div>
           )}
@@ -256,29 +256,29 @@ export default function AdminOverview({ currentMonth, setCurrentMonth }) {
       {/* Bottom Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
         {/* Worker Comparison */}
-        <div className="flex flex-col h-full bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
+        <div className="flex flex-col h-full bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-[var(--border-soft)]">
           <div className="flex items-center gap-3 mb-6 shrink-0">
             <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(235,141,0,0.12)', color: FT.orange }}><Activity size={20} /></div>
-            <h3 className="font-medium text-base text-slate-700">Comparativo por Trabalhador</h3>
+            <h3 className="font-medium text-base text-[var(--ink-mid)]">Comparativo por Trabalhador</h3>
           </div>
           <div className="scroll-marca overflow-y-auto flex-1 min-h-0 space-y-3">
             {workerComparisonData.length > 0 ? workerComparisonData.map((w) => (
-              <div key={w.id} className="flex items-center gap-4 p-3 rounded-2xl hover:bg-slate-50 transition-colors">
+              <div key={w.id} className="flex items-center gap-4 p-3 rounded-2xl hover:bg-[var(--surface)] transition-colors">
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-center mb-1">
-                    <span className="text-sm font-bold text-slate-700 truncate">{w.name}</span>
+                    <span className="text-sm font-bold text-[var(--ink-mid)] truncate">{w.name}</span>
                     <div className="flex items-center gap-3 shrink-0">
-                      <span className="text-[10px] font-black text-slate-400">{formatHours(w.registered)} / {formatHours(w.prevRegistered)}</span>
+                      <span className="text-[10px] font-black text-[var(--slate-dim)]">{formatHours(w.registered)} / {formatHours(w.prevRegistered)}</span>
                       {w.diffPct !== null ? (
                         <span className={`text-[10px] font-black px-2 py-1 rounded-full ${w.isOver ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
                           {w.isOver ? '▲' : '▼'} {Math.abs(w.diffPct)}%
                         </span>
                       ) : (
-                        <span className="text-[10px] font-black text-slate-400 px-2 py-1">—</span>
+                        <span className="text-[10px] font-black text-[var(--slate-dim)] px-2 py-1">—</span>
                       )}
                     </div>
                   </div>
-                  <div className="w-full bg-slate-100 rounded-full h-2">
+                  <div className="w-full bg-[var(--surface-dim)] rounded-full h-2">
                     <div
                       className="h-2 rounded-full transition-all duration-500"
                       style={{ width: `${Math.min(100, w.ratioPct || 0)}%`, backgroundColor: FT.orange }}
@@ -287,24 +287,24 @@ export default function AdminOverview({ currentMonth, setCurrentMonth }) {
                 </div>
               </div>
             )) : (
-              <p className="text-xs text-slate-400 italic text-center py-8">Sem dados de trabalhadores este mês.</p>
+              <p className="text-xs text-[var(--slate-dim)] italic text-center py-8">Sem dados de trabalhadores este mês.</p>
             )}
           </div>
         </div>
 
         {/* Top Units + Recent Activity */}
         <div className="space-y-4 sm:space-y-6 lg:space-y-8">
-          <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
+          <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-[var(--border-soft)]">
             <div className="flex items-center gap-3 mb-6">
               <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(27,58,87,0.1)', color: 'var(--navy)' }}><Trophy size={20} /></div>
-              <h3 className="font-medium text-base text-slate-700">Top Unidades (Horas)</h3>
+              <h3 className="font-medium text-base text-[var(--ink-mid)]">Top Unidades (Horas)</h3>
             </div>
             <div className="space-y-4">
               {topClientsWithPrev.length > 0 ? topClientsWithPrev.map((c) => (
                 <div key={c.id} className="flex items-center justify-between group">
                   <div className="flex-1">
                     <div className="flex justify-between items-center mb-1">
-                      <span className="text-xs font-bold text-slate-700">{c.name}</span>
+                      <span className="text-xs font-bold text-[var(--ink-mid)]">{c.name}</span>
                       <div className="flex items-center gap-2 shrink-0">
                         {c.pct !== null && c.pct !== 0 && (
                           <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${c.pct >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
@@ -314,19 +314,19 @@ export default function AdminOverview({ currentMonth, setCurrentMonth }) {
                         <span className="text-xs font-black" style={{ color: 'var(--navy)' }}>{formatHours(c.hours)}</span>
                       </div>
                     </div>
-                    <div className="w-full bg-slate-50 rounded-full h-2">
+                    <div className="w-full bg-[var(--surface)] rounded-full h-2">
                       <div className="h-2 rounded-full transition-all duration-1000" style={{ width: `${Math.min(100, (c.hours / c.totalCurr) * 100)}%`, backgroundColor: FT.navy }} />
                     </div>
                   </div>
                 </div>
-              )) : <p className="text-xs text-slate-400 italic">Sem dados de clientes registados este mês.</p>}
+              )) : <p className="text-xs text-[var(--slate-dim)] italic">Sem dados de clientes registados este mês.</p>}
             </div>
           </div>
 
-          <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
+          <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-[var(--border-soft)]">
             <div className="flex items-center gap-3 mb-6">
               <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: FT.slate }}><History size={20} /></div>
-              <h3 className="font-medium text-base text-slate-700">Atividade Recente</h3>
+              <h3 className="font-medium text-base text-[var(--ink-mid)]">Atividade Recente</h3>
             </div>
             <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
               {logs
@@ -334,18 +334,18 @@ export default function AdminOverview({ currentMonth, setCurrentMonth }) {
                 .sort((a, b) => parseLogDate(b.date) - parseLogDate(a.date) || b.id.localeCompare(a.id))
                 .slice(0, showAllActivity ? undefined : 5)
                 .map(log => (
-                  <div key={log.id} className="flex gap-3 items-start p-3 hover:bg-slate-50 rounded-2xl transition-colors">
-                    <div className="bg-slate-100 p-2 rounded-xl text-slate-400 mt-0.5"><Activity size={12} /></div>
+                  <div key={log.id} className="flex gap-3 items-start p-3 hover:bg-[var(--surface)] rounded-2xl transition-colors">
+                    <div className="bg-[var(--surface-dim)] p-2 rounded-xl text-[var(--slate)] mt-0.5"><Activity size={12} /></div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold text-slate-700 truncate">{workers.find(w => w.id === log.workerId)?.name || 'Colaborador'}</p>
-                      <p className="text-[10px] text-slate-400 uppercase tracking-widest">{clients.find(c => c.id === log.clientId)?.name} • {formatLogDate(log.date)}</p>
+                      <p className="text-xs font-bold text-[var(--ink-mid)] truncate">{workers.find(w => w.id === log.workerId)?.name || 'Colaborador'}</p>
+                      <p className="text-[10px] text-[var(--slate-dim)] uppercase tracking-widest">{clients.find(c => c.id === log.clientId)?.name} • {formatLogDate(log.date)}</p>
                     </div>
                     <div className="text-xs font-black px-2 py-1 rounded-lg shrink-0" style={{ color: 'var(--navy)', backgroundColor: 'rgba(27,58,87,0.08)' }}>
                       {formatHours(Number(log.hours) || 0)}
                     </div>
                   </div>
                 ))}
-              {logs.length === 0 && <p className="text-xs text-slate-400 italic text-center py-4">Sem atividade registada.</p>}
+              {logs.length === 0 && <p className="text-xs text-[var(--slate-dim)] italic text-center py-4">Sem atividade registada.</p>}
             </div>
             {logs.length > 5 && (
               <button

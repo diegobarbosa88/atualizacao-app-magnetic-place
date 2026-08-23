@@ -82,12 +82,12 @@ export default function ContadorAcessoPanel() {
   };
 
   return (
-    <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100 lg:col-span-2">
+    <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-[var(--border-soft)] lg:col-span-2">
       <div className="flex items-center gap-3 mb-6">
         <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600"><Link2 size={20} /></div>
         <div>
-          <h3 className="font-black text-lg text-slate-800">Acesso do Contabilista</h3>
-          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Link do Resumo Mensal partilhado (/partilha/resumo)</p>
+          <h3 className="font-black text-lg text-[var(--ink)]">Acesso do Contabilista</h3>
+          <p className="text-[10px] text-[var(--slate-dim)] font-bold uppercase tracking-widest mt-0.5">Link do Resumo Mensal partilhado (/partilha/resumo)</p>
         </div>
       </div>
 
@@ -111,9 +111,9 @@ export default function ContadorAcessoPanel() {
       ) : (
         <div className="space-y-3">
           <div className="space-y-1">
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Link ativo (muda o mês na URL conforme necessário)</label>
+            <label className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Link ativo (muda o mês na URL conforme necessário)</label>
             <div className="flex gap-2">
-              <input readOnly value={link || ''} className="flex-1 bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-mono text-slate-600 outline-none" />
+              <input readOnly value={link || ''} className="flex-1 bg-[var(--surface)] border border-[var(--border)] rounded-xl p-3 text-xs font-mono text-[var(--ink-soft)] outline-none" />
               <button onClick={copiar} className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 ${copiado ? 'bg-emerald-50 text-emerald-700' : 'text-white hover:opacity-90'}`} style={copiado ? {} : { backgroundColor: FT.navy }}>
                 {copiado ? <><CheckCircle2 size={13} /> Copiado</> : <><Copy size={13} /> Copiar</>}
               </button>
@@ -127,7 +127,7 @@ export default function ContadorAcessoPanel() {
             {regenerando ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
             Regenerar Link
           </button>
-          <p className="text-[10px] text-slate-400 font-medium">
+          <p className="text-[10px] text-[var(--slate-dim)] font-medium">
             Regenerar invalida imediatamente o link atual. Terás de reenviar o novo link ao contabilista.
           </p>
         </div>

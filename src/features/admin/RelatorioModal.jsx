@@ -328,10 +328,10 @@ export default function RelatorioModal({ displayData, filename, dataRun, onClose
   const ColChecks = ({ cols, state, setter, label }) => (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between mb-1">
-        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">{label}</span>
+        <span className="text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)]">{label}</span>
         <div className="flex gap-2">
           <button onClick={() => toggleAll(setter, cols, true)}  className="text-[9px] text-indigo-500 hover:underline">Todos</button>
-          <button onClick={() => toggleAll(setter, cols, false)} className="text-[9px] text-slate-400 hover:underline">Nenhum</button>
+          <button onClick={() => toggleAll(setter, cols, false)} className="text-[9px] text-[var(--slate-dim)] hover:underline">Nenhum</button>
         </div>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
@@ -339,7 +339,7 @@ export default function RelatorioModal({ displayData, filename, dataRun, onClose
           <label key={c.key} className="flex items-center gap-1.5 cursor-pointer select-none">
             <input type="checkbox" checked={!!state[c.key]} onChange={() => setter(p => ({ ...p, [c.key]: !p[c.key] }))}
               className="accent-indigo-600 w-3.5 h-3.5" />
-            <span className="text-[11px] text-slate-600">{c.label}</span>
+            <span className="text-[11px] text-[var(--ink-soft)]">{c.label}</span>
           </label>
         ))}
       </div>
@@ -365,11 +365,11 @@ export default function RelatorioModal({ displayData, filename, dataRun, onClose
     >
       <div className="p-6 sm:p-8 space-y-6">
         <div>
-          <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2">Formato</p>
+          <p className="text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-2">Formato</p>
           <div className="flex gap-2">
             {[{ k: 'csv', l: 'CSV (Excel)' }, { k: 'pdf', l: 'PDF' }].map(({ k, l }) => (
               <button key={k} onClick={() => setFormato(k)}
-                className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${formato === k ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
+                className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${formato === k ? 'bg-indigo-600 text-white' : 'bg-[var(--surface-dim)] text-[var(--slate-dim)] hover:bg-[var(--border)]'}`}>
                 {l}
               </button>
             ))}
@@ -377,7 +377,7 @@ export default function RelatorioModal({ displayData, filename, dataRun, onClose
         </div>
 
         <div>
-          <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2">Secções a incluir</p>
+          <p className="text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-2">Secções a incluir</p>
           <div className="flex flex-wrap gap-2">
             {[
               { k: 'matched',       l: `Reconciliados (${data.matched?.length ?? 0})`,       color: 'emerald' },
@@ -390,7 +390,7 @@ export default function RelatorioModal({ displayData, filename, dataRun, onClose
                     ? color === 'emerald' ? 'bg-emerald-100 text-emerald-700 border-emerald-300'
                     : color === 'amber'   ? 'bg-amber-100 text-amber-700 border-amber-300'
                     :                       'bg-rose-100 text-rose-700 border-rose-300'
-                    : 'bg-slate-50 text-slate-400 border-slate-200'
+                    : 'bg-[var(--surface)] text-[var(--slate-dim)] border-[var(--border)]'
                 }`}>
                 {secoes[k] ? '✓ ' : ''}{l}
               </button>
@@ -399,11 +399,11 @@ export default function RelatorioModal({ displayData, filename, dataRun, onClose
         </div>
 
         <div>
-          <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2">Opções</p>
+          <p className="text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-2">Opções</p>
           <label className="flex items-center gap-2 cursor-pointer select-none">
             <input type="checkbox" checked={incluirTotalEntidade} onChange={() => setIncluirTotalEntidade(p => !p)}
               className="accent-indigo-600 w-4 h-4" />
-            <span className="text-xs text-slate-600 font-medium">Incluir total por entidade</span>
+            <span className="text-xs text-[var(--ink-soft)] font-medium">Incluir total por entidade</span>
           </label>
         </div>
 

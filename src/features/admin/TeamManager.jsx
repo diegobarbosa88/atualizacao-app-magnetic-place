@@ -201,29 +201,29 @@ const TeamManagerContent = ({ onLogin }) => {
       {teamSubTab === 'workers' && (<>
       <div className="flex flex-wrap justify-between items-center gap-3 mb-5">
         <div className="relative">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--slate)] pointer-events-none" />
           <input
             type="text"
             placeholder="Pesquisar colaborador..."
             value={workersSearch}
             onChange={e => setWorkersSearch(e.target.value)}
-            className="pl-8 pr-3 py-2 text-xs border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-300 w-48 sm:w-64"
+            className="pl-8 pr-3 py-2 text-xs border border-[var(--border)] rounded-xl bg-[var(--surface)] focus:outline-none focus:ring-2 focus:ring-indigo-300 w-48 sm:w-64"
           />
         </div>
         <div className="flex items-center gap-2">
           {inactiveCount > 0 && (
-            <label className="flex items-center gap-2 text-xs font-bold text-slate-500 cursor-pointer">
-              <input type="checkbox" checked={showInactive} onChange={e => setShowInactive(e.target.checked)} className="rounded border-slate-300" />
+            <label className="flex items-center gap-2 text-xs font-bold text-[var(--slate-dim)] cursor-pointer">
+              <input type="checkbox" checked={showInactive} onChange={e => setShowInactive(e.target.checked)} className="rounded border-[var(--border)]" />
               Mostrar inativos ({inactiveCount})
             </label>
           )}
-          <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl p-1">
-            <button onClick={() => setWorkersView('grid')} className={`p-2 rounded-lg transition-all ${workersView === 'grid' ? 'text-white' : 'text-slate-400 hover:text-slate-600'}`} style={workersView === 'grid' ? { backgroundColor: FT.navy } : {}} title="Vista em Grade"><LayoutGrid size={18} /></button>
-            <button onClick={() => setWorkersView('list')} className={`p-2 rounded-lg transition-all ${workersView === 'list' ? 'text-white' : 'text-slate-400 hover:text-slate-600'}`} style={workersView === 'list' ? { backgroundColor: FT.navy } : {}} title="Vista em Lista"><List size={18} /></button>
+          <div className="flex items-center bg-[var(--surface)] border border-[var(--border)] rounded-xl p-1">
+            <button onClick={() => setWorkersView('grid')} className={`p-2 rounded-lg transition-all ${workersView === 'grid' ? 'text-white' : 'text-[var(--slate)] hover:text-[var(--ink-soft)]'}`} style={workersView === 'grid' ? { backgroundColor: FT.navy } : {}} title="Vista em Grade"><LayoutGrid size={18} /></button>
+            <button onClick={() => setWorkersView('list')} className={`p-2 rounded-lg transition-all ${workersView === 'list' ? 'text-white' : 'text-[var(--slate)] hover:text-[var(--ink-soft)]'}`} style={workersView === 'list' ? { backgroundColor: FT.navy } : {}} title="Vista em Lista"><List size={18} /></button>
           </div>
           <button
             onClick={() => { setInviteEmail(''); setGeneratedLink(''); setInviteModal(true); }}
-            className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl font-black text-xs uppercase transition-all whitespace-nowrap border-2 hover:bg-slate-50"
+            className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl font-black text-xs uppercase transition-all whitespace-nowrap border-2 hover:bg-[var(--surface)]"
             style={{ borderColor: FT.slate, color: FT.slateDim }}
             title="Convidar novo colaborador via link de onboarding"
           >
@@ -231,7 +231,7 @@ const TeamManagerContent = ({ onLogin }) => {
           </button>
           <button
             onClick={() => setScannerOpen(true)}
-            className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl font-black text-xs uppercase transition-all whitespace-nowrap border-2 hover:bg-slate-50"
+            className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl font-black text-xs uppercase transition-all whitespace-nowrap border-2 hover:bg-[var(--surface)]"
             style={{ borderColor: FT.slate, color: FT.slateDim }}
             title="Scanner de Documentos com IA"
           >
@@ -276,34 +276,34 @@ const TeamManagerContent = ({ onLogin }) => {
       >
         <div className="p-5 space-y-4">
           {!generatedLink ? (<>
-            <p className="text-xs text-slate-500 font-medium leading-relaxed">
+            <p className="text-xs text-[var(--slate-dim)] font-medium leading-relaxed">
               Gera um link único e seguro que o colaborador usa para preencher os seus próprios dados.
               O link expira em 7 dias e só pode ser usado uma vez.
             </p>
             <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1">
+              <label className="block text-[10px] font-bold uppercase tracking-wide text-[var(--slate-dim)] mb-1">
                 Email do colaborador (opcional)
               </label>
               <input
-                className="w-full bg-white border border-slate-200 rounded-lg py-2 px-3 text-sm font-semibold text-slate-800 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 transition-all placeholder:font-normal placeholder:text-slate-400"
+                className="w-full bg-white border border-[var(--border)] rounded-lg py-2 px-3 text-sm font-semibold text-[var(--ink)] outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 transition-all placeholder:font-normal placeholder:text-[var(--slate-dim)]"
                 type="email"
                 placeholder="colaborador@email.com"
                 value={inviteEmail}
                 onChange={e => setInviteEmail(e.target.value)}
               />
-              <p className="text-[10px] text-slate-400 mt-1.5">Se preenchido, pode enviar o link por email.</p>
+              <p className="text-[10px] text-[var(--slate-dim)] mt-1.5">Se preenchido, pode enviar o link por email.</p>
             </div>
-            <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 space-y-3">
-              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+            <div className="bg-[var(--surface)] rounded-xl p-3 border border-[var(--border)] space-y-3">
+              <p className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">
                 Condições propostas (entram no compromisso de início de atividade)
               </p>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1">
+                  <label className="block text-[10px] font-bold uppercase tracking-wide text-[var(--slate-dim)] mb-1">
                     Vencimento base (€)
                   </label>
                   <input
-                    className="w-full bg-white border border-slate-200 rounded-lg py-2 px-3 text-sm font-semibold text-slate-800 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 transition-all"
+                    className="w-full bg-white border border-[var(--border)] rounded-lg py-2 px-3 text-sm font-semibold text-[var(--ink)] outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 transition-all"
                     type="number"
                     min="0"
                     step="0.01"
@@ -313,11 +313,11 @@ const TeamManagerContent = ({ onLogin }) => {
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1">
+                  <label className="block text-[10px] font-bold uppercase tracking-wide text-[var(--slate-dim)] mb-1">
                     Data de início prevista
                   </label>
                   <input
-                    className="w-full bg-white border border-slate-200 rounded-lg py-2 px-3 text-sm font-semibold text-slate-800 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 transition-all"
+                    className="w-full bg-white border border-[var(--border)] rounded-lg py-2 px-3 text-sm font-semibold text-[var(--ink)] outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 transition-all"
                     type="date"
                     value={inviteDataInicio}
                     onChange={e => setInviteDataInicio(e.target.value)}
@@ -325,18 +325,18 @@ const TeamManagerContent = ({ onLogin }) => {
                 </div>
               </div>
               <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1">
+                <label className="block text-[10px] font-bold uppercase tracking-wide text-[var(--slate-dim)] mb-1">
                   Local de trabalho
                 </label>
                 <input
-                  className="w-full bg-white border border-slate-200 rounded-lg py-2 px-3 text-sm font-semibold text-slate-800 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 transition-all placeholder:font-normal placeholder:text-slate-400"
+                  className="w-full bg-white border border-[var(--border)] rounded-lg py-2 px-3 text-sm font-semibold text-[var(--ink)] outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 transition-all placeholder:font-normal placeholder:text-[var(--slate-dim)]"
                   type="text"
                   placeholder="Ex: instalações do cliente Acme Lda, Porto"
                   value={inviteLocalTrabalho}
                   onChange={e => setInviteLocalTrabalho(e.target.value)}
                 />
               </div>
-              <p className="text-[10px] text-slate-400">
+              <p className="text-[10px] text-[var(--slate-dim)]">
                 Opcional — se deixares em branco, o compromisso mostra "[a definir]" nesses pontos.
               </p>
             </div>
@@ -384,7 +384,7 @@ const TeamManagerContent = ({ onLogin }) => {
             </div>
             <button
               onClick={() => { setGeneratedLink(''); setInviteEmail(''); setInviteError(''); setInviteVencimentoBase(''); setInviteDataInicio(''); setInviteLocalTrabalho(''); }}
-              className="w-full text-xs text-slate-400 hover:text-slate-600 font-bold py-1 transition-colors"
+              className="w-full text-xs text-[var(--slate-dim)] hover:text-[var(--ink-soft)] font-bold py-1 transition-colors"
             >
               Gerar novo link
             </button>
