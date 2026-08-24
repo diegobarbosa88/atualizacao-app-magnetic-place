@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { ArrowRightLeft, Plus, Loader2, RefreshCw, Download, CheckCircle, Trash2 } from 'lucide-react';
 import NovoPagamentoModal from './NovoPagamentoModal';
 import { authFetch } from '../../../utils/authFetch';
-import { FT } from '../../../styles/designTokens';
+import { FT, SCALE } from '../../../styles/designTokens';
 
 const STATUS_BADGE = {
   pendente:           'bg-amber-50 text-amber-700 border-amber-100',
@@ -292,7 +292,7 @@ export default function PagamentosTab() {
                     className="rounded accent-[var(--navy)]" />
                 </th>
                 {['Fornecedor', 'IBAN', 'Valor', 'Data', 'Referência', 'Estado', ''].map(h => (
-                    <th key={h} className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] last:w-10">{h}</th>
+                    <th key={h} className={`px-4 py-3 text-left ${SCALE.text.statLabel} text-[var(--slate-dim)] last:w-10`}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -308,17 +308,17 @@ export default function PagamentosTab() {
                   <td className="px-4 py-3 font-semibold text-[var(--ink)]">
                     <div>
                       <p>{p.fornecedor_nome}</p>
-                      {p.fornecedor_nif && <p className="text-[10px] text-[var(--slate-dim)] font-normal">NIF {p.fornecedor_nif}</p>}
+                      {p.fornecedor_nif && <p className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>NIF {p.fornecedor_nif}</p>}
                     </div>
                   </td>
-                  <td className="px-4 py-3 font-mono text-[var(--slate-dim)] text-[10px]">{p.fornecedor_iban}</td>
+                  <td className={`px-4 py-3 font-mono text-[var(--slate-dim)] ${SCALE.text.meta}`}>{p.fornecedor_iban}</td>
                   <td className="px-4 py-3 font-bold text-[var(--ink)]">{fmt(p.valor)}</td>
                   <td className="px-4 py-3 text-[var(--slate-dim)]">
                     {new Date(p.data_pagamento).toLocaleDateString('pt-PT')}
                   </td>
                   <td className="px-4 py-3 text-[var(--slate-dim)] max-w-[140px] truncate">{p.referencia || '—'}</td>
                   <td className="px-4 py-3">
-                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase border ${STATUS_BADGE[p.status] || ''}`}>
+                    <span className={`px-2 py-0.5 rounded-full ${SCALE.text.badge} border ${STATUS_BADGE[p.status] || ''}`}>
                       {STATUS_LABEL[p.status] || p.status}
                     </span>
                   </td>

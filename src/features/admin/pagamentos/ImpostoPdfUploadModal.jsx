@@ -4,7 +4,7 @@ import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { Upload, Sparkles, Loader2, CheckCircle } from 'lucide-react';
 import { authFetch } from '../../../utils/authFetch';
 import ModalShell from '../../../components/common/ModalShell';
-import { FT } from '../../../styles/designTokens';
+import { FT, SCALE } from '../../../styles/designTokens';
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl;
 
 const TIPOS = ['IRC', 'IVA', 'IRS', 'SS', 'Outro'];
@@ -191,7 +191,7 @@ export default function ImpostoPdfUploadModal({ onClose, onSaved }) {
           {/* Fields */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-1">Tipo *</label>
+              <label className={`block ${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1`}>Tipo *</label>
               <select
                 value={fields.tipo}
                 onChange={e => set('tipo', e.target.value)}
@@ -201,7 +201,7 @@ export default function ImpostoPdfUploadModal({ onClose, onSaved }) {
               </select>
             </div>
             <div>
-              <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-1">Período</label>
+              <label className={`block ${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1`}>Período</label>
               <input
                 type="text"
                 placeholder="ex: 2026-06"
@@ -211,7 +211,7 @@ export default function ImpostoPdfUploadModal({ onClose, onSaved }) {
               />
             </div>
             <div>
-              <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-1">Valor (€) *</label>
+              <label className={`block ${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1`}>Valor (€) *</label>
               <input
                 type="number"
                 step="0.01"
@@ -223,7 +223,7 @@ export default function ImpostoPdfUploadModal({ onClose, onSaved }) {
               />
             </div>
             <div>
-              <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-1">Data Vencimento</label>
+              <label className={`block ${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1`}>Data Vencimento</label>
               <input
                 type="date"
                 value={fields.data_vencimento}
@@ -234,7 +234,7 @@ export default function ImpostoPdfUploadModal({ onClose, onSaved }) {
           </div>
 
           <div>
-            <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-1">IBAN Destino *</label>
+            <label className={`block ${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1`}>IBAN Destino *</label>
             <input
               type="text"
               placeholder="PT50..."
@@ -246,7 +246,7 @@ export default function ImpostoPdfUploadModal({ onClose, onSaved }) {
             />
           </div>
           <div>
-            <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-1">Referência</label>
+            <label className={`block ${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1`}>Referência</label>
             <input
               type="text"
               placeholder="Referência MB ou número de documento"
@@ -256,7 +256,7 @@ export default function ImpostoPdfUploadModal({ onClose, onSaved }) {
             />
           </div>
           <div>
-            <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-1">Descrição</label>
+            <label className={`block ${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1`}>Descrição</label>
             <input
               type="text"
               placeholder="ex: IVA Mensal Jun 2026"
@@ -267,7 +267,7 @@ export default function ImpostoPdfUploadModal({ onClose, onSaved }) {
           </div>
 
           {erro && (
-            <div className="px-4 py-3 rounded-xl text-[11px] font-bold bg-red-50 border border-red-200 text-red-700">{erro}</div>
+            <div className={`px-4 py-3 rounded-xl ${SCALE.text.body} bg-red-50 border border-red-200 text-red-700`}>{erro}</div>
           )}
       </div>
     </ModalShell>

@@ -3,7 +3,7 @@ import { Loader2, RefreshCw, Download, Plus, X, ExternalLink, FileText, AlertTri
 import ImpostoPdfUploadModal from './ImpostoPdfUploadModal';
 import { authFetch } from '../../../utils/authFetch';
 import ModalShell from '../../../components/common/ModalShell';
-import { FT } from '../../../styles/designTokens';
+import { FT, SCALE } from '../../../styles/designTokens';
 
 function fmt(val) {
   return new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(val ?? 0);
@@ -289,21 +289,21 @@ export default function FilaAprovacaoTab() {
             <ListChecks size={16} style={{ color: FT.slate }} />
             Fila de Pagamentos
           </h4>
-          <p className="text-[10px] font-semibold text-[var(--slate-dim)] mt-0.5">
+          <p className={`${SCALE.text.meta} text-[var(--slate-dim)] mt-0.5`}>
             Faturas de fornecedores + impostos pendentes de pagamento
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setMostrarModalImposto(true)}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-black bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200 transition-all"
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl ${SCALE.text.body} bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200 transition-all`}
           >
             <Plus size={13} /> Importar Imposto
           </button>
           <button
             onClick={carregar}
             disabled={loading}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black bg-[var(--surface-dim)] text-[var(--ink-soft)] hover:bg-[var(--border)] transition-all disabled:opacity-60"
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl ${SCALE.text.body} bg-[var(--surface-dim)] text-[var(--ink-soft)] hover:bg-[var(--border)] transition-all disabled:opacity-60`}
           >
             <RefreshCw size={13} className={loading ? 'animate-spin' : ''} /> Atualizar
           </button>
@@ -320,14 +320,14 @@ export default function FilaAprovacaoTab() {
             <button
               key={key}
               onClick={() => { setTab(key); setSelecionados(new Set()); }}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl ${SCALE.text.badge} transition-all ${
                 tab === key ? '' : 'text-[var(--slate-dim)] hover:text-[var(--ink-soft)]'
               }`}
               style={tab === key ? { backgroundColor: 'rgba(235,141,0,0.15)', color: 'var(--navy)' } : {}}
             >
               {label}
               {count > 0 && (
-                <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${tab === key ? 'bg-white text-[var(--navy)]' : 'bg-[var(--border)] text-[var(--slate-dim)]'}`}>
+                <span className={`${SCALE.text.badge} px-1.5 py-0.5 rounded-full ${tab === key ? 'bg-white text-[var(--navy)]' : 'bg-[var(--border)] text-[var(--slate-dim)]'}`}>
                   {count}
                 </span>
               )}
@@ -338,7 +338,7 @@ export default function FilaAprovacaoTab() {
 
       {/* Export result */}
       {exportResult && (
-        <div className={`px-4 py-3 rounded-xl text-[11px] font-bold border ${exportResult.erro ? 'bg-red-50 border-red-200 text-red-700' : 'bg-emerald-50 border-emerald-200 text-emerald-700'}`}>
+        <div className={`px-4 py-3 rounded-xl ${SCALE.text.body} border ${exportResult.erro ? 'bg-red-50 border-red-200 text-red-700' : 'bg-emerald-50 border-emerald-200 text-emerald-700'}`}>
           {exportResult.erro
             ? `Erro: ${exportResult.erro}`
             : `SEPA XML gerado com ${exportResult.count} pagamento${exportResult.count !== 1 ? 's' : ''} — Total: ${fmt(exportResult.total)}. Faça upload no portal NovoBanco.`
@@ -348,7 +348,7 @@ export default function FilaAprovacaoTab() {
 
       {/* Erro */}
       {erro && (
-        <div className="px-4 py-3 rounded-xl text-[11px] font-bold bg-red-50 border border-red-200 text-red-700">{erro}</div>
+        <div className={`px-4 py-3 rounded-xl ${SCALE.text.body} bg-red-50 border border-red-200 text-red-700`}>{erro}</div>
       )}
 
       {/* Action bar (only when pendentes selected) */}
@@ -361,7 +361,7 @@ export default function FilaAprovacaoTab() {
               onChange={toggleAll}
               className="w-4 h-4 accent-[var(--navy)] cursor-pointer"
             />
-            <span className="text-[11px] font-black text-[var(--ink-soft)]">
+            <span className={`${SCALE.text.body} text-[var(--ink-soft)]`}>
               {selecionados.size > 0
                 ? `${selecionados.size} selecionado${selecionados.size !== 1 ? 's' : ''} — ${fmt(totalSelecionado)}`
                 : `Selecionar todos (${pendentes.length})`
@@ -371,7 +371,7 @@ export default function FilaAprovacaoTab() {
           <button
             onClick={handleExportar}
             disabled={exportando || selecionados.size === 0}
- className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-black disabled:opacity-40 transition-all shadow-sm hover:opacity-90"
+ className={`flex items-center gap-1.5 px-4 py-2 rounded-xl ${SCALE.text.body} disabled:opacity-40 transition-all shadow-sm hover:opacity-90`}
             style={{ backgroundColor: FT.orange, color: FT.navy }}
           >
             {exportando ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
@@ -395,7 +395,7 @@ export default function FilaAprovacaoTab() {
             {tab === 'pendente' ? 'Nenhum pagamento pendente' : tab === 'exportado' ? 'Nenhum exportado ainda' : 'Nenhum rejeitado'}
           </p>
           {tab === 'pendente' && (
-            <p className="text-[11px] text-[var(--slate-dim)] mt-1">Faturas pendentes e impostos importados aparecem aqui.</p>
+            <p className={`${SCALE.text.body} text-[var(--slate-dim)] mt-1`}>Faturas pendentes e impostos importados aparecem aqui.</p>
           )}
         </div>
       )}
@@ -426,7 +426,7 @@ export default function FilaAprovacaoTab() {
                 )}
 
                 {/* Type badge */}
-                <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest shrink-0 ${
+                <span className={`inline-flex items-center px-2 py-0.5 rounded-lg ${SCALE.text.badge} shrink-0 ${
                   item.fonte === 'imposto'
                     ? 'bg-orange-100 text-orange-700'
                     : item.fonte === 'fatura-gmail'
@@ -441,25 +441,25 @@ export default function FilaAprovacaoTab() {
                   <p className="text-xs font-black text-[var(--ink)] truncate">{item.label}</p>
                   <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                     {item.referencia && (
-                      <span className="text-[10px] text-[var(--slate-dim)] truncate">{item.referencia}</span>
+                      <span className={`${SCALE.text.meta} text-[var(--slate-dim)] truncate`}>{item.referencia}</span>
                     )}
                     {item.iban
-                      ? <span className="text-[10px] text-[var(--slate-dim)]">{maskIban(item.iban)}</span>
+                      ? <span className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>{maskIban(item.iban)}</span>
                       : item.fonte === 'fatura-gmail' && item.nif
                         ? <button
                             onClick={() => { setIbanModal({ nif: item.nif, nome: item.label }); setIbanInputVal(''); }}
-                            className="flex items-center gap-1 text-[10px] text-orange-400 font-bold hover:text-orange-600 underline underline-offset-2"
+                            className={`flex items-center gap-1 ${SCALE.text.meta} text-orange-400 hover:text-orange-600 underline underline-offset-2`}
                           >
                             <AlertTriangle size={10} /> Sem IBAN — Definir
                           </button>
-                        : <span className="flex items-center gap-1 text-[10px] text-orange-400 font-bold"><AlertTriangle size={10} /> Sem IBAN</span>
+                        : <span className={`flex items-center gap-1 ${SCALE.text.meta} text-orange-400`}><AlertTriangle size={10} /> Sem IBAN</span>
                     }
                   </div>
                 </div>
 
                 {/* Date */}
                 <div className="shrink-0 text-right">
-                  <span className={`text-[10px] font-bold ${dc}`}>{formatDate(item.data_vencimento)}</span>
+                  <span className={`${SCALE.text.meta} ${dc}`}>{formatDate(item.data_vencimento)}</span>
                 </div>
 
                 {/* Amount */}
@@ -542,7 +542,7 @@ export default function FilaAprovacaoTab() {
               autoFocus
             />
             {ibanModal.nif && (
-              <p className="text-[10px] text-[var(--slate-dim)] mt-1">Aplicado a todas as faturas deste fornecedor (NIF: {ibanModal.nif})</p>
+              <p className={`${SCALE.text.meta} text-[var(--slate-dim)] mt-1`}>Aplicado a todas as faturas deste fornecedor (NIF: {ibanModal.nif})</p>
             )}
           </div>
         </ModalShell>

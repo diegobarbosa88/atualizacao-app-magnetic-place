@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Loader2, ArrowRightLeft } from 'lucide-react';
 import { authFetch } from '../../../utils/authFetch';
 import ModalShell from '../../../components/common/ModalShell';
-import { FT } from '../../../styles/designTokens';
+import { FT, SCALE } from '../../../styles/designTokens';
 
 function AutocompleteFornecedor({ value, onChange }) {
   const [q, setQ] = useState(value?.nome || '');
@@ -51,7 +51,7 @@ function AutocompleteFornecedor({ value, onChange }) {
               onMouseDown={() => { onChange(f); setQ(f.nome); setAberto(false); }}>
               <span className="font-semibold text-[var(--ink)]">{f.nome}</span>
               {f.nif && <span className="ml-2 text-[var(--slate-dim)] font-mono">{f.nif}</span>}
-              {f.iban && <span className="ml-2 text-[var(--slate-dim)] font-mono text-[10px]">{f.iban}</span>}
+              {f.iban && <span className={`ml-2 text-[var(--slate-dim)] font-mono ${SCALE.text.meta}`}>{f.iban}</span>}
             </button>
           ))}
         </div>
@@ -117,7 +117,7 @@ export default function NovoPagamentoModal({ onClose, onCriado }) {
     >
       <form onSubmit={handleSubmit} className="px-6 py-5 space-y-3">
           <div className="space-y-1">
-            <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Fornecedor *</p>
+            <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Fornecedor *</p>
             <AutocompleteFornecedor value={{ nome: form.fornecedor_nome }} onChange={handleFornecedor} />
             {form.fornecedor_nome && (
               <input type="text" value={form.fornecedor_nome} onChange={e => set('fornecedor_nome', e.target.value)}
@@ -127,7 +127,7 @@ export default function NovoPagamentoModal({ onClose, onCriado }) {
           </div>
 
           <div className="space-y-1">
-            <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">IBAN *</p>
+            <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>IBAN *</p>
             <input type="text" value={form.fornecedor_iban} onChange={e => set('fornecedor_iban', e.target.value.toUpperCase())}
               placeholder="PT50 0000 0000 0000 0000 0000 0"
               required
@@ -136,13 +136,13 @@ export default function NovoPagamentoModal({ onClose, onCriado }) {
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">NIF</p>
+              <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>NIF</p>
               <input type="text" value={form.fornecedor_nif} onChange={e => set('fornecedor_nif', e.target.value)}
                 placeholder="123456789"
                 className="w-full px-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30" />
             </div>
             <div className="space-y-1">
-              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Valor (€) *</p>
+              <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Valor (€) *</p>
               <input type="number" step="0.01" min="0.01" value={form.valor} onChange={e => set('valor', e.target.value)}
                 placeholder="0,00"
                 required
@@ -152,13 +152,13 @@ export default function NovoPagamentoModal({ onClose, onCriado }) {
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Data *</p>
+              <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Data *</p>
               <input type="date" value={form.data_pagamento} onChange={e => set('data_pagamento', e.target.value)}
                 required
                 className="w-full px-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30" />
             </div>
             <div className="space-y-1">
-              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Referência</p>
+              <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Referência</p>
               <input type="text" value={form.referencia} onChange={e => set('referencia', e.target.value)}
                 placeholder="Nº fatura..."
                 className="w-full px-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30" />
