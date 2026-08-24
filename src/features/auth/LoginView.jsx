@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { UserCircle, Lock, Download, AlertCircle, ExternalLink, X } from 'lucide-react';
 import CompanyLogo from '../../components/common/CompanyLogo';
 import './LoginView.css';
-import { FT } from '../../styles/designTokens';
+import { FT, SCALE } from '../../styles/designTokens';
 
 const PAGE_BG = { background: 'linear-gradient(160deg, #0F1F3D 0%, #1a3460 100%)' };
 const CARD_STYLE = {
@@ -150,7 +150,7 @@ const LoginView = ({ onLogin }) => {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-1">
-            <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Utilizador</label>
+            <label className={`${SCALE.text.statLabel} text-slate-400 ml-1`}>Utilizador</label>
             <div className="relative">
               <UserCircle className="absolute left-4 top-4 text-slate-400" size={20} />
               <input
@@ -168,7 +168,7 @@ const LoginView = ({ onLogin }) => {
           </div>
 
           <div className="space-y-1">
-            <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Senha</label>
+            <label className={`${SCALE.text.statLabel} text-slate-400 ml-1`}>Senha</label>
             <div className="relative">
               <Lock className="absolute left-4 top-4 text-slate-400" size={20} />
               <input
@@ -216,16 +216,16 @@ const LoginView = ({ onLogin }) => {
             {!isIOS && !deferredPrompt && showIosInstructions && (
               <div className="rounded-2xl p-5 animate-in zoom-in-95 duration-300" style={{ backgroundColor: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.25)' }}>
                 <div className="flex justify-between items-center mb-3">
-                  <h4 className="text-[10px] font-black uppercase tracking-widest text-indigo-300">Como instalar</h4>
+                  <h4 className={`${SCALE.text.statLabel} text-indigo-300`}>Como instalar</h4>
                   <button onClick={() => setShowIosInstructions(false)} className="text-indigo-400 hover:text-indigo-200"><X size={16} /></button>
                 </div>
                 <ul className="space-y-2">
-                  <li className="flex items-center gap-3 text-[10px] font-medium text-indigo-200 p-2.5 rounded-xl" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
-                    <span className="w-5 h-5 flex items-center justify-center rounded-full font-black text-[9px]" style={{ backgroundColor: 'rgba(99,102,241,0.4)', color: '#c7d2fe' }}>1</span>
+                  <li className={`flex items-center gap-3 ${SCALE.text.meta} text-indigo-200 p-2.5 rounded-xl`} style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
+                    <span className={`w-5 h-5 flex items-center justify-center rounded-full ${SCALE.text.badge}`} style={{ backgroundColor: 'rgba(99,102,241,0.4)', color: '#c7d2fe' }}>1</span>
                     Abra o menu do browser (⋮ ou ···)
                   </li>
-                  <li className="flex items-center gap-3 text-[10px] font-medium text-indigo-200 p-2.5 rounded-xl" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
-                    <span className="w-5 h-5 flex items-center justify-center rounded-full font-black text-[9px]" style={{ backgroundColor: 'rgba(99,102,241,0.4)', color: '#c7d2fe' }}>2</span>
+                  <li className={`flex items-center gap-3 ${SCALE.text.meta} text-indigo-200 p-2.5 rounded-xl`} style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
+                    <span className={`w-5 h-5 flex items-center justify-center rounded-full ${SCALE.text.badge}`} style={{ backgroundColor: 'rgba(99,102,241,0.4)', color: '#c7d2fe' }}>2</span>
                     Escolha <span className="font-black mx-1">"Instalar aplicação"</span> ou <span className="font-black mx-1">"Adicionar ao ecrã inicial"</span>
                   </li>
                 </ul>
@@ -237,7 +237,7 @@ const LoginView = ({ onLogin }) => {
                 <div className="flex justify-between items-center mb-4">
                   <div className="flex items-center gap-2">
                     <ExternalLink size={18} className="text-amber-400" />
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-amber-300">Guia Visual iPhone</h4>
+                    <h4 className={`${SCALE.text.statLabel} text-amber-300`}>Guia Visual iPhone</h4>
                   </div>
                   <button onClick={() => setShowIosInstructions(false)} className="text-amber-400 p-1 hover:text-amber-200"><X size={16} /></button>
                 </div>
@@ -247,20 +247,20 @@ const LoginView = ({ onLogin }) => {
                 </div>
 
                 <div className="space-y-3">
-                  <p className="text-[11px] font-bold text-amber-300 leading-relaxed">Mais fácil do que parece:</p>
+                  <p className={`${SCALE.text.body} text-amber-300 leading-relaxed`}>Mais fácil do que parece:</p>
                   <ul className="space-y-2">
-                    <li className="flex items-center gap-3 text-[10px] font-medium text-amber-200 p-2.5 rounded-xl" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
-                      <span className="w-5 h-5 flex items-center justify-center rounded-full font-black text-[9px]" style={{ backgroundColor: 'rgba(245,158,11,0.3)', color: '#fcd34d' }}>1</span>
+                    <li className={`flex items-center gap-3 ${SCALE.text.meta} text-amber-200 p-2.5 rounded-xl`} style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
+                      <span className={`w-5 h-5 flex items-center justify-center rounded-full ${SCALE.text.badge}`} style={{ backgroundColor: 'rgba(245,158,11,0.3)', color: '#fcd34d' }}>1</span>
                       Toque no ícone de <span className="font-black mx-1">Partilhar</span> em baixo.
                     </li>
-                    <li className="flex items-center gap-3 text-[10px] font-medium text-amber-200 p-2.5 rounded-xl" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
-                      <span className="w-5 h-5 flex items-center justify-center rounded-full font-black text-[9px]" style={{ backgroundColor: 'rgba(245,158,11,0.3)', color: '#fcd34d' }}>2</span>
+                    <li className={`flex items-center gap-3 ${SCALE.text.meta} text-amber-200 p-2.5 rounded-xl`} style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
+                      <span className={`w-5 h-5 flex items-center justify-center rounded-full ${SCALE.text.badge}`} style={{ backgroundColor: 'rgba(245,158,11,0.3)', color: '#fcd34d' }}>2</span>
                       Escolha <span className="font-black mx-1">"Ecrã de Início"</span>.
                     </li>
                   </ul>
                   <button
                     onClick={() => setShowIosInstructions(false)}
-                    className="w-full py-2 text-white rounded-xl text-[9px] font-black uppercase tracking-widest mt-2 transition-colors"
+                    className={`w-full py-2 text-white rounded-xl ${SCALE.text.badge} mt-2 transition-colors`}
                     style={{ backgroundColor: 'rgba(245,158,11,0.6)' }}
                   >
                     Entendido
