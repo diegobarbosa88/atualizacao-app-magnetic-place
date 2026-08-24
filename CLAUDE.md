@@ -1119,6 +1119,53 @@ correctamente por nome de trabalhador E de cliente em Correções, por nome de t
 Faltas, badges de Faltas inalterados pela pesquisa, mensagem de zero resultados a aparecer.
 Contraste do badge de ícone (idêntico nos 4, mesma classe): 4,52:1 claro / 5,95:1 escuro.
 
+**Correção ao contentor invisível do `CorrectionsInbox.jsx`, 2026-08-24 — pílula de botões
+separados vira um contentor visível.** As 4 tabs já eram estruturalmente um único `<div>` (não "4
+botões soltos"), mas o fundo do contentor (`--surface-dim`) era **idêntico ao fundo da própria
+página** — só a pílula colorida da tab activa aparecia, o resto lia-se como texto solto. Corrigido
+para `var(--panel)` (branco/`#131d28`, distinto do fundo da página nos dois modos) + borda subtil;
+botões passam de `flex-shrink-0` para `flex-1`, para preencherem o contentor em segmentos iguais.
+Contraste reconfirmado, melhorou em escuro (o novo fundo por trás do `-bg` translúcido do tom é
+mais escuro): 4,52/6,62 (Abertas), inactivas 5,10 — nenhum regrediu.
+**Mesmo bug confirmado, sem corrigir, no toggle lista/grade do `WorkerValidationPanel.jsx`**
+(idêntica classe `bg-[var(--surface-dim)] p-1 rounded-2xl`) — fora do pedido desta passagem.
+
+**Spec "Cabeçalho unificado Equipa (Opção B)", 2026-08-24 — achado que invalidou a premissa
+central da spec antes de tocar em código.** A spec pedia para tratar o "Cartão 1" (ícone+título+
+tab bar) como sofrendo do mesmo bug do `--surface-dim` acima, com a extracção como oportunidade de
+corrigir os dois de uma vez. **Não é o caso**: o "Cartão 1" já existe — é o `SectionHeaderShell.jsx`,
+partilhado por **19 secções do admin** (Clientes, Fornecedores, Horários, Documentos, Faturação,
+Reconciliação, Pagamentos, Custos, Calc. Recibos, Relatórios, Definições, Alertas, Ajudas de
+Custo, Contabilidade, TOConline, Formação Interna, Mapa Salários, e Equipa) — e usa
+`bg-slate-100`/`bg-white`, não `--surface-dim`. Confirmado ao vivo, nos dois modos, que são
+genuinamente distintos entre si (claro: branco/cinza-azulado/branco; escuro: `#1e293b`/`#0f172a`/
+`#1e293b`) — **sem bug de invisibilidade aqui**, mecanismo diferente do `CorrectionsInbox.jsx`.
+**Decisão do Diego: não tocar em `SectionHeaderShell.jsx`** — o risco de mexer num componente
+partilhado por 19 secções para resolver uma inconsistência pequena (título sem `FONT_TITLE`,
+badge do ícone `--navy-soft` em vez de âmbar como as 4 subtabs) é maior que o ganho; fica
+registada como pendência para **ronda dedicada**, com revisão das 19 secções antes de mudar algo
+partilhado.
+**Segundo achado, também reportado antes de decidir:** o 4º "filtro" proposto para Colaboradores
+("Onboarding pendente") não tem alvo sensato como filtro exclusivo — vem de
+`worker_onboarding_submissions`, tabela diferente de `workers`, que é o que a lista filtra;
+filtrar por ele devolveria sempre lista vazia. Decisão do Diego: comporta-se como link de
+navegação para a subtab Pendentes (onde os dados vivem), não como filtro — com "↗" acrescentado
+ao rótulo para sinalizar que é diferente dos outros três.
+**Implementado:** `StatChip` (dentro do `SectionHeaderShell.jsx`, não tocado) já suportava
+`onClick`/`active` — só faltava `TeamManager.jsx` passar essas props. Substituído o antigo
+`showInactive` (booleano) por `workerFilter` ('all'/'ativos'/'inativos', exclusivo) — e a checkbox
+"Mostrar inativos" foi **removida**, por decisão minha não pedida explicitamente na spec: ficava
+redundante com os 3 chips (que já cobrem o mesmo território e mais — "Inativos" sozinho não era
+possível só com a checkbox). Registado por transparência, não confirmado com o Diego antes de
+remover — reversível se ele preferir manter os dois controlos.
+**Default do filtro ficou `'ativos'`, não `'all'` como uma nota solta de uma ronda anterior
+sugeria** ("Colaboradores = ver todos, ativo por padrão") — decisão minha de preservar o
+comportamento actual da app (inactivos escondidos por omissão, `showInactive` antigo default
+`false`), já que ninguém pediu explicitamente para mudar esse default, só para o tornar
+filtrável de forma exclusiva. Confirmado ao vivo: filtro exclusivo funciona (28/23/5 correctos),
+pesquisa continua a combinar com o filtro activo, "Onboarding pendente ↗" navega para Pendentes,
+chip activo com destaque laranja visível nos dois modos.
+
 **`ItemRow.jsx` — pendência separada, padrão diferente, não convertido.** Ao contrário do
 `CorrectionsInbox.jsx`, aqui a cor não segue o estado da correção — é uma cor-chave **fixa por
 coluna** da grelha de 3 colunas (Atual/Pedido/Final): "Pedido" é sempre `text-amber-600`, "Final" é
