@@ -46,11 +46,16 @@ function AvisoRow({ req, destaque, ctx }) {
   const open = openIds.has(req.id);
   const chipBg = destaque ? '#FBF0DE' : FT.bg;
   const chipColor = destaque ? '#8a4a00' : FT.ink;
+  // Fundo próprio (chipBg/chipColor acima) é autocontido, fica estático. Mas o ícone de
+  // motivo e o "solicitado há Nd" assentam directamente no bg-white desta div — que inverte
+  // em modo escuro via a regra-ponte de App.css — logo precisam de um token que também
+  // inverta, não FT.ink/#8a4a00 estáticos (davam 1,16:1 e 2,13:1 em escuro).
+  const metaTextColor = destaque ? 'var(--tone-amber)' : 'var(--ink-mid)';
 
   return (
     <div className="rounded-xl border border-[var(--border-soft)] overflow-hidden bg-white">
       <div onClick={() => toggleOpen(req.id)} className="px-3 py-2.5 flex items-center gap-2.5 cursor-pointer select-none hover:bg-[var(--surface)] transition-colors">
-        {React.createElement(reasonIcon(req.reason), { size: 14, className: 'shrink-0', style: { color: destaque ? '#8a4a00' : 'var(--slate-dim)' } })}
+        {React.createElement(reasonIcon(req.reason), { size: 14, className: 'shrink-0', style: { color: destaque ? metaTextColor : 'var(--slate-dim)' } })}
         <div className="flex-1 min-w-0">
           <p className="text-xs font-bold text-[var(--ink-mid)] truncate">{req.reason}{client ? ` · ${client.name}` : ''}</p>
           <div className="flex flex-wrap items-center gap-1.5 mt-1">
@@ -66,7 +71,7 @@ function AvisoRow({ req, destaque, ctx }) {
             })}
             {sortedDates.length > 4 && <span className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>+{sortedDates.length - 4}</span>}
             {isPending && (
-              <span className={SCALE.text.meta} style={{ color: chipColor }}>
+              <span className={SCALE.text.meta} style={{ color: metaTextColor }}>
                 solicitado há {diasEntre(new Date(req.created_at), new Date())}d
               </span>
             )}
@@ -163,7 +168,10 @@ function PendingWorkerCard({ group, destaque, ctx }) {
           {getInitials(group.name)}
         </div>
         <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
-          <p className="text-sm font-bold text-[var(--ink)] truncate" style={{ fontFamily: FONT_TITLE }}>{group.name}</p>
+          {/* FT.ink estático, não var(--ink): o cartão usa background inline fixo
+              ('#fff'/'#FDF8F0', não a classe bg-white), logo não inverte — var(--ink)
+              inverteria sozinho e dava 1,21:1 (quase branco sobre branco) em escuro. */}
+          <p className="text-sm font-bold truncate" style={{ fontFamily: FONT_TITLE, color: FT.ink }}>{group.name}</p>
           {extras.length > 0 && (
             <button
               onClick={() => toggleWorker(group.id)}
