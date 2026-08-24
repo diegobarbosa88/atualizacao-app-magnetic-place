@@ -1,4 +1,5 @@
 import React from 'react';
+import { SCALE } from '../../../styles/designTokens';
 
 // Pequenos componentes de apresentação partilhados pelas tabs de Formação
 // Interna no admin (Ações Presenciais / E-learning) — cartão de resumo no
@@ -11,7 +12,7 @@ export function ResumoCard({ icon, label, value, accent }) {
       </div>
       <div className="min-w-0">
         <p className="text-lg font-black text-[var(--ink)] leading-tight">{value}</p>
-        <p className="text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)] truncate">{label}</p>
+        <p className={`${SCALE.text.badge} text-[var(--slate-dim)] truncate`}>{label}</p>
       </div>
     </div>
   );
@@ -27,7 +28,7 @@ export function BarraProgresso({ concluidos, total }) {
           style={{ width: `${pct}%` }}
         />
       </div>
-      <span className="text-[10px] font-bold text-[var(--slate-dim)] shrink-0 tabular-nums">{concluidos}/{total}</span>
+      <span className={`${SCALE.text.meta} text-[var(--slate-dim)] shrink-0 tabular-nums`}>{concluidos}/{total}</span>
     </div>
   );
 }

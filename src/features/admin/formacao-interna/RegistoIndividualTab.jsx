@@ -4,6 +4,7 @@ import { useApp } from '../../../context/AppContext';
 import { listFormacoes } from './formacaoApi';
 import { exportRegistoIndividualPDF, exportCertificadoPDF } from './formacaoExport';
 import { CATEGORIAS } from './formacaoTemplates';
+import { SCALE } from '../../../styles/designTokens';
 
 const ANO_ATUAL = new Date().getFullYear();
 const ANOS = Array.from({ length: 5 }, (_, i) => ANO_ATUAL - i);
@@ -164,7 +165,7 @@ export default function RegistoIndividualTab() {
             <div className="p-4 rounded-2xl bg-white border border-[var(--border-soft)]">
               <div className="flex items-center gap-2 mb-3 text-[var(--slate-dim)]">
                 <User size={14} />
-                <p className="text-[10px] font-black uppercase tracking-widest">Trabalhador</p>
+                <p className={SCALE.text.badge}>Trabalhador</p>
               </div>
               <p className="text-sm font-black text-[var(--ink)] mb-1">{worker.name}</p>
               <p className="text-xs text-[var(--slate-dim)]">NIF: {worker.nif || '—'}</p>
@@ -175,13 +176,13 @@ export default function RegistoIndividualTab() {
             <div className="p-4 rounded-2xl bg-white border border-[var(--border-soft)]">
               <div className="flex items-center gap-2 mb-3 text-[var(--slate-dim)]">
                 <Clock size={14} />
-                <p className="text-[10px] font-black uppercase tracking-widest">Art. 131.º CT — {ano}</p>
+                <p className={SCALE.text.badge}>Art. 131.º CT — {ano}</p>
               </div>
               <div className="flex items-baseline gap-2 mb-1">
                 <p className="text-2xl font-black text-[var(--ink)]">{resumo.horasRealizadas.toFixed(1)}h</p>
                 <p className="text-xs font-bold text-[var(--slate-dim)]">de {resumo.horasMinimas.toFixed(1)}h mínimas (proporcional)</p>
               </div>
-              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${
+              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg ${SCALE.text.badge} ${
                 resumo.anoEmCurso ? 'bg-amber-50 text-amber-600' : resumo.cumprido ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'
               }`}>
                 {resumo.anoEmCurso
@@ -199,7 +200,7 @@ export default function RegistoIndividualTab() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-left text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)] border-b border-[var(--border-soft)]">
+                  <tr className={`text-left ${SCALE.text.statLabel} text-[var(--slate-dim)] border-b border-[var(--border-soft)]`}>
                     <th className="py-2 pr-4">Data</th>
                     <th className="py-2 pr-4">Formação</th>
                     <th className="py-2 pr-4">Categoria</th>
@@ -219,7 +220,7 @@ export default function RegistoIndividualTab() {
                       <td className="py-3 pr-4 whitespace-nowrap">
                         {p.assinado_em ? (
                           <div className="flex items-center gap-1.5">
-                            <span className="text-[9px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">
+                            <span className={`${SCALE.text.badge} text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg`}>
                               {fmtData(p.assinado_em)}
                             </span>
                             <button
@@ -232,7 +233,7 @@ export default function RegistoIndividualTab() {
                             </button>
                           </div>
                         ) : (
-                          <span className="text-[9px] font-black uppercase tracking-widest text-[var(--ink-soft)] bg-[var(--surface-dim)] px-2 py-1 rounded-lg">
+                          <span className={`${SCALE.text.badge} text-[var(--ink-soft)] bg-[var(--surface-dim)] px-2 py-1 rounded-lg`}>
                             Por assinar
                           </span>
                         )}

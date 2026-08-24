@@ -4,7 +4,7 @@ import ListaAcoesTab from './ListaAcoesTab';
 import ElearningAcoesTab from './ElearningAcoesTab';
 import NovaAcaoForm from './NovaAcaoForm';
 import HorasPorTrabalhadorTab from './HorasPorTrabalhadorTab';
-import { FT } from '../../../styles/designTokens';
+import { FT, SCALE } from '../../../styles/designTokens';
 import CertificacoesValidadeTab from './CertificacoesValidadeTab';
 import RegistoIndividualTab from './RegistoIndividualTab';
 import SectionHeaderShell from '../../../components/common/SectionHeaderShell';
@@ -43,7 +43,7 @@ export default function FormacaoInternaAdmin() {
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl ${SCALE.text.badge} transition-all ${
                 tab === t.id ? 'text-white' : 'bg-[var(--surface-dim)] text-[var(--ink-soft)] hover:bg-[var(--border)]'
               }`}
               style={tab === t.id ? { backgroundColor: FT.navy } : {}}

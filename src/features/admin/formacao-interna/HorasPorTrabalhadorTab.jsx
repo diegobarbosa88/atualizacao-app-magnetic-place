@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { horasPorTrabalhador } from './formacaoApi';
+import { SCALE } from '../../../styles/designTokens';
 
 const ANO_ATUAL = new Date().getFullYear();
 const ANOS = Array.from({ length: 5 }, (_, i) => ANO_ATUAL - i);
@@ -50,7 +51,7 @@ export default function HorasPorTrabalhadorTab() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)] border-b border-[var(--border-soft)]">
+              <tr className={`text-left ${SCALE.text.statLabel} text-[var(--slate-dim)] border-b border-[var(--border-soft)]`}>
                 <th className="py-2 pr-4">Trabalhador</th>
                 <th className="py-2 pr-4">Horas de Formação</th>
                 <th className="py-2 pr-4">Meta Anual</th>
@@ -66,7 +67,7 @@ export default function HorasPorTrabalhadorTab() {
                     <td className="py-3 pr-4 text-[var(--ink-soft)]">{w.horas.toFixed(1)}h</td>
                     <td className="py-3 pr-4 text-[var(--slate-dim)]">{w.meta}h</td>
                     <td className="py-3">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${cor.bg} ${cor.text}`}>
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg ${SCALE.text.badge} ${cor.bg} ${cor.text}`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${cor.dot}`} />
                         {w.cumprido ? 'Cumprido' : `${w.horas.toFixed(1)}/${w.meta}h`}
                       </span>

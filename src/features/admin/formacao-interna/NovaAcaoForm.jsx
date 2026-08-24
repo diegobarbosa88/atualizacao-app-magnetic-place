@@ -7,10 +7,11 @@ import {
   CATEGORIAS_ENTIDADE_EXTERNA, CATEGORIAS_EXIGEM_VALIDADE, VALIDADE_PADRAO_MESES,
 } from './formacaoTemplates';
 import { ICON_NAMES, IlustracaoTile } from './formacaoIcons';
+import { SCALE } from '../../../styles/designTokens';
 
 const CAMPO = 'w-full px-3 py-2.5 rounded-xl border border-[var(--border)] text-sm text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300';
 const CAMPO_DISABLED = 'w-full px-3 py-2.5 rounded-xl border border-[var(--border-soft)] bg-[var(--surface)] text-sm text-[var(--slate-dim)]';
-const LABEL = 'block text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-1.5';
+const LABEL = `block ${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1.5`;
 
 const INICIAL = {
   categoria: 'soldadura', tipo_formacao: '', data_inicio: '', data_fim: '', duracao_horas: '',
@@ -295,7 +296,7 @@ export default function NovaAcaoForm({ onCriada }) {
           <option value="presencial">Presencial</option>
           <option value="e-learning">E-learning</option>
         </select>
-        <p className="text-[10px] font-bold text-[var(--slate-dim)] mt-1.5">
+        <p className={`${SCALE.text.meta} text-[var(--slate-dim)] mt-1.5`}>
           {isElearning
             ? 'O trabalhador vê o conteúdo, responde ao questionário e só depois de aprovado assina.'
             : 'Fluxo atual — o trabalhador assina diretamente a partir do dashboard.'}
@@ -309,7 +310,7 @@ export default function NovaAcaoForm({ onCriada }) {
               <label className={LABEL}>Link do Conteúdo (vídeo ou PDF, opcional)</label>
               <input className={CAMPO} value={form.conteudo_url} onChange={setField('conteudo_url')} placeholder="https://... (opcional se já houver conteúdo estruturado)" />
               {conteudoEstruturado && (
-                <p className="text-[10px] font-bold text-indigo-500 mt-1.5 flex items-center gap-1">
+                <p className={`${SCALE.text.meta} text-indigo-500 mt-1.5 flex items-center gap-1`}>
                   <FileText size={11} /> Conteúdo estruturado pré-preenchido a partir do modelo — o trabalhador vê-o diretamente na app.
                 </p>
               )}
@@ -330,7 +331,7 @@ export default function NovaAcaoForm({ onCriada }) {
                       {sec.icone && <IlustracaoTile nome={sec.icone} height={36} />}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] truncate mb-1">{sec.titulo}</p>
+                      <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] truncate mb-1`}>{sec.titulo}</p>
                       <select
                         className="w-full text-sm text-[var(--ink-mid)] bg-transparent focus:outline-none"
                         value={sec.icone || ''}
@@ -349,7 +350,7 @@ export default function NovaAcaoForm({ onCriada }) {
           <div>
             <label className={LABEL}>Questionário</label>
             {questionario.some(q => q.pergunta.trim()) && (
-              <p className="text-[10px] font-bold text-indigo-500 mb-2 flex items-center gap-1">
+              <p className={`${SCALE.text.meta} text-indigo-500 mb-2 flex items-center gap-1`}>
                 <FileText size={11} /> {questionario.length} pergunta{questionario.length !== 1 ? 's' : ''} pré-preenchida{questionario.length !== 1 ? 's' : ''} a partir do modelo — revê/edita à vontade.
               </p>
             )}
@@ -405,7 +406,7 @@ export default function NovaAcaoForm({ onCriada }) {
                         )}
                       </div>
                     ))}
-                    <button type="button" onClick={() => addOpcao(idx)} className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-indigo-500 hover:text-indigo-700 mt-1">
+                    <button type="button" onClick={() => addOpcao(idx)} className={`inline-flex items-center gap-1 ${SCALE.text.badge} text-indigo-500 hover:text-indigo-700 mt-1`}>
                       <Plus size={11} /> Opção
                     </button>
                   </div>
@@ -415,7 +416,7 @@ export default function NovaAcaoForm({ onCriada }) {
             <button
               type="button"
               onClick={addPergunta}
-              className="inline-flex items-center gap-1.5 mt-2 text-[10px] font-black uppercase tracking-widest text-indigo-600 hover:text-indigo-800"
+              className={`inline-flex items-center gap-1.5 mt-2 ${SCALE.text.badge} text-indigo-600 hover:text-indigo-800`}
             >
               <Plus size={12} /> Adicionar Pergunta
             </button>
@@ -443,7 +444,7 @@ export default function NovaAcaoForm({ onCriada }) {
                 {sel?.selecionado && exigeValidade && (
                   <input
                     type="date"
-                    className="px-2.5 py-1.5 rounded-lg border border-[var(--border)] text-[11px] font-bold text-[var(--ink-soft)] shrink-0"
+                    className={`px-2.5 py-1.5 rounded-lg border border-[var(--border)] ${SCALE.text.body} text-[var(--ink-soft)] shrink-0`}
                     value={sel.data_validade}
                     onChange={e => setValidadeParticipante(w.id, e.target.value)}
                     placeholder={validadeMesesDefault ? `Auto (+${validadeMesesDefault}m)` : 'Data de validade'}
@@ -454,7 +455,7 @@ export default function NovaAcaoForm({ onCriada }) {
             );
           })}
         </div>
-        <p className="text-[10px] font-bold text-[var(--slate-dim)] mt-1.5">
+        <p className={`${SCALE.text.meta} text-[var(--slate-dim)] mt-1.5`}>
           {selecionadosIds.length} selecionado{selecionadosIds.length !== 1 ? 's' : ''}
           {exigeValidade && validadeMesesDefault ? ` — data de validade em branco assume automaticamente +${validadeMesesDefault} meses.` : ''}
         </p>

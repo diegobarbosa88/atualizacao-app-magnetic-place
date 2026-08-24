@@ -8,6 +8,7 @@ import { IlustracaoTile } from './formacaoIcons';
 import { ResumoCard, BarraProgresso } from './formacaoAdminUiKit';
 import ModalShell from '../../../components/common/ModalShell';
 import SubTabBar from '../../../components/common/SubTabBar';
+import { SCALE } from '../../../styles/designTokens';
 
 const ANO_ATUAL = new Date().getFullYear();
 const ANOS = Array.from({ length: 5 }, (_, i) => ANO_ATUAL - i);
@@ -266,7 +267,7 @@ export default function ElearningAcoesTab({ refreshKey }) {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)] border-b border-[var(--border-soft)]">
+              <tr className={`text-left ${SCALE.text.statLabel} text-[var(--slate-dim)] border-b border-[var(--border-soft)]`}>
                 <th className="py-2 pr-4">Formação</th>
                 <th className="py-2 pr-4">Duração</th>
                 <th className="py-2 pr-4">Progresso</th>
@@ -292,11 +293,11 @@ export default function ElearningAcoesTab({ refreshKey }) {
                     >
                       <td className="py-3 pr-4">
                         <div className="flex items-center gap-1.5 mb-1">
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest bg-indigo-50 text-indigo-600">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-lg ${SCALE.text.badge} bg-indigo-50 text-indigo-600`}>
                             {CATEGORIA_LABEL[f.categoria] || f.categoria}
                           </span>
                           {temReprovado && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest bg-rose-50 text-rose-600">
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg ${SCALE.text.badge} bg-rose-50 text-rose-600`}>
                               <AlertTriangle size={10} /> Reprovado
                             </span>
                           )}
@@ -370,7 +371,7 @@ export default function ElearningAcoesTab({ refreshKey }) {
                                       <div className="flex items-center gap-1.5 shrink-0">
                                         {p.assinado_em ? (
                                           <>
-                                            <span className="text-[9px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">
+                                            <span className={`${SCALE.text.badge} text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg`}>
                                               Assinado {new Date(p.assinado_em).toLocaleDateString('pt-PT')}
                                             </span>
                                             <button
@@ -383,7 +384,7 @@ export default function ElearningAcoesTab({ refreshKey }) {
                                             </button>
                                           </>
                                         ) : (
-                                          <span className="text-[9px] font-black uppercase tracking-widest text-[var(--ink-soft)] bg-[var(--surface-dim)] px-2 py-1 rounded-lg">
+                                          <span className={`${SCALE.text.badge} text-[var(--ink-soft)] bg-[var(--surface-dim)] px-2 py-1 rounded-lg`}>
                                             Por assinar (worker)
                                           </span>
                                         )}
@@ -391,15 +392,15 @@ export default function ElearningAcoesTab({ refreshKey }) {
                                     </div>
                                     <div className="flex flex-wrap items-center gap-2 mt-2 pt-2 border-t border-[var(--border-soft)]">
                                       {conclusaoCfg && (
-                                        <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg ${conclusaoCfg.bg} ${conclusaoCfg.text}`}>
+                                        <span className={`${SCALE.text.badge} px-2 py-1 rounded-lg ${conclusaoCfg.bg} ${conclusaoCfg.text}`}>
                                           {conclusaoCfg.label}
                                         </span>
                                       )}
                                       {p.nota_obtida != null && (
-                                        <span className="text-[9px] font-bold text-[var(--slate-dim)]">Nota: {p.nota_obtida}%</span>
+                                        <span className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>Nota: {p.nota_obtida}%</span>
                                       )}
                                       {duracao && (
-                                        <span className="text-[9px] font-bold text-[var(--slate-dim)]">Tempo de conclusão: {duracao}</span>
+                                        <span className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>Tempo de conclusão: {duracao}</span>
                                       )}
                                     </div>
                                   </div>
@@ -445,7 +446,7 @@ export default function ElearningAcoesTab({ refreshKey }) {
                                     )}
                                   </div>
                                   <div className="min-w-0">
-                                    <p className="text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Pergunta {qi + 1}</p>
+                                    <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Pergunta {qi + 1}</p>
                                     <p className="text-xs font-bold text-[var(--ink-mid)]">{q.pergunta}</p>
                                   </div>
                                 </div>
@@ -507,7 +508,7 @@ export default function ElearningAcoesTab({ refreshKey }) {
                     {sel && exigeValidadeAlvo && (
                       <input
                         type="date"
-                        className="px-2.5 py-1.5 rounded-lg border border-[var(--border)] text-[11px] font-bold text-[var(--ink-soft)] shrink-0"
+                        className={`px-2.5 py-1.5 rounded-lg border border-[var(--border)] ${SCALE.text.body} text-[var(--ink-soft)] shrink-0`}
                         value={sel.data_validade}
                         onChange={e => setValidadeSelecionado(w.id, e.target.value)}
                         placeholder={validadeMesesAlvo ? `Auto (+${validadeMesesAlvo}m)` : 'Data de validade'}
@@ -519,7 +520,7 @@ export default function ElearningAcoesTab({ refreshKey }) {
             </div>
           )}
           {exigeValidadeAlvo && validadeMesesAlvo && (
-            <p className="text-[10px] font-bold text-[var(--slate-dim)] mt-2">Data de validade em branco assume automaticamente +{validadeMesesAlvo} meses.</p>
+            <p className={`${SCALE.text.meta} text-[var(--slate-dim)] mt-2`}>Data de validade em branco assume automaticamente +{validadeMesesAlvo} meses.</p>
           )}
         </div>
       </ModalShell>

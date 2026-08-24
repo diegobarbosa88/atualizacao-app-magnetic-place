@@ -5,6 +5,7 @@ import { listFormacoes } from './formacaoApi';
 import { exportFormacaoPDF, exportCertificadoPDF } from './formacaoExport';
 import { CATEGORIAS } from './formacaoTemplates';
 import { ResumoCard, BarraProgresso } from './formacaoAdminUiKit';
+import { SCALE } from '../../../styles/designTokens';
 
 const ANO_ATUAL = new Date().getFullYear();
 const ANOS = Array.from({ length: 5 }, (_, i) => ANO_ATUAL - i);
@@ -161,7 +162,7 @@ export default function ListaAcoesTab({ refreshKey }) {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)] border-b border-[var(--border-soft)]">
+              <tr className={`text-left ${SCALE.text.statLabel} text-[var(--slate-dim)] border-b border-[var(--border-soft)]`}>
                 <th className="py-2 pr-4">Formação</th>
                 <th className="py-2 pr-4">Duração</th>
                 <th className="py-2 pr-4">Assinaturas</th>
@@ -187,16 +188,16 @@ export default function ListaAcoesTab({ refreshKey }) {
                     >
                       <td className="py-3 pr-4">
                         <div className="flex items-center gap-1.5 mb-1">
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest bg-indigo-50 text-indigo-600">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-lg ${SCALE.text.badge} bg-indigo-50 text-indigo-600`}>
                             {CATEGORIA_LABEL[f.categoria] || f.categoria}
                           </span>
                           {f.exige_entidade_externa && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest bg-[var(--surface-dim)] text-[var(--ink-soft)]">
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg ${SCALE.text.badge} bg-[var(--surface-dim)] text-[var(--ink-soft)]`}>
                               <Building2 size={10} /> {f.entidade_externa || 'Entidade Externa'}
                             </span>
                           )}
                           {temExpirado && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest bg-rose-50 text-rose-600">
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg ${SCALE.text.badge} bg-rose-50 text-rose-600`}>
                               <AlertTriangle size={10} /> Expirado
                             </span>
                           )}
@@ -257,19 +258,19 @@ export default function ListaAcoesTab({ refreshKey }) {
                                     <div className="min-w-0">
                                       <p className="text-xs font-bold text-[var(--ink-mid)] truncate">{p.workers?.name || p.worker_id}</p>
                                       {p.data_validade && (
-                                        <p className="text-[9px] font-bold text-[var(--slate-dim)]">Válido até {new Date(p.data_validade).toLocaleDateString('pt-PT')}</p>
+                                        <p className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>Válido até {new Date(p.data_validade).toLocaleDateString('pt-PT')}</p>
                                       )}
                                     </div>
                                   </div>
                                   <div className="flex items-center gap-2 shrink-0">
                                     {estCfg && (
-                                      <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg ${estCfg.bg} ${estCfg.text}`}>
+                                      <span className={`${SCALE.text.badge} px-2 py-1 rounded-lg ${estCfg.bg} ${estCfg.text}`}>
                                         {estCfg.label}
                                       </span>
                                     )}
                                     {p.assinado_em ? (
                                       <>
-                                        <span className="text-[9px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">
+                                        <span className={`${SCALE.text.badge} text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg`}>
                                           Assinado {new Date(p.assinado_em).toLocaleDateString('pt-PT')}
                                         </span>
                                         <button
@@ -282,7 +283,7 @@ export default function ListaAcoesTab({ refreshKey }) {
                                         </button>
                                       </>
                                     ) : (
-                                      <span className="text-[9px] font-black uppercase tracking-widest text-[var(--ink-soft)] bg-[var(--surface-dim)] px-2 py-1 rounded-lg">
+                                      <span className={`${SCALE.text.badge} text-[var(--ink-soft)] bg-[var(--surface-dim)] px-2 py-1 rounded-lg`}>
                                         Por assinar (worker)
                                       </span>
                                     )}
