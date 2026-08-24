@@ -3,7 +3,7 @@ import { Landmark, Plus, Loader2, RefreshCw, ChevronRight, ArrowUpRight, ArrowDo
 import { authFetch } from '../../../utils/authFetch';
 import { fmtMes } from '../movimentacoes/txUtils';
 import ModalShell from '../../../components/common/ModalShell';
-import { FT } from '../../../styles/designTokens';
+import { FT, SCALE } from '../../../styles/designTokens';
 
 function fmtEur(val, currency = 'EUR') {
   return new Intl.NumberFormat('pt-PT', { style: 'currency', currency }).format(val ?? 0);
@@ -53,21 +53,21 @@ function NovaConta({ onClose, onSalva }) {
       <form onSubmit={handleSubmit} className="px-6 py-5 space-y-3">
           {[{ key: 'nome', label: 'Nome *', required: true }, { key: 'iban', label: 'IBAN' }, { key: 'banco', label: 'Banco' }].map(({ key, label, required }) => (
             <div key={key} className="space-y-1">
-              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">{label}</p>
+              <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>{label}</p>
               <input type="text" value={form[key]} onChange={e => set(key, e.target.value)} required={required}
                 className="w-full px-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30" />
             </div>
           ))}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Moeda</p>
+              <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Moeda</p>
               <select value={form.moeda} onChange={e => set('moeda', e.target.value)}
                 className="w-full px-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30">
                 <option value="EUR">EUR</option><option value="USD">USD</option><option value="GBP">GBP</option>
               </select>
             </div>
             <div className="space-y-1">
-              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Saldo Inicial</p>
+              <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Saldo Inicial</p>
               <input type="number" step="0.01" value={form.saldo_inicial} onChange={e => set('saldo_inicial', e.target.value)}
                 className="w-full px-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30" />
             </div>
@@ -151,7 +151,7 @@ function PainelMovimentos({ conta, onClose }) {
             <select
               value={mesSelecionado}
               onChange={e => setMesSelecionado(e.target.value)}
-              className="border border-[var(--border)] rounded-2xl px-4 py-2 text-[11px] font-black tracking-widest text-[var(--ink-soft)] bg-white hover:bg-[var(--surface)] cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30"
+              className={`border border-[var(--border)] rounded-2xl px-4 py-2 ${SCALE.text.badge} text-[var(--ink-soft)] bg-white hover:bg-[var(--surface)] cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30`}
               style={{ textTransform: 'uppercase' }}
             >
               <option value="">Todos os meses</option>
@@ -165,7 +165,7 @@ function PainelMovimentos({ conta, onClose }) {
                 {mesSelecionado ? ` — ${fmtMes(mesSelecionado)}` : ''}
               </p>
               {mesSelecionado && (
-                <p className="text-[10px] text-[var(--slate-dim)]" title="Total carregado para esta conta">
+                <p className={`${SCALE.text.meta} text-[var(--slate-dim)]`} title="Total carregado para esta conta">
                   {movimentos.length} no total
                 </p>
               )}
@@ -178,7 +178,7 @@ function PainelMovimentos({ conta, onClose }) {
           {loading ? (
             <div className="flex flex-col items-center gap-2 py-10">
               <Loader2 size={20} className="animate-spin text-[var(--slate)]" />
-              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">A carregar todos os movimentos…</p>
+              <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>A carregar todos os movimentos…</p>
             </div>
           ) : erro ? (
             <div className="px-5 py-4 text-xs text-red-600 font-semibold">{erro}</div>
@@ -200,14 +200,14 @@ function PainelMovimentos({ conta, onClose }) {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-semibold text-[var(--ink-mid)] truncate">{at.description || at.annotation || '—'}</p>
-                      <p className="text-[10px] text-[var(--slate-dim)]">{fmtData(at.transaction_date || at.posted_date)}</p>
+                      <p className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>{fmtData(at.transaction_date || at.posted_date)}</p>
                     </div>
                     <div className="text-right shrink-0">
                       <p className={`text-xs font-black ${entrada ? 'text-emerald-600' : 'text-rose-500'}`}>
                         {entrada ? '+' : ''}{fmtEur(valor)}
                       </p>
                       {saldoApos != null && (
-                        <p className="text-[10px] text-[var(--slate-dim)]">{fmtEur(saldoApos)}</p>
+                        <p className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>{fmtEur(saldoApos)}</p>
                       )}
                     </div>
                   </div>
@@ -256,11 +256,11 @@ export default function TOConlineBankAccounts({ onDesligado }) {
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)' }}><Landmark size={16} style={{ color: FT.slate }} /></div>
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Saldo Total</p>
+              <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Saldo Total</p>
               <p className="text-2xl font-black" style={{ color: 'var(--navy)' }}>{fmtEur(totalSaldo)}</p>
             </div>
           </div>
-          <p className="text-[10px] text-[var(--slate-dim)] font-semibold">{contas.length} conta{contas.length !== 1 ? 's' : ''}</p>
+          <p className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>{contas.length} conta{contas.length !== 1 ? 's' : ''}</p>
         </div>
       )}
 
@@ -307,14 +307,14 @@ export default function TOConlineBankAccounts({ onDesligado }) {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-[var(--ink)]">{a.name || '—'}</p>
-                    <p className="text-[10px] font-mono text-[var(--slate-dim)] truncate">{a.iban || a.nib || '—'}</p>
-                    {a.swift && <p className="text-[10px] text-[var(--slate-dim)] font-mono">{a.swift}</p>}
+                    <p className={`${SCALE.text.meta} font-mono text-[var(--slate-dim)] truncate`}>{a.iban || a.nib || '—'}</p>
+                    {a.swift && <p className={`${SCALE.text.meta} text-[var(--slate-dim)] font-mono`}>{a.swift}</p>}
                   </div>
                   <div className="text-right shrink-0">
                     <p className="text-base font-black" style={{ color: 'var(--navy)' }}>
                       {c.saldo_atual != null ? fmtEur(c.saldo_atual) : '—'}
                     </p>
-                    <p className="text-[10px] text-[var(--slate-dim)]">{a.account_type || '—'}</p>
+                    <p className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>{a.account_type || '—'}</p>
                   </div>
                   <ChevronRight size={14} className="text-[var(--slate)] shrink-0" />
                 </button>

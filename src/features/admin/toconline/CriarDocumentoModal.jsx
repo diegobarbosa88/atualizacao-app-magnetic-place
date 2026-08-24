@@ -4,7 +4,7 @@ import { authFetch } from '../../../utils/authFetch';
 import ModalShell from '../../../components/common/ModalShell';
 import { useApp } from '../../../context/AppContext';
 import { TOCONLINE_TIPOS_RECEITA } from '../../../lib/ajudas/faturasToConline.js';
-import { FT } from '../../../styles/designTokens';
+import { FT, SCALE } from '../../../styles/designTokens';
 
 // Mesma normalização usada no gate de faturasToConline.js (buscarFaturasVendasPeriodo)
 // — lowercase+trim simples, não fuzzy. Consistência deliberada: se o nome não
@@ -255,29 +255,29 @@ export default function CriarDocumentoModal({ onClose, onCriado, onClienteElegiv
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <div className="space-y-1">
-              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Tipo Doc.</p>
+              <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Tipo Doc.</p>
               <select value={tipo} onChange={e => setTipo(e.target.value)}
                 className="w-full px-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-[var(--navy)]">
                 {TIPOS_DOC.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
               </select>
             </div>
             <div className="space-y-1">
-              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Data</p>
+              <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Data</p>
               <input type="date" value={data} onChange={e => setData(e.target.value)} required
                 className="w-full px-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-[var(--navy)]" />
             </div>
             <div className="space-y-1">
-              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Série (opcional)</p>
+              <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Série (opcional)</p>
               <input type="text" value={serie} onChange={e => setSerie(e.target.value)} placeholder="Ex: A"
                 className="w-full px-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-[var(--navy)]" />
             </div>
           </div>
 
           <div className="space-y-1">
-            <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Cliente *</p>
+            <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Cliente *</p>
             <AutocompleteCliente value={cliente} onChange={setCliente} />
             {cliente && (
-              <p className="text-[10px] text-emerald-600 font-semibold">
+              <p className={`${SCALE.text.meta} text-emerald-600`}>
                 {cliente.nome}{cliente.nif ? ` · NIF ${cliente.nif}` : ''}
               </p>
             )}
@@ -285,9 +285,9 @@ export default function CriarDocumentoModal({ onClose, onCriado, onClienteElegiv
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Linhas *</p>
+              <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Linhas *</p>
               <button type="button" onClick={addLinha}
-                className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-blue-600 hover:text-blue-700 transition-colors">
+                className={`flex items-center gap-1 ${SCALE.text.badge} text-blue-600 hover:text-blue-700 transition-colors`}>
                 <Plus size={11} /> Adicionar linha
               </button>
             </div>
@@ -318,7 +318,7 @@ export default function CriarDocumentoModal({ onClose, onCriado, onClienteElegiv
           </div>
 
           <div className="space-y-1">
-            <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Observações</p>
+            <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Observações</p>
             <textarea value={observacoes} onChange={e => setObservacoes(e.target.value)} rows={2}
               className="w-full px-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-[var(--navy)] resize-none" />
           </div>

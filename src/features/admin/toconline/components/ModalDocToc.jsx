@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Download, Loader2 } from 'lucide-react';
 import { getAttrs, getNomeEntidade, getDocNum, formatValToc, tipoDocLabel, FIELD_LABELS_TOC } from '../utils/tocUtils';
 import ModalShell from '../../../../components/common/ModalShell';
-import { FT } from '../../../../styles/designTokens';
+import { FT, SCALE } from '../../../../styles/designTokens';
 
 export default function ModalDocToc({ item, tipo, onClose }) {
   const [pdfUrl, setPdfUrl] = useState(null);
@@ -75,7 +75,7 @@ export default function ModalDocToc({ item, tipo, onClose }) {
           <div className="space-y-3">
             {campos.map(([k, v]) => (
               <div key={k} className="flex gap-3">
-                <span className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] w-36 shrink-0 pt-0.5">
+                <span className={`${SCALE.text.statLabel} text-[var(--slate-dim)] w-36 shrink-0 pt-0.5`}>
                   {FIELD_LABELS_TOC[k] || k.replace(/_/g, ' ')}
                 </span>
                 <span className="text-sm text-[var(--ink-mid)] font-semibold flex-1 break-words">

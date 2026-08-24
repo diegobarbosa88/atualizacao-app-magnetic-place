@@ -9,7 +9,7 @@ import ModalShell from '../../../components/common/ModalShell';
 import { authFetch } from '../../../utils/authFetch';
 import { calcularFaturacaoCliente } from '../../../lib/faturacao/tarifaHistorica.js';
 import { verificarEstimativaParaFatura, confirmarEEmitirFatura } from '../../../lib/ajudas/emitirFaturaComAjudas.js';
-import { FT } from '../../../styles/designTokens';
+import { FT, SCALE } from '../../../styles/designTokens';
 
 const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
@@ -592,7 +592,7 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
                 <ShieldAlert size={16} className="text-amber-600 shrink-0 mt-0.5" />
                 <div>
                   <p className="text-xs font-black text-amber-800">Cliente não identificado automaticamente</p>
-                  <p className="text-[10px] text-amber-700 mt-0.5">
+                  <p className={`${SCALE.text.meta} text-amber-700 mt-0.5`}>
                     A fatura do TOConline está em nome de{' '}
                     <span className="font-bold">"{nomeToConlineInicial || clienteIdInicial?.replace(/^toc:/, '')}"</span>,
                     que não corresponde a nenhum cliente cadastrado. Escolha o cliente correspondente para aplicar
@@ -603,7 +603,7 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
             </div>
 
             <div className="space-y-1">
-              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Cliente correspondente</p>
+              <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Cliente correspondente</p>
               <select value={resolucaoEscolhida} onChange={e => setResolucaoEscolhida(e.target.value)}
                 className="w-full px-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30">
                 <option value="">Selecionar cliente...</option>
@@ -615,11 +615,11 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
 
             <div className="flex gap-2">
               <button onClick={() => setSemClienteCorrespondente(true)}
-                className="flex-1 px-3 py-2.5 text-[10px] font-black uppercase tracking-widest text-[var(--ink-soft)] hover:bg-[var(--surface-dim)] rounded-xl transition-all">
+                className={`flex-1 px-3 py-2.5 ${SCALE.text.badge} text-[var(--ink-soft)] hover:bg-[var(--surface-dim)] rounded-xl transition-all`}>
                 Não corresponde a nenhum cliente
               </button>
               <button onClick={() => { if (resolucaoEscolhida) setClienteId(resolucaoEscolhida); }} disabled={!resolucaoEscolhida}
-                className="flex-1 px-3 py-2.5 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all disabled:opacity-50 shadow-md hover:opacity-90"
+                className={`flex-1 px-3 py-2.5 text-white ${SCALE.text.badge} rounded-xl transition-all disabled:opacity-50 shadow-md hover:opacity-90`}
                 style={{ backgroundColor: FT.navy }}>
                 Confirmar correspondência
               </button>
@@ -632,7 +632,7 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
 
             {/* Cliente */}
             <div className="space-y-1">
-              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Cliente *</p>
+              <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Cliente *</p>
               {clienteId.startsWith('toc:') ? (
                 <input type="text" disabled
                   value={`${nomeToConlineInicial || clienteId.replace(/^toc:/, '')} (sem cliente cadastrado associado)`}
@@ -651,7 +651,7 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
 
             {/* Período */}
             <div className="space-y-1">
-              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Período *</p>
+              <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Período *</p>
               <input type="month" value={periodo} onChange={e => setPeriodo(e.target.value)}
                 disabled={!!periodoInicial}
                 className="w-full px-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30 disabled:bg-[var(--surface)] disabled:text-[var(--slate-dim)]" />
@@ -660,14 +660,14 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
             {/* Tipo + Série */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Tipo de documento</p>
+                <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Tipo de documento</p>
                 <select value={tipoDocumento} onChange={e => setTipoDocumento(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30">
                   {TIPOS_DOCUMENTO.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                 </select>
               </div>
               <div className="space-y-1">
-                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Série</p>
+                <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Série</p>
                 <input type="text" value={serie} onChange={e => setSerie(e.target.value)}
                   placeholder="Ex: A"
                   className="w-full px-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30" />
@@ -677,12 +677,12 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
             {/* Datas */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Data da fatura</p>
+                <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Data da fatura</p>
                 <input type="date" value={dataFatura} onChange={e => setDataFatura(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30" />
               </div>
               <div className="space-y-1">
-                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Prazo de pagamento</p>
+                <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Prazo de pagamento</p>
                 <select value={prazo} onChange={e => setPrazo(Number(e.target.value))}
                   className="w-full px-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30">
                   {PRAZOS_PAGAMENTO.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
@@ -692,7 +692,7 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
 
             {/* Data de vencimento (manual ou calculada) */}
             <div className="space-y-1">
-              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">
+              <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>
                 Data de vencimento
                 {prazo !== -1 && <span className="normal-case font-normal text-[var(--slate-dim)]"> — calculada automaticamente</span>}
               </p>
@@ -733,7 +733,7 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
                   </div>
                 )}
                 {((ajudasValorInicial ?? ajudas?.valor_ajudas ?? ajudasEstimado) != null) && (
-                  <p className="text-[9px] text-[var(--slate-dim)] italic">Valor informativo de meses anteriores — o valor final de ajudas de custo é sempre recalculado no momento da confirmação de emissão.</p>
+                  <p className={`${SCALE.text.meta} text-[var(--slate-dim)] italic`}>Valor informativo de meses anteriores — o valor final de ajudas de custo é sempre recalculado no momento da confirmação de emissão.</p>
                 )}
                 {!temLinhasValidas && !carregandoAjudas && (
                   <p className="text-amber-600 flex items-center gap-1">
@@ -747,9 +747,9 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
             {clienteId && servicosLinhas.length > 0 && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Linhas da fatura</p>
+                  <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Linhas da fatura</p>
                   <button onClick={handleGuardarConfig} disabled={guardandoConfig}
-                    className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-[var(--surface-dim)] rounded-lg transition-all disabled:opacity-50" style={{ color: 'var(--slate-dim)' }}>
+                    className={`flex items-center gap-1 px-2.5 py-1.5 ${SCALE.text.badge} hover:bg-[var(--surface-dim)] rounded-lg transition-all disabled:opacity-50`} style={{ color: 'var(--slate-dim)' }}>
                     {guardandoConfig ? <Loader2 size={11} className="animate-spin" /> : configGuardada ? <CheckCircle size={11} className="text-emerald-500" /> : <Save size={11} />}
                     {configGuardada ? 'Guardado' : 'Guardar padrão'}
                   </button>
@@ -777,7 +777,7 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
                       {/* Linha 2: Qtd · Unidade · Preço · IVA · Desconto */}
                       <div className="grid grid-cols-5 gap-1.5">
                         <div className="space-y-0.5">
-                          <p className="text-[8px] font-black uppercase tracking-widest text-[var(--slate-dim)] pl-0.5">Qtd</p>
+                          <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] pl-0.5`}>Qtd</p>
                           <input type="number" min="0" step="0.01"
                             value={s.quantidade ?? ''}
                             onChange={e => updateLinha(s.id, 'quantidade', e.target.value)}
@@ -785,7 +785,7 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
                             className="w-full px-2 py-1.5 rounded-lg border border-[var(--border)] text-xs text-center text-[var(--ink-mid)] focus:outline-none focus:ring-1 focus:ring-[#1B3A57]/30" />
                         </div>
                         <div className="space-y-0.5">
-                          <p className="text-[8px] font-black uppercase tracking-widest text-[var(--slate-dim)] pl-0.5">Unidade</p>
+                          <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] pl-0.5`}>Unidade</p>
                           <input type="text"
                             value={s.unidade ?? ''}
                             onChange={e => updateLinha(s.id, 'unidade', e.target.value)}
@@ -793,7 +793,7 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
                             className="w-full px-2 py-1.5 rounded-lg border border-[var(--border)] text-xs text-center text-[var(--ink-mid)] focus:outline-none focus:ring-1 focus:ring-[#1B3A57]/30" />
                         </div>
                         <div className="space-y-0.5">
-                          <p className="text-[8px] font-black uppercase tracking-widest text-[var(--slate-dim)] pl-0.5">Preço unit.</p>
+                          <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] pl-0.5`}>Preço unit.</p>
                           <input type="number" min="0" step="0.01"
                             value={s.preco_unitario ?? s.valor_fixo ?? ''}
                             onChange={e => updateLinha(s.id, 'preco_unitario', e.target.value)}
@@ -801,15 +801,15 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
                             className="w-full px-2 py-1.5 rounded-lg border border-[var(--border)] text-xs text-center text-[var(--ink-mid)] focus:outline-none focus:ring-1 focus:ring-[#1B3A57]/30" />
                         </div>
                         <div className="space-y-0.5">
-                          <p className="text-[8px] font-black uppercase tracking-widest text-[var(--slate-dim)] pl-0.5">IVA</p>
+                          <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] pl-0.5`}>IVA</p>
                           <select value={s.taxa_iva}
                             onChange={e => updateLinha(s.id, 'taxa_iva', Number(e.target.value))}
-                            className="w-full px-1 py-1.5 rounded-lg border border-[var(--border)] text-[10px] text-center focus:outline-none focus:ring-1 focus:ring-[#1B3A57]/30">
+                            className={`w-full px-1 py-1.5 rounded-lg border border-[var(--border)] ${SCALE.text.meta} text-center focus:outline-none focus:ring-1 focus:ring-[#1B3A57]/30`}>
                             {IVA_OPTS.map(v => <option key={v} value={v}>{v}%</option>)}
                           </select>
                         </div>
                         <div className="space-y-0.5">
-                          <p className="text-[8px] font-black uppercase tracking-widest text-[var(--slate-dim)] pl-0.5">Desc. %</p>
+                          <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] pl-0.5`}>Desc. %</p>
                           <input type="text"
                             value={s.desconto ?? ''}
                             onChange={e => updateLinha(s.id, 'desconto', e.target.value)}
@@ -823,7 +823,7 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
 
                   <div className="px-3 py-2 border-t border-[var(--border-soft)]">
                     <button onClick={adicionarLinhaFixa}
-                      className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest hover:opacity-80 transition-colors" style={{ color: 'var(--slate-dim)' }}>
+                      className={`flex items-center gap-1.5 ${SCALE.text.badge} hover:opacity-80 transition-colors`} style={{ color: 'var(--slate-dim)' }}>
                       <Plus size={11} /> Adicionar linha
                     </button>
                   </div>
@@ -833,7 +833,7 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
 
             {/* Observações */}
             <div className="space-y-1">
-              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Observações</p>
+              <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Observações</p>
               <textarea value={observacoes} onChange={e => setObservacoes(e.target.value)}
                 rows={2} placeholder="Observações que aparecerão na fatura..."
                 className="w-full px-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30 resize-none" />
@@ -843,7 +843,7 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
             <div className="rounded-2xl border border-[var(--border-soft)] overflow-hidden">
               <button type="button"
                 onClick={() => setOpcoesAbertas(v => !v)}
-                className="w-full flex items-center justify-between px-4 py-3 text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] hover:bg-[var(--surface)] transition-colors">
+                className={`w-full flex items-center justify-between px-4 py-3 ${SCALE.text.badge} text-[var(--slate-dim)] hover:bg-[var(--surface)] transition-colors`}>
                 <span>Opções avançadas</span>
                 <ChevronDown size={12} className={`transition-transform ${opcoesAbertas ? 'rotate-180' : ''}`} />
               </button>
@@ -853,7 +853,7 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
 
                   {/* Desconto global */}
                   <div className="space-y-1">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Desconto global no documento</p>
+                    <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Desconto global no documento</p>
                     <input type="text" value={descontoGlobal} onChange={e => setDescontoGlobal(e.target.value)}
                       placeholder='Ex: "10" = 10% · "3+5" = composto'
                       className="w-full px-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30" />
@@ -861,7 +861,7 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
 
                   {/* Método de pagamento */}
                   <div className="space-y-1">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Método de pagamento</p>
+                    <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Método de pagamento</p>
                     <select value={metodoPagamento} onChange={e => setMetodoPagamento(e.target.value)}
                       className="w-full px-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30">
                       {METODOS_PAGAMENTO.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
@@ -870,7 +870,7 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
 
                   {/* Referência externa */}
                   <div className="space-y-1">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Referência externa</p>
+                    <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Referência externa</p>
                     <input type="text" value={referenciaExterna} onChange={e => setReferenciaExterna(e.target.value)}
                       placeholder="Nº encomenda, PO, referência do cliente..."
                       className="w-full px-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30" />
@@ -879,8 +879,8 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
                   {/* Preços com IVA incluído */}
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Preços com IVA incluído</p>
-                      <p className="text-[9px] text-[var(--slate-dim)] mt-0.5">Os preços nas linhas já incluem IVA</p>
+                      <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Preços com IVA incluído</p>
+                      <p className={`${SCALE.text.meta} text-[var(--slate-dim)] mt-0.5`}>Os preços nas linhas já incluem IVA</p>
                     </div>
                     <Toggle checked={ivaIncluido} onChange={setIvaIncluido} />
                   </div>
@@ -889,22 +889,22 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Retenção na fonte</p>
-                        <p className="text-[9px] text-[var(--slate-dim)] mt-0.5">IRS ou IRC retido na fonte</p>
+                        <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Retenção na fonte</p>
+                        <p className={`${SCALE.text.meta} text-[var(--slate-dim)] mt-0.5`}>IRS ou IRC retido na fonte</p>
                       </div>
                       <Toggle checked={retencao.ativa} onChange={v => setRetencao(r => ({ ...r, ativa: v }))} />
                     </div>
                     {retencao.ativa && (
                       <div className="grid grid-cols-3 gap-2 pl-1">
                         <div className="space-y-0.5">
-                          <p className="text-[8px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Percentagem</p>
+                          <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Percentagem</p>
                           <input type="number" min="0" max="100" step="0.1"
                             value={retencao.percentagem}
                             onChange={e => setRetencao(r => ({ ...r, percentagem: Number(e.target.value) }))}
                             className="w-full px-2 py-1.5 rounded-lg border border-[var(--border)] text-xs text-center focus:outline-none focus:ring-1 focus:ring-[#1B3A57]/30" />
                         </div>
                         <div className="space-y-0.5">
-                          <p className="text-[8px] font-black uppercase tracking-widest text-[var(--slate)]">Tipo</p>
+                          <p className={`${SCALE.text.statLabel} text-[var(--slate)]`}>Tipo</p>
                           <select value={retencao.tipo}
                             onChange={e => setRetencao(r => ({ ...r, tipo: e.target.value }))}
                             className="w-full px-2 py-1.5 rounded-lg border border-[var(--border)] text-xs focus:outline-none focus:ring-1 focus:ring-[#1B3A57]/30">
@@ -913,10 +913,10 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
                           </select>
                         </div>
                         <div className="space-y-0.5">
-                          <p className="text-[8px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Ao pagar</p>
+                          <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Ao pagar</p>
                           <div className="flex items-center h-[30px] gap-2">
                             <Toggle checked={retencao.ao_pagar} onChange={v => setRetencao(r => ({ ...r, ao_pagar: v }))} />
-                            <span className="text-[9px] text-[var(--slate-dim)]">{retencao.ao_pagar ? 'Sim' : 'Não'}</span>
+                            <span className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>{retencao.ao_pagar ? 'Sim' : 'Não'}</span>
                           </div>
                         </div>
                       </div>
@@ -925,16 +925,16 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
 
                   {/* Moeda */}
                   <div className="space-y-2">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Moeda</p>
+                    <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Moeda</p>
                     <div className="grid grid-cols-2 gap-2">
                       <div className="space-y-0.5">
-                        <p className="text-[8px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Código ISO</p>
+                        <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Código ISO</p>
                         <input type="text" value={moedaIso} onChange={e => setMoedaIso(e.target.value.toUpperCase())}
                           maxLength={3} placeholder="EUR"
                           className="w-full px-2 py-1.5 rounded-lg border border-[var(--border)] text-xs text-center focus:outline-none focus:ring-1 focus:ring-[#1B3A57]/30" />
                       </div>
                       <div className="space-y-0.5">
-                        <p className="text-[8px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Taxa de conversão</p>
+                        <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Taxa de conversão</p>
                         <input type="number" min="0" step="0.0001" value={moedaTaxa}
                           onChange={e => setMoedaTaxa(e.target.value)}
                           placeholder="1.0000"
@@ -948,8 +948,8 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Morada do cliente na fatura</p>
-                        <p className="text-[9px] text-[var(--slate-dim)] mt-0.5">Sobrepõe a morada registada no TOConline</p>
+                        <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Morada do cliente na fatura</p>
+                        <p className={`${SCALE.text.meta} text-[var(--slate-dim)] mt-0.5`}>Sobrepõe a morada registada no TOConline</p>
                       </div>
                       <Toggle checked={moradaAtiva} onChange={setMoradaAtiva} />
                     </div>
@@ -1024,10 +1024,10 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
                 {/* Cabeçalho */}
                 <div className="px-5 py-4 border-b border-[var(--border-soft)] flex items-start justify-between gap-4">
                   <div>
-                    <p className="text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-0.5">{tipoLabel}</p>
+                    <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] mb-0.5`}>{tipoLabel}</p>
                     <p className="text-lg font-black text-[var(--ink)]">{tipoDocumento} ••••{serie ? ` / ${serie}` : ''}</p>
                   </div>
-                  <div className="text-right text-[10px] text-[var(--slate-dim)] space-y-0.5">
+                  <div className={`text-right ${SCALE.text.meta} text-[var(--slate-dim)] space-y-0.5`}>
                     <p><span className="font-bold text-[var(--ink-mid)]">Data:</span> {dataFatura}</p>
                     {dataVencimento && <p><span className="font-bold text-[var(--ink-mid)]">Vencimento:</span> {dataVencimento}</p>}
                     {prazo > 0 && <p className="text-[var(--slate-dim)]">{prazo} dias</p>}
@@ -1038,11 +1038,11 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
 
                 {/* Cliente */}
                 <div className="px-5 py-3 border-b border-[var(--border-soft)] bg-[var(--surface)]">
-                  <p className="text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-1">Cliente</p>
+                  <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1`}>Cliente</p>
                   <p className="text-xs font-bold text-[var(--ink)]">{cliente?.name}</p>
-                  {cliente?.nif && <p className="text-[10px] text-[var(--slate-dim)]">NIF: {cliente.nif}</p>}
+                  {cliente?.nif && <p className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>NIF: {cliente.nif}</p>}
                   {moradaAtiva && moradaDetalhe && (
-                    <p className="text-[10px] text-[var(--slate-dim)]">{moradaDetalhe}{moradaCp || moradaCidade ? `, ${moradaCp} ${moradaCidade}`.trim() : ''}</p>
+                    <p className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>{moradaDetalhe}{moradaCp || moradaCidade ? `, ${moradaCp} ${moradaCidade}`.trim() : ''}</p>
                   )}
                 </div>
 
@@ -1075,34 +1075,34 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
                 {/* Totais */}
                 <div className="px-5 py-3 border-t border-[var(--border-soft)] bg-[var(--surface)] space-y-1">
                   {ivaIncluido && (
-                    <p className="text-[9px] text-amber-600 mb-1">* Preços incluem IVA</p>
+                    <p className={`${SCALE.text.meta} text-amber-600 mb-1`}>* Preços incluem IVA</p>
                   )}
-                  <div className="flex justify-between text-[10px] text-[var(--slate-dim)]">
+                  <div className={`flex justify-between ${SCALE.text.meta} text-[var(--slate-dim)]`}>
                     <span>Subtotal s/ desconto</span>
                     <span>{totalBase.toFixed(2)} €</span>
                   </div>
                   {descontoGlobal.trim() && (
-                    <div className="flex justify-between text-[10px] text-rose-600">
+                    <div className={`flex justify-between ${SCALE.text.meta} text-rose-600`}>
                       <span>Desconto global ({descontoGlobal}%)</span>
                       <span>-{(totalBase - totalBaseGlobal).toFixed(2)} €</span>
                     </div>
                   )}
                   {linhasPreview.filter(l => l.desconto).length > 0 && (
-                    <div className="flex justify-between text-[10px] text-rose-500">
+                    <div className={`flex justify-between ${SCALE.text.meta} text-rose-500`}>
                       <span>Descontos nas linhas</span>
                       <span>incluídos acima</span>
                     </div>
                   )}
-                  <div className="flex justify-between text-[10px] text-[var(--slate-dim)]">
+                  <div className={`flex justify-between ${SCALE.text.meta} text-[var(--slate-dim)]`}>
                     <span>Base tributável</span>
                     <span>{totalBaseGlobal.toFixed(2)} €</span>
                   </div>
-                  <div className="flex justify-between text-[10px] text-[var(--slate-dim)]">
+                  <div className={`flex justify-between ${SCALE.text.meta} text-[var(--slate-dim)]`}>
                     <span>IVA</span>
                     <span>{totalIva.toFixed(2)} €</span>
                   </div>
                   {retencao.ativa && (
-                    <div className="flex justify-between text-[10px] text-amber-600">
+                    <div className={`flex justify-between ${SCALE.text.meta} text-amber-600`}>
                       <span>Retenção {retencao.tipo} ({retencao.percentagem}%)</span>
                       <span>-{(totalBaseGlobal * retencao.percentagem / 100).toFixed(2)} €</span>
                     </div>
@@ -1116,8 +1116,8 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
                 {/* Observações */}
                 {observacoes.trim() && (
                   <div className="px-5 py-3 border-t border-[var(--border-soft)]">
-                    <p className="text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-1">Observações</p>
-                    <p className="text-[10px] text-[var(--ink-soft)] leading-relaxed">{observacoes}</p>
+                    <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1`}>Observações</p>
+                    <p className={`${SCALE.text.meta} text-[var(--ink-soft)] leading-relaxed`}>{observacoes}</p>
                   </div>
                 )}
               </div>
@@ -1130,17 +1130,17 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
                     <ShieldAlert size={16} className="text-rose-500 shrink-0 mt-0.5" />
                     <div>
                       <p className="text-xs font-black text-rose-700">Fatura não pode ser emitida</p>
-                      <p className="text-[10px] text-rose-600 mt-0.5">{gateAjudas.motivo}</p>
+                      <p className={`${SCALE.text.meta} text-rose-600 mt-0.5`}>{gateAjudas.motivo}</p>
                     </div>
                   </div>
                   <div className="flex gap-2 pt-1">
                     <button onClick={() => setGateAjudas(null)}
-                      className="flex-1 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] hover:bg-white rounded-lg transition-all">
+                      className={`flex-1 px-3 py-2 ${SCALE.text.badge} text-[var(--slate-dim)] hover:bg-white rounded-lg transition-all`}>
                       Cancelar
                     </button>
                     <button
                       onClick={() => navigate(gateAjudas.motivo?.includes('percentagem') ? '/admin/ajudas-custo?subtab=historico' : '/admin/ajudas-custo?subtab=elegibilidade')}
-                      className="flex-1 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-white rounded-lg transition-all hover:opacity-90"
+                      className={`flex-1 px-3 py-2 ${SCALE.text.badge} text-white rounded-lg transition-all hover:opacity-90`}
                       style={{ backgroundColor: FT.navy }}>
                       {gateAjudas.motivo?.includes('percentagem') ? 'Ir para Histórico' : 'Ir para Elegibilidade'}
                     </button>
@@ -1153,18 +1153,18 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
                 const l = gateAjudas.linha;
                 return (
                   <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 space-y-2.5">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Confirmação de ajudas de custo</p>
-                    <div className="flex justify-between text-[11px] text-[var(--ink-soft)]">
+                    <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Confirmação de ajudas de custo</p>
+                    <div className={`flex justify-between ${SCALE.text.body} text-[var(--ink-soft)]`}>
                       <span>Valor estimado bruto</span>
                       <span className="font-bold text-[var(--ink)]">{l.valorEstimadoBruto.toFixed(2)} €</span>
                     </div>
                     {l.residuoAplicado !== 0 && (
-                      <div className="flex justify-between text-[11px] text-[var(--ink-soft)]">
+                      <div className={`flex justify-between ${SCALE.text.body} text-[var(--ink-soft)]`}>
                         <span>Resíduo do mês anterior aplicado</span>
                         <span className="font-bold text-[var(--ink)]">{l.residuoAplicado.toFixed(2)} €</span>
                       </div>
                     )}
-                    <div className="flex justify-between text-[11px] text-[var(--ink-soft)]">
+                    <div className={`flex justify-between ${SCALE.text.body} text-[var(--ink-soft)]`}>
                       <span>% histórica usada</span>
                       <span className="font-bold text-[var(--ink)]">{(gateAjudas.percentagemUsada * 100).toFixed(1)}%</span>
                     </div>
@@ -1174,11 +1174,11 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
                     </div>
                     <div className="flex gap-2 pt-1">
                       <button onClick={() => setGateAjudas(null)} disabled={emitindo}
-                        className="flex-1 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] hover:bg-white rounded-lg transition-all disabled:opacity-50">
+                        className={`flex-1 px-3 py-2 ${SCALE.text.badge} text-[var(--slate-dim)] hover:bg-white rounded-lg transition-all disabled:opacity-50`}>
                         Cancelar
                       </button>
                       <button onClick={handleConfirmarEEmitir} disabled={emitindo}
- className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all disabled:opacity-60 hover:opacity-90"
+ className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 ${SCALE.text.badge} rounded-lg transition-all disabled:opacity-60 hover:opacity-90`}
                         style={{ backgroundColor: FT.orange, color: FT.navy }}>
                         {emitindo ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle size={12} />}
                         Confirmar e Emitir

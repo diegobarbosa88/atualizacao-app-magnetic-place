@@ -4,7 +4,7 @@ import {
   Eye, ArrowUpDown, ArrowUp, ArrowDown,
 } from 'lucide-react';
 import { MESES, getAttrs, getNomeEntidade, getValorTotal, getIva, getDocNum, getObservacao } from './utils/tocUtils';
-import { FT } from '../../../styles/designTokens';
+import { FT, SCALE } from '../../../styles/designTokens';
 import { useTableFilters } from './hooks/useTableFilters';
 import { useTocRelatorios } from './hooks/useTocRelatorios';
 import ModalDocToc from './components/ModalDocToc';
@@ -13,7 +13,7 @@ const selectClass = "w-full px-3 py-2 rounded-xl border border-[var(--border)] t
 
 function ThSort({ campo, label, ordem, toggleOrdem }) {
   return (
-    <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] cursor-pointer select-none hover:text-[var(--ink-soft)] transition-colors"
+    <th className={`px-4 py-3 ${SCALE.text.statLabel} text-[var(--slate-dim)] cursor-pointer select-none hover:text-[var(--ink-soft)] transition-colors`}
       onClick={() => toggleOrdem(campo)}>
       <span className="flex items-center gap-1">
         {label}
@@ -62,7 +62,7 @@ export default function TOConlineRelatorios({ onDesligado }) {
         <p className="text-xs font-black uppercase tracking-widest text-[var(--slate-dim)]">Filtrar documentos</p>
         <div className="flex flex-wrap gap-3 items-end">
           <div className="space-y-1">
-            <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Tipo</p>
+            <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Tipo</p>
             <div className="flex gap-1 bg-[var(--surface-dim)] p-1 rounded-xl">
               {[
                 { key: 'vendas', label: 'Vendas' },
@@ -70,7 +70,7 @@ export default function TOConlineRelatorios({ onDesligado }) {
                 { key: 'recibos', label: 'Recibos' },
               ].map(({ key, label }) => (
                 <button key={key} onClick={() => { setTipo(key); }}
-                  className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${tipo === key ? '' : 'text-[var(--slate-dim)] hover:text-[var(--ink-soft)]'}`}
+                  className={`px-3 py-1.5 rounded-lg ${SCALE.text.badge} transition-all ${tipo === key ? '' : 'text-[var(--slate-dim)] hover:text-[var(--ink-soft)]'}`}
                   style={tipo === key ? { backgroundColor: 'rgba(235,141,0,0.15)', color: 'var(--navy)' } : {}}>
                   {label}
                 </button>
@@ -79,13 +79,13 @@ export default function TOConlineRelatorios({ onDesligado }) {
           </div>
 
           <div className="space-y-1">
-            <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Data de</p>
+            <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Data de</p>
             <input type="date" value={dataDe} onChange={e => setDataDe(e.target.value)}
               className="px-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30" />
           </div>
 
           <div className="space-y-1">
-            <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Data até</p>
+            <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Data até</p>
             <input type="date" value={dataAte} onChange={e => setDataAte(e.target.value)}
               className="px-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30" />
           </div>
@@ -108,19 +108,19 @@ export default function TOConlineRelatorios({ onDesligado }) {
           {/* Totais */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             <div className="bg-white rounded-2xl border border-[var(--border-soft)] p-4">
-              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-1">Documentos</p>
+              <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1`}>Documentos</p>
               <p className="text-2xl font-black text-[var(--ink)]">
                 {docsFiltrados.length}
                 {docsFiltrados.length !== docs.length && <span className="text-sm text-[var(--slate-dim)] font-semibold ml-1">/ {docs.length}</span>}
               </p>
             </div>
             <div className="bg-white rounded-2xl border border-[var(--border-soft)] p-4">
-              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-1">Total</p>
+              <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1`}>Total</p>
               <p className="text-2xl font-black text-[var(--ink)]">{totalValor.toFixed(2)} €</p>
             </div>
             {totalIva > 0 && (
               <div className="bg-white rounded-2xl border border-[var(--border-soft)] p-4">
-                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-1">IVA</p>
+                <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1`}>IVA</p>
                 <p className="text-2xl font-black text-[var(--ink)]">{totalIva.toFixed(2)} €</p>
               </div>
             )}
@@ -156,21 +156,21 @@ export default function TOConlineRelatorios({ onDesligado }) {
             {mostrarFiltros && (
               <div className="bg-white rounded-2xl border border-[var(--border-soft)] shadow-sm p-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Ano</label>
+                  <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Ano</label>
                   <select value={filtroAno} onChange={e => setFiltroAno(e.target.value)} className={selectClass}>
                     <option value="">Todos</option>
                     {anosDisponiveis.map(a => <option key={a} value={a}>{a}</option>)}
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Mês</label>
+                  <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Mês</label>
                   <select value={filtroMes} onChange={e => setFiltroMes(e.target.value)} className={selectClass}>
                     <option value="">Todos</option>
                     {MESES.map(m => <option key={m.val} value={m.val}>{m.label}</option>)}
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">
+                  <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>
                     {tipo === 'compras' ? 'Fornecedor' : 'Cliente'}
                   </label>
                   <select value={filtroEntidade} onChange={e => setFiltroEntidade(e.target.value)} className={selectClass}>
@@ -194,13 +194,13 @@ export default function TOConlineRelatorios({ onDesligado }) {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="border-b border-[var(--border-soft)] bg-[var(--surface)]">
-                      <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Nº Doc.</th>
+                      <th className={`px-4 py-3 ${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Nº Doc.</th>
                       <ThSort campo="entidade" label={tipo === 'compras' ? 'Fornecedor' : 'Cliente'} ordem={ordem} toggleOrdem={toggleOrdem} />
                       <ThSort campo="date" label="Data" ordem={ordem} toggleOrdem={toggleOrdem} />
                       <ThSort campo="total" label="Total" ordem={ordem} toggleOrdem={toggleOrdem} />
-                      <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">IVA</th>
-                      <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Observação</th>
-                      <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Ações</th>
+                      <th className={`px-4 py-3 ${SCALE.text.statLabel} text-[var(--slate-dim)]`}>IVA</th>
+                      <th className={`px-4 py-3 ${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Observação</th>
+                      <th className={`px-4 py-3 ${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Ações</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -248,7 +248,7 @@ export default function TOConlineRelatorios({ onDesligado }) {
                     : `${docs.length} documento(s)`}
                 </span>
                 {temMais && (
-                  <span className="text-[10px] text-amber-500">Mostrando primeiros 50 resultados — afine as datas para ver mais.</span>
+                  <span className={`${SCALE.text.meta} text-amber-500`}>Mostrando primeiros 50 resultados — afine as datas para ver mais.</span>
                 )}
               </div>
             </div>

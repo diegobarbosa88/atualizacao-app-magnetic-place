@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Search, Plus, Loader2, RefreshCw, User, Users } from 'lucide-react';
 import { authFetch } from '../../../utils/authFetch';
 import ModalShell from '../../../components/common/ModalShell';
-import { FT } from '../../../styles/designTokens';
+import { FT, SCALE } from '../../../styles/designTokens';
 
 function NovoClienteModal({ onClose, onSalvo }) {
   const [form, setForm] = useState({ nome: '', nif: '', email: '', morada: '', codigo_postal: '', localidade: '' });
@@ -51,7 +51,7 @@ function NovoClienteModal({ onClose, onSalvo }) {
             { key: 'localidade', label: 'Localidade' },
           ].map(({ key, label, required, type = 'text' }) => (
             <div key={key} className="space-y-1">
-              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">{label}</p>
+              <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>{label}</p>
               <input
                 type={type}
                 value={form[key]}
@@ -173,7 +173,7 @@ export default function TOConlineClientes({ onDesligado }) {
             <thead>
               <tr className="bg-[var(--surface)] border-b border-[var(--border-soft)]">
                 {['Nome', 'NIF', 'Email', 'Morada'].map(h => (
-                  <th key={h} className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">{h}</th>
+                  <th key={h} className={`px-4 py-3 text-left ${SCALE.text.statLabel} text-[var(--slate-dim)]`}>{h}</th>
                 ))}
               </tr>
             </thead>
