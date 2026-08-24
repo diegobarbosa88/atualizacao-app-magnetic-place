@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { User, Phone, Mail, MapPin, CreditCard, Shield, Landmark, Edit2, X, Send, Clock, CheckCircle, XCircle, FileCheck, Download } from 'lucide-react';
 import { isSigned } from '../../constants/documentStatus';
-import { FT, FONT_TITLE, FONT_MONO } from '../../styles/designTokens';
+import { FT, FONT_TITLE, FONT_MONO, SCALE } from '../../styles/designTokens';
 import { notifyEvent, TARGET } from '../../utils/notifyEvent';
 
 const FIELDS = [
@@ -23,7 +23,7 @@ function getInitials(name = '') {
 
 function SectionLabel({ children }) {
   return (
-    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 px-1 mb-2">{children}</p>
+    <p className={`${SCALE.text.statLabel} text-slate-400 px-1 mb-2`}>{children}</p>
   );
 }
 
@@ -97,7 +97,7 @@ const WorkerProfile = ({ worker, changeRequests, documents = [] }) => {
         <div className="text-center">
           <p className="text-base font-black text-slate-800">{worker?.name || '—'}</p>
           {worker?.profissao && (
-            <p className="text-[10px] font-black uppercase tracking-widest mt-0.5" style={{ fontFamily: FONT_MONO, color: FT.orangeDeep }}>{worker.profissao}</p>
+            <p className={`${SCALE.text.statLabel} mt-0.5`} style={{ fontFamily: FONT_MONO, color: FT.orangeDeep }}>{worker.profissao}</p>
           )}
         </div>
       </div>
@@ -105,7 +105,7 @@ const WorkerProfile = ({ worker, changeRequests, documents = [] }) => {
       {/* Dados Pessoais */}
       <div>
         <SectionLabel>Dados Pessoais</SectionLabel>
-        <p className="text-[10px] text-slate-400 font-bold px-1 mb-3">Para alterar um campo clique no lápis.</p>
+        <p className={`${SCALE.text.meta} text-slate-400 px-1 mb-3`}>Para alterar um campo clique no lápis.</p>
         <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden divide-y divide-slate-50">
           {FIELDS.map(f => {
             const Icon = f.icon;
@@ -121,13 +121,13 @@ const WorkerProfile = ({ worker, changeRequests, documents = [] }) => {
                       <Icon size={12} className="text-slate-400" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">{f.label}</p>
+                      <p className={`${SCALE.text.statLabel} text-slate-400`}>{f.label}</p>
                       {pending ? (
                         <div className="mt-0.5 space-y-0.5">
                           <p className="text-xs text-slate-300 line-through leading-snug">{value || '—'}</p>
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <span className="text-xs font-black" style={{ color: FT.orangeDeep }}>{pending.proposed}</span>
-                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[8px] font-black uppercase rounded-full" style={{ fontFamily: FONT_MONO, background: FT.warnBg, color: FT.warn, border: `1px solid ${FT.warn}55` }}>
+                            <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full ${SCALE.text.badge}`} style={{ fontFamily: FONT_MONO, background: FT.warnBg, color: FT.warn, border: `1px solid ${FT.warn}55` }}>
                               <Clock size={7} /> Aguarda
                             </span>
                           </div>
@@ -216,7 +216,7 @@ const WorkerProfile = ({ worker, changeRequests, documents = [] }) => {
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-bold text-slate-700 truncate">{doc.tipo || doc.title || doc.nome || doc.name}</p>
                   {(doc.signed_at || doc.dataAssinatura) && (
-                    <p className="text-[10px] text-slate-400 mt-0.5">
+                    <p className={`${SCALE.text.meta} text-slate-400 mt-0.5`}>
                       {new Date(doc.signed_at || doc.dataAssinatura).toLocaleDateString('pt-PT')}
                     </p>
                   )}
@@ -250,17 +250,17 @@ const WorkerProfile = ({ worker, changeRequests, documents = [] }) => {
                     : <XCircle size={13} style={{ color: FT.bad }} />}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-400" style={{ fontFamily: FONT_MONO }}>{r.field_label}</p>
+                  <p className={`${SCALE.text.statLabel} text-slate-400`} style={{ fontFamily: FONT_MONO }}>{r.field_label}</p>
                   <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
                     <span className="text-xs text-slate-300 line-through">{r.before || '—'}</span>
                     <span className="text-slate-300">→</span>
                     <span className="text-xs font-bold" style={{ color: r.status === 'approved' ? FT.ok : FT.inkSoft, textDecoration: r.status === 'approved' ? 'none' : 'line-through' }}>{r.proposed}</span>
                   </div>
                   {r.admin_note && (
-                    <p className="text-[10px] text-slate-400 mt-0.5 italic">"{r.admin_note}"</p>
+                    <p className={`${SCALE.text.meta} text-slate-400 mt-0.5 italic`}>"{r.admin_note}"</p>
                   )}
                 </div>
-                <span className="shrink-0 text-[8px] font-black uppercase px-2 py-0.5 rounded-full" style={{ fontFamily: FONT_MONO, background: r.status === 'approved' ? FT.okBg : FT.badBg, color: r.status === 'approved' ? FT.ok : FT.bad }}>
+                <span className={`shrink-0 px-2 py-0.5 rounded-full ${SCALE.text.badge}`} style={{ fontFamily: FONT_MONO, background: r.status === 'approved' ? FT.okBg : FT.badBg, color: r.status === 'approved' ? FT.ok : FT.bad }}>
                   {r.status === 'approved' ? 'Aprovado' : 'Rejeitado'}
                 </span>
               </div>

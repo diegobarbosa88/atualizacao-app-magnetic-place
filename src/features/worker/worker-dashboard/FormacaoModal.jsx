@@ -10,7 +10,7 @@ import ModalShell from '../../../components/common/ModalShell';
 import FormacaoElearningFlow from './FormacaoElearningFlow';
 import { listMinhasFormacoes, assinarMinhaFormacao } from './formacaoWorkerApi';
 import { CATEGORIAS } from '../../admin/formacao-interna/formacaoTemplates';
-import { FT, FONT_TITLE, FONT_MONO } from './formacaoDesignTokens';
+import { FT, FONT_TITLE, FONT_MONO, SCALE } from './formacaoDesignTokens';
 
 const CATEGORIA_LABEL = Object.fromEntries(CATEGORIAS.map(c => [c.id, c.label]));
 
@@ -197,18 +197,18 @@ export default function FormacaoModal({ isOpen, onClose, currentUser, onChanged 
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-bold text-[16px] leading-tight mb-0.5" style={{ fontFamily: FONT_TITLE, color: FT.navyDeep }}>{p.tipo_formacao}</p>
-                      <p className="text-[11px] uppercase tracking-wide" style={{ fontFamily: FONT_MONO, color: FT.slate }}>
+                      <p className={`${SCALE.text.body} uppercase tracking-wide`} style={{ fontFamily: FONT_MONO, color: FT.slate }}>
                         {CATEGORIA_LABEL[p.categoria] || p.categoria} · {p.duracao_horas}h · {p.formato === 'e-learning' ? 'e-learning' : 'presencial'}
                       </p>
                       {p.estado_conclusao === 'reprovado' && !concluidoTotal && (
-                        <p className="text-[10px] font-bold mt-1" style={{ color: FT.bad }}>Última tentativa: {p.nota_obtida}% (mínimo {p.nota_minima_aprovacao}%)</p>
+                        <p className={`${SCALE.text.meta} mt-1`} style={{ color: FT.bad }}>Última tentativa: {p.nota_obtida}% (mínimo {p.nota_minima_aprovacao}%)</p>
                       )}
                       {p.data_validade && (
-                        <p className="text-[10px] font-bold mt-1" style={{ color: FT.slate }}>Válido até {new Date(p.data_validade).toLocaleDateString('pt-PT')}</p>
+                        <p className={`${SCALE.text.meta} mt-1`} style={{ color: FT.slate }}>Válido até {new Date(p.data_validade).toLocaleDateString('pt-PT')}</p>
                       )}
                     </div>
                     <span
-                      className="text-[11px] font-semibold px-2.5 py-1 rounded-full shrink-0 whitespace-nowrap"
+                      className={`${SCALE.text.body} px-2.5 py-1 rounded-full shrink-0 whitespace-nowrap`}
                       style={concluidoTotal ? { background: FT.okBg, color: FT.ok } : { background: '#F0EEE7', color: FT.inkSoft }}
                     >
                       {statusLabel}

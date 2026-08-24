@@ -1,7 +1,7 @@
 import React from 'react';
 import { Bell, Clock, CheckCircle, FileText, GraduationCap, AlertTriangle, Edit2, ChevronRight } from 'lucide-react';
 import ModalShell from '../../../components/common/ModalShell';
-import { FT, FONT_MONO } from './formacaoDesignTokens';
+import { FT, FONT_MONO, SCALE } from './formacaoDesignTokens';
 
 export default function PendingAlertsModal({
   isOpen, onClose,
@@ -42,7 +42,7 @@ export default function PendingAlertsModal({
                   <p className="text-xs font-black text-slate-700 capitalize leading-snug">
                     Validar Horas de {monthLabel}
                   </p>
-                  <p className="text-[10px] font-bold text-slate-400 mt-0.5 leading-snug">
+                  <p className={`${SCALE.text.meta} text-slate-400 mt-0.5 leading-snug`}>
                     {isCurrentMonth
                       ? 'O mês terminou. Verifica os registos e submete.'
                       : 'Tens horas de um mês anterior por validar.'}
@@ -52,7 +52,7 @@ export default function PendingAlertsModal({
               {isCurrentMonth ? (
                 <button
                   onClick={() => { onApproveMonth(); onClose(); }}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 text-white rounded-xl font-black text-[11px] uppercase tracking-widest transition-all shadow-sm active:scale-95"
+                  className={`w-full flex items-center justify-center gap-2 py-2.5 text-white rounded-xl transition-all shadow-sm active:scale-95 ${SCALE.text.badge}`}
                   style={{ fontFamily: FONT_MONO, background: FT.orange }}
                 >
                   <CheckCircle size={13} /> Confirmar e Enviar
@@ -60,7 +60,7 @@ export default function PendingAlertsModal({
               ) : (
                 <button
                   onClick={() => { onReviewMonth(pending); onClose(); }}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 text-white rounded-xl font-black text-[11px] uppercase tracking-widest transition-all shadow-sm active:scale-95"
+                  className={`w-full flex items-center justify-center gap-2 py-2.5 text-white rounded-xl transition-all shadow-sm active:scale-95 ${SCALE.text.badge}`}
                   style={{ fontFamily: FONT_MONO, background: FT.orange }}
                 >
                   <ChevronRight size={13} /> Rever e Validar
@@ -79,14 +79,14 @@ export default function PendingAlertsModal({
               </div>
               <div className="min-w-0">
                 <p className="text-xs font-black text-slate-700 leading-snug">Assinaturas Pendentes</p>
-                <p className="text-[10px] font-bold text-slate-400 mt-0.5 leading-snug">
+                <p className={`${SCALE.text.meta} text-slate-400 mt-0.5 leading-snug`}>
                   {pendingSignaturesCount} {pendingSignaturesCount === 1 ? 'documento requer' : 'documentos requerem'} a tua assinatura digital.
                 </p>
               </div>
             </div>
             <button
               onClick={() => { onSignDocuments(); onClose(); }}
-              className="w-full flex items-center justify-center gap-2 py-2.5 text-white rounded-xl font-black text-[11px] uppercase tracking-widest transition-all shadow-sm active:scale-95"
+              className={`w-full flex items-center justify-center gap-2 py-2.5 text-white rounded-xl transition-all shadow-sm active:scale-95 ${SCALE.text.badge}`}
               style={{ fontFamily: FONT_MONO, background: FT.warn }}
             >
               <Edit2 size={13} /> Assinar Agora
@@ -103,14 +103,14 @@ export default function PendingAlertsModal({
               </div>
               <div className="min-w-0">
                 <p className="text-xs font-black text-slate-700 leading-snug">Formações por Assinar</p>
-                <p className="text-[10px] font-bold text-slate-400 mt-0.5 leading-snug">
+                <p className={`${SCALE.text.meta} text-slate-400 mt-0.5 leading-snug`}>
                   {pendingFormacaoCount} {pendingFormacaoCount === 1 ? 'formação requer' : 'formações requerem'} a tua assinatura digital.
                 </p>
               </div>
             </div>
             <button
               onClick={() => { onSignFormacao(); onClose(); }}
-              className="w-full flex items-center justify-center gap-2 py-2.5 text-white rounded-xl font-black text-[11px] uppercase tracking-widest transition-all shadow-sm active:scale-95"
+              className={`w-full flex items-center justify-center gap-2 py-2.5 text-white rounded-xl transition-all shadow-sm active:scale-95 ${SCALE.text.badge}`}
               style={{ fontFamily: FONT_MONO, background: FT.orange }}
             >
               <Edit2 size={13} /> Assinar Agora
@@ -132,15 +132,15 @@ export default function PendingAlertsModal({
                 <div className="min-w-0">
                   <p className="text-xs font-black text-slate-700 capitalize leading-snug">{dateLabel}</p>
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
-                    <span className="text-[10px] font-bold text-slate-500">{clientName}</span>
-                    <span className="text-[10px] font-bold" style={{ color: FT.navy }}>Entrada {log.startTime}</span>
-                    <span className="text-[10px] font-bold text-rose-500">Saída em falta</span>
+                    <span className={`${SCALE.text.meta} text-slate-500`}>{clientName}</span>
+                    <span className={SCALE.text.meta} style={{ color: FT.navy }}>Entrada {log.startTime}</span>
+                    <span className={`${SCALE.text.meta} text-rose-500`}>Saída em falta</span>
                   </div>
                 </div>
               </div>
               <button
                 onClick={() => { onCompleteLog(log); onClose(); }}
-                className="w-full flex items-center justify-center gap-2 py-2.5 bg-orange-600 text-white rounded-xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-900 transition-all shadow-sm active:scale-95"
+                className={`w-full flex items-center justify-center gap-2 py-2.5 bg-orange-600 text-white rounded-xl hover:bg-slate-900 transition-all shadow-sm active:scale-95 ${SCALE.text.badge}`}
               >
                 <Edit2 size={13} /> Completar Registo
               </button>
@@ -148,7 +148,7 @@ export default function PendingAlertsModal({
           );
         })}
 
-        <p className="text-[10px] text-slate-400 font-bold text-center leading-relaxed pb-2">
+        <p className={`${SCALE.text.meta} text-slate-400 text-center leading-relaxed pb-2`}>
           Resolve os avisos pendentes para manter os teus registos em dia.
         </p>
       </div>

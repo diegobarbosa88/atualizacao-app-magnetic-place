@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { LogOut, Coffee, Loader2, Timer } from 'lucide-react';
+import { SCALE } from '../../../styles/designTokens';
 
 export default function InServiceCard({ todayOpenLog, clients, handleRegistarPausa, handleRegistarSaida, geoActionLoading }) {
   const [now, setNow] = useState(() => new Date());
@@ -35,7 +36,7 @@ export default function InServiceCard({ todayOpenLog, clients, handleRegistarPau
             <Timer size={24} className="text-white" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[9px] font-black uppercase tracking-widest text-indigo-200 mb-0.5">
+            <p className={`${SCALE.text.badge} text-indigo-200 mb-0.5`}>
               Em serviço desde {todayOpenLog.startTime}
             </p>
             <p className="text-white font-black text-3xl leading-none tabular-nums">{formatElapsed(todayOpenLog.startTime)}</p>

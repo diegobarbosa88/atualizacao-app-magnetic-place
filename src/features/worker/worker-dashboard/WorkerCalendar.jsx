@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Plus, Zap, Trash2, Edit2, Moon } from 'lucide-react';
 import { formatHours } from '../../../utils/formatUtils';
 import { toISODateLocal } from '../../../utils/dateUtils';
-import { FT, FONT_TITLE, FONT_MONO } from './formacaoDesignTokens';
+import { FT, FONT_TITLE, FONT_MONO, SCALE } from './formacaoDesignTokens';
 
 const WEEKDAYS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 
@@ -65,7 +65,7 @@ export default function WorkerCalendar({
         />
         <div className="grid grid-cols-7 gap-1 mb-2">
           {WEEKDAYS.map(d => (
-            <div key={d} className="text-center text-[9px] font-black uppercase tracking-widest text-slate-400 py-1" style={{ fontFamily: FONT_MONO }}>{d}</div>
+            <div key={d} className={`text-center ${SCALE.text.statLabel} text-slate-400 py-1`} style={{ fontFamily: FONT_MONO }}>{d}</div>
           ))}
         </div>
 
@@ -157,7 +157,7 @@ export default function WorkerCalendar({
                 {new Date(selectedDay + 'T00:00:00').toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' })}
               </p>
               {selectedDayTotal > 0 && (
-                <p className="text-[10px] font-bold text-[var(--navy)] mt-0.5">{formatHours(selectedDayTotal)} registadas</p>
+                <p className={`${SCALE.text.meta} text-[var(--navy)] mt-0.5`}>{formatHours(selectedDayTotal)} registadas</p>
               )}
             </div>
             {!myApproval && !selectedDayBeforeStart && (
@@ -173,7 +173,7 @@ export default function WorkerCalendar({
                 )}
                 <button
                   onClick={() => onAddEntry(selectedDay)}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-[var(--orange)] text-white rounded-xl text-[11px] font-black uppercase tracking-wide hover:bg-[var(--orange-deep)] transition-all active:scale-95"
+                  className={`flex items-center gap-1.5 px-3 py-2 bg-[var(--orange)] text-white rounded-xl hover:bg-[var(--orange-deep)] transition-all active:scale-95 ${SCALE.text.badge}`}
                 >
                   <Plus size={13} /> Adicionar
                 </button>
@@ -190,14 +190,14 @@ export default function WorkerCalendar({
                   className="bg-white px-3 py-2.5 rounded-2xl border border-slate-100 flex items-center justify-between gap-2 shadow-sm cursor-pointer hover:bg-[#1B3A57]/5 transition-all"
                 >
                   <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <span className="text-[9px] font-black bg-[#1B3A57]/10 text-[var(--navy)] px-2 py-1 rounded-lg border border-[#1B3A57]/15 uppercase shrink-0 max-w-[90px] truncate">
+                    <span className={`${SCALE.text.badge} bg-[#1B3A57]/10 text-[var(--navy)] px-2 py-1 rounded-lg border border-[#1B3A57]/15 shrink-0 max-w-[90px] truncate`}>
                       {clients.find(c => c.id === log.clientId)?.name || 'Cliente'}
                     </span>
                     <div className="text-xs font-bold font-mono text-slate-600 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100 shrink-0">
                       {log.startTime}–{log.endTime || '?'}
                     </div>
                     {(log.breakStart || log.breakEnd) && (
-                      <div className="text-[9px] font-bold text-orange-500 bg-orange-50 px-2 py-1 rounded-lg border border-orange-100 hidden sm:block shrink-0">
+                      <div className={`${SCALE.text.badge} text-orange-500 bg-orange-50 px-2 py-1 rounded-lg border border-orange-100 hidden sm:block shrink-0`}>
                         P: {log.breakStart || '--:--'}–{log.breakEnd || '--:--'}
                       </div>
                     )}

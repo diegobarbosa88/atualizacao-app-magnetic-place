@@ -1,6 +1,6 @@
 import React from 'react';
 import { LogOut, Timer, Users, UserCircle, Bell, Home, CalendarX, FileText, GraduationCap } from 'lucide-react';
-import { FT, FONT_TITLE, FONT_MONO } from './formacaoDesignTokens';
+import { FT, FONT_TITLE, FONT_MONO, SCALE } from './formacaoDesignTokens';
 
 const formatShortName = (fullName) => {
   if (!fullName) return '';
@@ -32,9 +32,9 @@ const TabButton = ({ active, onClick, icon, label, badge }) => (
     style={{ color: active ? FT.orange : FT.slateDim }}
   >
     {icon}
-    <span className="text-[9px] font-black uppercase tracking-wide" style={{ fontFamily: FONT_MONO }}>{label}</span>
+    <span className={SCALE.text.badge} style={{ fontFamily: FONT_MONO }}>{label}</span>
     {badge > 0 && (
-      <span className="absolute top-1.5 right-[calc(50%-16px)] w-3.5 h-3.5 bg-amber-400 rounded-full text-[8px] font-black text-white flex items-center justify-center">
+      <span className={`absolute top-1.5 right-[calc(50%-16px)] w-3.5 h-3.5 bg-amber-400 rounded-full text-white flex items-center justify-center ${SCALE.text.badge}`}>
         {badge}
       </span>
     )}
@@ -49,7 +49,7 @@ export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, act
   return (
     <>
       {currentUser?.isAdminImpersonating && (
-        <div className="bg-[var(--navy-solid)] text-white p-2 text-center text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-4 shadow-lg sticky top-0 z-[100]">
+        <div className={`bg-[var(--navy-solid)] text-white p-2 text-center flex items-center justify-center gap-4 shadow-lg sticky top-0 z-[100] ${SCALE.text.statLabel}`}>
           <span>Modo Visualização Admin (Impersonando: {currentUser.name})</span>
           <button
             onClick={() => onLogin('admin')}
@@ -87,7 +87,7 @@ export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, act
               title={alertCount > 0 ? 'Avisos pendentes' : 'Notificações'}
             >
               <Bell size={18} />
-              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-rose-500 rounded-full text-[9px] font-black text-white flex items-center justify-center px-1">
+              <span className={`absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-rose-500 rounded-full text-white flex items-center justify-center px-1 ${SCALE.text.badge}`}>
                 {totalBellCount}
               </span>
             </button>
@@ -100,10 +100,10 @@ export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, act
               className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-black shadow-sm transition-all ${workerTab === 'horarios' ? 'bg-[var(--navy-solid)] text-white' : 'bg-[#1B3A57]/10 text-[var(--navy)] hover:bg-[#1B3A57]/20'}`}
             >
               {activeWorkerSchedule && (
-                <span className="text-[9px] opacity-70 border-r border-current/20 pr-2 mr-1 leading-tight text-right uppercase">
+                <span className={`${SCALE.text.badge} opacity-70 border-r border-current/20 pr-2 mr-1 leading-tight text-right`}>
                   <span className="block">{formatTimeCompact(activeWorkerSchedule.startTime)} - {formatTimeCompact(activeWorkerSchedule.endTime)}</span>
                   {activeWorkerSchedule.breakStart && (
-                    <span className="block text-[8px] font-bold opacity-70">
+                    <span className={`block ${SCALE.text.statLabel} opacity-70`}>
                       P: {formatTimeCompact(activeWorkerSchedule.breakStart)}-{formatTimeCompact(activeWorkerSchedule.breakEnd)}
                     </span>
                   )}
@@ -122,7 +122,7 @@ export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, act
                 <CalendarX size={15} className="shrink-0" />
                 <span>Falta</span>
                 {absencePendingCount > 0 && (
-                  <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-orange-500 rounded-full text-[8px] font-black text-white flex items-center justify-center">
+                  <span className={`absolute -top-1 -right-1 w-3.5 h-3.5 bg-orange-500 rounded-full text-white flex items-center justify-center ${SCALE.text.badge}`}>
                     {absencePendingCount}
                   </span>
                 )}
@@ -137,7 +137,7 @@ export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, act
               <FileText size={15} className="shrink-0" />
               <span>Documentos</span>
               {documentsPendingCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-rose-500 rounded-full text-[8px] font-black text-white flex items-center justify-center">
+                <span className={`absolute -top-1 -right-1 w-3.5 h-3.5 bg-rose-500 rounded-full text-white flex items-center justify-center ${SCALE.text.badge}`}>
                   {documentsPendingCount}
                 </span>
               )}
@@ -151,7 +151,7 @@ export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, act
               <GraduationCap size={15} className="shrink-0" />
               <span>Formação</span>
               {formacaoPendingCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-rose-500 rounded-full text-[8px] font-black text-white flex items-center justify-center">
+                <span className={`absolute -top-1 -right-1 w-3.5 h-3.5 bg-rose-500 rounded-full text-white flex items-center justify-center ${SCALE.text.badge}`}>
                   {formacaoPendingCount}
                 </span>
               )}
@@ -165,7 +165,7 @@ export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, act
               <UserCircle size={15} />
               <span>Perfil</span>
               {pendingRequests > 0 && (
-                <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-amber-400 rounded-full text-[8px] font-black text-white flex items-center justify-center">
+                <span className={`absolute -top-1 -right-1 w-3.5 h-3.5 bg-amber-400 rounded-full text-white flex items-center justify-center ${SCALE.text.badge}`}>
                   {pendingRequests}
                 </span>
               )}

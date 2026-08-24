@@ -1,6 +1,7 @@
 import React from 'react';
 import { AlertTriangle, Edit2, Clock } from 'lucide-react';
 import ModalShell from '../../../components/common/ModalShell';
+import { SCALE } from '../../../styles/designTokens';
 
 export default function IncompleteLogModal({ logs, clients, onComplete, onDismiss }) {
   if (!logs || logs.length === 0) return null;
@@ -19,7 +20,7 @@ export default function IncompleteLogModal({ logs, clients, onComplete, onDismis
       size="md"
       footer={
         <div className="px-5 pb-6 pt-4">
-          <p className="text-[10px] text-slate-400 font-bold text-center leading-relaxed">
+          <p className={`${SCALE.text.meta} text-slate-400 text-center leading-relaxed`}>
             Completa os registos para garantir que as horas são contabilizadas corretamente.
           </p>
         </div>
@@ -43,16 +44,16 @@ export default function IncompleteLogModal({ logs, clients, onComplete, onDismis
                 <div className="min-w-0">
                   <p className="text-xs font-black text-slate-700 capitalize leading-snug">{dateLabel}</p>
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
-                    <span className="text-[10px] font-bold text-slate-500">{clientName}</span>
-                    <span className="text-[10px] font-bold text-indigo-600">Entrada {log.startTime}</span>
-                    <span className="text-[10px] font-bold text-rose-500">Saída em falta</span>
+                    <span className={`${SCALE.text.meta} text-slate-500`}>{clientName}</span>
+                    <span className={`${SCALE.text.meta} text-indigo-600`}>Entrada {log.startTime}</span>
+                    <span className={`${SCALE.text.meta} text-rose-500`}>Saída em falta</span>
                   </div>
                 </div>
               </div>
               {/* Action */}
               <button
                 onClick={() => onComplete(log)}
-                className="w-full flex items-center justify-center gap-2 py-2.5 bg-orange-600 text-white rounded-xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-900 transition-all shadow-sm active:scale-95"
+                className={`w-full flex items-center justify-center gap-2 py-2.5 bg-orange-600 text-white rounded-xl hover:bg-slate-900 transition-all shadow-sm active:scale-95 ${SCALE.text.badge}`}
               >
                 <Edit2 size={13} /> Completar Registo
               </button>

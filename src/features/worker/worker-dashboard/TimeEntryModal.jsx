@@ -3,7 +3,7 @@ import { Calendar, Users, Zap } from 'lucide-react';
 import EntryForm from '../../../components/common/EntryForm';
 import RequestEntryCard from '../../../components/worker/RequestEntryCard';
 import ModalShell from '../../../components/common/ModalShell';
-import { FT } from './formacaoDesignTokens';
+import { FT, SCALE } from './formacaoDesignTokens';
 
 const DAY_NAMES = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'];
 
@@ -93,18 +93,18 @@ export default function TimeEntryModal({
         {bulkMode && !isLimitedWorker && (
           <div className="px-5 py-4 border-b border-slate-100">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Selecionar Dias</span>
+              <span className={`${SCALE.text.statLabel} text-slate-400`}>Selecionar Dias</span>
               <div className="flex gap-3">
                 <button
                   onClick={() => setSelectedDays([...daysList])}
-                  className="text-[10px] font-black uppercase tracking-wide"
+                  className={SCALE.text.badge}
                   style={{ color: FT.navy }}
                 >
                   Todos
                 </button>
                 <button
                   onClick={() => setSelectedDays([])}
-                  className="text-[10px] font-black text-slate-400 hover:text-slate-600 uppercase tracking-wide"
+                  className={`${SCALE.text.badge} text-slate-400 hover:text-slate-600`}
                 >
                   Limpar
                 </button>
@@ -127,7 +127,7 @@ export default function TimeEntryModal({
                       ? { background: '#F7F5F0', color: '#D8D3C8' }
                       : { background: '#F4F2EC', color: FT.slateDim }}
                   >
-                    <span className="text-[8px] font-bold">{DAY_NAMES[d.getDay()]}</span>
+                    <span className={SCALE.text.statLabel}>{DAY_NAMES[d.getDay()]}</span>
                     <span className="text-sm font-black leading-tight">{d.getDate()}</span>
                     {hasLogs && (
                       <span className="w-1 h-1 rounded-full mt-0.5" style={{ background: isSelected ? 'rgba(255,255,255,.7)' : FT.navy }} />

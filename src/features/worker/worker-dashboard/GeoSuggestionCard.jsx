@@ -1,6 +1,6 @@
 import React from 'react';
 import { LogIn, LogOut, Loader2, MapPin, Building2, AlertTriangle, Edit2 } from 'lucide-react';
-import { FT, FONT_MONO } from './formacaoDesignTokens';
+import { FT, FONT_MONO, SCALE } from './formacaoDesignTokens';
 
 export default function GeoSuggestionCard({ geoSuggestion, geoSuggestionDismissed, setGeoSuggestion, setGeoSuggestionDismissed, geoActionLoading, handleConfirmGeoSuggestion, previousOpenLogs, clients, onCompleteLog }) {
   if (!geoSuggestion || geoSuggestionDismissed) return null;
@@ -26,7 +26,7 @@ export default function GeoSuggestionCard({ geoSuggestion, geoSuggestionDismisse
             <Building2 size={24} />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[10px] font-black uppercase tracking-widest mb-0.5" style={{ fontFamily: FONT_MONO, color: FT.slate }}>
+            <p className={`${SCALE.text.statLabel} mb-0.5`} style={{ fontFamily: FONT_MONO, color: FT.slate }}>
               {isEntry ? 'Registar entrada em' : 'Registar saída de'}
             </p>
             <p className="text-white font-extrabold text-xl leading-none truncate flex items-center gap-2">
@@ -38,7 +38,7 @@ export default function GeoSuggestionCard({ geoSuggestion, geoSuggestionDismisse
             </p>
             {geoSuggestion.dist != null && (
               <span
-                className="inline-flex items-center gap-1 mt-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide"
+                className={`inline-flex items-center gap-1 mt-1.5 px-2.5 py-1 rounded-full ${SCALE.text.badge}`}
                 style={{
                   fontFamily: FONT_MONO,
                   background: geoSuggestion.within ? FT.okBg : FT.warnBg,
@@ -61,7 +61,7 @@ export default function GeoSuggestionCard({ geoSuggestion, geoSuggestionDismisse
                 <p className="text-xs font-black leading-snug" style={{ color: FT.orangeDeep }}>
                   Tens um registo sem saída de {new Date(blockedLog.date + 'T00:00:00').toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' })}
                 </p>
-                <p className="text-[10px] font-bold mt-0.5" style={{ color: FT.inkSoft }}>
+                <p className={`${SCALE.text.meta} mt-0.5`} style={{ color: FT.inkSoft }}>
                   Entrada {blockedLog.startTime} · {(clients || []).find(c => String(c.id) === String(blockedLog.clientId))?.name || 'Unidade'}
                 </p>
               </div>

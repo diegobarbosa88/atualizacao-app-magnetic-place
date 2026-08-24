@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CalendarX, Send, CheckCircle, Clock, Eye, Trash2 } from 'lucide-react';
 import ModalShell from '../../../components/common/ModalShell';
-import { FT, FONT_MONO } from './formacaoDesignTokens';
+import { FT, FONT_MONO, SCALE } from './formacaoDesignTokens';
 
 const DEFAULT_REASONS = ['Doença', 'Consulta médica', 'Emergência familiar', 'Férias', 'Assunto pessoal', 'Outro'];
 const WEEKDAY_SHORT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
@@ -27,7 +27,7 @@ function AbsenceHistoryRow({ r, onDelete }) {
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs font-bold text-slate-700">{r.reason}</p>
         <div className="shrink-0 flex items-center gap-2">
-          <span className="flex items-center gap-1 text-[9px] font-black uppercase px-2 py-0.5 rounded-full" style={{ background: s.bg, color: s.fg, fontFamily: FONT_MONO }}>
+          <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full ${SCALE.text.badge}`} style={{ background: s.bg, color: s.fg, fontFamily: FONT_MONO }}>
             <Icon size={9} /> {s.label}
           </span>
           {canDelete && (
@@ -48,9 +48,9 @@ function AbsenceHistoryRow({ r, onDelete }) {
             const isWeekend = d.getDay() === 0 || d.getDay() === 6;
             return (
               <span key={ds} className={`inline-flex flex-col items-center px-2.5 py-1.5 rounded-xl text-center leading-none ${isWeekend ? 'bg-slate-100 text-slate-400' : 'bg-orange-100 text-orange-700'}`}>
-                <span className="text-[8px] font-black uppercase tracking-wider">{d.toLocaleDateString('pt-PT', { weekday: 'short' })}</span>
+                <span className={SCALE.text.statLabel}>{d.toLocaleDateString('pt-PT', { weekday: 'short' })}</span>
                 <span className="text-sm font-black">{d.getDate()}</span>
-                <span className="text-[8px] font-bold opacity-70">{d.toLocaleDateString('pt-PT', { month: 'short' })}</span>
+                <span className={`${SCALE.text.meta} opacity-70`}>{d.toLocaleDateString('pt-PT', { month: 'short' })}</span>
               </span>
             );
           })}
@@ -111,12 +111,12 @@ export default function AbsenceRequestModal({
       <button
         onClick={handleSubmit}
         disabled={selectedDates.length === 0 || !reason || submitting}
-        className="w-full flex items-center justify-center gap-2 py-3 bg-orange-500 text-white rounded-xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-900 transition-all shadow-sm active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+        className={`w-full flex items-center justify-center gap-2 py-3 bg-orange-500 text-white rounded-xl hover:bg-slate-900 transition-all shadow-sm active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${SCALE.text.badge}`}
       >
         <Send size={13} />
         {submitting ? 'A enviar...' : `Enviar Aviso${selectedDates.length > 1 ? ` (${selectedDates.length} dias)` : ''}`}
       </button>
-      <p className="text-[10px] text-slate-400 font-bold text-center">
+      <p className={`${SCALE.text.meta} text-slate-400 text-center`}>
         O aviso será enviado imediatamente ao responsável.
       </p>
     </div>
@@ -136,12 +136,12 @@ export default function AbsenceRequestModal({
 
         {/* Day grid */}
         <div>
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">
+          <p className={`${SCALE.text.statLabel} text-slate-500 mb-2`}>
             Dias em falta <span className="text-slate-400 font-bold normal-case tracking-normal">({selectedDates.length} selecionado{selectedDates.length !== 1 ? 's' : ''})</span>
           </p>
           <div className="grid grid-cols-7 gap-1">
             {WEEKDAY_SHORT.map(d => (
-              <div key={d} className="text-center text-[9px] font-black uppercase text-slate-300 pb-1">{d}</div>
+              <div key={d} className={`text-center ${SCALE.text.statLabel} text-slate-300 pb-1`}>{d}</div>
             ))}
             {Array.from({ length: new Date(daysList[0] + 'T00:00:00').getDay() }).map((_, i) => (
               <div key={`e${i}`} />
@@ -176,7 +176,7 @@ export default function AbsenceRequestModal({
             })}
           </div>
           {selectedDates.length > 0 && (
-            <p className="text-[10px] text-orange-600 font-bold mt-2 leading-relaxed">
+            <p className={`${SCALE.text.meta} text-orange-600 mt-2 leading-relaxed`}>
               {selectedDates.sort().map(ds => new Date(ds + 'T00:00:00').toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' })).join(', ')}
             </p>
           )}
@@ -184,7 +184,7 @@ export default function AbsenceRequestModal({
 
         {/* Reason */}
         <div>
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Motivo</p>
+          <p className={`${SCALE.text.statLabel} text-slate-500 mb-2`}>Motivo</p>
           <select
             value={reason}
             onChange={e => setReason(e.target.value)}
@@ -198,7 +198,7 @@ export default function AbsenceRequestModal({
 
         {/* Notes */}
         <div>
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">
+          <p className={`${SCALE.text.statLabel} text-slate-500 mb-2`}>
             Notas adicionais <span className="font-bold normal-case tracking-normal text-slate-400">(opcional)</span>
           </p>
           <textarea
@@ -213,7 +213,7 @@ export default function AbsenceRequestModal({
         {/* Histórico de avisos */}
         {myAbsences.length > 0 && (
           <div>
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Os meus avisos</p>
+            <p className={`${SCALE.text.statLabel} text-slate-500 mb-2`}>Os meus avisos</p>
             <div className="bg-white border border-slate-100 rounded-2xl overflow-hidden">
               {myAbsences.map(r => <AbsenceHistoryRow key={r.id} r={r} onDelete={onDelete} />)}
             </div>

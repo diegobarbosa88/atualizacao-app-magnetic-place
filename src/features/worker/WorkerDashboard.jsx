@@ -11,6 +11,7 @@ import { toISODateLocal, isSameMonth } from '../../utils/dateUtils';
 import { formatHours } from '../../utils/formatUtils';
 import { newId as newAbsenceId, notifyClientOfAbsence, deleteAbsenceRequest, buildAbsenceNotificationMessage } from '../../utils/absenceRequestsApi';
 import { notifyEvent, TARGET } from '../../utils/notifyEvent';
+import { SCALE } from '../../styles/designTokens';
 
 import WorkerProfile from './WorkerProfile';
 import { DISABLE_CLIENT_NOTIFICATIONS } from '../../config';
@@ -533,8 +534,8 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
                 <div className={`p-2 rounded-xl shrink-0 mt-0.5 ${bgClass}`}><Bell size={14} /></div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-black text-slate-800 leading-snug">{n.title}</p>
-                  {n.message && <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">{n.message}</p>}
-                  {n.created_at && <p className="text-[9px] text-slate-400 mt-1">{new Date(n.created_at).toLocaleString('pt-PT')}</p>}
+                  {n.message && <p className={`${SCALE.text.body} text-slate-500 mt-0.5 leading-snug`}>{n.message}</p>}
+                  {n.created_at && <p className={`${SCALE.text.meta} text-slate-400 mt-1`}>{new Date(n.created_at).toLocaleString('pt-PT')}</p>}
                 </div>
               </div>
             );

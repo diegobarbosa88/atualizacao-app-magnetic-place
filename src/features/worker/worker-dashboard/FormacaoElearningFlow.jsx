@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { PlayCircle, FileText, CheckCircle2, Loader2, ChevronLeft } from 'lucide-react';
 import { iniciarFormacao, responderQuestionario, getConteudoUrl, assinarMinhaFormacao } from './formacaoWorkerApi';
-import { FT, FONT_TITLE, FONT_MONO } from './formacaoDesignTokens';
+import { FT, FONT_TITLE, FONT_MONO, SCALE } from './formacaoDesignTokens';
 import { IlustracaoTile } from '../../admin/formacao-interna/formacaoIcons';
 
 const STEPS = [
@@ -143,6 +143,14 @@ function SignatureCanvas({ onConfirm, busy }) {
   return (
     <div>
       <p className="text-[13px] mb-2" style={{ color: FT.inkSoft }}>Assina abaixo para confirmar a conclusão da formação:</p>
+      {/* border via style, não className: a COR vem de FT.slate, uma variável de
+          JS interpolada dentro de um style inline — isto nunca foi uma classe
+          Tailwind, não há "JIT a falhar" aqui (essa era a leitura errada de uma
+          versão anterior deste comentário; ver AUDITORIA-BLOQUEADORES.md, A.3).
+          O SCALE.border.control funciona normalmente via className, incluindo
+          neste mesmo ficheiro (linhas 164/331/353). A largura fica literal
+          só porque não há como partilhar esse valor numérico com um style
+          inline que já precisa da cor em runtime. */}
       <div className="mb-2.5 rounded-[10px] overflow-hidden" style={{ border: `1.5px dashed ${FT.slate}`, background: '#FBFAF7', touchAction: 'none' }}>
         <canvas
           ref={canvasRef}
@@ -157,7 +165,7 @@ function SignatureCanvas({ onConfirm, busy }) {
           type="button"
           onClick={clear}
           disabled={busy}
-          className="flex-1 py-2.5 px-3.5 rounded-[9px] text-[13px] font-semibold border-[1.5px] transition-all disabled:opacity-50"
+          className={`flex-1 py-2.5 px-3.5 rounded-[9px] text-[13px] font-semibold ${SCALE.border.control} transition-all disabled:opacity-50`}
           style={{ borderColor: FT.navy, color: FT.navy }}
         >
           Limpar
@@ -324,7 +332,7 @@ export default function FormacaoElearningFlow({ participacao, currentUser, onFin
                   <label
                     key={oi}
                     onClick={() => setRespostas(prev => prev.map((r, i) => i === qi ? oi : r))}
-                    className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-[9px] mb-2 cursor-pointer text-[13.5px] border-[1.5px] transition-colors"
+                    className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-[9px] mb-2 cursor-pointer text-[13.5px] ${SCALE.border.control} transition-colors`}
                     style={{ borderColor: selecionada ? FT.orange : FT.border, background: selecionada ? '#FFF6EA' : 'transparent' }}
                   >
                     <input
@@ -346,7 +354,7 @@ export default function FormacaoElearningFlow({ participacao, currentUser, onFin
                   type="button"
                   onClick={() => setPerguntaIdx(i => i - 1)}
                   disabled={busy}
-                  className="py-3 px-4 rounded-[9px] font-semibold text-[14.5px] border-[1.5px] transition-all disabled:opacity-50 flex items-center gap-1 shrink-0"
+                  className={`py-3 px-4 rounded-[9px] font-semibold text-[14.5px] ${SCALE.border.control} transition-all disabled:opacity-50 flex items-center gap-1 shrink-0`}
                   style={{ borderColor: FT.navy, color: FT.navy }}
                 >
                   <ChevronLeft size={16} /> Anterior

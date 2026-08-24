@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { PenLine, CheckCircle, ChevronDown, ChevronUp, Zap } from 'lucide-react';
 import EntryForm from '../../../components/common/EntryForm';
 import { toISODateLocal } from '../../../utils/dateUtils';
-import { FT, FONT_MONO } from './formacaoDesignTokens';
+import { FT, FONT_MONO, SCALE } from './formacaoDesignTokens';
 
 const DAY_NAMES = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
@@ -77,11 +77,11 @@ export default function ManualTimeEntryCard({ clients, currentUser, onSave, onQu
               <PenLine size={16} />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400" style={{ fontFamily: FONT_MONO }}>Registar Horário de Hoje</p>
+              <p className={`${SCALE.text.statLabel} text-slate-400`} style={{ fontFamily: FONT_MONO }}>Registar Horário de Hoje</p>
               <p className="text-sm font-bold" style={{ color: FT.navyDeep }}>{dateLabel}</p>
             </div>
             {todayLogs.length > 0 && (
-              <span className="text-[10px] bg-emerald-50 text-emerald-700 font-black px-2 py-0.5 rounded-full border border-emerald-100 uppercase tracking-wide shrink-0">
+              <span className={`${SCALE.text.badge} bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full border border-emerald-100 shrink-0`}>
                 {todayLogs.length} registo{todayLogs.length !== 1 ? 's' : ''}
               </span>
             )}
@@ -97,7 +97,7 @@ export default function ManualTimeEntryCard({ clients, currentUser, onSave, onQu
               <button
                 onClick={handleQuickRegister}
                 title="Registo rápido com horário padrão"
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl transition-colors text-[10px] font-black uppercase tracking-wide"
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl transition-colors ${SCALE.text.badge}`}
                 style={{ background: FT.warnBg, color: FT.warn, border: `1px solid ${FT.warn}33`, fontFamily: FONT_MONO }}
               >
                 <Zap size={13} />

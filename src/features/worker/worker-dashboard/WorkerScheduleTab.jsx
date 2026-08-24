@@ -1,6 +1,6 @@
 import React from 'react';
 import { Coffee, Star, Timer, Clock } from 'lucide-react';
-import { FT, FONT_MONO } from './formacaoDesignTokens';
+import { FT, FONT_MONO, SCALE } from './formacaoDesignTokens';
 
 const ALL_DAYS = [{ v: 1, l: '2ª' }, { v: 2, l: '3ª' }, { v: 3, l: '4ª' }, { v: 4, l: '5ª' }, { v: 5, l: '6ª' }, { v: 6, l: 'Sáb' }, { v: 0, l: 'Dom' }];
 
@@ -20,19 +20,19 @@ function TimeRow({ startTime, endTime, breakStart, breakEnd }) {
   return (
     <div className="flex items-center gap-3">
       <div className="flex-1 rounded-xl px-3 py-2 text-center" style={{ background: '#F4F2EC' }}>
-        <p className="text-[9px] font-black uppercase tracking-widest mb-0.5" style={{ fontFamily: FONT_MONO, color: FT.slateDim }}>Entrada</p>
+        <p className={`${SCALE.text.badge} mb-0.5`} style={{ fontFamily: FONT_MONO, color: FT.slateDim }}>Entrada</p>
         <p className="text-base font-bold tabular-nums leading-none" style={{ fontFamily: FONT_MONO, color: FT.navyDeep }}>{startTime || '--:--'}</p>
       </div>
       <span className="font-black" style={{ color: FT.slate }}>→</span>
       <div className="flex-1 rounded-xl px-3 py-2 text-center" style={{ background: '#F4F2EC' }}>
-        <p className="text-[9px] font-black uppercase tracking-widest mb-0.5" style={{ fontFamily: FONT_MONO, color: FT.slateDim }}>Saída</p>
+        <p className={`${SCALE.text.badge} mb-0.5`} style={{ fontFamily: FONT_MONO, color: FT.slateDim }}>Saída</p>
         <p className="text-base font-bold tabular-nums leading-none" style={{ fontFamily: FONT_MONO, color: FT.navyDeep }}>{endTime || '--:--'}</p>
       </div>
       {breakStart && (
         <>
           <span className="text-slate-200">·</span>
           <div className="rounded-xl px-3 py-2 text-center" style={{ background: FT.warnBg }}>
-            <p className="text-[9px] font-black uppercase tracking-widest mb-0.5 flex items-center justify-center gap-0.5" style={{ fontFamily: FONT_MONO, color: FT.warn }}>
+            <p className={`${SCALE.text.badge} mb-0.5 flex items-center justify-center gap-0.5`} style={{ fontFamily: FONT_MONO, color: FT.warn }}>
               <Coffee size={8} /> Pausa
             </p>
             <p className="text-xs font-bold tabular-nums leading-none whitespace-nowrap" style={{ fontFamily: FONT_MONO, color: FT.orangeDeep }}>
@@ -55,7 +55,7 @@ function DayChips({ days, allDays = false, activeDayValues }) {
         return (
           <span
             key={d.v}
-            className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase"
+            className={`px-2 py-0.5 rounded-full ${SCALE.text.badge}`}
             style={{
               fontFamily: FONT_MONO,
               background: isActive ? `${FT.navy}1A` : '#F4F2EC',
@@ -88,12 +88,12 @@ function ScheduleCard({ s, isDefault, setDefaultSchedule }) {
         <div className="flex-1 min-w-0">
           <p className="text-sm font-bold leading-tight truncate" style={{ color: 'var(--ink)' }}>{s.name}</p>
           {headerSubtitle && (
-            <p className="text-[10px] font-bold mt-0.5" style={{ fontFamily: FONT_MONO, color: 'var(--ink-soft)' }}>{headerSubtitle}</p>
+            <p className={`${SCALE.text.meta} mt-0.5`} style={{ fontFamily: FONT_MONO, color: 'var(--ink-soft)' }}>{headerSubtitle}</p>
           )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {isDefault && (
-            <span className="text-[9px] font-black uppercase tracking-widest text-white px-2.5 py-0.5 rounded-full" style={{ fontFamily: FONT_MONO, background: FT.orange }}>
+            <span className={`${SCALE.text.badge} text-white px-2.5 py-0.5 rounded-full`} style={{ fontFamily: FONT_MONO, background: FT.orange }}>
               Padrão
             </span>
           )}

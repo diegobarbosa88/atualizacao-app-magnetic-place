@@ -1,13 +1,14 @@
 import React from 'react';
 import { Clock, ChevronDown, ChevronUp, X, Send, CheckCircle, XCircle, ArrowRight, Edit3, Trash2 } from 'lucide-react';
 import { formatDocDate } from '../../../utils/dateUtils';
+import { SCALE } from '../../../styles/designTokens';
 
 const fmtTime = (t) => t || '--:--';
 const fmtTs = (iso) => formatDocDate(iso, true) || '—';
 
 function TimeRange({ data, color = 'slate' }) {
   if (!data || (!data.startTime && !data.endTime)) {
-    return <span className="italic text-slate-300 text-[11px]">Sem registo</span>;
+    return <span className={`italic text-slate-300 ${SCALE.text.body}`}>Sem registo</span>;
   }
   return (
     <span className={`font-mono text-[11px] font-black text-${color}-700`}>
@@ -36,24 +37,24 @@ function PendingItem({ item, corrObj, labelKind }) {
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-xs font-black text-slate-800 leading-none">{item.date}</p>
-          <p className={`text-[10px] font-bold uppercase tracking-wide mt-0.5 ${isRemoval ? 'text-rose-500' : 'text-amber-500'}`}>
+          <p className={`${SCALE.text.badge} mt-0.5 ${isRemoval ? 'text-rose-500' : 'text-amber-500'}`}>
             {labelKind(item)}
           </p>
         </div>
         {corrObj?.submitted_at && (
-          <span className="text-[9px] font-bold text-slate-400 flex items-center gap-1 shrink-0">
+          <span className={`${SCALE.text.meta} text-slate-400 flex items-center gap-1 shrink-0`}>
             <Send size={10} /> {fmtTs(corrObj.submitted_at)}
           </span>
         )}
       </div>
       <div className="flex items-center gap-2 px-4 py-3">
         <div className="flex-1 bg-slate-50 rounded-xl px-3 py-2">
-          <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Original</p>
+          <p className={`${SCALE.text.statLabel} text-slate-400 mb-0.5`}>Original</p>
           <TimeRange data={item.before} color="slate" />
         </div>
         <ArrowRight size={14} className="text-amber-400 shrink-0" />
         <div className={`flex-1 rounded-xl px-3 py-2 ${isRemoval ? 'bg-rose-50' : 'bg-amber-50'}`}>
-          <p className={`text-[9px] font-black uppercase tracking-widest mb-0.5 ${isRemoval ? 'text-rose-400' : 'text-amber-500'}`}>
+          <p className={`${SCALE.text.statLabel} mb-0.5 ${isRemoval ? 'text-rose-400' : 'text-amber-500'}`}>
             Solicitado
           </p>
           {isRemoval
@@ -80,7 +81,7 @@ function ResolvedGroup({ corrId, items, corr, accepted, dismissCorrection }) {
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className={`text-[10px] font-black uppercase tracking-wide rounded-full px-2.5 py-0.5 ${
+            <span className={`${SCALE.text.badge} rounded-full px-2.5 py-0.5 ${
               accepted ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
             }`}>
               {accepted ? 'Aceite' : 'Rejeitado'}
@@ -90,7 +91,7 @@ function ResolvedGroup({ corrId, items, corr, accepted, dismissCorrection }) {
             </span>
           </div>
           {(corr?.submitted_at || corr?.reviewed_at) && (
-            <div className={`flex items-center gap-2 mt-1 text-[9px] font-bold flex-wrap ${accepted ? 'text-emerald-500' : 'text-rose-400'}`}>
+            <div className={`flex items-center gap-2 mt-1 flex-wrap ${SCALE.text.meta} ${accepted ? 'text-emerald-500' : 'text-rose-400'}`}>
               {corr.submitted_at && (
                 <span className="flex items-center gap-1">
                   <Send size={9} /> {fmtTs(corr.submitted_at)}
@@ -125,15 +126,15 @@ function ResolvedGroup({ corrId, items, corr, accepted, dismissCorrection }) {
             return (
               <div key={item.id} className="flex items-center gap-2">
                 {items.length > 1 && (
-                  <span className="font-mono text-[9px] text-slate-400 w-16 shrink-0">{item.date}</span>
+                  <span className={`font-mono ${SCALE.text.meta} text-slate-400 w-16 shrink-0`}>{item.date}</span>
                 )}
                 <div className="flex-1 bg-slate-50 rounded-xl px-3 py-2">
-                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Original</p>
+                  <p className={`${SCALE.text.statLabel} text-slate-400 mb-0.5`}>Original</p>
                   <TimeRange data={item.before} color="slate" />
                 </div>
                 <ArrowRight size={13} className={`shrink-0 ${accepted ? 'text-emerald-400' : 'text-rose-400'}`} />
                 <div className={`flex-1 rounded-xl px-3 py-2 ${accepted ? 'bg-emerald-50' : 'bg-rose-50'}`}>
-                  <p className={`text-[9px] font-black uppercase tracking-widest mb-0.5 ${accepted ? 'text-emerald-500' : 'text-rose-500'}`}>
+                  <p className={`${SCALE.text.statLabel} mb-0.5 ${accepted ? 'text-emerald-500' : 'text-rose-500'}`}>
                     Aplicado
                   </p>
                   {hasProposed
@@ -181,13 +182,13 @@ export default function PendingCorrectionsPanel({ pendingItems, resolvedItems, p
               : 'Pedidos respondidos'}
           </p>
           {hasPending && hasResolved && (
-            <p className="text-[10px] font-bold text-slate-400 mt-0.5">
+            <p className={`${SCALE.text.meta} text-slate-400 mt-0.5`}>
               {resolvedItems.length} já respondido{resolvedItems.length > 1 ? 's' : ''}
             </p>
           )}
         </div>
         {hasPending && (
-          <span className="bg-amber-100 text-amber-700 text-[10px] font-black px-2.5 py-0.5 rounded-full shrink-0">
+          <span className={`bg-amber-100 text-amber-700 px-2.5 py-0.5 rounded-full shrink-0 ${SCALE.text.badge}`}>
             {pendingItems.length}
           </span>
         )}
@@ -212,7 +213,7 @@ export default function PendingCorrectionsPanel({ pendingItems, resolvedItems, p
           {hasPending && hasResolved && (
             <div className="flex items-center gap-2 py-1">
               <div className="flex-1 h-px bg-slate-100" />
-              <span className="text-[9px] font-black uppercase tracking-widest text-slate-300">Respondidos</span>
+              <span className={`${SCALE.text.statLabel} text-slate-300`}>Respondidos</span>
               <div className="flex-1 h-px bg-slate-100" />
             </div>
           )}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, CheckCircle, TrendingUp } from 'lucide-react';
 import { formatHours } from '../../../utils/formatUtils';
-import { FT, FONT_MONO } from './formacaoDesignTokens';
+import { FT, FONT_MONO, SCALE } from './formacaoDesignTokens';
 
 export default function WorkerHeroStats({ currentUser, currentMonth, setCurrentMonth, todayHours, totalMonthHours, expectedHours, myApproval, showProgress, setShowProgress, fillHeight }) {
   const [now, setNow] = useState(new Date());
@@ -30,7 +30,7 @@ export default function WorkerHeroStats({ currentUser, currentMonth, setCurrentM
 
       {/* Linha superior: data + selector de mês */}
       <div className="flex items-center justify-between mb-4">
-        <p className="text-[10px] font-black uppercase tracking-widest" style={{ fontFamily: FONT_MONO, color: FT.slate }}>{dateLabel}</p>
+        <p className={SCALE.text.statLabel} style={{ fontFamily: FONT_MONO, color: FT.slate }}>{dateLabel}</p>
         <div className="flex items-center gap-1 rounded-full px-1.5 py-1" style={{ background: 'rgba(255,255,255,0.07)' }}>
           <button
             onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))}
@@ -38,7 +38,7 @@ export default function WorkerHeroStats({ currentUser, currentMonth, setCurrentM
           >
             <ChevronLeft size={13} />
           </button>
-          <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 min-w-[54px] text-center text-white" style={{ fontFamily: FONT_MONO }}>
+          <span className={`${SCALE.text.badge} px-1.5 min-w-[54px] text-center text-white`} style={{ fontFamily: FONT_MONO }}>
             {new Date(currentMonth).toLocaleDateString('pt-PT', { month: 'short', year: '2-digit' })}
           </span>
           <button
@@ -60,14 +60,14 @@ export default function WorkerHeroStats({ currentUser, currentMonth, setCurrentM
       <div className="grid grid-cols-2 gap-2.5">
         {/* Hoje */}
         <div className="rounded-xl px-4 py-3 flex flex-col gap-0.5" style={{ background: 'rgba(255,255,255,0.06)' }}>
-          <p className="text-[10px] font-black uppercase tracking-widest" style={{ fontFamily: FONT_MONO, color: FT.slate }}>Hoje</p>
+          <p className={SCALE.text.statLabel} style={{ fontFamily: FONT_MONO, color: FT.slate }}>Hoje</p>
           <p className="text-2xl font-black text-white tabular-nums leading-none">{formatHours(todayHours)}</p>
         </div>
 
         {/* Mês */}
         <div className="rounded-xl px-4 py-3 flex flex-col gap-0.5 relative" style={{ background: 'rgba(235,141,0,0.14)' }}>
           <div className="flex items-center justify-between">
-            <p className="text-[10px] font-black uppercase tracking-widest capitalize" style={{ fontFamily: FONT_MONO, color: '#FFD9A3' }}>
+            <p className={`${SCALE.text.statLabel} capitalize`} style={{ fontFamily: FONT_MONO, color: '#FFD9A3' }}>
               {new Date(currentMonth).toLocaleDateString('pt-PT', { month: 'long' })}
             </p>
             <div className="flex items-center gap-1.5">
@@ -86,7 +86,7 @@ export default function WorkerHeroStats({ currentUser, currentMonth, setCurrentM
           </div>
           <p className="text-2xl font-black text-white tabular-nums leading-none">{formatHours(totalMonthHours)}</p>
           {myApproval && (
-            <p className="text-[8px] font-bold text-emerald-400 uppercase tracking-wide">Aprovado</p>
+            <p className={`${SCALE.text.statLabel} text-emerald-400`}>Aprovado</p>
           )}
         </div>
       </div>
@@ -95,7 +95,7 @@ export default function WorkerHeroStats({ currentUser, currentMonth, setCurrentM
       {expectedHours > 0 && showProgress && (
         <div className="mt-3 animate-in slide-in-from-top-2 duration-300">
           <div className="flex items-center justify-between mb-1.5">
-            <span className="text-[9px] font-black uppercase tracking-widest" style={{ fontFamily: FONT_MONO, color: '#FFD9A3' }}>
+            <span className={SCALE.text.statLabel} style={{ fontFamily: FONT_MONO, color: '#FFD9A3' }}>
               Meta: {formatHours(expectedHours)}
             </span>
             <span className="text-sm font-black text-white">
