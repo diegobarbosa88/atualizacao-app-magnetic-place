@@ -6,7 +6,7 @@ import {
 import { useApp } from '../../../context/AppContext';
 import { calculateDuration, formatHours } from '../../../utils/formatUtils';
 import { toISODateLocal } from '../../../utils/dateUtils';
-import { FT } from '../../../styles/designTokens';
+import { FT, SCALE } from '../../../styles/designTokens';
 import { sendValidationEmail } from '../../../utils/emailUtils';
 import { shouldSendNotification } from '../../../config';
 
@@ -94,12 +94,12 @@ export default function ClientEnviosPanel({
         <div className="bg-white rounded-2xl border border-[var(--border-soft)] shadow-sm overflow-x-auto animate-in fade-in slide-in-from-bottom-2 duration-300">
           <table className="w-full text-sm min-w-[600px]">
             <thead><tr className="border-b border-[var(--border-soft)] bg-[var(--surface)]">
-              <th className="text-left px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Cliente</th>
-              <th className="text-left px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest hidden sm:table-cell">Email</th>
-              <th className="text-right px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Horas</th>
-              <th className="text-center px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Estado</th>
-              <th className="text-center px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Link</th>
-              <th className="text-right px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Ações</th>
+              <th className={`text-left px-4 py-3 ${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Cliente</th>
+              <th className={`text-left px-4 py-3 ${SCALE.text.statLabel} text-[var(--slate-dim)] hidden sm:table-cell`}>Email</th>
+              <th className={`text-right px-4 py-3 ${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Horas</th>
+              <th className={`text-center px-4 py-3 ${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Estado</th>
+              <th className={`text-center px-4 py-3 ${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Link</th>
+              <th className={`text-right px-4 py-3 ${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Ações</th>
             </tr></thead>
             <tbody>
               {enrichedClients.map(c => (
@@ -108,7 +108,7 @@ export default function ClientEnviosPanel({
                   <td className="px-4 py-3 text-[var(--slate-dim)] text-xs hidden sm:table-cell">{c.email || '—'}</td>
                   <td className="px-4 py-3 text-right font-black tabular-nums" style={{ color: 'var(--navy)' }}>{formatHours(c.totalHoras)}h</td>
                   <td className="px-4 py-3 text-center">
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wide ${
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full ${SCALE.text.badge} ${
                       c.status === 'validado' ? 'bg-emerald-100 text-emerald-700' :
                       c.status === 'enviado'  ? 'bg-teal-100 text-teal-700' :
                                                  'bg-amber-100 text-amber-700'
@@ -153,7 +153,7 @@ export default function ClientEnviosPanel({
             return (
               <div key={c.id} className="bg-white p-5 rounded-2xl border border-[var(--border-soft)] shadow-sm hover:shadow-md hover:border-[var(--border)] hover:-translate-y-0.5 transition-all duration-200">
                 <div className="flex justify-between items-start mb-3">
-                  <div className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase border flex items-center gap-1 ${c.status === 'validado' ? 'text-emerald-600 border-emerald-200 bg-emerald-50' : c.status === 'enviado' ? 'text-teal-600 border-teal-200 bg-teal-50' : 'text-amber-600 border-amber-200 bg-amber-50'}`}>
+                  <div className={`px-2.5 py-1 rounded-full ${SCALE.text.badge} border flex items-center gap-1 ${c.status === 'validado' ? 'text-emerald-600 border-emerald-200 bg-emerald-50' : c.status === 'enviado' ? 'text-teal-600 border-teal-200 bg-teal-50' : 'text-amber-600 border-amber-200 bg-amber-50'}`}>
                     {c.status === 'validado' && <CheckCircle size={10} />}
                     {c.status === 'enviado' && <Mail size={10} />}
                     {c.status === 'validado' ? 'Validado' : c.status === 'enviado' ? 'Enviado' : 'Pendente'}
@@ -161,19 +161,19 @@ export default function ClientEnviosPanel({
                   <span className="text-lg font-black" style={{ color: 'var(--navy)' }}>{formatHours(c.totalHoras)}h</span>
                 </div>
                 <h4 className="font-black text-[var(--ink)] text-sm truncate mb-0.5">{c.name}</h4>
-                <p className="text-[10px] text-[var(--slate-dim)] font-bold truncate mb-3">{c.email || 'Sem email'}</p>
+                <p className={`${SCALE.text.meta} text-[var(--slate-dim)] truncate mb-3`}>{c.email || 'Sem email'}</p>
                 <div className="flex items-center gap-1.5 mb-3 bg-[var(--surface)] rounded-xl p-2 border border-[var(--border-soft)]">
-                  <span className="text-[9px] font-mono text-[var(--slate-dim)] truncate flex-1">{linkUnico ? linkUnico.replace(/.*\?/, '?') : 'Sem share_token'}</span>
+                  <span className={`${SCALE.text.meta} font-mono text-[var(--slate-dim)] truncate flex-1`}>{linkUnico ? linkUnico.replace(/.*\?/, '?') : 'Sem share_token'}</span>
                   <button disabled={!linkUnico} onClick={() => linkUnico && navigator.clipboard.writeText(linkUnico)} className="text-[var(--slate)] hover:text-[var(--slate)] transition-colors shrink-0 disabled:opacity-30"><Copy size={12} /></button>
                 </div>
                 <div className="flex gap-2">
                   {c.status === 'validado' ? (
                     <>
-                      <button onClick={() => handleAnularValidacao(c)} className="flex-1 flex items-center justify-center gap-1.5 py-2 text-rose-500 hover:bg-rose-50 rounded-xl text-[10px] font-black uppercase transition-all border border-rose-100"><RotateCcw size={12} /> Anular</button>
-                      <button onClick={() => setPrintingReport({ client: c, logs, workers, clients, month: portalMonthStr, clientApprovals })} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[10px] font-black uppercase transition-all border hover:bg-[var(--surface)]" style={{ color: 'var(--navy)', borderColor: FT.slate }}><Download size={12} /> Relatório</button>
+                      <button onClick={() => handleAnularValidacao(c)} className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-rose-500 hover:bg-rose-50 rounded-xl ${SCALE.text.badge} transition-all border border-rose-100`}><RotateCcw size={12} /> Anular</button>
+                      <button onClick={() => setPrintingReport({ client: c, logs, workers, clients, month: portalMonthStr, clientApprovals })} className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl ${SCALE.text.badge} transition-all border hover:bg-[var(--surface)]`} style={{ color: 'var(--navy)', borderColor: FT.slate }}><Download size={12} /> Relatório</button>
                     </>
                   ) : (
-                    <button onClick={() => { setClienteSelecionado(c); setModalEmailAberto(true); }} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[10px] font-black uppercase transition-all text-white hover:opacity-90" style={{ backgroundColor: FT.navy }}><Mail size={12} /> {c.status === 'enviado' ? 'Reenviar' : 'Enviar Email'}</button>
+                    <button onClick={() => { setClienteSelecionado(c); setModalEmailAberto(true); }} className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl ${SCALE.text.badge} transition-all text-white hover:opacity-90`} style={{ backgroundColor: FT.navy }}><Mail size={12} /> {c.status === 'enviado' ? 'Reenviar' : 'Enviar Email'}</button>
                   )}
                 </div>
               </div>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Shield, ChevronDown, ChevronRight, Filter } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
-import { FT } from '../../../styles/designTokens';
+import { FT, SCALE } from '../../../styles/designTokens';
 
 const ACTION_LABELS = {
   log_criado:      { label: 'Registo Criado',   color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
@@ -23,10 +23,10 @@ function TimeSnap({ data, label }) {
   if (!data) return <span className="text-[var(--slate)] text-xs">—</span>;
   return (
     <div className="text-xs text-[var(--ink-soft)]">
-      <span className="font-bold text-[9px] uppercase tracking-widest text-[var(--slate-dim)] mr-1">{label}</span>
+      <span className={`${SCALE.text.badge} text-[var(--slate-dim)] mr-1`}>{label}</span>
       {data.startTime && <span className="font-mono">{data.startTime}→{data.endTime || '…'}</span>}
-      {data.breakStart && <span className="text-[var(--slate-dim)] text-[10px] ml-1">(⏸{data.breakStart}–{data.breakEnd || '…'})</span>}
-      {data.hours !== undefined && <span className="text-[var(--slate-dim)] ml-1 text-[10px]">{Number(data.hours).toFixed(2)}h</span>}
+      {data.breakStart && <span className={`text-[var(--slate-dim)] ${SCALE.text.meta} ml-1`}>(⏸{data.breakStart}–{data.breakEnd || '…'})</span>}
+      {data.hours !== undefined && <span className={`text-[var(--slate-dim)] ml-1 ${SCALE.text.meta}`}>{Number(data.hours).toFixed(2)}h</span>}
     </div>
   );
 }
@@ -45,10 +45,10 @@ function AuditRow({ entry }) {
         className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-[var(--surface)] transition-colors text-left"
       >
         {expanded ? <ChevronDown size={12} className="text-[var(--slate)] shrink-0" /> : <ChevronRight size={12} className="text-[var(--slate)] shrink-0" />}
-        <span className="text-[10px] font-bold text-[var(--slate-dim)] w-28 shrink-0">{formatDateTime(entry.created_at)}</span>
+        <span className={`${SCALE.text.meta} text-[var(--slate-dim)] w-28 shrink-0`}>{formatDateTime(entry.created_at)}</span>
         <span className="text-xs text-[var(--ink-soft)] flex-1 min-w-0 truncate">{entry.worker_name || '—'}</span>
-        {dateLabel && <span className="text-[10px] text-[var(--slate-dim)] shrink-0">{dateLabel}</span>}
-        <span className={`text-[10px] font-black px-2 py-0.5 rounded-lg border shrink-0 ${meta.color}`}>{meta.label}</span>
+        {dateLabel && <span className={`${SCALE.text.meta} text-[var(--slate-dim)] shrink-0`}>{dateLabel}</span>}
+        <span className={`${SCALE.text.badge} px-2 py-0.5 rounded-lg border shrink-0 ${meta.color}`}>{meta.label}</span>
       </button>
       {expanded && (
         <div className="px-10 pb-3 space-y-1.5">
@@ -57,7 +57,7 @@ function AuditRow({ entry }) {
             <TimeSnap data={entry.before_data} label="Antes" />
             {entry.after_data && <TimeSnap data={entry.after_data} label="Depois" />}
           </div>
-          {entry.log_id && <p className="text-[10px] text-[var(--slate-dim)] font-mono">log: {entry.log_id}</p>}
+          {entry.log_id && <p className={`${SCALE.text.meta} text-[var(--slate-dim)] font-mono`}>log: {entry.log_id}</p>}
         </div>
       )}
     </div>
@@ -81,12 +81,12 @@ function ClientGroup({ clientName, clientId, entries }) {
         onClick={() => setExpanded(e => !e)}
         className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[var(--surface)] transition-colors text-left border-b border-[var(--border-soft)]"
       >
-        <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-[10px] font-black" style={{ backgroundColor: FT.navy, color: FT.orange }}>
+        <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${SCALE.text.badge}`} style={{ backgroundColor: FT.navy, color: FT.orange }}>
           {getClientInitials(clientName || clientId)}
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-black text-[var(--ink)] text-sm truncate">{clientName || clientId}</p>
-          <p className="text-[10px] font-bold text-[var(--slate-dim)] uppercase tracking-widest">
+          <p className={`${SCALE.text.badge} text-[var(--slate-dim)]`}>
             {entries.length} ação{entries.length !== 1 ? 'ões' : ''}
           </p>
         </div>
@@ -98,10 +98,10 @@ function ClientGroup({ clientName, clientId, entries }) {
           {/* Mini header */}
           <div className="flex items-center gap-3 px-4 py-1.5 bg-[var(--surface)] border-b border-[var(--border-soft)]">
             <span className="w-4 shrink-0" />
-            <span className="text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)] w-28 shrink-0">Data/Hora</span>
-            <span className="text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)] flex-1">Colaborador</span>
-            <span className="text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Data Reg.</span>
-            <span className="text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Ação</span>
+            <span className={`${SCALE.text.statLabel} text-[var(--slate-dim)] w-28 shrink-0`}>Data/Hora</span>
+            <span className={`${SCALE.text.statLabel} text-[var(--slate-dim)] flex-1`}>Colaborador</span>
+            <span className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Data Reg.</span>
+            <span className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Ação</span>
           </div>
           {entries.map(e => <AuditRow key={e.id} entry={e} />)}
         </div>
@@ -172,7 +172,7 @@ export default function ClientPortalAuditPanel() {
           </div>
           <div>
             <h3 className="font-black text-[var(--ink)] text-base uppercase tracking-tight">Auditoria Portal do Cliente</h3>
-            <p className="text-[10px] font-bold text-[var(--slate-dim)] uppercase tracking-widest">
+            <p className={`${SCALE.text.badge} text-[var(--slate-dim)]`}>
               {filtered.length} ação{filtered.length !== 1 ? 'ões' : ''} · {grouped.length} cliente{grouped.length !== 1 ? 's' : ''}
             </p>
           </div>
@@ -180,12 +180,12 @@ export default function ClientPortalAuditPanel() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowFilters(s => !s)}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all border-2 hover:bg-[var(--surface)]"
+            className={`flex items-center gap-2 px-3 py-2 rounded-xl ${SCALE.text.body} uppercase tracking-wider transition-all border-2 hover:bg-[var(--surface)]`}
             style={showFilters || hasFilters ? { borderColor: FT.slate, color: 'var(--navy)', backgroundColor: 'rgba(134,154,175,0.1)' } : { borderColor: 'transparent', color: '#64748b' }}
           >
             <Filter size={13} /> Filtros {hasFilters && `(${[filterClient, filterAction, filterDateFrom, filterDateTo].filter(Boolean).length})`}
           </button>
-          <button onClick={loadEntries} className="px-3 py-2 bg-[var(--surface)] text-[var(--slate-dim)] hover:text-[var(--ink)] rounded-xl text-[11px] font-black uppercase tracking-wider transition-all">
+          <button onClick={loadEntries} className={`px-3 py-2 bg-[var(--surface)] text-[var(--slate-dim)] hover:text-[var(--ink)] rounded-xl ${SCALE.text.body} uppercase tracking-wider transition-all`}>
             ↻ Atualizar
           </button>
         </div>
@@ -194,7 +194,7 @@ export default function ClientPortalAuditPanel() {
       {showFilters && (
         <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div>
-            <label className="text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-1 block">Cliente</label>
+            <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1 block`}>Cliente</label>
             <select
               value={filterClient}
               onChange={e => setFilterClient(e.target.value)}
@@ -205,7 +205,7 @@ export default function ClientPortalAuditPanel() {
             </select>
           </div>
           <div>
-            <label className="text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-1 block">Ação</label>
+            <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1 block`}>Ação</label>
             <select
               value={filterAction}
               onChange={e => setFilterAction(e.target.value)}
@@ -216,19 +216,19 @@ export default function ClientPortalAuditPanel() {
             </select>
           </div>
           <div>
-            <label className="text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-1 block">De</label>
+            <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1 block`}>De</label>
             <input type="date" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)}
               className="w-full px-2 py-1.5 text-xs border border-[var(--border)] rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[var(--navy)]" />
           </div>
           <div>
-            <label className="text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-1 block">Até</label>
+            <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1 block`}>Até</label>
             <input type="date" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)}
               className="w-full px-2 py-1.5 text-xs border border-[var(--border)] rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[var(--navy)]" />
           </div>
           {hasFilters && (
             <button
               onClick={() => { setFilterClient(''); setFilterAction(''); setFilterDateFrom(''); setFilterDateTo(''); }}
-              className="col-span-2 sm:col-span-4 text-[10px] font-black uppercase tracking-widest transition-colors hover:opacity-70"
+              className={`col-span-2 sm:col-span-4 ${SCALE.text.badge} transition-colors hover:opacity-70`}
               style={{ color: 'var(--navy)' }}
             >
               Limpar filtros

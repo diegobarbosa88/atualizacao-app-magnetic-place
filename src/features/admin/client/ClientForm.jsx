@@ -6,7 +6,7 @@ import {
   AlertTriangle, Info,
 } from 'lucide-react';
 import { getCurrentPosition } from '../../../utils/geoUtils';
-import { FT } from '../../../styles/designTokens';
+import { FT, SCALE } from '../../../styles/designTokens';
 
 const FONT_TITLE = "'Barlow Condensed', sans-serif";
 const FONT_MONO = "'IBM Plex Mono', monospace";
@@ -14,7 +14,7 @@ const FONT_MONO = "'IBM Plex Mono', monospace";
 function Field({ label, icon: Icon, span2, children }) {
   return (
     <div className={`space-y-1 ${span2 ? 'md:col-span-2' : ''}`}>
-      <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--slate-dim)] ml-1 flex items-center gap-1.5" style={{ fontFamily: FONT_MONO }}>
+      <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)] ml-1 flex items-center gap-1.5`} style={{ fontFamily: FONT_MONO }}>
         {Icon && <Icon size={11} className="opacity-70" />} {label}
       </label>
       {children}
@@ -22,7 +22,7 @@ function Field({ label, icon: Icon, span2, children }) {
   );
 }
 
-const INPUT_CLS = "w-full bg-white border-[1.5px] border-[#E4E1D6] rounded-[0.85rem] py-[0.72rem] px-[0.9rem] text-[0.86rem] font-semibold text-[var(--ink-mid)] outline-none shadow-sm focus:border-[var(--navy)] focus:ring-4 focus:ring-[#1B3A57]/10 transition-all";
+const INPUT_CLS = `w-full bg-white ${SCALE.border.control} border-[#E4E1D6] rounded-[0.85rem] py-[0.72rem] px-[0.9rem] text-[0.86rem] font-semibold text-[var(--ink-mid)] outline-none shadow-sm focus:border-[var(--navy)] focus:ring-4 focus:ring-[#1B3A57]/10 transition-all`;
 
 export default function ClientForm() {
   const { schedules } = useApp();
@@ -82,7 +82,7 @@ export default function ClientForm() {
               </div>
               <div>
                 <h4 className="font-bold text-[var(--ink-mid)] text-[1.2rem] leading-none" style={{ fontFamily: FONT_TITLE }}>Identificação</h4>
-                <p className="text-[9.5px] font-bold uppercase tracking-widest text-[var(--slate-dim)] mt-0.5" style={{ fontFamily: FONT_MONO }}>Dados gerais do cliente</p>
+                <p className={`${SCALE.text.badge} text-[var(--slate-dim)] mt-0.5`} style={{ fontFamily: FONT_MONO }}>Dados gerais do cliente</p>
               </div>
             </div>
 
@@ -154,20 +154,20 @@ export default function ClientForm() {
               </div>
               <div>
                 <h4 className="font-bold text-[var(--ink-mid)] text-[1.2rem] leading-none" style={{ fontFamily: FONT_TITLE }}>Financeiro</h4>
-                <p className="text-[9.5px] font-bold uppercase tracking-widest text-[var(--slate-dim)] mt-0.5" style={{ fontFamily: FONT_MONO }}>Faturação por hora trabalhada</p>
+                <p className={`${SCALE.text.badge} text-[var(--slate-dim)] mt-0.5`} style={{ fontFamily: FONT_MONO }}>Faturação por hora trabalhada</p>
               </div>
             </div>
 
             {currentClient && (
               <div className="relative overflow-hidden flex items-end justify-between gap-4 rounded-[1.2rem] px-[1.35rem] py-[1.15rem] mb-[1.1rem]" style={{ background: `linear-gradient(135deg, ${FT.navy} 0%, ${FT.navyMid} 100%)` }}>
                 <div>
-                  <p className="text-[9.5px] font-bold uppercase tracking-widest mb-1" style={{ fontFamily: FONT_MONO, color: '#9fb4c8' }}>Valor / hora atual</p>
+                  <p className={`${SCALE.text.badge} mb-1`} style={{ fontFamily: FONT_MONO, color: '#9fb4c8' }}>Valor / hora atual</p>
                   <p className="font-bold leading-none text-white" style={{ fontFamily: FONT_TITLE, fontSize: '2.5rem' }}>
                     {Number(currentClient.valorHora || 0).toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-[1.1rem] font-semibold" style={{ color: '#b9c9d8' }}>€</span>
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-[9px] font-bold uppercase tracking-widest" style={{ fontFamily: FONT_MONO, color: '#8ea6bc' }}>Válido desde</p>
+                  <p className={SCALE.text.badge} style={{ fontFamily: FONT_MONO, color: '#8ea6bc' }}>Válido desde</p>
                   <p className="text-sm font-bold text-white" style={{ fontFamily: FONT_MONO }}>
                     {currentClient.dataAlteracao ? new Date(currentClient.dataAlteracao).toLocaleDateString('pt-PT') : '—'}
                   </p>
@@ -225,30 +225,30 @@ export default function ClientForm() {
               >
                 <span className="w-2 h-2 rounded-full bg-white" style={{ transform: 'rotate(45deg)' }} />
               </div>
-              <div className="absolute left-2.5 bottom-2.5 bg-white/90 rounded-lg px-2 py-1 text-[9.5px] font-bold" style={{ fontFamily: FONT_MONO, color: 'var(--navy)' }}>
+              <div className={`absolute left-2.5 bottom-2.5 bg-white/90 rounded-lg px-2 py-1 ${SCALE.text.meta}`} style={{ fontFamily: FONT_MONO, color: 'var(--navy)' }}>
                 raio {raio}m
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-[0.7rem] mb-[0.7rem]">
               <div className="space-y-1">
-                <label className="text-[9px] font-bold uppercase tracking-wider text-[var(--slate-dim)]" style={{ fontFamily: FONT_MONO }}>Latitude</label>
-                <input type="number" step="any" value={clientForm.lat ?? ''} onChange={e => setClientForm(prev => ({ ...prev, lat: e.target.value }))} className="w-full bg-white border-[1.5px] border-[#E4E1D6] rounded-xl py-[0.55rem] px-[0.7rem] text-[0.78rem] font-bold outline-none shadow-sm focus:border-[var(--navy)] focus:ring-4 focus:ring-[#1B3A57]/10 transition-all" style={{ fontFamily: FONT_MONO }} placeholder="38.7169" />
+                <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`} style={{ fontFamily: FONT_MONO }}>Latitude</label>
+                <input type="number" step="any" value={clientForm.lat ?? ''} onChange={e => setClientForm(prev => ({ ...prev, lat: e.target.value }))} className={`w-full bg-white ${SCALE.border.control} border-[#E4E1D6] rounded-xl py-[0.55rem] px-[0.7rem] text-[0.78rem] font-bold outline-none shadow-sm focus:border-[var(--navy)] focus:ring-4 focus:ring-[#1B3A57]/10 transition-all`} style={{ fontFamily: FONT_MONO }} placeholder="38.7169" />
               </div>
               <div className="space-y-1">
-                <label className="text-[9px] font-bold uppercase tracking-wider text-[var(--slate-dim)]" style={{ fontFamily: FONT_MONO }}>Longitude</label>
-                <input type="number" step="any" value={clientForm.lng ?? ''} onChange={e => setClientForm(prev => ({ ...prev, lng: e.target.value }))} className="w-full bg-white border-[1.5px] border-[#E4E1D6] rounded-xl py-[0.55rem] px-[0.7rem] text-[0.78rem] font-bold outline-none shadow-sm focus:border-[var(--navy)] focus:ring-4 focus:ring-[#1B3A57]/10 transition-all" style={{ fontFamily: FONT_MONO }} placeholder="-9.1399" />
+                <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`} style={{ fontFamily: FONT_MONO }}>Longitude</label>
+                <input type="number" step="any" value={clientForm.lng ?? ''} onChange={e => setClientForm(prev => ({ ...prev, lng: e.target.value }))} className={`w-full bg-white ${SCALE.border.control} border-[#E4E1D6] rounded-xl py-[0.55rem] px-[0.7rem] text-[0.78rem] font-bold outline-none shadow-sm focus:border-[var(--navy)] focus:ring-4 focus:ring-[#1B3A57]/10 transition-all`} style={{ fontFamily: FONT_MONO }} placeholder="-9.1399" />
               </div>
             </div>
             <div className="space-y-1 mb-3">
-              <label className="text-[9px] font-bold uppercase tracking-wider text-[var(--slate-dim)]" style={{ fontFamily: FONT_MONO }}>Raio (metros)</label>
-              <input type="number" value={clientForm.geo_radius_m ?? 200} onChange={e => setClientForm(prev => ({ ...prev, geo_radius_m: e.target.value }))} className="w-full bg-white border-[1.5px] border-[#E4E1D6] rounded-xl py-[0.55rem] px-[0.7rem] text-[0.78rem] font-bold outline-none shadow-sm focus:border-[var(--navy)] focus:ring-4 focus:ring-[#1B3A57]/10 transition-all" style={{ fontFamily: FONT_MONO }} placeholder="200" />
+              <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`} style={{ fontFamily: FONT_MONO }}>Raio (metros)</label>
+              <input type="number" value={clientForm.geo_radius_m ?? 200} onChange={e => setClientForm(prev => ({ ...prev, geo_radius_m: e.target.value }))} className={`w-full bg-white ${SCALE.border.control} border-[#E4E1D6] rounded-xl py-[0.55rem] px-[0.7rem] text-[0.78rem] font-bold outline-none shadow-sm focus:border-[var(--navy)] focus:ring-4 focus:ring-[#1B3A57]/10 transition-all`} style={{ fontFamily: FONT_MONO }} placeholder="200" />
             </div>
 
             <button
               onClick={handleUseCurrentLocation}
               disabled={geoLoading}
-              className="w-full flex items-center justify-center gap-2 disabled:opacity-50 px-4 py-2.5 rounded-xl font-bold text-[10.5px] uppercase tracking-wide shadow-sm transition-all border-[1.5px] hover:bg-white"
+              className={`w-full flex items-center justify-center gap-2 disabled:opacity-50 px-4 py-2.5 rounded-xl ${SCALE.text.badge} shadow-sm transition-all ${SCALE.border.control} hover:bg-white`}
               style={{ fontFamily: FONT_MONO, borderColor: FT.slate, color: 'var(--navy)' }}
             >
               {geoLoading ? <Loader2 size={13} className="animate-spin" /> : <Navigation size={13} />}
@@ -258,7 +258,7 @@ export default function ClientForm() {
               <button
                 onClick={handleGeocodeMorada}
                 disabled={geocodeLoading}
-                className="mt-2 w-full flex items-center justify-center gap-2 bg-white disabled:opacity-50 px-4 py-2.5 rounded-xl font-bold text-[10.5px] uppercase tracking-wide shadow-sm transition-all border-[1.5px] border-dashed hover:bg-[var(--surface)]"
+                className={`mt-2 w-full flex items-center justify-center gap-2 bg-white disabled:opacity-50 px-4 py-2.5 rounded-xl ${SCALE.text.badge} shadow-sm transition-all ${SCALE.border.control} border-dashed hover:bg-[var(--surface)]`}
                 style={{ fontFamily: FONT_MONO, borderColor: '#a8b5c1', color: '#5C7086' }}
               >
                 {geocodeLoading ? <Loader2 size={13} className="animate-spin" /> : <MapPin size={13} />}
@@ -275,7 +275,7 @@ export default function ClientForm() {
               </div>
               <h4 className="font-bold uppercase tracking-wide text-[0.95rem]" style={{ fontFamily: FONT_MONO, color: '#51606E' }}>Horários</h4>
               <span
-                className="ml-auto text-[9.5px] font-bold px-2 py-0.5 rounded-full text-white"
+                className={`ml-auto ${SCALE.text.meta} px-2 py-0.5 rounded-full text-white`}
                 style={{ fontFamily: FONT_MONO, backgroundColor: FT.navy }}
               >
                 {(clientForm.assignedSchedules || []).length} selec.
@@ -283,7 +283,7 @@ export default function ClientForm() {
             </div>
             <div className="flex flex-wrap gap-2 max-h-[170px] overflow-y-auto pr-0.5 custom-scrollbar">
               {schedules.length === 0 && (
-                <p className="text-[10px] text-[var(--slate-dim)] font-bold px-1">Sem horários criados.</p>
+                <p className={`${SCALE.text.meta} text-[var(--slate-dim)] px-1`}>Sem horários criados.</p>
               )}
               {[...schedules].sort((a, b) => a.name.localeCompare(b.name)).map(s => {
                 const isAssigned = !!(clientForm.assignedSchedules || []).includes(s.id);
@@ -296,7 +296,7 @@ export default function ClientForm() {
                       const updated = current.includes(s.id) ? current.filter(id => id !== s.id) : [...current, s.id];
                       setClientForm({ ...clientForm, assignedSchedules: updated });
                     }}
-                    className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[10px] font-bold border-[1.5px] transition-all"
+                    className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 ${SCALE.text.meta} ${SCALE.border.control} transition-all`}
                     style={{
                       fontFamily: FONT_MONO,
                       backgroundColor: isAssigned ? FT.navy : '#fff',
