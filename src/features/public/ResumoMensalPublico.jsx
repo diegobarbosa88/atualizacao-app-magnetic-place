@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, FileSpreadsheet, ShieldAlert } from 'lucide-
 import { MESES_PT } from '../../lib/payroll/reciboCalculations.js';
 import { RESUMO_COLS, GROUP_DEFS } from '../../lib/payroll/resumoCols.js';
 import { useDragScroll } from '../../lib/useDragScroll.js';
+import { SCALE } from '../../styles/designTokens';
 
 const EMPRESA = { nome: 'Magnetic Place Unipessoal, Lda', nif: '517379740' };
 
@@ -271,10 +272,10 @@ export default function ResumoMensalPublico() {
           </button>
         </div>
         <div className="flex items-center gap-3">
-          {saveStatus === 'saving' && <span className="text-[10px] text-slate-300 animate-pulse">A guardar…</span>}
-          {saveStatus === 'ok'     && <span className="text-[10px] text-emerald-400 font-black">✓ Guardado</span>}
-          {saveStatus === 'error'  && <span className="text-[10px] text-red-400 font-black">✗ Erro ao guardar</span>}
-          {isReady && !saveStatus  && <span className="text-[10px] text-slate-400">{rows.length} trabalhadores</span>}
+          {saveStatus === 'saving' && <span className={`${SCALE.text.meta} text-slate-300 animate-pulse`}>A guardar…</span>}
+          {saveStatus === 'ok'     && <span className={`${SCALE.text.meta} text-emerald-400`}>✓ Guardado</span>}
+          {saveStatus === 'error'  && <span className={`${SCALE.text.meta} text-red-400`}>✗ Erro ao guardar</span>}
+          {isReady && !saveStatus  && <span className={`${SCALE.text.meta} text-slate-400`}>{rows.length} trabalhadores</span>}
           <button
             onClick={exportXLS}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black uppercase bg-emerald-600 text-white hover:bg-emerald-700 transition-all border border-emerald-600 shadow-sm"
@@ -300,11 +301,11 @@ export default function ResumoMensalPublico() {
             Resumo — {mesLabel}
           </h3>
           {isReady && (
-            <span className="text-[10px] font-black text-slate-400 bg-slate-100 px-2 py-0.5 rounded-lg">
+            <span className={`${SCALE.text.meta} text-slate-400 bg-slate-100 px-2 py-0.5 rounded-lg`}>
               {rows.length} trabalhadores
             </span>
           )}
-          <span className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-lg font-bold ml-auto">
+          <span className={`${SCALE.text.meta} text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-lg ml-auto`}>
             Vista partilhada · acesso registado
           </span>
         </div>
@@ -340,7 +341,7 @@ export default function ResumoMensalPublico() {
                     return (
                       <th
                         key={ci}
-                        className="text-[8px] font-black uppercase tracking-widest py-1"
+                        className={`${SCALE.text.statLabel} py-1`}
                         style={{
                           background: def.bg, color: def.text,
                           textAlign: isFirstInGroup ? 'left' : 'center',
@@ -365,7 +366,7 @@ export default function ResumoMensalPublico() {
                     return (
                       <th
                         key={ci}
-                        className={`px-1.5 py-2 text-[9px] font-black uppercase tracking-wide leading-tight ${col.highlight ? hlHead(col.highlight) : ''}`}
+                        className={`px-1.5 py-2 ${SCALE.text.statLabel} leading-tight ${col.highlight ? hlHead(col.highlight) : ''}`}
                         style={{
                           background: col.highlight ? undefined : def.bg,
                           color: col.highlight ? undefined : def.text,
@@ -416,7 +417,7 @@ export default function ResumoMensalPublico() {
                         >
                           {isCopied && (
                             <span
-                              className="absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full px-1.5 py-0.5 rounded-md bg-emerald-600 text-white text-[9px] font-black uppercase tracking-wide shadow-md pointer-events-none whitespace-nowrap"
+                              className={`absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full px-1.5 py-0.5 rounded-md bg-emerald-600 text-white ${SCALE.text.badge} shadow-md pointer-events-none whitespace-nowrap`}
                               style={{ zIndex: 20 }}
                             >
                               Copiado!
@@ -445,7 +446,7 @@ export default function ResumoMensalPublico() {
                               onChange={e => setRows(prev => prev.map(r => r.workerId === row.workerId ? { ...r, observacao: e.target.value } : r))}
                               onBlur={e => updateObs(row.workerId, { observacao: e.target.value })}
                               placeholder="—"
-                              className="w-full bg-transparent outline-none text-[10px] font-bold text-slate-600 placeholder-slate-300"
+                              className={`w-full bg-transparent outline-none ${SCALE.text.meta} text-slate-600 placeholder-slate-300`}
                               style={{ minWidth: 0 }}
                             />
                           ) : col.tipo === 'ajuste' ? (
@@ -460,7 +461,7 @@ export default function ResumoMensalPublico() {
                               <span className={`block px-2 ${tdAlign(col)}`}>
                                 {val}
                                 {Math.abs(diff) >= 0.005 && (
-                                  <span className={`block text-[9px] font-bold leading-tight ${diff <= 0 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                  <span className={`block ${SCALE.text.badge} leading-tight ${diff <= 0 ? 'text-emerald-600' : 'text-amber-600'}`}>
                                     {diff > 0 ? '+' : ''}{diff.toFixed(2)}
                                   </span>
                                 )}
@@ -485,7 +486,7 @@ export default function ResumoMensalPublico() {
                     return (
                       <td
                         key={ci}
-                        className={`px-1.5 py-2 text-[10px] font-black whitespace-nowrap text-center ${col.highlight ? hlFoot(col.highlight) : 'bg-indigo-50 text-indigo-700'}`}
+                        className={`px-1.5 py-2 ${SCALE.text.meta} whitespace-nowrap text-center ${col.highlight ? hlFoot(col.highlight) : 'bg-indigo-50 text-indigo-700'}`}
                         style={{
                           borderRight: isLastInGroup && def.border ? `2px solid ${def.border}` : isLastInGroup ? '1px solid #1e293b' : undefined,
                           ...(ai === 0 ? { position: 'sticky', left: 0, zIndex: 5, background: '#eef2ff' } : {}),
@@ -505,7 +506,7 @@ export default function ResumoMensalPublico() {
         )}
 
         {/* Aviso abaixo da tabela */}
-        <p className="flex-shrink-0 text-center text-[10px] text-slate-400 font-bold pt-2">
+        <p className={`flex-shrink-0 text-center ${SCALE.text.meta} text-slate-400 pt-2`}>
           Estimativa não oficial · Valores calculados com base nas tabelas IRS {ano} e TSU em vigor · Confirme sempre no TOConline
         </p>
       </div>

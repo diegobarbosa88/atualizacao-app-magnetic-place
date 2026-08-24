@@ -10,6 +10,7 @@ import { formatPersonName } from '../../utils/textUtils';
 import { notifyEvent, TARGET } from '../../utils/notifyEvent';
 import SelectProfissaoEmpresa from '../../components/SelectProfissaoEmpresa';
 import OnboardingCommitmentStep from './OnboardingCommitmentStep';
+import { SCALE } from '../../styles/designTokens';
 
 const SUPABASE_URL      = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -80,7 +81,7 @@ function InputField({ label, error, icon: Icon, children }) {
       </label>
       {children}
       {error && (
-        <p className="flex items-center gap-1 text-[11px] text-rose-500 font-semibold">
+        <p className={`flex items-center gap-1 ${SCALE.text.body} text-rose-500`}>
           <AlertCircle size={11} /> {error}
         </p>
       )}
@@ -149,7 +150,7 @@ function MobileHeader({ step }) {
         {/* Linha 2: passo atual + dots */}
         <div className="flex items-end justify-between">
           <div>
-            <p className="text-slate-500 text-[9px] font-bold uppercase tracking-widest mb-1">
+            <p className={`text-slate-500 ${SCALE.text.badge} mb-1`}>
               Passo {step + 1} de {STEPS.length}
             </p>
             <p className="text-white text-base font-extrabold normal-case leading-none">
@@ -192,7 +193,7 @@ function BrandPanel({ step }) {
             <p className="text-white font-black text-base tracking-tight leading-none" style={{ fontFamily: "'Big Shoulders Display', sans-serif" }}>
               MAGNETIC PLACE
             </p>
-            <p className="text-slate-400 text-[10px] font-medium mt-0.5">Unipessoal, Lda</p>
+            <p className={`text-slate-400 ${SCALE.text.meta} mt-0.5`}>Unipessoal, Lda</p>
           </div>
         </div>
 
@@ -228,7 +229,7 @@ function BrandPanel({ step }) {
       <div className="pt-6 border-t border-white/10">
         <div className="flex items-center gap-2 text-slate-500">
           <Lock size={12} />
-          <span className="text-[10px] font-medium normal-case">Dados protegidos — RGPD</span>
+          <span className={`${SCALE.text.meta} normal-case`}>Dados protegidos — RGPD</span>
         </div>
       </div>
     </div>
@@ -730,7 +731,7 @@ function ReviewBlock({ title, accent, children }) {
     <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
       <div className="flex items-center gap-2 px-5 py-3 border-b border-slate-50">
         <div className={`w-2 h-2 rounded-full ${a.dot}`} />
-        <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md ${a.label}`}>{title}</span>
+        <span className={`${SCALE.text.badge} px-2 py-0.5 rounded-md ${a.label}`}>{title}</span>
       </div>
       <div className="px-5 py-2 divide-y divide-slate-50">{children}</div>
     </div>
@@ -741,7 +742,7 @@ function RRow({ label, value, mono }) {
   if (!value) return null;
   return (
     <div className="flex items-start gap-3 py-2.5">
-      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide w-20 shrink-0 pt-0.5">{label}</span>
+      <span className={`${SCALE.text.statLabel} text-slate-400 w-20 shrink-0 pt-0.5`}>{label}</span>
       <span className={`text-sm text-slate-700 break-all normal-case ${mono ? 'font-mono font-medium' : 'font-semibold'}`}>{value}</span>
     </div>
   );
