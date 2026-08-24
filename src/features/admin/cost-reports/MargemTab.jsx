@@ -1,5 +1,6 @@
 import React from 'react';
 import { formatCurrency } from './costReportsUtils';
+import { SCALE } from '../../../styles/designTokens';
 import '../reconciliacao/reconciliacao-mockup.css';
 
 // Limiar de margem saudável — abaixo de 15% (sobre a faturação) mostra a
@@ -47,12 +48,12 @@ export default function MargemTab({ clientMargins }) {
         <table className="w-full text-left border-separate border-spacing-y-2">
           <thead>
             <tr className="text-[var(--slate-dim)]">
-              <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest">Cliente</th>
-              <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest">Horas</th>
-              <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest">Faturação</th>
-              <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest">Custo</th>
-              <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest">Margem</th>
-              <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest">%</th>
+              <th className={`px-4 py-2 ${SCALE.text.statLabel}`}>Cliente</th>
+              <th className={`px-4 py-2 ${SCALE.text.statLabel}`}>Horas</th>
+              <th className={`px-4 py-2 ${SCALE.text.statLabel}`}>Faturação</th>
+              <th className={`px-4 py-2 ${SCALE.text.statLabel}`}>Custo</th>
+              <th className={`px-4 py-2 ${SCALE.text.statLabel}`}>Margem</th>
+              <th className={`px-4 py-2 ${SCALE.text.statLabel}`}>%</th>
             </tr>
           </thead>
           <tbody>
@@ -70,7 +71,7 @@ export default function MargemTab({ clientMargins }) {
             ))}
             {clientMargins.length > 0 && (
               <tr className="bg-[var(--surface-dim)]">
-                <td className="px-4 py-3 rounded-l-2xl text-[10px] font-black uppercase text-[var(--slate-dim)]">Total</td>
+                <td className={`px-4 py-3 rounded-l-2xl ${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Total</td>
                 <td className="px-4 py-3 text-sm font-black text-[var(--ink-mid)]">{totalHours.toFixed(1)}h</td>
                 <td className="px-4 py-3 text-sm font-black text-[var(--navy)]">{formatCurrency(totalFaturation)}</td>
                 <td className="px-4 py-3 text-sm font-black text-rose-600">{formatCurrency(totalCost)}</td>

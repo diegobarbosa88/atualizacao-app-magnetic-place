@@ -4,7 +4,7 @@ import { useRef } from 'react';
 import FaturarClienteModal from '../toconline/FaturarClienteModal';
 import { MESES_PT, mesesDisponiveis, formatarMes } from '../../../utils/validacaoHelpers';
 import { authFetch } from '../../../utils/authFetch';
-import { FT } from '../../../styles/designTokens';
+import { FT, SCALE } from '../../../styles/designTokens';
 
 const fmtEur = v => (parseFloat(v) || 0).toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
 const fmtPct = v => (parseFloat(v) || 0).toFixed(2) + '%';
@@ -742,12 +742,12 @@ table{width:100%;border-collapse:collapse;margin-bottom:20px;}
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-sm font-black text-[var(--ink)]">Ajudas de Custo — {ano}</h3>
-            <p className="text-[10px] text-[var(--slate-dim)] mt-0.5">Baseado nos recibos TOConline processados do ano</p>
+            <p className={`${SCALE.text.meta} text-[var(--slate-dim)] mt-0.5`}>Baseado nos recibos TOConline processados do ano</p>
           </div>
           {orcamentoAnual === 0 && (
             <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-xl">
               <AlertTriangle size={12} className="text-amber-500" />
-              <span className="text-[10px] font-bold text-amber-600">Sem recibos processados este ano</span>
+              <span className={`${SCALE.text.meta} text-amber-600`}>Sem recibos processados este ano</span>
             </div>
           )}
         </div>
@@ -765,7 +765,7 @@ table{width:100%;border-collapse:collapse;margin-bottom:20px;}
             return (
               <div key={label} className="bg-[var(--surface)] border border-[var(--border-soft)] rounded-xl p-3 text-center">
                 <p className="text-base font-black" style={{ color: toneColor }}>{val}</p>
-                <p className="text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)] mt-0.5">{label}</p>
+                <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] mt-0.5`}>{label}</p>
               </div>
             );
           })}
@@ -776,12 +776,12 @@ table{width:100%;border-collapse:collapse;margin-bottom:20px;}
           <div className="flex items-start gap-2 px-3 py-2.5 bg-amber-50 border border-amber-200 rounded-xl">
             <AlertTriangle size={13} className="text-amber-500 shrink-0 mt-0.5" />
             <div>
-              <p className="text-[10px] font-black text-amber-700">
+              <p className={`${SCALE.text.meta} text-amber-700`}>
                 {mesesNaoConfirmados.length === 1
                   ? `${formatarMes(mesesNaoConfirmados[0])} tem ajudas por confirmar`
                   : `${mesesNaoConfirmados.length} meses anteriores com ajudas por confirmar`}
               </p>
-              <p className="text-[9px] text-amber-600 mt-0.5">
+              <p className={`${SCALE.text.meta} text-amber-600 mt-0.5`}>
                 {mesesNaoConfirmados.map(m => formatarMes(m)).join(' · ')}
               </p>
             </div>
@@ -791,7 +791,7 @@ table{width:100%;border-collapse:collapse;margin-bottom:20px;}
         {/* Barra de progresso */}
         {orcamentoAnual > 0 && (
           <div className="space-y-1">
-            <div className="flex justify-between text-[10px] text-[var(--slate-dim)]">
+            <div className={`flex justify-between ${SCALE.text.meta} text-[var(--slate-dim)]`}>
               <span>Faturado vs Total recibos</span>
               <span>{fmtPct(progressoPct)}</span>
             </div>
@@ -809,7 +809,7 @@ table{width:100%;border-collapse:collapse;margin-bottom:20px;}
             <h3 className="text-sm font-black text-[var(--ink)]">
               {temRecibosDoMes ? `Ajudas de Custo — ${formatarMes(selectedMonth)}` : `Previsão para fatura de ${formatarMes(mesSeguinte(selectedMonth))} (trabalho de ${formatarMes(selectedMonth)})`}
             </h3>
-            <p className="text-[10px] text-[var(--slate-dim)] mt-0.5 max-w-xs sm:max-w-none">
+            <p className={`${SCALE.text.meta} text-[var(--slate-dim)] mt-0.5 max-w-xs sm:max-w-none`}>
               {semDadosAjudas && clientesMesFinal.length > 0
                 ? 'Sem ajudas disponíveis — confirme meses anteriores para calcular a taxa histórica'
                 : temRecibosDoMes
@@ -822,19 +822,19 @@ table{width:100%;border-collapse:collapse;margin-bottom:20px;}
           <div className="flex flex-wrap items-center gap-2">
             {semHoras && clientesMesFinal.length > 0 && (
               <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[var(--surface-dim)] border border-[var(--border)] rounded-xl">
-                <span className="text-[10px] font-bold text-[var(--slate)]">Faturas TOConline</span>
+                <span className={`${SCALE.text.meta} text-[var(--slate)]`}>Faturas TOConline</span>
               </div>
             )}
             {tocSemAuth && (
               <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-amber-50 border border-amber-200 rounded-xl">
                 <AlertTriangle size={12} className="text-amber-500" />
-                <span className="text-[10px] font-bold text-amber-700">TOConline sem auth</span>
+                <span className={`${SCALE.text.meta} text-amber-700`}>TOConline sem auth</span>
               </div>
             )}
             {confirmado && (
               <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-50 border border-emerald-200 rounded-xl">
                 <CheckCircle size={12} className="text-emerald-600" />
-                <span className="text-[10px] font-bold text-emerald-700">Confirmado</span>
+                <span className={`${SCALE.text.meta} text-emerald-700`}>Confirmado</span>
               </div>
             )}
           </div>
@@ -861,11 +861,11 @@ table{width:100%;border-collapse:collapse;margin-bottom:20px;}
                       onChange={e => setSelecionados(e.target.checked ? new Set(linhas.map(l => l.clientId)) : new Set())}
                       className="accent-[var(--navy)] cursor-pointer" />
                   </th>
-                  <th className="px-3 py-2 text-left text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Cliente</th>
-                  <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)] hidden sm:table-cell">Horas</th>
-                  <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Valor Fatura</th>
-                  <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)] hidden sm:table-cell">% Total</th>
-                  <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Ajudas Incluídas</th>
+                  <th className={`px-3 py-2 text-left ${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Cliente</th>
+                  <th className={`px-3 py-2 text-right ${SCALE.text.statLabel} text-[var(--slate-dim)] hidden sm:table-cell`}>Horas</th>
+                  <th className={`px-3 py-2 text-right ${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Valor Fatura</th>
+                  <th className={`px-3 py-2 text-right ${SCALE.text.statLabel} text-[var(--slate-dim)] hidden sm:table-cell`}>% Total</th>
+                  <th className={`px-3 py-2 text-right ${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Ajudas Incluídas</th>
                   <th className="px-2 py-2 w-8" />
                 </tr>
               </thead>
@@ -885,7 +885,7 @@ table{width:100%;border-collapse:collapse;margin-bottom:20px;}
                     <td className="px-3 py-2.5 font-bold text-[var(--ink)]">
                       {l.nome}
                       {l.fromToC && l.docNum && (
-                        <span className="ml-1.5 font-mono font-normal text-[10px] text-[var(--slate-dim)]">{l.docNum}</span>
+                        <span className={`ml-1.5 font-mono font-normal ${SCALE.text.meta} text-[var(--slate-dim)]`}>{l.docNum}</span>
                       )}
                     </td>
                     <td className="px-3 py-2.5 text-right text-[var(--slate-dim)] hidden sm:table-cell">{l.fromToC ? '—' : `${l.horas.toFixed(2)}h`}</td>
@@ -894,12 +894,12 @@ table{width:100%;border-collapse:collapse;margin-bottom:20px;}
                     <td className="px-3 py-2.5 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         {flashDiff !== null && Math.abs(flashDiff) >= 0.005 && (
-                          <span className={`px-1 py-0.5 rounded text-[9px] font-black ${flashDiff > 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-500'}`}>
+                          <span className={`px-1 py-0.5 rounded ${SCALE.text.badge} ${flashDiff > 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-500'}`}>
                             {flashDiff > 0 ? '▲' : '▼'} {Math.abs(flashDiff).toFixed(2)}
                           </span>
                         )}
                         {(obsAplicados.has(l.clientId) || (l.daObservacao && overrides[l.clientId] === undefined)) && (
-                          <span className="px-1.5 py-0.5 bg-[var(--surface-dim)] text-[var(--ink-soft)] rounded text-[8px] font-black uppercase tracking-wider" title="Valor obtido da observação da fatura TOConline">Obs.</span>
+                          <span className={`px-1.5 py-0.5 bg-[var(--surface-dim)] text-[var(--ink-soft)] rounded ${SCALE.text.statLabel}`} title="Valor obtido da observação da fatura TOConline">Obs.</span>
                         )}
                         <input
                           type="number"
@@ -939,19 +939,19 @@ table{width:100%;border-collapse:collapse;margin-bottom:20px;}
                 })}
               </tbody>
               {semDadosAjudas && (
-                <caption className="caption-bottom px-4 py-2 text-[10px] text-[var(--slate-dim)] italic border-t border-[var(--border-soft)] text-left">
+                <caption className={`caption-bottom px-4 py-2 ${SCALE.text.meta} text-[var(--slate-dim)] italic border-t border-[var(--border-soft)] text-left`}>
                   Os valores de ajudas aparecem a zero porque ainda não existem recibos de vencimento processados nem histórico de faturação para este mês.
                 </caption>
               )}
               <tfoot className="border-t-2 border-[var(--border)] bg-[var(--surface)]">
                 <tr>
                   <td className="px-2 py-2.5 w-7" />
-                  <td className="px-3 py-2.5 text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">TOTAL</td>
-                  <td className="px-3 py-2.5 text-right text-[10px] font-black text-[var(--ink-soft)] hidden sm:table-cell">{semHoras ? '—' : `${linhas.reduce((s,l)=>s+l.horas,0).toFixed(2)}h`}</td>
-                  <td className="px-3 py-2.5 text-right text-[10px] font-black text-[var(--ink-mid)]">{fmtEur(totalFaturaMes)}</td>
-                  <td className="px-3 py-2.5 text-right text-[10px] text-[var(--slate-dim)] hidden sm:table-cell">100%</td>
+                  <td className={`px-3 py-2.5 ${SCALE.text.statLabel} text-[var(--slate-dim)]`}>TOTAL</td>
+                  <td className={`px-3 py-2.5 text-right ${SCALE.text.meta} text-[var(--ink-soft)] hidden sm:table-cell`}>{semHoras ? '—' : `${linhas.reduce((s,l)=>s+l.horas,0).toFixed(2)}h`}</td>
+                  <td className={`px-3 py-2.5 text-right ${SCALE.text.meta} text-[var(--ink-mid)]`}>{fmtEur(totalFaturaMes)}</td>
+                  <td className={`px-3 py-2.5 text-right ${SCALE.text.meta} text-[var(--slate-dim)] hidden sm:table-cell`}>100%</td>
                   <td className="px-3 py-2.5 text-right">
-                    <span className={`text-[10px] font-black ${ajudasEfetivoMes > 0 && Math.abs(totalAjudasMes - ajudasEfetivoMes) > 0.5 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                    <span className={`${SCALE.text.meta} ${ajudasEfetivoMes > 0 && Math.abs(totalAjudasMes - ajudasEfetivoMes) > 0.5 ? 'text-amber-600' : 'text-emerald-600'}`}>
                       {fmtEur(totalAjudasMes)}
                     </span>
                   </td>
@@ -962,7 +962,7 @@ table{width:100%;border-collapse:collapse;margin-bottom:20px;}
             </div>
 
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 py-3 border-t border-[var(--border-soft)] gap-3">
-              <p className="text-[10px] text-[var(--slate-dim)]">
+              <p className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>
                 {eEstimativa ? 'Estimativa' : 'Recibos do mês'}:{' '}
                 <span className="font-bold" style={{ color: eEstimativa ? '#d97706' : FT.navy }}>{fmtEur(ajudasEfetivoMes)}</span>
                 {eEstimativa && <span className="ml-1 text-amber-500">(taxa {fmtPct(taxaAjudas * 100)})</span>}
@@ -979,31 +979,31 @@ table{width:100%;border-collapse:collapse;margin-bottom:20px;}
               </p>
               <div className="flex flex-wrap gap-2">
                 <button onClick={handleExtrairObs} disabled={extraindoObs}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-[var(--surface-dim)] text-[var(--ink-soft)] rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[var(--border)] transition-all disabled:opacity-40"
+                  className={`flex items-center gap-1.5 px-3 py-2 bg-[var(--surface-dim)] text-[var(--ink-soft)] rounded-xl hover:bg-[var(--border)] transition-all disabled:opacity-40 ${SCALE.text.badge}`}
                   title="Procura as faturas TOConline do mês e preenche as ajudas com o valor da observação">
                   {extraindoObs ? <Loader2 size={12} className="animate-spin" /> : <FileSearch size={12} />}
                   {extraindoObs ? 'A extrair...' : 'Extrair obs.'}
                 </button>
                 <button onClick={handleRedistribuir}
                   disabled={selecionados.size === 0 && Object.keys(overrides).filter(k => !obsAplicados.has(k)).length === 0 && !linhas.some(l => l.daObservacao)}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-[var(--surface-dim)] text-[var(--ink-soft)] rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[var(--border)] transition-all disabled:opacity-40"
+                  className={`flex items-center gap-1.5 px-3 py-2 bg-[var(--surface-dim)] text-[var(--ink-soft)] rounded-xl hover:bg-[var(--border)] transition-all disabled:opacity-40 ${SCALE.text.badge}`}
                   title={selecionados.size > 0 ? `Repor distribuição proporcional nos ${selecionados.size} selecionado(s)` : 'Repor distribuição proporcional automática'}>
                   <RotateCcw size={12} />
                   {selecionados.size > 0 ? `Redistribuir (${selecionados.size})` : 'Redistribuir'}
                 </button>
                 <button onClick={handleCopiar}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-[var(--surface-dim)] text-[var(--ink-soft)] rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[var(--border)] transition-all">
+                  className={`flex items-center gap-1.5 px-3 py-2 bg-[var(--surface-dim)] text-[var(--ink-soft)] rounded-xl hover:bg-[var(--border)] transition-all ${SCALE.text.badge}`}>
                   <Copy size={12} />
                   {copiado ? 'Copiado!' : 'Copiar'}
                 </button>
                 <button onClick={handleExportarXLS}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-[var(--surface-dim)] text-[var(--ink-soft)] rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[var(--border)] transition-all"
+                  className={`flex items-center gap-1.5 px-3 py-2 bg-[var(--surface-dim)] text-[var(--ink-soft)] rounded-xl hover:bg-[var(--border)] transition-all ${SCALE.text.badge}`}
                   title="Exportar tabela e histórico para Excel">
                   <Download size={12} />
                   XLS
                 </button>
                 <button onClick={handleConfirmar} disabled={confirmando || confirmado}
-                  className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-40"
+                  className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl transition-all disabled:opacity-40 ${SCALE.text.badge}`}
                   style={{ backgroundColor: FT.orange, color: FT.navy }}>
                   {confirmando ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle size={12} />}
                   {confirmado ? 'Confirmado' : confirmando ? 'A guardar...' : 'Confirmar mês'}
@@ -1029,11 +1029,11 @@ table{width:100%;border-collapse:collapse;margin-bottom:20px;}
               <table className="w-full text-xs">
                 <thead className="bg-[var(--surface)] border-b border-[var(--border-soft)] sticky top-0 z-20">
                   <tr>
-                    <th className="px-3 py-2 text-left text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Cliente</th>
-                    <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)] hidden sm:table-cell">Horas</th>
-                    <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)] hidden sm:table-cell">Valor Fatura</th>
-                    <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)] hidden sm:table-cell">% Total</th>
-                    <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Ajudas Faturadas</th>
+                    <th className={`px-3 py-2 text-left ${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Cliente</th>
+                    <th className={`px-3 py-2 text-right ${SCALE.text.statLabel} text-[var(--slate-dim)] hidden sm:table-cell`}>Horas</th>
+                    <th className={`px-3 py-2 text-right ${SCALE.text.statLabel} text-[var(--slate-dim)] hidden sm:table-cell`}>Valor Fatura</th>
+                    <th className={`px-3 py-2 text-right ${SCALE.text.statLabel} text-[var(--slate-dim)] hidden sm:table-cell`}>% Total</th>
+                    <th className={`px-3 py-2 text-right ${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Ajudas Faturadas</th>
                     <th className="px-3 py-2 w-20"></th>
                   </tr>
                 </thead>
@@ -1058,10 +1058,10 @@ table{width:100%;border-collapse:collapse;margin-bottom:20px;}
                               <ChevronRight size={12} className={`text-[var(--slate)] transition-transform shrink-0 ${aberto ? 'rotate-90' : ''}`} />
                               <span className="font-black text-[var(--ink-mid)]">{formatarMes(h.mes)}</span>
                               {h.mes === selectedMonth && (
-                                <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider text-white" style={{ backgroundColor: FT.navy }}>Seleccionado</span>
+                                <span className={`px-1.5 py-0.5 rounded ${SCALE.text.statLabel} text-white`} style={{ backgroundColor: FT.navy }}>Seleccionado</span>
                               )}
                               {h.ajudasRecibo > 0 ? (
-                                <span className="text-[9px] text-[var(--slate-dim)]">
+                                <span className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>
                                   Recibos: <span className="font-bold text-[var(--ink-soft)]">{fmtEur(h.ajudasRecibo)}</span>
                                   {h.dif !== 0 && (
                                     <span className={`ml-1 font-bold ${h.dif > 0 ? 'text-rose-500' : 'text-emerald-600'}`}>
@@ -1071,7 +1071,7 @@ table{width:100%;border-collapse:collapse;margin-bottom:20px;}
                                 </span>
                               ) : null}
                               {faturasHist[h.mes] !== undefined && faturasHist[h.mes].length > 0 && (
-                                <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded text-[8px] font-black uppercase tracking-wider shrink-0">
+                                <span className={`px-1.5 py-0.5 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded shrink-0 ${SCALE.text.statLabel}`}>
                                   {faturasHist[h.mes].length} fat. TOC
                                 </span>
                               )}
@@ -1081,7 +1081,7 @@ table{width:100%;border-collapse:collapse;margin-bottom:20px;}
                             </div>
                           </td>
                           <td className="px-3 py-2 text-right hidden sm:table-cell">
-                            <span className={`text-[9px] font-black ${h.dif > 0.5 ? 'text-red-500' : h.dif < -0.5 ? 'text-emerald-600' : 'text-[var(--slate-dim)]'}`}>
+                            <span className={`${SCALE.text.meta} ${h.dif > 0.5 ? 'text-red-500' : h.dif < -0.5 ? 'text-emerald-600' : 'text-[var(--slate-dim)]'}`}>
                               {h.dif !== 0 ? `${h.dif > 0 ? '+' : ''}${fmtEur(h.dif)}` : ''}
                             </span>
                           </td>
@@ -1091,7 +1091,7 @@ table{width:100%;border-collapse:collapse;margin-bottom:20px;}
                               <button
                                 onClick={() => handleGuardarHist(h.mes)}
                                 disabled={gravandoHist === h.mes || !temEdicoes}
-                                className="flex items-center gap-1 px-2 py-1 text-white rounded-lg text-[9px] font-black hover:opacity-90 transition-all disabled:opacity-30"
+                                className={`flex items-center gap-1 px-2 py-1 text-white rounded-lg hover:opacity-90 transition-all disabled:opacity-30 ${SCALE.text.meta}`}
                                 style={{ backgroundColor: FT.navy }}
                                 title="Guardar edições"
                               >
@@ -1125,7 +1125,7 @@ table{width:100%;border-collapse:collapse;margin-bottom:20px;}
                           if (clientesMesHist.length === 0) {
                             return (
                               <tr>
-                                <td colSpan={6} className="px-3 py-2 text-[10px] text-[var(--slate-dim)] text-center italic">Sem registos por cliente.</td>
+                                <td colSpan={6} className={`px-3 py-2 ${SCALE.text.meta} text-[var(--slate-dim)] text-center italic`}>Sem registos por cliente.</td>
                               </tr>
                             );
                           }
@@ -1176,7 +1176,7 @@ table{width:100%;border-collapse:collapse;margin-bottom:20px;}
                                       {totalFaturaCliente > 0 ? fmtEur(totalFaturaCliente) : '—'}
                                     </td>
                                     <td className="px-3 py-2.5 text-right text-[var(--slate-dim)] hidden sm:table-cell">{fmtPct(pct)}</td>
-                                    <td className="px-3 py-2.5 text-right text-[10px] font-black text-[var(--slate-dim)]">
+                                    <td className={`px-3 py-2.5 text-right ${SCALE.text.meta} text-[var(--slate-dim)]`}>
                                       {fmtEur(invoices.reduce((s, inv) => {
                                         const k = `${h.mes}|${r.client_id}|${inv.docNum}`;
                                         return s + (histOverrides[k] !== undefined
@@ -1195,10 +1195,10 @@ table{width:100%;border-collapse:collapse;margin-bottom:20px;}
                                     return (
                                       <tr key={inv.docNum} className={subRowCls}>
                                         <td className="px-3 py-1.5 pl-12">
-                                          <span className="px-1.5 py-0.5 bg-[var(--surface-dim)] text-[var(--ink-soft)] rounded text-[8px] font-mono">{inv.docNum}</span>
+                                          <span className={`px-1.5 py-0.5 bg-[var(--surface-dim)] text-[var(--ink-soft)] rounded font-mono ${SCALE.text.statLabel}`}>{inv.docNum}</span>
                                         </td>
                                         <td className="hidden sm:table-cell" />
-                                        <td className="px-3 py-1.5 text-right text-[10px] text-[var(--slate-dim)] hidden sm:table-cell">{fmtEur(inv.valor)}</td>
+                                        <td className={`px-3 py-1.5 text-right ${SCALE.text.meta} text-[var(--slate-dim)] hidden sm:table-cell`}>{fmtEur(inv.valor)}</td>
                                         <td className="hidden sm:table-cell" />
                                         <td className="px-3 py-1.5 text-right">
                                           <input
@@ -1228,7 +1228,7 @@ table{width:100%;border-collapse:collapse;margin-bottom:20px;}
                                 <tr className={rowCls}>
                                   <td className="px-3 py-2.5 pl-8 font-bold text-[var(--ink)]">
                                     {nomeCliente}
-                                    {invoices[0] && <span className="ml-2 px-1.5 py-0.5 bg-[var(--surface-dim)] text-[var(--ink-soft)] rounded text-[8px] font-mono">{invoices[0].docNum}</span>}
+                                    {invoices[0] && <span className={`ml-2 px-1.5 py-0.5 bg-[var(--surface-dim)] text-[var(--ink-soft)] rounded font-mono ${SCALE.text.statLabel}`}>{invoices[0].docNum}</span>}
                                   </td>
                                   <td className="px-3 py-2.5 text-right text-[var(--slate-dim)] hidden sm:table-cell">
                                     {temLogsNoMes ? `${horasCliente.toFixed(2)}h` : '—'}
@@ -1259,13 +1259,13 @@ table{width:100%;border-collapse:collapse;margin-bottom:20px;}
                 </tbody>
                 <tfoot className="border-t-2 border-[var(--border)] bg-[var(--surface)]">
                   <tr>
-                    <td className="px-3 py-2.5 text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">TOTAL {ano}</td>
+                    <td className={`px-3 py-2.5 ${SCALE.text.statLabel} text-[var(--slate-dim)]`}>TOTAL {ano}</td>
                     <td className="hidden sm:table-cell" />
-                    <td className="px-3 py-2.5 text-right text-[10px] font-black text-[var(--ink-mid)] hidden sm:table-cell">
+                    <td className={`px-3 py-2.5 text-right ${SCALE.text.meta} text-[var(--ink-mid)] hidden sm:table-cell`}>
                       {fmtEur(historicoAnual.reduce((s, h) => s + h.totalFatura, 0))}
                     </td>
                     <td className="hidden sm:table-cell" />
-                    <td className="px-3 py-2.5 text-right text-[10px] font-black text-[var(--ink-mid)]">
+                    <td className={`px-3 py-2.5 text-right ${SCALE.text.meta} text-[var(--ink-mid)]`}>
                       {fmtEur(faturadosAno.reduce((s, r) => s + (parseFloat(r.valor_ajudas) || 0), 0))}
                     </td>
                     <td />

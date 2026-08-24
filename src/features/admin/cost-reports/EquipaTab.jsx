@@ -1,5 +1,6 @@
 import React from 'react';
 import { formatCurrency } from './costReportsUtils';
+import { SCALE } from '../../../styles/designTokens';
 import '../reconciliacao/reconciliacao-mockup.css';
 
 export default function EquipaTab({ workerCosts }) {
@@ -31,9 +32,9 @@ export default function EquipaTab({ workerCosts }) {
         <table className="w-full text-left border-separate border-spacing-y-2">
           <thead>
             <tr className="text-[var(--slate-dim)]">
-              <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest">Nome</th>
-              <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest">Total Horas</th>
-              <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest">Custo (€)</th>
+              <th className={`px-4 py-2 ${SCALE.text.statLabel}`}>Nome</th>
+              <th className={`px-4 py-2 ${SCALE.text.statLabel}`}>Total Horas</th>
+              <th className={`px-4 py-2 ${SCALE.text.statLabel}`}>Custo (€)</th>
             </tr>
           </thead>
           <tbody>
@@ -48,7 +49,7 @@ export default function EquipaTab({ workerCosts }) {
             ))}
             {workerCosts.length > 0 && (
               <tr className="bg-[var(--surface-dim)]">
-                <td className="px-4 py-3 rounded-l-2xl text-[10px] font-black uppercase text-[var(--slate-dim)]">Total</td>
+                <td className={`px-4 py-3 rounded-l-2xl ${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Total</td>
                 <td className="px-4 py-3 text-sm font-black text-[var(--ink-mid)]">{totalHours.toFixed(1)}h</td>
                 <td className="px-4 py-3 rounded-r-2xl text-sm font-black text-[var(--navy)]">{formatCurrency(totalCost)}</td>
               </tr>

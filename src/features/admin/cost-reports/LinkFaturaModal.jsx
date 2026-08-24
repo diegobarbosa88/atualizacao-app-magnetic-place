@@ -2,7 +2,7 @@ import React from 'react';
 import { X, Loader2, Plus, Link2 } from 'lucide-react';
 import { formatCurrency } from './costReportsUtils';
 import ModalShell from '../../../components/common/ModalShell';
-import { FT } from '../../../styles/designTokens';
+import { FT, SCALE } from '../../../styles/designTokens';
 
 const LinkFaturaModal = ({
   fatura,
@@ -34,15 +34,15 @@ const LinkFaturaModal = ({
       <div className="p-6 sm:p-8 space-y-5">
         {fatLink && (
           <div className="space-y-2">
-            <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Movimento Associado</p>
+            <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Movimento Associado</p>
             <div className="flex items-center justify-between bg-emerald-50 rounded-2xl px-4 py-3">
               <div>
                 <p className="text-sm font-bold text-emerald-800">{formatCurrency(Number(fatLink.tx_key?.split('|')[2] || 0))}</p>
-                <p className="text-[10px] text-[var(--slate-dim)]">
+                <p className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>
                   {fatLink.tx_key?.split('|')[0]} · {(fatLink.tx_key?.split('|')[1] || '').slice(0, 50)}
                 </p>
                 {fatLink.auto_matched && (
-                  <span className="text-[9px] text-indigo-400 font-black uppercase">Auto-match</span>
+                  <span className={`${SCALE.text.badge} text-indigo-400`}>Auto-match</span>
                 )}
               </div>
               <button
@@ -57,7 +57,7 @@ const LinkFaturaModal = ({
 
         {!fatLink && (
           <div className="space-y-2">
-            <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Adicionar pagamento de extrato</p>
+            <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Adicionar pagamento de extrato</p>
             {runsLoading ? (
               <div className="flex items-center gap-2 text-[var(--slate-dim)] text-sm">
                 <Loader2 size={14} className="animate-spin" /> A carregar extratos...
@@ -87,7 +87,7 @@ const LinkFaturaModal = ({
 
         {!fatLink && selectedRun && !runLoading && (
           <div className="space-y-2">
-            <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">
+            <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>
               Entradas disponíveis ({creditosDisponiveisFatura.length})
             </p>
             {creditosDisponiveisFatura.length === 0 && (
@@ -102,7 +102,7 @@ const LinkFaturaModal = ({
               >
                 <div>
                   <p className="text-sm font-bold text-[var(--ink)]">{formatCurrency(Number(tx.valor))}</p>
-                  <p className="text-[10px] text-[var(--slate-dim)]">{tx.data} · {(tx.descricao || '').slice(0, 55)}</p>
+                  <p className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>{tx.data} · {(tx.descricao || '').slice(0, 55)}</p>
                 </div>
                 {linkSaving
                   ? <Loader2 size={13} className="animate-spin" style={{ color: 'var(--navy)' }} />
@@ -114,7 +114,7 @@ const LinkFaturaModal = ({
         )}
 
         {fatLink && (
-          <p className="text-[10px] text-[var(--slate-dim)] text-center">
+          <p className={`${SCALE.text.meta} text-[var(--slate-dim)] text-center`}>
             Para substituir o movimento, primeiro remova o atual.
           </p>
         )}

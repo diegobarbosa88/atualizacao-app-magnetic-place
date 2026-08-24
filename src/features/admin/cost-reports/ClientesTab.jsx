@@ -3,7 +3,8 @@ import { Link2 } from 'lucide-react';
 import { formatCurrency } from './costReportsUtils';
 import LinkPagamentoModal from './LinkPagamentoModal';
 import '../reconciliacao/reconciliacao-mockup.css';
-import { FT } from '../../../styles/designTokens';
+import { FT, SCALE } from '../../../styles/designTokens';
+import { PAYMENT_STATUS } from './pagamentoStatusUtils';
 
 export default function ClientesTab({ clientCosts, supabase, selectedMonth }) {
   const [pagamentos, setPagamentos] = useState([]);
@@ -113,11 +114,11 @@ export default function ClientesTab({ clientCosts, supabase, selectedMonth }) {
         <table className="w-full text-left border-separate border-spacing-y-2">
           <thead>
             <tr className="text-[var(--slate-dim)]">
-              <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest">Nome</th>
-              <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest">Total Horas</th>
-              <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest">Faturação (€)</th>
-              <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest">Pago Banco</th>
-              <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest">Estado</th>
+              <th className={`px-4 py-2 ${SCALE.text.statLabel}`}>Nome</th>
+              <th className={`px-4 py-2 ${SCALE.text.statLabel}`}>Total Horas</th>
+              <th className={`px-4 py-2 ${SCALE.text.statLabel}`}>Faturação (€)</th>
+              <th className={`px-4 py-2 ${SCALE.text.statLabel}`}>Pago Banco</th>
+              <th className={`px-4 py-2 ${SCALE.text.statLabel}`}>Estado</th>
             </tr>
           </thead>
           <tbody>
@@ -136,10 +137,7 @@ export default function ClientesTab({ clientCosts, supabase, selectedMonth }) {
                   </td>
                   <td className="px-4 py-3 rounded-r-2xl border-y border-r border-[var(--border-soft)]">
                     <div className="flex items-center gap-2">
-                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${
-                        estado === 'PAGO' ? 'bg-emerald-100 text-emerald-700' :
-                        estado === 'PARCIAL' ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-600'
-                      }`}>{estado}</span>
+                      <span className={`px-2 py-0.5 rounded-full ${SCALE.text.badge} ${PAYMENT_STATUS[estado].cls}`}>{estado}</span>
                       <button onClick={() => abrirLinkModal(item.id, item.name, item.cost)} className="p-1 rounded-lg hover:bg-[var(--surface)] transition-all" style={{ color: FT.slateDim }} title="Associar pagamento bancário">
                         <Link2 size={13} />
                       </button>
@@ -150,7 +148,7 @@ export default function ClientesTab({ clientCosts, supabase, selectedMonth }) {
             })}
             {clientCosts.length > 0 && (
               <tr className="bg-[var(--surface-dim)]">
-                <td className="px-4 py-3 rounded-l-2xl text-[10px] font-black uppercase text-[var(--slate-dim)]">Total</td>
+                <td className={`px-4 py-3 rounded-l-2xl ${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Total</td>
                 <td className="px-4 py-3 text-sm font-black text-[var(--ink-mid)]">{clientCosts.reduce((a, i) => a + i.totalHours, 0).toFixed(1)}h</td>
                 <td className="px-4 py-3 text-sm font-black text-[var(--navy)]">{formatCurrency(clientCosts.reduce((a, i) => a + i.cost, 0))}</td>
                 <td className="px-4 py-3 text-sm font-black text-emerald-700">{formatCurrency(pagamentos.reduce((s, p) => s + Number(p.valor_pago || 0), 0))}</td>

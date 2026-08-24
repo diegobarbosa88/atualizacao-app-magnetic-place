@@ -4,12 +4,13 @@ import { formatCurrency, parseFaturaValor } from './costReportsUtils';
 import { toISODateLocal } from '../../../utils/dateUtils';
 import LinkFaturaModal from './LinkFaturaModal';
 import '../reconciliacao/reconciliacao-mockup.css';
-import { FT } from '../../../styles/designTokens';
+import { FT, SCALE } from '../../../styles/designTokens';
+import { PAYMENT_STATUS } from './pagamentoStatusUtils';
 
 function TypeBadge({ tipo }) {
-  if (tipo === 'cliente') return <span className="px-2 py-0.5 rounded-lg text-[9px] font-black uppercase bg-emerald-100 text-emerald-700">Cliente</span>;
-  if (tipo === 'fornecedor') return <span className="px-2 py-0.5 rounded-lg text-[9px] font-black uppercase bg-rose-100 text-rose-700">Fornecedor</span>;
-  return <span className="px-2 py-0.5 rounded-lg text-[9px] font-black uppercase bg-[var(--surface-dim)] text-[var(--ink-soft)]">Sem tipo</span>;
+  if (tipo === 'cliente') return <span className={`px-2 py-0.5 rounded-lg ${SCALE.text.badge} bg-emerald-100 text-emerald-700`}>Cliente</span>;
+  if (tipo === 'fornecedor') return <span className={`px-2 py-0.5 rounded-lg ${SCALE.text.badge} bg-rose-100 text-rose-700`}>Fornecedor</span>;
+  return <span className={`px-2 py-0.5 rounded-lg ${SCALE.text.badge} bg-[var(--surface-dim)] text-[var(--ink-soft)]`}>Sem tipo</span>;
 }
 
 export default function FaturasTab({ supabase }) {
@@ -128,7 +129,7 @@ export default function FaturasTab({ supabase }) {
     <div>
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-black text-[var(--ink-mid)] uppercase tracking-tight">Faturas de Clientes</h3>
-        <button onClick={() => setIsAddingFatura(true)} className="flex items-center gap-1.5 px-4 py-2 text-[var(--navy)] rounded-xl text-[10px] font-black uppercase shadow-sm transition-colors" style={{ backgroundColor: FT.orange }}>
+        <button onClick={() => setIsAddingFatura(true)} className={`flex items-center gap-1.5 px-4 py-2 text-[var(--navy)] rounded-xl shadow-sm transition-colors ${SCALE.text.badge}`} style={{ backgroundColor: FT.orange }}>
           <Plus size={12} /> Inserir Fatura
         </button>
       </div>
@@ -159,19 +160,19 @@ export default function FaturasTab({ supabase }) {
         <div className="mb-6 bg-[var(--surface)] p-4 sm:p-6 rounded-2xl border border-[var(--border)]">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <div className="space-y-1">
-              <label className="text-[10px] font-black text-[var(--slate-dim)] uppercase ml-1">Cliente</label>
+              <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)] ml-1`}>Cliente</label>
               <input type="text" value={faturaForm.cliente} onChange={e => setFaturaForm({ ...faturaForm, cliente: e.target.value })} className="w-full bg-white border border-[var(--border)] rounded-xl p-3 text-sm font-bold outline-none shadow-sm" placeholder="Nome do cliente..." />
             </div>
             <div className="space-y-1">
-              <label className="text-[10px] font-black text-[var(--slate-dim)] uppercase ml-1">Número Fatura</label>
+              <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)] ml-1`}>Número Fatura</label>
               <input type="text" value={faturaForm.numero} onChange={e => setFaturaForm({ ...faturaForm, numero: e.target.value })} className="w-full bg-white border border-[var(--border)] rounded-xl p-3 text-sm font-bold outline-none shadow-sm" placeholder="FT 2026/001..." />
             </div>
             <div className="space-y-1">
-              <label className="text-[10px] font-black text-[var(--slate-dim)] uppercase ml-1">Valor (€)</label>
+              <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)] ml-1`}>Valor (€)</label>
               <input type="text" value={faturaForm.valor} onChange={e => setFaturaForm({ ...faturaForm, valor: e.target.value })} className="w-full bg-white border border-[var(--border)] rounded-xl p-3 text-sm font-bold text-[var(--navy)] outline-none shadow-sm" placeholder="0,00" />
             </div>
             <div className="space-y-1">
-              <label className="text-[10px] font-black text-[var(--slate-dim)] uppercase ml-1">Data</label>
+              <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)] ml-1`}>Data</label>
               <input type="date" value={faturaForm.data} onChange={e => setFaturaForm({ ...faturaForm, data: e.target.value })} className="w-full bg-white border border-[var(--border)] rounded-xl p-3 text-sm shadow-sm" />
             </div>
           </div>
@@ -187,13 +188,13 @@ export default function FaturasTab({ supabase }) {
         <table className="w-full text-left border-separate border-spacing-y-2">
           <thead>
             <tr className="text-[var(--slate-dim)]">
-              <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest">Cliente</th>
-              <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest">Tipo</th>
-              <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest">Número</th>
-              <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest">Valor</th>
-              <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest">Data</th>
-              <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest">Estado</th>
-              <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-right">Ações</th>
+              <th className={`px-4 py-2 ${SCALE.text.statLabel}`}>Cliente</th>
+              <th className={`px-4 py-2 ${SCALE.text.statLabel}`}>Tipo</th>
+              <th className={`px-4 py-2 ${SCALE.text.statLabel}`}>Número</th>
+              <th className={`px-4 py-2 ${SCALE.text.statLabel}`}>Valor</th>
+              <th className={`px-4 py-2 ${SCALE.text.statLabel}`}>Data</th>
+              <th className={`px-4 py-2 ${SCALE.text.statLabel}`}>Estado</th>
+              <th className={`px-4 py-2 ${SCALE.text.statLabel} text-right`}>Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -210,7 +211,7 @@ export default function FaturasTab({ supabase }) {
                   <td className="px-4 py-3 text-sm font-black text-[var(--navy)]">{formatCurrency(valor)}</td>
                   <td className="px-4 py-3 text-sm font-bold text-[var(--slate-dim)]">{dados.data_fatura ? new Date(dados.data_fatura).toLocaleDateString('pt-PT') : '—'}</td>
                   <td className="px-4 py-3">
-                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${f.status === 'PAGO' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{f.status}</span>
+                    <span className={`px-2 py-0.5 rounded-full ${SCALE.text.badge} ${PAYMENT_STATUS[f.status]?.cls || PAYMENT_STATUS.PENDENTE.cls}`}>{f.status}</span>
                   </td>
                   <td className="px-4 py-3 rounded-r-2xl text-right">
                     {(() => {
@@ -218,23 +219,23 @@ export default function FaturasTab({ supabase }) {
                       if (fl) {
                         return (
                           <div className="flex items-center justify-end gap-2">
-                            <span className="text-[9px] text-[var(--slate-dim)] truncate max-w-[120px]" title={fl.tx_key}>
+                            <span className={`${SCALE.text.meta} text-[var(--slate-dim)] truncate max-w-[120px]`} title={fl.tx_key}>
                               {fl.tx_key?.split('|')[0]} · {fl.tx_key?.split('|')[2]} €
                             </span>
-                            <button onClick={() => removerPagamentoFatura(f.id)} className="text-rose-400 hover:text-rose-600 text-[9px] font-black uppercase hover:underline">Desligar</button>
+                            <button onClick={() => removerPagamentoFatura(f.id)} className={`text-rose-400 hover:text-rose-600 hover:underline ${SCALE.text.badge}`}>Desligar</button>
                           </div>
                         );
                       }
                       return (
                         <div className="flex items-center justify-end gap-2">
-                          <button onClick={() => abrirLinkFaturaModal(f)} className="flex items-center gap-1 px-2 py-1 bg-[var(--surface)] hover:bg-[var(--surface-dim)] rounded-lg text-[9px] font-black uppercase transition-colors" style={{ color: FT.slateDim }}>
+                          <button onClick={() => abrirLinkFaturaModal(f)} className={`flex items-center gap-1 px-2 py-1 bg-[var(--surface)] hover:bg-[var(--surface-dim)] rounded-lg transition-colors ${SCALE.text.badge}`} style={{ color: FT.slateDim }}>
                             <Link2 size={10} /> Ligar
                           </button>
                           {f.status === 'PENDENTE' && (
                             <button onClick={async () => {
                               await supabase.from('faturas').update({ status: 'PAGO' }).eq('id', f.id);
                               await recarregarFaturas();
-                            }} className="text-emerald-600 hover:text-emerald-800 text-[9px] font-black uppercase hover:underline">PAGO</button>
+                            }} className={`text-emerald-600 hover:text-emerald-800 hover:underline ${SCALE.text.badge}`}>PAGO</button>
                           )}
                         </div>
                       );

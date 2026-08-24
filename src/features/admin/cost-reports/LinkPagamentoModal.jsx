@@ -2,7 +2,7 @@ import React from 'react';
 import { X, Loader2, Plus } from 'lucide-react';
 import { formatCurrency } from './costReportsUtils';
 import ModalShell from '../../../components/common/ModalShell';
-import { FT } from '../../../styles/designTokens';
+import { FT, SCALE } from '../../../styles/designTokens';
 
 const LinkPagamentoModal = ({
   linkModal,
@@ -32,12 +32,12 @@ const LinkPagamentoModal = ({
       <div className="p-6 sm:p-8 space-y-5">
         {pagamentosDoCliente.length > 0 && (
           <div className="space-y-2">
-            <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Associados</p>
+            <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Associados</p>
             {pagamentosDoCliente.map(p => (
               <div key={p.id} className="flex items-center justify-between bg-emerald-50 rounded-2xl px-4 py-3">
                 <div>
                   <p className="text-sm font-bold text-emerald-800">{formatCurrency(p.valor_pago)}</p>
-                  <p className="text-[10px] text-[var(--slate-dim)]">{p.transaction_data?.data} · {p.transaction_data?.descricao?.slice(0, 50)}</p>
+                  <p className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>{p.transaction_data?.data} · {p.transaction_data?.descricao?.slice(0, 50)}</p>
                 </div>
                 <button onClick={() => removerPagamento(p.id)} className="p-1.5 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all"><X size={13} /></button>
               </div>
@@ -46,7 +46,7 @@ const LinkPagamentoModal = ({
         )}
 
         <div className="space-y-2">
-          <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Adicionar pagamento de extrato</p>
+          <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Adicionar pagamento de extrato</p>
           {runsLoading ? (
             <div className="flex items-center gap-2 text-[var(--slate-dim)] text-sm"><Loader2 size={14} className="animate-spin" /> A carregar extratos...</div>
           ) : (
@@ -70,7 +70,7 @@ const LinkPagamentoModal = ({
         )}
         {selectedRun && !runLoading && (
           <div className="space-y-2">
-            <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">
+            <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>
               Entradas disponíveis ({creditosDisponiveis.length})
             </p>
             {creditosDisponiveis.length === 0 && (
@@ -85,7 +85,7 @@ const LinkPagamentoModal = ({
               >
                 <div>
                   <p className="text-sm font-bold text-[var(--ink)]">{formatCurrency(Number(tx.valor))}</p>
-                  <p className="text-[10px] text-[var(--slate-dim)]">{tx.data} · {(tx.descricao || '').slice(0, 55)}</p>
+                  <p className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>{tx.data} · {(tx.descricao || '').slice(0, 55)}</p>
                 </div>
                 {linkSaving ? <Loader2 size={13} className="animate-spin" style={{ color: 'var(--navy)' }} /> : <Plus size={14} style={{ color: FT.slate }} />}
               </button>

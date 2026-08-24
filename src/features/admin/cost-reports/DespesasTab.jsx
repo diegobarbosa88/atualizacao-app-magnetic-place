@@ -3,12 +3,12 @@ import { Trash2, ChevronDown, Loader2 } from 'lucide-react';
 import { formatCurrency, parseFaturaValor, getMonthLabel } from './costReportsUtils';
 import { toISODateLocal } from '../../../utils/dateUtils';
 import '../reconciliacao/reconciliacao-mockup.css';
-import { FT } from '../../../styles/designTokens';
+import { FT, SCALE } from '../../../styles/designTokens';
 
 function TypeBadge({ tipo }) {
-  if (tipo === 'fornecedor') return <span className="px-2 py-0.5 rounded-lg text-[9px] font-black uppercase bg-rose-100 text-rose-700">Fornecedor</span>;
-  if (tipo === 'cliente') return <span className="px-2 py-0.5 rounded-lg text-[9px] font-black uppercase bg-emerald-100 text-emerald-700">Cliente</span>;
-  return <span className="px-2 py-0.5 rounded-lg text-[9px] font-black uppercase bg-[var(--surface-dim)] text-[var(--ink-soft)]">Sem tipo</span>;
+  if (tipo === 'fornecedor') return <span className={`px-2 py-0.5 rounded-lg ${SCALE.text.badge} bg-rose-100 text-rose-700`}>Fornecedor</span>;
+  if (tipo === 'cliente') return <span className={`px-2 py-0.5 rounded-lg ${SCALE.text.badge} bg-emerald-100 text-emerald-700`}>Cliente</span>;
+  return <span className={`px-2 py-0.5 rounded-lg ${SCALE.text.badge} bg-[var(--surface-dim)] text-[var(--ink-soft)]`}>Sem tipo</span>;
 }
 
 export default function DespesasTab({
@@ -44,22 +44,22 @@ export default function DespesasTab({
         <div className="mb-6 bg-white p-4 sm:p-6 rounded-2xl shadow-inner border border-[var(--border-soft)]">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <div className="space-y-1">
-              <label className="text-[10px] font-black text-[var(--slate-dim)] uppercase ml-1">Descrição</label>
+              <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)] ml-1`}>Descrição</label>
               <input type="text" value={expenseForm.name} onChange={e => setExpenseForm({ ...expenseForm, name: e.target.value })} className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-sm outline-none shadow-sm font-bold" placeholder="Descrição..." />
             </div>
             <div className="space-y-1">
-              <label className="text-[10px] font-black text-[var(--slate-dim)] uppercase ml-1">Valor (€)</label>
+              <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)] ml-1`}>Valor (€)</label>
               <input type="number" value={expenseForm.amount} onChange={e => setExpenseForm({ ...expenseForm, amount: e.target.value })} className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-sm font-bold text-rose-600 outline-none shadow-sm" placeholder="0.00" />
             </div>
             <div className="space-y-1">
-              <label className="text-[10px] font-black text-[var(--slate-dim)] uppercase ml-1">Tipo</label>
+              <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)] ml-1`}>Tipo</label>
               <select value={expenseForm.type} onChange={e => setExpenseForm({ ...expenseForm, type: e.target.value })} className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-sm outline-none shadow-sm font-bold">
                 <option value="fixo">Fixo</option>
                 <option value="variável">Variável</option>
               </select>
             </div>
             <div className="space-y-1">
-              <label className="text-[10px] font-black text-[var(--slate-dim)] uppercase ml-1">Data</label>
+              <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)] ml-1`}>Data</label>
               <input type="date" value={expenseForm.date} onChange={e => setExpenseForm({ ...expenseForm, date: e.target.value })} className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 text-sm shadow-sm" />
             </div>
           </div>
@@ -100,11 +100,11 @@ export default function DespesasTab({
         <table className="w-full text-left border-separate border-spacing-y-2">
           <thead>
             <tr className="text-[var(--slate-dim)]">
-              <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest">Data</th>
-              <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest">Descrição</th>
-              <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest">Tipo</th>
-              <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-right">Valor</th>
-              <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-right">Ações</th>
+              <th className={`px-4 py-2 ${SCALE.text.statLabel}`}>Data</th>
+              <th className={`px-4 py-2 ${SCALE.text.statLabel}`}>Descrição</th>
+              <th className={`px-4 py-2 ${SCALE.text.statLabel}`}>Tipo</th>
+              <th className={`px-4 py-2 ${SCALE.text.statLabel} text-right`}>Valor</th>
+              <th className={`px-4 py-2 ${SCALE.text.statLabel} text-right`}>Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -120,7 +120,7 @@ export default function DespesasTab({
                   {exp._isFatura ? (
                     <TypeBadge tipo={exp._tipo === 'fornecedor' ? 'fornecedor' : exp._tipo ? exp._tipo : 'indefinido'} />
                   ) : (
-                    <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase ${exp.type === 'fixo' ? 'bg-[var(--surface-dim)] text-[var(--ink-soft)]' : 'bg-amber-100 text-amber-700'}`}>{exp.type}</span>
+                    <span className={`px-2.5 py-1 rounded-full ${SCALE.text.badge} ${exp.type === 'fixo' ? 'bg-[var(--surface-dim)] text-[var(--ink-soft)]' : 'bg-amber-100 text-amber-700'}`}>{exp.type}</span>
                   )}
                 </td>
                 <td className="px-4 py-3 border-y border-[var(--border-soft)] font-black text-rose-600 text-right whitespace-nowrap">-{formatCurrency(exp.amount)}</td>
@@ -135,7 +135,7 @@ export default function DespesasTab({
             ))}
             {allExpensesSorted.length > 0 && (
               <tr className="bg-[var(--surface-dim)]">
-                <td colSpan="3" className="px-4 py-3 rounded-l-2xl text-[10px] font-black uppercase text-[var(--slate-dim)]">Total</td>
+                <td colSpan="3" className={`px-4 py-3 rounded-l-2xl ${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Total</td>
                 <td className="px-4 py-3 font-black text-rose-600 text-right">-{formatCurrency(totalAllExpenses)}</td>
                 <td className="px-4 py-3 rounded-r-2xl"></td>
               </tr>
@@ -147,7 +147,7 @@ export default function DespesasTab({
       {/* Excluídas — faturas de cliente (estrutural: tipo='cliente', nunca contam como despesa) */}
       {faturasClienteExcluidas.length > 0 && (
         <div className="mt-8">
-          <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-3">
+          <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] mb-3`}>
             Excluídas deste total — faturas de cliente
             <span className="ml-2 text-[var(--slate-dim)] font-bold normal-case tracking-normal">
               {faturasClienteExcluidas.length} faturas · {formatCurrency(faturasClienteExcluidas.reduce((s, f) => s + parseFaturaValor(f), 0))}
@@ -157,10 +157,10 @@ export default function DespesasTab({
             <table className="w-full text-left border-separate border-spacing-y-1">
               <thead>
                 <tr className="text-[var(--slate-dim)]">
-                  <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest">Cliente</th>
-                  <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest">Tipo</th>
-                  <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest">Data</th>
-                  <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-right">Valor</th>
+                  <th className={`px-4 py-2 ${SCALE.text.statLabel}`}>Cliente</th>
+                  <th className={`px-4 py-2 ${SCALE.text.statLabel}`}>Tipo</th>
+                  <th className={`px-4 py-2 ${SCALE.text.statLabel}`}>Data</th>
+                  <th className={`px-4 py-2 ${SCALE.text.statLabel} text-right`}>Valor</th>
                 </tr>
               </thead>
               <tbody>
@@ -186,7 +186,7 @@ export default function DespesasTab({
       {/* Faturas sem data — nunca atribuídas silenciosamente a um mês */}
       {faturasSemData.length > 0 && (
         <div className="mt-6">
-          <button onClick={() => setShowSemData(p => !p)} className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] hover:text-[var(--ink-soft)] transition-colors">
+          <button onClick={() => setShowSemData(p => !p)} className={`flex items-center gap-2 text-[var(--slate-dim)] hover:text-[var(--ink-soft)] transition-colors ${SCALE.text.badge}`}>
             <ChevronDown size={13} className={`transition-transform ${showSemData ? 'rotate-180' : ''}`} />
             Faturas sem data ({faturasSemData.length})
           </button>
@@ -195,9 +195,9 @@ export default function DespesasTab({
               <table className="w-full text-left border-separate border-spacing-y-1">
                 <thead>
                   <tr className="text-[var(--slate-dim)]">
-                    <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest">Fornecedor</th>
-                    <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest">Tipo</th>
-                    <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-right">Valor</th>
+                    <th className={`px-4 py-2 ${SCALE.text.statLabel}`}>Fornecedor</th>
+                    <th className={`px-4 py-2 ${SCALE.text.statLabel}`}>Tipo</th>
+                    <th className={`px-4 py-2 ${SCALE.text.statLabel} text-right`}>Valor</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -218,7 +218,7 @@ export default function DespesasTab({
       {/* Excluídas manualmente das despesas (botão de excluir na tabela principal) */}
       {faturasExcluidas.length > 0 && (
         <div className="mt-6">
-          <button onClick={() => setShowExcluidas(p => !p)} className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] hover:text-[var(--ink-soft)] transition-colors">
+          <button onClick={() => setShowExcluidas(p => !p)} className={`flex items-center gap-2 text-[var(--slate-dim)] hover:text-[var(--ink-soft)] transition-colors ${SCALE.text.badge}`}>
             <ChevronDown size={13} className={`transition-transform ${showExcluidas ? 'rotate-180' : ''}`} />
             Excluídas das despesas ({faturasExcluidas.length})
           </button>
@@ -227,10 +227,10 @@ export default function DespesasTab({
               <table className="w-full text-left border-separate border-spacing-y-1">
                 <thead>
                   <tr className="text-[var(--slate-dim)]">
-                    <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest">Data</th>
-                    <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest">Fornecedor</th>
-                    <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-right">Valor</th>
-                    <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-right">Ações</th>
+                    <th className={`px-4 py-2 ${SCALE.text.statLabel}`}>Data</th>
+                    <th className={`px-4 py-2 ${SCALE.text.statLabel}`}>Fornecedor</th>
+                    <th className={`px-4 py-2 ${SCALE.text.statLabel} text-right`}>Valor</th>
+                    <th className={`px-4 py-2 ${SCALE.text.statLabel} text-right`}>Ações</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -244,7 +244,7 @@ export default function DespesasTab({
                         <td className="px-4 py-2 border-y border-[var(--border-soft)] text-sm text-[var(--slate-dim)]">{f.dados?.fornecedor || f.entidade || f.descricao || f.filename || '—'}</td>
                         <td className="px-4 py-2 border-y border-[var(--border-soft)] text-sm font-bold text-[var(--slate-dim)] text-right whitespace-nowrap">{formatCurrency(parseFaturaValor(f))}</td>
                         <td className="px-4 py-2 rounded-r-xl border-y border-r border-[var(--border-soft)] text-right">
-                          <button onClick={() => restaurarFaturaDespesa(f.id)} className="px-3 py-1 text-[10px] font-black uppercase tracking-widest bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-lg transition-all">Restaurar</button>
+                          <button onClick={() => restaurarFaturaDespesa(f.id)} className={`px-3 py-1 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-lg transition-all ${SCALE.text.badge}`}>Restaurar</button>
                         </td>
                       </tr>
                     );
