@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ChevronDown, ChevronUp, X, Save, Search, Loader2, Check } from 'lucide-react';
 import { DEFAULT_GMAIL_CONFIG, configParaQuery } from './faturasUtils';
-import { FT } from '../../../styles/designTokens';
+import { FT, SCALE } from '../../../styles/designTokens';
 
 export default function GmailConfigPanel({
   cfg,
@@ -55,7 +55,7 @@ export default function GmailConfigPanel({
       {mostrarConfig && (
         <div className="border-t border-[var(--border-soft)] pt-4 space-y-4">
           <div className="space-y-1.5">
-            <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Estado dos emails</p>
+            <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Estado dos emails</p>
             <div className="flex gap-3 flex-wrap">
               {[{ key: 'naoLidos', label: 'Sem ler' }, { key: 'lidos', label: 'Lidos' }].map(({ key, label }) => (
                 <label key={key} className="flex items-center gap-2 cursor-pointer select-none">
@@ -73,7 +73,7 @@ export default function GmailConfigPanel({
           </div>
 
           <div className="space-y-1.5">
-            <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Palavras no assunto</p>
+            <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Palavras no assunto</p>
             <div className="flex flex-wrap gap-1.5 mb-2">
               {cfg.assuntos.map(a => (
                 <span key={a} className="flex items-center gap-1 px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-semibold">
@@ -95,14 +95,14 @@ export default function GmailConfigPanel({
           </div>
 
           <div className="space-y-1.5">
-            <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Remetente (from:)</p>
+            <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Remetente (from:)</p>
             <input value={cfg.remetente} onChange={e => setCfgField('remetente', e.target.value)}
               placeholder="ex: fornecedor@empresa.pt"
               className="w-full px-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-indigo-300" />
           </div>
 
           <div className="space-y-1.5">
-            <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Outros filtros (sintaxe Gmail)</p>
+            <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Outros filtros (sintaxe Gmail)</p>
             <input value={cfg.palavras} onChange={e => setCfgField('palavras', e.target.value)}
               placeholder='ex: larger:1M after:2024/01/01'
               className="w-full px-3 py-2 rounded-xl border border-[var(--border)] text-xs font-mono text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-indigo-300" />

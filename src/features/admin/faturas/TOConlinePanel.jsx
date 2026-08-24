@@ -4,7 +4,7 @@ import {
   Search, X, Eye, ArrowUpDown, ArrowUp, ArrowDown, RefreshCw,
 } from 'lucide-react';
 import { authFetch } from '../../../utils/authFetch';
-import { FT } from '../../../styles/designTokens';
+import { FT, SCALE } from '../../../styles/designTokens';
 import { useApp } from '../../../context/AppContext';
 import { MESES, getAttrs, getNomeEntidade, getValorTotal, getIva, getDocNum } from '../toconline/utils/tocUtils';
 import { useTableFilters } from '../toconline/hooks/useTableFilters';
@@ -99,7 +99,7 @@ export default function TOConlinePanel() {
   };
 
   const ThSortRel = ({ campo, label }) => (
-    <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] cursor-pointer select-none hover:text-[var(--ink-soft)] transition-colors"
+    <th className={`px-4 py-3 ${SCALE.text.statLabel} text-[var(--slate-dim)] cursor-pointer select-none hover:text-[var(--ink-soft)] transition-colors`}
       onClick={() => toggleOrdemRel(campo)}>
       <span className="flex items-center gap-1">
         {label}
@@ -156,7 +156,7 @@ export default function TOConlinePanel() {
                 { key: 'recibos', label: 'Recibos' },
               ].map(({ key, label }) => (
                 <button key={key} onClick={() => setTipoRel(key)}
-                  className="flex-1 sm:flex-none px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap"
+                  className={`flex-1 sm:flex-none px-3 py-1.5 rounded-xl ${SCALE.text.badge} transition-all whitespace-nowrap`}
                   style={tipoRel === key ? { backgroundColor: 'rgba(235,141,0,0.15)', color: 'var(--navy)' } : { color: '#94A3B8' }}>
                   {label}
                 </button>
@@ -164,12 +164,12 @@ export default function TOConlinePanel() {
             </div>
             <div className="flex gap-2 w-full sm:w-auto sm:flex-1 sm:min-w-0">
               <div className="space-y-0.5 flex-1 min-w-0">
-                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">De</p>
+                <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>De</p>
                 <input type="date" value={dataDeRel} onChange={e => setDataDeRel(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-blue-300" />
               </div>
               <div className="space-y-0.5 flex-1 min-w-0">
-                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Até</p>
+                <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Até</p>
                 <input type="date" value={dataAteRel} onChange={e => setDataAteRel(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-blue-300" />
               </div>
@@ -211,21 +211,21 @@ export default function TOConlinePanel() {
                 {mostrarFiltrosRel && (
                   <div className="bg-[var(--surface)] rounded-2xl border border-[var(--border-soft)] p-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div className="space-y-1">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Ano</label>
+                      <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Ano</label>
                       <select value={filtroAnoRel} onChange={e => setFiltroAnoRel(e.target.value)} className={selectClass}>
                         <option value="">Todos</option>
                         {anosDisponiveisRel.map(a => <option key={a} value={a}>{a}</option>)}
                       </select>
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Mês</label>
+                      <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Mês</label>
                       <select value={filtroMesRel} onChange={e => setFiltroMesRel(e.target.value)} className={selectClass}>
                         <option value="">Todos</option>
                         {MESES.map(m => <option key={m.val} value={m.val}>{m.label}</option>)}
                       </select>
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">{tipoRel === 'compras' ? 'Fornecedor' : 'Cliente'}</label>
+                      <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>{tipoRel === 'compras' ? 'Fornecedor' : 'Cliente'}</label>
                       <select value={filtroEntidadeRel} onChange={e => setFiltroEntidadeRel(e.target.value)} className={selectClass}>
                         <option value="">Todos</option>
                         {entidadesDisponiveisRel.map(e => <option key={e} value={e}>{e}</option>)}
@@ -240,12 +240,12 @@ export default function TOConlinePanel() {
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="border-b border-[var(--border-soft)] bg-[var(--surface)]">
-                        <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Nº Doc</th>
+                        <th className={`px-4 py-3 ${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Nº Doc</th>
                         <ThSortRel campo="entidade" label={tipoRel === 'compras' ? 'Fornecedor' : 'Cliente'} />
                         <ThSortRel campo="date" label="Data" />
                         <ThSortRel campo="total" label="Total" />
-                        <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">IVA</th>
-                        <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Ações</th>
+                        <th className={`px-4 py-3 ${SCALE.text.statLabel} text-[var(--slate-dim)]`}>IVA</th>
+                        <th className={`px-4 py-3 ${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Ações</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -287,7 +287,7 @@ export default function TOConlinePanel() {
                     {temMais && docsRel.length === docsFiltrados.length && ' · pode haver mais'}
                   </span>
                   {temMais && (
-                    <span className="text-[10px] text-[var(--slate-dim)]">Mostrando os primeiros 50 resultados — afine as datas para reduzir.</span>
+                    <span className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>Mostrando os primeiros 50 resultados — afine as datas para reduzir.</span>
                   )}
                 </div>
               </div>

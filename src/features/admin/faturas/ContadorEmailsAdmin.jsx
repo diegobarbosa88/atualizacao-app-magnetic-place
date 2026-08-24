@@ -4,7 +4,7 @@ import {
   AlertTriangle, ChevronDown, ChevronUp, Send, ShieldAlert, Trash2,
 } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
-import { FT } from '../../../styles/designTokens';
+import { FT, SCALE } from '../../../styles/designTokens';
 import { DEFAULT_GMAIL_CONFIG_CONTADOR, configParaQuery } from './faturasUtils';
 import GmailConfigPanel from './GmailConfigPanel';
 import ApoliceSegurosImportPanel from './ApoliceSegurosImportPanel';
@@ -329,12 +329,12 @@ export default function ContadorEmailsAdmin() {
             <input type="checkbox" checked={todosSelecionadosNaPagina}
               onChange={toggleSelecionarTodosPagina}
               className="rounded border-[var(--border)] text-red-600 focus:ring-red-300 cursor-pointer" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">
+            <span className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>
               Selecionar todos {totalPaginas > 1 ? 'nesta página' : ''}
             </span>
           </label>
           <label className="flex items-center gap-2">
-            <span className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Por página</span>
+            <span className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Por página</span>
             <select value={itensPorPagina}
               onChange={e => { setItensPorPagina(Number(e.target.value)); setPaginaAtual(1); }}
               className="px-2.5 py-1.5 rounded-lg border border-[var(--border)] text-xs font-semibold text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-indigo-300">
@@ -368,17 +368,17 @@ export default function ContadorEmailsAdmin() {
                     )}
                     <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest ${statusCfg.bg} ${statusCfg.text}`}>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-lg ${SCALE.text.badge} ${statusCfg.bg} ${statusCfg.text}`}>
                         {statusCfg.label}
                       </span>
-                      <span className="text-[10px] text-[var(--slate-dim)] font-semibold">{formatDate(email.recebido_em)}</span>
+                      <span className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>{formatDate(email.recebido_em)}</span>
                     </div>
                     <p className="text-sm font-bold text-[var(--ink-mid)] truncate">{email.assunto || '(sem assunto)'}</p>
-                    <p className="text-[11px] text-[var(--slate-dim)] truncate">
+                    <p className={`${SCALE.text.body} text-[var(--slate-dim)] truncate`}>
                       {email.isMensal ? 'Envio proativo — gerado automaticamente, não é resposta a um email recebido' : email.remetente}
                     </p>
                     {(d.numero_fatura || d.valor != null || d.mes_referencia) && (
-                      <p className="text-[10px] text-[var(--slate-dim)] font-semibold mt-1.5">
+                      <p className={`${SCALE.text.meta} text-[var(--slate-dim)] mt-1.5`}>
                         {d.numero_fatura && <>Nº {d.numero_fatura} · </>}
                         {d.valor != null && <>{Number(d.valor).toFixed(2)} € · </>}
                         {d.mes_referencia && <>Ref. {d.mes_referencia}</>}
@@ -392,7 +392,7 @@ export default function ContadorEmailsAdmin() {
                       <button
                         onClick={() => gerarRascunho(email.id)}
                         disabled={gerandoId === email.id}
-                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-50 text-[var(--navy-solid)] hover:opacity-90"
+                        className={`flex items-center gap-1.5 px-3 py-2 rounded-xl ${SCALE.text.badge} transition-all disabled:opacity-50 text-[var(--navy-solid)] hover:opacity-90`}
                         style={{ backgroundColor: FT.orange }}
                       >
                         {gerandoId === email.id ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
@@ -403,7 +403,7 @@ export default function ContadorEmailsAdmin() {
                       <button
                         onClick={() => { if (aberto) fecharRevisao(); gerarRascunho(email.id); }}
                         disabled={gerandoId === email.id}
-                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-50 border-2 hover:bg-[var(--surface)]"
+                        className={`flex items-center gap-1.5 px-3 py-2 rounded-xl ${SCALE.text.badge} transition-all disabled:opacity-50 border-2 hover:bg-[var(--surface)]`}
                         style={{ borderColor: FT.orange, color: FT.orange }}
                         title="Reclassifica o tipo de pedido a partir do Gmail e gera um novo rascunho, substituindo o atual"
                       >
@@ -414,7 +414,7 @@ export default function ContadorEmailsAdmin() {
                     {resposta && resposta.status === 'pendente' && (
                       <button
                         onClick={() => aberto ? fecharRevisao() : abrirRevisao(email)}
-                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all hover:bg-[var(--surface)]"
+                        className={`flex items-center gap-1.5 px-3 py-2 rounded-xl ${SCALE.text.badge} border-2 transition-all hover:bg-[var(--surface)]`}
                         style={{ borderColor: FT.slate, color: 'var(--navy)' }}
                       >
                         {aberto ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
@@ -422,7 +422,7 @@ export default function ContadorEmailsAdmin() {
                       </button>
                     )}
                     {resposta && resposta.status !== 'pendente' && (
-                      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${STATUS_CFG[resposta.status]?.bg} ${STATUS_CFG[resposta.status]?.text}`}>
+                      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg ${SCALE.text.badge} ${STATUS_CFG[resposta.status]?.bg} ${STATUS_CFG[resposta.status]?.text}`}>
                         {resposta.status === 'enviado' ? <CheckCircle2 size={11} /> : <XCircle size={11} />}
                         {STATUS_CFG[resposta.status]?.label}
                       </span>
@@ -432,7 +432,7 @@ export default function ContadorEmailsAdmin() {
                         onClick={() => apagarEmail(email)}
                         disabled={apagandoId === email.id}
                         title="Apagar este email (e rascunho/anexo associados)"
-                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-50 border-2 hover:bg-red-50"
+                        className={`flex items-center gap-1.5 px-3 py-2 rounded-xl ${SCALE.text.badge} transition-all disabled:opacity-50 border-2 hover:bg-red-50`}
                         style={{ borderColor: '#EF4444', color: '#EF4444' }}
                       >
                         {apagandoId === email.id ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
@@ -457,7 +457,7 @@ export default function ContadorEmailsAdmin() {
                   <div className="border-t border-[var(--border-soft)] p-4 sm:p-5 space-y-3 bg-[var(--surface)]">
                     <div className="flex items-center gap-2">
                       <ShieldAlert size={13} style={{ color: FT.slate }} />
-                      <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--slate-dim)' }}>
+                      <p className={SCALE.text.statLabel} style={{ color: 'var(--slate-dim)' }}>
                         Revê o texto antes de aprovar — o envio só acontece depois de confirmares
                       </p>
                     </div>
@@ -469,7 +469,7 @@ export default function ContadorEmailsAdmin() {
                       className="w-full p-3 rounded-2xl border border-[var(--border)] text-sm leading-relaxed outline-none focus:border-[var(--slate)] transition-all font-medium text-[var(--ink-mid)]"
                     />
                     {textoEditado && (
-                      <p className="text-[10px] text-amber-600 font-bold uppercase tracking-widest">Texto editado manualmente (será registado)</p>
+                      <p className={`${SCALE.text.statLabel} text-amber-600`}>Texto editado manualmente (será registado)</p>
                     )}
 
                     {acaoErro && (

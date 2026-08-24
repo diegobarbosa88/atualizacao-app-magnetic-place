@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ChevronDown, ChevronUp, Building2, CheckCircle, Loader2 } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
+import { SCALE } from '../../../styles/designTokens';
 
 export default function FaturaConfigPanel() {
   const { systemSettings, setSystemSettings, saveSystemSettings } = useApp();
@@ -52,7 +53,7 @@ export default function FaturaConfigPanel() {
 
   const Field = ({ label, field, placeholder, type = 'text' }) => (
     <div className="space-y-1">
-      <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">{label}</p>
+      <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>{label}</p>
       <input
         type={type}
         value={form[field]}
