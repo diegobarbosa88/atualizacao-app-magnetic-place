@@ -69,6 +69,57 @@ function MiniTimeline({ w, ssFlag }) {
   );
 }
 
+// Badge único do cartão (grid): reutiliza a mesma deteção de estado que
+// MiniTimeline/apoliceBadge já fazem para a vista de tabela, mas condensa
+// num só selo — verde "OK" quando SS e Apólice estão ambos regularizados,
+// laranja com as mensagens específicas (não um "pendente" genérico) quando
+// há 1+ problema. Vista de tabela mantém-se em MiniTimeline/apoliceBadge.
+function vinculoBadge(w, apoliceMap, ssFlag) {
+  const admissaoFeita = !!w.ss_admissao_comunicada_em;
+  const cessacaoFeita = !!w.ss_cessacao_comunicada_em;
+  const temFim = !!w.dataFim;
+
+  let ssProblema = null;
+  if (ssFlag?.prioridade === 'rejeitada') ssProblema = `SS rejeitou: ${ssFlag.motivo || 'ver detalhe'}`;
+  else if (ssFlag?.prioridade === 'presa') ssProblema = 'SS presa a processar';
+  else if (!admissaoFeita) ssProblema = 'SS admissão por comunicar';
+  else if (temFim && !cessacaoFeita) ssProblema = 'SS cessação por comunicar';
+
+  const apoliceStatus = apoliceMap[w.id]?.status;
+  let apoliceProblema = null;
+  if (apoliceStatus === 'solicitado' || apoliceStatus === 'pendente') apoliceProblema = 'Apólice Solicitada';
+  else if (apoliceStatus === 'excluido') apoliceProblema = 'Apólice Excluída';
+  else if (apoliceStatus !== 'ativo') apoliceProblema = 'Apólice por confirmar';
+
+  // Cores fixas (não var(--...)), de propósito: este cartão usa bg-white
+  // fixo, sem par dark mode — herdar tokens que invertem compunha o fundo
+  // escuro do token sobre o branco fixo do cartão e caía para 2,81:1.
+  // O laranja usa #8a4a00, não FT.orangeDeep — mesmo fixo, FT.orangeDeep
+  // sobre FT.warnBg dá só 3,07:1 (falha AA); nunca tinha sido medido como
+  // par texto+fundo antes (só existia em hover). Se o cartão alguma vez
+  // passar a seguir o tema, reverter o verde para var(--ok)/var(--ok-bg)/
+  // var(--ok-border) — esse par mede bem — mas o laranja precisa de um
+  // par novo medido para dark mode, não var(--orange-deep)/var(--warn-bg):
+  // ver nota em CLAUDE.md.
+  if (!ssProblema && !apoliceProblema) {
+    return (
+      <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full ${SCALE.text.meta}`} style={{ background: FT.okBg, border: `1px solid ${FT.ok}4D`, color: FT.ok }}>
+        <ShieldCheck size={9} /> OK
+      </span>
+    );
+  }
+
+  const texto = [ssProblema, apoliceProblema].filter(Boolean).join(' · ');
+  return (
+    // #8a4a00, não FT.orangeDeep: medido, FT.orangeDeep sobre FT.warnBg dá
+    // 3,07:1 (falha AA). #8a4a00 dá 6,08:1 — mais escuro só o suficiente,
+    // mesma família visual do orangeDeep. Ver nota em CLAUDE.md.
+    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full ${SCALE.text.meta}`} style={{ background: FT.warnBg, border: `1px solid ${FT.warn}4D`, color: '#8a4a00' }} title={texto}>
+      <AlertTriangle size={9} /> {texto}
+    </span>
+  );
+}
+
 function apoliceBadge(w, apoliceMap) {
   const status = apoliceMap[w.id]?.status;
   if (status === 'ativo') {
@@ -417,8 +468,7 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                 <p className={`${SCALE.text.meta} text-[var(--slate-dim)] truncate`} style={{ fontFamily: FONT_MONO }}>{w.profissao || 'Staff'}</p>
               </div>
             </div>
-            <div className="mb-1.5 overflow-hidden"><MiniTimeline w={w} ssFlag={ssComunicacoesMap[w.nis]} /></div>
-            <div className="mb-2">{apoliceBadge(w, apoliceMap)}</div>
+            <div className="mb-2">{vinculoBadge(w, apoliceMap, ssComunicacoesMap[w.nis])}</div>
             <div className={`${SCALE.text.meta} text-[var(--slate-dim)] space-y-0.5 border-t border-[var(--border-soft)] pt-1.5`}>
               <div className="flex items-center gap-1 truncate">
                 <span>⏱</span> <span className="truncate">{schedules.find(s => s.id === w.defaultScheduleId)?.name || 'N/A'}</span>
