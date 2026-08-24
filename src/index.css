@@ -96,6 +96,43 @@
   --bad-bg: #fbeae6;
   --bad-border: rgba(180, 67, 47, 0.3);
 
+  /* Tons de estado partilhados entre domínios (correções, faturação, e no
+     futuro validade de documento / alertas) — cada domínio mapeia os seus
+     próprios nomes semânticos para um destes, em vez de ter tokens
+     independentes por domínio. Valores claros = amber/emerald/rose/indigo-700
+     do Tailwind v4 (oklch convertido e validado); valores escuros escolhidos
+     por contraste real contra --surface, não por fórmula — ver histórico. */
+  --tone-amber: #bb4d00;
+  --tone-amber-bg: #fef3c6;
+  --tone-amber-border: rgba(187, 77, 0, 0.3);
+  --tone-emerald: #007a55;
+  --tone-emerald-bg: #d0fae5;
+  --tone-emerald-border: rgba(0, 122, 85, 0.3);
+  --tone-rose: #c70036;
+  --tone-rose-bg: #ffe4e6;
+  --tone-rose-border: rgba(199, 0, 54, 0.3);
+  --tone-indigo: #432dd7;
+  --tone-indigo-bg: #e0e7ff;
+  --tone-indigo-border: rgba(67, 45, 215, 0.3);
+
+  /* Variantes de papel (não de domínio) — para hierarquia tipográfica REAL
+     dentro de uma mesma cor de estado, confirmada em CorrectionsInbox.jsx/
+     ItemRow.jsx: rótulo repetido < metadado < valor < identidade, no mesmo
+     padrão de peso Tailwind nas três famílias (600/700/800/900 no claro).
+     Nome pelo papel, não pelo degrau — quem for usar escolhe pela função. */
+  --tone-amber-label: #e17100;
+  --tone-amber-meta: #bb4d00;
+  --tone-amber-value: #973c00;
+  --tone-amber-identity: #7b3306;
+  --tone-emerald-label: #009966;
+  --tone-emerald-meta: #007a55;
+  --tone-emerald-value: #006045;
+  --tone-emerald-identity: #004f3b;
+  --tone-rose-label: #ec003f;
+  --tone-rose-meta: #c70036;
+  --tone-rose-value: #a50036;
+  --tone-rose-identity: #8b0836;
+
   --text: #51606e;
   --text-h: #1b3a57;
   --bg: #fff;
@@ -187,6 +224,44 @@
   --bad: #e08872;
   --bad-bg: rgba(180, 67, 47, 0.25);
   --bad-border: rgba(224, 136, 114, 0.35);
+
+  /* Tons partilhados — degrau real do Tailwind mais próximo que ainda bate
+     >=4.5:1 contra --surface (indigo é o mais apertado, 4.71:1; ver histórico
+     de decisão). --x-bg reaproveita a cor CLARA do tom como véu, mesmo
+     mecanismo já usado em --ok/--warn/--bad. */
+  --tone-amber: #fe9a00;
+  --tone-amber-bg: rgba(187, 77, 0, 0.22);
+  --tone-amber-border: rgba(254, 154, 0, 0.35);
+  --tone-emerald: #00bc7d;
+  --tone-emerald-bg: rgba(0, 122, 85, 0.22);
+  --tone-emerald-border: rgba(0, 188, 125, 0.35);
+  --tone-rose: #ff637e;
+  --tone-rose-bg: rgba(199, 0, 54, 0.22);
+  --tone-rose-border: rgba(255, 99, 126, 0.35);
+  --tone-indigo: #7c86ff;
+  --tone-indigo-bg: rgba(67, 45, 215, 0.22);
+  --tone-indigo-border: rgba(124, 134, 255, 0.35);
+
+  /* Variantes de papel — hierarquia INVERTIDA em relação ao claro: no claro
+     identity é o degrau mais escuro (900), no escuro tem de ser o mais claro
+     (maior contraste = mais proeminente sobre fundo escuro). rose não tinha
+     4 degraus Tailwind com contraste seguro no intervalo útil (500 dava
+     4,38:1, 600 dava 3,63:1) — label e meta são interpolação OKLCH própria
+     entre rose-300 e rose-500, não classes Tailwind existentes; emerald-label
+     também é interpolado (emerald-600 puro dava só 4,50:1, margem apertada
+     demais para confiar). Todos os valores medidos contra --surface. */
+  --tone-amber-label: #e17100;
+  --tone-amber-meta: #fe9a00;
+  --tone-amber-value: #ffb900;
+  --tone-amber-identity: #ffd230;
+  --tone-emerald-label: #00a36d;
+  --tone-emerald-meta: #00bc7d;
+  --tone-emerald-value: #00d492;
+  --tone-emerald-identity: #5ee9b5;
+  --tone-rose-label: #ff4065;
+  --tone-rose-meta: #ff5b75;
+  --tone-rose-value: #ff8092;
+  --tone-rose-identity: #ffa1ad;
 
   --code-bg: #1c2733;
   --shadow:

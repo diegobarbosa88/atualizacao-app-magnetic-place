@@ -115,6 +115,14 @@ export const SCALE = {
     // à mão como `rounded-[2.5rem]` antes de terem nome.
     hero:    'rounded-[2.5rem]',
   },
+  border: {
+    // 1,5px — contorno de controlo interativo (algo em que se clica ou
+    // escreve): inputs, botões secundários, chips/opções selecionáveis.
+    // Nunca separador estático entre conteúdo. 11 usos confirmados,
+    // concentrados em 2 ficheiros (ClientForm.jsx, FormacaoElearningFlow.jsx)
+    // — mesmo autor, mesma decisão, repetida por className e por style inline.
+    control: 'border-[1.5px]',
+  },
   pad: {
     card:   'px-[1.1rem] py-[1.05rem]',
     // Degrau móvel mantido do CARD_CLS anterior — em ecrã pequeno 24px de
@@ -132,8 +140,12 @@ export const SCALE = {
     sectionTitle: 'text-[1.3rem] font-bold leading-none',
     // IBM Plex Mono — metadados e rótulos
     meta:       'text-[10px] font-semibold',
-    badge:      'text-[9.5px] font-bold uppercase tracking-[0.04em]',
-    statLabel:  'text-[8.5px] font-extrabold uppercase tracking-[0.11em]',
+    // Eram 9.5px/8.5px — nunca correspondiam a nenhum uso real. Corrigidos
+    // para os valores que a app já usa em centenas de sítios (9px/8px,
+    // confirmado por censo): a escala converge para a app, não o inverso —
+    // mesma lógica já aplicada aos raios órfãos.
+    badge:      'text-[9px] font-bold uppercase tracking-[0.04em]',
+    statLabel:  'text-[8px] font-extrabold uppercase tracking-[0.11em]',
     // Inter — texto corrido
     body:       'text-[11px] font-semibold',
   },
