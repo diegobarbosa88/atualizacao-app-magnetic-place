@@ -4,7 +4,7 @@ import {
 } from 'lucide-react';
 import { formatDocDate } from '../../../utils/dateUtils';
 import { toSentenceCase, toSentenceCaseFilename } from '../../../utils/textUtils';
-import { FT } from '../../../styles/designTokens';
+import { FT, SCALE } from '../../../styles/designTokens';
 import SortableTh from './SortableTh';
 import { getValidadeStatus, getDiasRestantes, CATEGORIAS_RH_ACT, CATEGORIA_CONFIG, CATEGORIA_COLOR_MAP } from '../../../constants/rhCategories';
 
@@ -13,17 +13,17 @@ const ACTION_ICON_STYLE = { color: FT.slate };
 
 function StateBadge({ state }) {
   if (state === 'signed') return (
-    <span title="Assinado" className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-black bg-emerald-100 text-emerald-700">
+    <span title="Assinado" className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg ${SCALE.text.meta} bg-emerald-100 text-emerald-700`}>
       <CheckCircle size={12} /> Assinado
     </span>
   );
   if (state === 'awaiting_admin') return (
-    <span title="Aguarda aprovação" className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-black bg-[var(--surface-dim)] text-[var(--navy)]">
+    <span title="Aguarda aprovação" className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg ${SCALE.text.meta} bg-[var(--surface-dim)] text-[var(--navy)]`}>
       <FileSignature size={12} /> Aguarda aprovação
     </span>
   );
   return (
-    <span title="Pendente" className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-black bg-amber-100 text-amber-700">
+    <span title="Pendente" className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg ${SCALE.text.meta} bg-amber-100 text-amber-700`}>
       <Clock size={12} /> Pendente
     </span>
   );
@@ -41,7 +41,7 @@ function ValidadeBadge({ dataValidade }) {
   };
   const { cls, icon, label } = config[status];
   return (
-    <span className={`inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded-lg text-[9px] font-black border ${cls}`}>
+    <span className={`inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded-lg ${SCALE.text.meta} border ${cls}`}>
       {icon} {label}
     </span>
   );
@@ -67,7 +67,7 @@ function CategoriaEditor({ docId, source, categoria, onSave }) {
     <div className="relative inline-block" ref={ref}>
       <button
         onClick={() => setOpen(o => !o)}
-        className={`inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-lg text-[9px] font-black border transition-all group ${colors.bg} ${colors.text} ${colors.border} hover:brightness-95`}
+        className={`inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-lg ${SCALE.text.meta} border transition-all group ${colors.bg} ${colors.text} ${colors.border} hover:brightness-95`}
         title={semCategoria ? 'Sem categoria — clique para definir' : 'Editar categoria'}
       >
         {semCategoria && <AlertTriangle size={8} />}
@@ -78,7 +78,7 @@ function CategoriaEditor({ docId, source, categoria, onSave }) {
       {open && (
         <div className="absolute left-0 top-full mt-1 z-50 bg-white border border-[var(--border)] rounded-xl shadow-xl overflow-hidden min-w-[220px]">
           <div className="px-3 py-2 border-b border-[var(--border-soft)]">
-            <p className="text-[9px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Categoria ACT</p>
+            <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Categoria ACT</p>
           </div>
           <div className="py-1 max-h-64 overflow-y-auto">
             {CATEGORIAS_RH_ACT.map(c => (
@@ -119,7 +119,7 @@ export default function DocumentsTable({
             <SortableTh label="Documento" columnKey="title" sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
             <SortableTh label="Tipo / Categoria" columnKey="tipo" sortKey={sortKey} sortDir={sortDir} onSort={onSort} className="hidden md:table-cell" />
             <SortableTh label="Estado" columnKey="state" sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
-            <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-right">Ações</th>
+            <th className={`px-4 py-2 ${SCALE.text.statLabel} text-right`}>Ações</th>
           </tr>
         </thead>
         <tbody>
@@ -152,11 +152,11 @@ export default function DocumentsTable({
                   </td>
                   <td className="px-4 py-4 border-y border-[var(--border-soft)]">
                     <p className="text-xs font-bold text-[var(--ink-mid)] truncate max-w-[260px]" title={d.title}>{toSentenceCaseFilename(d.title)}</p>
-                    {d.subtitle && <p className="text-[10px] text-[var(--slate-dim)] mt-0.5 truncate max-w-[260px]">{d.subtitle}</p>}
+                    {d.subtitle && <p className={`${SCALE.text.meta} text-[var(--slate-dim)] mt-0.5 truncate max-w-[260px]`}>{d.subtitle}</p>}
                     {(d.signedAtWorker || d.signedAtAdmin) && (
                       <div className="mt-1 flex flex-col gap-0.5">
-                        {d.signedAtWorker && <p className="text-[10px] text-emerald-600 font-bold">Trabalhador: {formatDocDate(d.signedAtWorker.toISOString(), true)}</p>}
-                        {d.signedAtAdmin && <p className="text-[10px] text-indigo-600 font-bold">Magnetic Place: {formatDocDate(d.signedAtAdmin.toISOString(), true)}</p>}
+                        {d.signedAtWorker && <p className={`${SCALE.text.meta} text-emerald-600`}>Trabalhador: {formatDocDate(d.signedAtWorker.toISOString(), true)}</p>}
+                        {d.signedAtAdmin && <p className={`${SCALE.text.meta} text-indigo-600`}>Magnetic Place: {formatDocDate(d.signedAtAdmin.toISOString(), true)}</p>}
                       </div>
                     )}
                   </td>
@@ -175,7 +175,7 @@ export default function DocumentsTable({
                         ? { bg: 'bg-orange-100', text: 'text-orange-700', border: 'border-orange-200' }
                         : CATEGORIA_COLOR_MAP[(CATEGORIA_CONFIG[d.categoria] || CATEGORIA_CONFIG["Outros"]).color];
                       return (
-                        <span className={`inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-lg text-[9px] font-black border ${colors.bg} ${colors.text} ${colors.border}`}>
+                        <span className={`inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-lg ${SCALE.text.meta} border ${colors.bg} ${colors.text} ${colors.border}`}>
                           {semCategoria && <AlertTriangle size={8} />}
                           {d.categoria || 'Sem categoria'}
                         </span>

@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useApp } from '../../../context/AppContext';
 import { renderPdfFirstPage, renderPdfToSrcDoc } from '../../../components/common/workerDocuments/useDocumentPreview';
-import { FT } from '../../../styles/designTokens';
+import { FT, SCALE } from '../../../styles/designTokens';
 import {
   FileText, Clock,
   FolderOpen, Eye, EyeOff, CheckCircle, AlertTriangle, ChevronDown, ChevronUp, ChevronRight,
@@ -106,7 +106,7 @@ function AvatarRing({ name, total, expirados, urgentes }) {
         <circle cx="22" cy="22" r={r} fill="none" stroke={color} strokeWidth="3" strokeLinecap="round"
           strokeDasharray={`${c * validPct} ${c}`} />
       </svg>
-      <div className="absolute inset-[3px] rounded-full flex items-center justify-center text-[10px] font-black" style={{ backgroundColor: FT.navy, color: FT.orange }}>
+      <div className={`absolute inset-[3px] rounded-full flex items-center justify-center ${SCALE.text.badge}`} style={{ backgroundColor: FT.navy, color: FT.orange }}>
         {getInitials(name)}
       </div>
     </div>
@@ -125,7 +125,7 @@ function ValidadeChip({ dataValidade }) {
   };
   const { cls, icon, label } = map[status];
   return (
-    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-black ${cls}`}>
+    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded ${SCALE.text.meta} ${cls}`}>
       {icon} {label}
     </span>
   );
@@ -133,17 +133,17 @@ function ValidadeChip({ dataValidade }) {
 
 function StateBadgeSmall({ state }) {
   if (state === 'signed') return (
-    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-black bg-emerald-100 text-emerald-700">
+    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded ${SCALE.text.meta} bg-emerald-100 text-emerald-700`}>
       <CheckCircle size={8} /> Assinado
     </span>
   );
   if (state === 'awaiting_admin') return (
-    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-black bg-indigo-100 text-indigo-700">
+    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded ${SCALE.text.meta} bg-indigo-100 text-indigo-700`}>
       <FileSignature size={8} /> Aguarda aprovação
     </span>
   );
   return (
-    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-black bg-amber-100 text-amber-700">
+    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded ${SCALE.text.meta} bg-amber-100 text-amber-700`}>
       <Clock size={8} /> Pendente
     </span>
   );
@@ -262,7 +262,7 @@ function DocCardSingle({ d, onOpenDoc, onDelete, confirmDeleteId, setConfirmDele
         <div className="p-1.5 bg-[var(--border)] text-[var(--ink-soft)] rounded-lg flex-shrink-0 mt-0.5"><FileText size={12} /></div>
         <div className="flex-1 min-w-0">
           <p className="text-xs font-black text-[var(--ink)] truncate">{title}</p>
-          {d.workerName && <p className="text-[10px] text-[var(--slate-dim)] font-bold truncate">{d.workerName}</p>}
+          {d.workerName && <p className={`${SCALE.text.meta} text-[var(--slate-dim)] truncate`}>{d.workerName}</p>}
         </div>
         {(temExpirado || temUrgente) && <AlertTriangle size={12} className={temExpirado ? 'text-red-500' : 'text-amber-500'} />}
       </div>
@@ -275,19 +275,19 @@ function DocCardSingle({ d, onOpenDoc, onDelete, confirmDeleteId, setConfirmDele
 
         {/* Info do documento — campos específicos da categoria */}
         <div className="bg-[var(--surface)] border border-[var(--border-soft)] rounded-xl p-2.5 space-y-1.5">
-          <p className="text-[9px] font-black text-[var(--slate-dim)] uppercase tracking-widest mb-1.5">Informação do documento</p>
+          <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1.5`}>Informação do documento</p>
           {getCategoryFields(d).map(({ label, value }) => {
             const isValidadeField = label === 'Válido até' || label === 'Validade';
             const expiry = isValidadeField ? getExpiryRelativeLabel(d.data_validade) : null;
             return (
               <div key={label}>
-                <span className="text-[9px] text-[var(--slate-dim)] font-bold">{label}: </span>
+                <span className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>{label}: </span>
                 {value ? (
-                  <span className="text-[10px] font-black text-[var(--ink-mid)]">{value}</span>
+                  <span className={`${SCALE.text.meta} text-[var(--ink-mid)]`}>{value}</span>
                 ) : (
-                  <span className="text-[10px] font-bold text-[var(--slate-dim)] italic">Não disponível</span>
+                  <span className={`${SCALE.text.meta} text-[var(--slate-dim)] italic`}>Não disponível</span>
                 )}
-                {expiry && <p className={`text-[9px] font-bold ${expiry.colorClass}`}>{expiry.label}</p>}
+                {expiry && <p className={`${SCALE.text.meta} ${expiry.colorClass}`}>{expiry.label}</p>}
               </div>
             );
           })}
@@ -300,10 +300,10 @@ function DocCardSingle({ d, onOpenDoc, onDelete, confirmDeleteId, setConfirmDele
         {/* Ações */}
         {confirmDeleteId === d.id ? (
           <div className="bg-rose-50 border border-rose-200 rounded-lg p-2 space-y-1.5">
-            <p className="text-[9px] font-black text-rose-700 text-center">Apagar permanentemente?</p>
+            <p className={`${SCALE.text.meta} text-rose-700 text-center`}>Apagar permanentemente?</p>
             <div className="flex gap-1.5">
-              <button onClick={() => { onDelete(d); setConfirmDeleteId(null); }} className="flex-1 py-1.5 bg-rose-600 text-white text-[9px] font-black rounded-lg hover:bg-rose-700">Sim</button>
-              <button onClick={() => setConfirmDeleteId(null)} className="flex-1 py-1.5 bg-white border border-[var(--border)] text-[var(--ink-soft)] text-[9px] font-black rounded-lg">Não</button>
+              <button onClick={() => { onDelete(d); setConfirmDeleteId(null); }} className={`flex-1 py-1.5 bg-rose-600 text-white ${SCALE.text.meta} rounded-lg hover:bg-rose-700`}>Sim</button>
+              <button onClick={() => setConfirmDeleteId(null)} className={`flex-1 py-1.5 bg-white border border-[var(--border)] text-[var(--ink-soft)] ${SCALE.text.meta} rounded-lg`}>Não</button>
             </div>
           </div>
         ) : (
@@ -355,7 +355,7 @@ function DocCardPair({ pair, onOpenDoc, onDelete, confirmDeleteId, setConfirmDel
     const thumbUrl = doc?.viewUrl || doc?.signedPdfUrl || null;
     return (
       <div className="flex-1 min-w-0">
-        <p className="text-[9px] font-black text-[var(--slate-dim)] uppercase tracking-widest text-center mb-1">{label}</p>
+        <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] text-center mb-1`}>{label}</p>
         <div className="h-28 rounded-lg border border-[var(--border)] overflow-hidden">
           <ThumbImg url={thumbUrl} alt={label} imgClassName="w-full h-full object-cover" wrapperClassName="w-full h-full flex items-center justify-center bg-[var(--surface-dim)]" />
         </div>
@@ -370,7 +370,7 @@ function DocCardPair({ pair, onOpenDoc, onDelete, confirmDeleteId, setConfirmDel
         <div className="p-1.5 bg-violet-200 text-violet-700 rounded-lg flex-shrink-0 mt-0.5"><Layers size={12} /></div>
         <div className="flex-1 min-w-0">
           <p className="text-xs font-black text-violet-800 truncate">{pairTitle}</p>
-          {workerName && <p className="text-[10px] text-violet-600 font-bold truncate">{workerName}</p>}
+          {workerName && <p className={`${SCALE.text.meta} text-violet-600 truncate`}>{workerName}</p>}
         </div>
         {(temExpirado || temUrgente) && <AlertTriangle size={12} className={temExpirado ? 'text-red-500' : 'text-amber-500'} />}
         {isManual && (
@@ -400,7 +400,7 @@ function DocCardPair({ pair, onOpenDoc, onDelete, confirmDeleteId, setConfirmDel
 
         {/* Info do documento — campos específicos da categoria */}
         <div className="bg-[var(--surface)] border border-[var(--border-soft)] rounded-xl p-2.5 space-y-1.5">
-          <p className="text-[9px] font-black text-[var(--slate-dim)] uppercase tracking-widest mb-1.5">Informação do documento</p>
+          <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1.5`}>Informação do documento</p>
           {(() => {
             const ref = frente || verso;
             const mergedDoc = {
@@ -418,13 +418,13 @@ function DocCardPair({ pair, onOpenDoc, onDelete, confirmDeleteId, setConfirmDel
               const expiry = isValidadeField ? getExpiryRelativeLabel(validade) : null;
               return (
                 <div key={label}>
-                  <span className="text-[9px] text-[var(--slate-dim)] font-bold">{label}: </span>
+                  <span className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>{label}: </span>
                   {value ? (
-                    <span className="text-[10px] font-black text-[var(--ink-mid)]">{value}</span>
+                    <span className={`${SCALE.text.meta} text-[var(--ink-mid)]`}>{value}</span>
                   ) : (
-                    <span className="text-[10px] font-bold text-[var(--slate-dim)] italic">Não disponível</span>
+                    <span className={`${SCALE.text.meta} text-[var(--slate-dim)] italic`}>Não disponível</span>
                   )}
-                  {expiry && <p className={`text-[9px] font-bold ${expiry.colorClass}`}>{expiry.label}</p>}
+                  {expiry && <p className={`${SCALE.text.meta} ${expiry.colorClass}`}>{expiry.label}</p>}
                 </div>
               );
             });
@@ -440,13 +440,13 @@ function DocCardPair({ pair, onOpenDoc, onDelete, confirmDeleteId, setConfirmDel
           {[{ doc: frente, label: 'Frente' }, { doc: verso, label: 'Verso' }].map(({ doc, label }) => (
             doc ? (
               <div key={doc.id} className="space-y-1">
-                <p className="text-[9px] font-black text-[var(--slate-dim)] uppercase tracking-widest text-center">{label}</p>
+                <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] text-center`}>{label}</p>
                 {confirmDeleteId === doc.id ? (
                   <div className="bg-rose-50 border border-rose-200 rounded-lg p-1.5 space-y-1">
-                    <p className="text-[9px] font-black text-rose-700 text-center">Apagar?</p>
+                    <p className={`${SCALE.text.meta} text-rose-700 text-center`}>Apagar?</p>
                     <div className="flex gap-1">
-                      <button onClick={() => { onDelete(doc); setConfirmDeleteId(null); }} className="flex-1 py-1 bg-rose-600 text-white text-[9px] font-black rounded hover:bg-rose-700">Sim</button>
-                      <button onClick={() => setConfirmDeleteId(null)} className="flex-1 py-1 bg-white border border-[var(--border)] text-[var(--ink-soft)] text-[9px] font-black rounded">Não</button>
+                      <button onClick={() => { onDelete(doc); setConfirmDeleteId(null); }} className={`flex-1 py-1 bg-rose-600 text-white ${SCALE.text.meta} rounded hover:bg-rose-700`}>Sim</button>
+                      <button onClick={() => setConfirmDeleteId(null)} className={`flex-1 py-1 bg-white border border-[var(--border)] text-[var(--ink-soft)] ${SCALE.text.meta} rounded`}>Não</button>
                     </div>
                   </div>
                 ) : (
@@ -512,11 +512,11 @@ function SubPastaCard({ categoria, docs, onOpenDoc, onDelete }) {
             />
           </div>
           <div className="flex flex-wrap gap-1 mt-1.5">
-            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-black bg-emerald-100 text-emerald-700">
+            <span className={`inline-flex items-center px-1.5 py-0.5 rounded ${SCALE.text.meta} bg-emerald-100 text-emerald-700`}>
               {validosCount} válido{validosCount !== 1 ? 's' : ''}
             </span>
             {aExpirarCount > 0 && (
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-black bg-red-100 text-red-700">
+              <span className={`inline-flex items-center px-1.5 py-0.5 rounded ${SCALE.text.meta} bg-red-100 text-red-700`}>
                 {aExpirarCount} a expirar
               </span>
             )}
@@ -594,7 +594,7 @@ export function WorkerPastaView({ worker, docs, onBack, onOpenDoc, onDelete, onA
         <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-sm font-black" style={{ backgroundColor: FT.navy, color: FT.orange }}>{getInitials(worker.workerName)}</div>
         <div className="flex-1">
           <h4 className="font-black text-[var(--ink)] text-base">{toSentenceCase(worker.workerName)}</h4>
-          <p className="text-[10px] text-[var(--slate-dim)] font-bold">{docs.length} documento{docs.length !== 1 ? 's' : ''}</p>
+          <p className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>{docs.length} documento{docs.length !== 1 ? 's' : ''}</p>
         </div>
         {expirados > 0 && (
           <span className="flex items-center gap-1 text-xs font-black text-red-600 bg-red-50 border border-red-200 px-2.5 py-1 rounded-xl">
@@ -809,7 +809,7 @@ export default function WorkerDocsFolderView({ docs, onPreview, onDeleteManual, 
                   <AvatarRing name={w.workerName} total={w.docs.length} expirados={expirados} urgentes={urgentes} />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-black text-[var(--ink)] truncate">{toSentenceCase(w.workerName)}</p>
-                    <p className="text-[10px] text-[var(--slate-dim)] font-bold mt-0.5">
+                    <p className={`${SCALE.text.meta} text-[var(--slate-dim)] mt-0.5`}>
                       {w.docs.length} doc{w.docs.length !== 1 ? 's' : ''}
                     </p>
                   </div>
@@ -825,13 +825,13 @@ export default function WorkerDocsFolderView({ docs, onPreview, onDeleteManual, 
                       const conf = CATEGORIA_CONFIG[cat] || CATEGORIA_CONFIG["Outros"];
                       const colors = COLOR_MAP[conf.color];
                       return (
-                        <span key={cat} className={`px-1.5 py-0.5 rounded text-[9px] font-black ${colors.bg} ${colors.text}`}>
+                        <span key={cat} className={`px-1.5 py-0.5 rounded ${SCALE.text.meta} ${colors.bg} ${colors.text}`}>
                           {cat.split(' ')[0]}
                         </span>
                       );
                     })}
                     {categorias.length > 4 && (
-                      <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-[var(--surface-dim)] text-[var(--ink-soft)]">
+                      <span className={`px-1.5 py-0.5 rounded ${SCALE.text.meta} bg-[var(--surface-dim)] text-[var(--ink-soft)]`}>
                         +{categorias.length - 4}
                       </span>
                     )}
@@ -841,7 +841,7 @@ export default function WorkerDocsFolderView({ docs, onPreview, onDeleteManual, 
                 {/* Alertas de validade */}
                 {(expirados > 0 || urgentes > 0) && (
                   <div className="mt-2 flex items-center gap-1">
-                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-black bg-red-100 text-red-700">
+                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded ${SCALE.text.meta} bg-red-100 text-red-700`}>
                       <AlertTriangle size={9} className="mr-0.5" /> {expirados + urgentes} a expirar
                     </span>
                   </div>

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Search, Plus, X } from 'lucide-react';
 import { CATEGORIAS_RH_ACT } from '../../../constants/rhCategories';
-import { FT } from '../../../styles/designTokens';
+import { FT, SCALE } from '../../../styles/designTokens';
 
 // Tabs de estado com contador e o botão "A Expirar" foram substituídos pelo
 // stat strip clicável no cabeçalho de DocumentsAdmin.jsx — evita repetir o
@@ -22,18 +22,18 @@ export default function DocumentsFilters({
     <>
       {hasActiveFilter && (
         <div className="flex items-center gap-2 mb-3">
-          <span className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">A filtrar por:</span>
+          <span className={`${SCALE.text.badge} text-[var(--slate-dim)]`}>A filtrar por:</span>
           {stateFilter !== 'all' && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-black bg-[#1B3A57]/5 text-[var(--navy)]">
+            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg ${SCALE.text.meta} bg-[#1B3A57]/5 text-[var(--navy)]`}>
               {{ pending: 'Pendentes', awaiting_admin: 'Aguarda aprovação', signed: 'Assinados' }[stateFilter] || stateFilter}
             </span>
           )}
           {validadeFilter === 'expiring' && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-black bg-red-50 text-red-600">A expirar/expirados</span>
+            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg ${SCALE.text.meta} bg-red-50 text-red-600`}>A expirar/expirados</span>
           )}
           <button
             onClick={() => { setStateFilter('all'); setValidadeFilter && setValidadeFilter(''); }}
-            className="flex items-center gap-1 text-[10px] font-black text-[var(--slate-dim)] hover:text-[var(--ink-soft)] transition-colors"
+            className={`flex items-center gap-1 ${SCALE.text.meta} text-[var(--slate-dim)] hover:text-[var(--ink-soft)] transition-colors`}
           >
             <X size={11} /> Limpar
           </button>

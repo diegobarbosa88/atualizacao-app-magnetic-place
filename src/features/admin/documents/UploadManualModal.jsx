@@ -2,6 +2,7 @@ import React from 'react';
 import { Upload, Loader2 } from 'lucide-react';
 import ModalShell from '../../../components/common/ModalShell';
 import { CATEGORIAS_RH_ACT, AUTO_CATEGORIA_TIPO, CATEGORIAS_COM_VALIDADE } from '../../../constants/rhCategories';
+import { SCALE } from '../../../styles/designTokens';
 
 const TIPOS_MANUAIS = ['Recibo de Vencimento', 'Mapa de Ajudas de Custo', 'Mapa de Deslocamento', 'Contrato de Trabalho', 'Outro'];
 
@@ -58,7 +59,7 @@ export default function UploadManualModal({
         <div className="space-y-4 px-6 py-5">
           {!hideWorkerSelect && (
             <div className="space-y-1">
-              <label className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest ml-1">Colaborador</label>
+              <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)] ml-1`}>Colaborador</label>
               <select
                 className="w-full p-3 rounded-xl border border-[var(--border)] bg-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
                 value={selWorker}
@@ -74,7 +75,7 @@ export default function UploadManualModal({
           )}
 
           <div className="space-y-1">
-            <label className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest ml-1">Tipo</label>
+            <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)] ml-1`}>Tipo</label>
             <select
               className="w-full p-3 rounded-xl border border-[var(--border)] bg-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
               value={selTipo}
@@ -88,7 +89,7 @@ export default function UploadManualModal({
           </div>
 
           <div className="space-y-1">
-            <label className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest ml-1">
+            <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)] ml-1`}>
               Categoria RH <span className="text-indigo-500">(ACT)</span>
             </label>
             <select
@@ -103,13 +104,13 @@ export default function UploadManualModal({
               ))}
             </select>
             {selCategoria && (
-              <p className="text-[10px] text-indigo-500 font-bold ml-1">Pasta: {selCategoria}</p>
+              <p className={`${SCALE.text.meta} text-indigo-500`}>Pasta: {selCategoria}</p>
             )}
           </div>
 
           {mostraValidade && (
             <div className="space-y-1">
-              <label className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest ml-1">
+              <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)] ml-1`}>
                 Data de Validade <span className="text-amber-500">⚠ recomendado para esta categoria</span>
               </label>
               <input
@@ -124,7 +125,7 @@ export default function UploadManualModal({
 
           {!mostraValidade && (
             <div className="space-y-1">
-              <label className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest ml-1">
+              <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)] ml-1`}>
                 Data de Validade <span className="text-[var(--slate-dim)]">(opcional)</span>
               </label>
               <input
@@ -138,7 +139,7 @@ export default function UploadManualModal({
           )}
 
           <div className="space-y-1">
-            <label className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest ml-1">Ficheiro (PDF)</label>
+            <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)] ml-1`}>Ficheiro (PDF)</label>
             <input
               type="file"
               accept=".pdf"
@@ -147,7 +148,7 @@ export default function UploadManualModal({
               disabled={uploading}
             />
             {selFile && (
-              <p className="text-[10px] text-[var(--slate-dim)] mt-1 ml-1 truncate">{selFile.name}</p>
+              <p className={`${SCALE.text.meta} text-[var(--slate-dim)] mt-1 ml-1 truncate`}>{selFile.name}</p>
             )}
           </div>
         </div>

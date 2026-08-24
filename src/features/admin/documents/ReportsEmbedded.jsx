@@ -4,6 +4,7 @@ import {
 } from 'lucide-react';
 import ClientTimesheetReport from '../../../components/common/ClientTimesheetReport';
 import ModalShell from '../../../components/common/ModalShell';
+import { SCALE } from '../../../styles/designTokens';
 
 export default function ReportsEmbedded({
   reportFilter, setReportFilter,
@@ -28,12 +29,12 @@ export default function ReportsEmbedded({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         <div className="bg-white p-3 sm:p-4 rounded-2xl shadow-sm border border-[var(--border-soft)] flex flex-col gap-2">
           <div className="bg-indigo-50 text-indigo-600 p-2 rounded-xl w-fit"><Users size={18} /></div>
-          <div><p className="text-xl sm:text-2xl font-black text-[var(--ink)]">{activeWorkersCount}</p><p className="text-[10px] font-black text-[var(--slate)] uppercase">Colaboradores c/ Registos</p></div>
+          <div><p className="text-xl sm:text-2xl font-black text-[var(--ink)]">{activeWorkersCount}</p><p className={`${SCALE.text.statLabel} text-[var(--slate)]`}>Colaboradores c/ Registos</p></div>
           <p className="text-xs font-bold text-[var(--slate-dim)] uppercase">no mês seleccionado</p>
         </div>
         <div className="bg-white p-3 sm:p-4 rounded-2xl shadow-sm border border-[var(--border-soft)] flex flex-col gap-2">
           <div className="bg-emerald-50 text-emerald-600 p-2 rounded-xl w-fit"><Building2 size={18} /></div>
-          <div><p className="text-xl sm:text-2xl font-black text-[var(--ink)]">{activeClientsCount}</p><p className="text-[10px] font-black text-[var(--slate)] uppercase">Clientes Activos</p></div>
+          <div><p className="text-xl sm:text-2xl font-black text-[var(--ink)]">{activeClientsCount}</p><p className={`${SCALE.text.statLabel} text-[var(--slate)]`}>Clientes Activos</p></div>
           <p className="text-xs font-bold text-[var(--slate-dim)] uppercase">no mês seleccionado</p>
         </div>
       </div>
@@ -41,21 +42,21 @@ export default function ReportsEmbedded({
       <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-[var(--border-soft)]">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest ml-1">Selecione o Cliente</label>
+            <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)] ml-1`}>Selecione o Cliente</label>
             <select className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-bold" value={reportFilter.clientId} onChange={e => setReportFilter({ ...reportFilter, clientId: e.target.value })}>
               <option value="">-- Escolher Cliente --</option>
               {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest ml-1">Colaborador (Opcional)</label>
+            <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)] ml-1`}>Colaborador (Opcional)</label>
             <select className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-bold" value={reportFilter.workerId} onChange={e => setReportFilter({ ...reportFilter, workerId: e.target.value })}>
               <option value="">-- Todos os Colaboradores --</option>
               {workers.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
             </select>
           </div>
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest ml-1">Mês (Ano-Mês)</label>
+            <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)] ml-1`}>Mês (Ano-Mês)</label>
             <input type="month" className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-bold" value={reportFilter.month} onChange={e => setReportFilter({ ...reportFilter, month: e.target.value })} />
           </div>
         </div>
@@ -104,18 +105,18 @@ export default function ReportsEmbedded({
           <div className="flex flex-col items-center justify-center py-10 text-center">
             <div className="bg-[var(--surface)] p-4 rounded-2xl mb-3"><FileText size={32} className="text-[var(--slate)]" /></div>
             <p className="text-sm font-bold text-[var(--slate-dim)]">Ainda sem relatórios gerados</p>
-            <p className="text-[10px] text-[var(--slate-dim)] mt-1">Gere um relatório para o ver aqui</p>
+            <p className={`${SCALE.text.meta} text-[var(--slate-dim)] mt-1`}>Gere um relatório para o ver aqui</p>
           </div>
         ) : (
           <div className="overflow-x-auto rounded-2xl border border-[var(--border-soft)]">
             <table className="min-w-full divide-y divide-[var(--border-soft)]">
               <thead className="bg-[var(--surface)]">
                 <tr>
-                  <th className="px-5 py-3 text-left text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Mês</th>
-                  <th className="px-5 py-3 text-left text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Cliente</th>
-                  <th className="px-5 py-3 text-left text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Colaborador</th>
-                  <th className="px-5 py-3 text-left text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Gerado em</th>
-                  <th className="px-5 py-3 text-right text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Ação</th>
+                  <th className={`px-5 py-3 text-left ${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Mês</th>
+                  <th className={`px-5 py-3 text-left ${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Cliente</th>
+                  <th className={`px-5 py-3 text-left ${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Colaborador</th>
+                  <th className={`px-5 py-3 text-left ${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Gerado em</th>
+                  <th className={`px-5 py-3 text-right ${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Ação</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-[var(--border-soft)]">
@@ -133,7 +134,7 @@ export default function ReportsEmbedded({
                           if (entry.clientId || entry.workerId) setPrintingReport({ client: clientSelected, month: entry.month, workerId: entry.workerId });
                           else setPrintingReport({ isGlobal: true, month: entry.month });
                         }, 50);
-                      }} className="px-4 py-1.5 bg-indigo-50 text-indigo-600 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-100 transition-all">Ver</button>
+                      }} className={`px-4 py-1.5 bg-indigo-50 text-indigo-600 rounded-xl ${SCALE.text.badge} hover:bg-indigo-100 transition-all`}>Ver</button>
                     </td>
                   </tr>
                 ))}
