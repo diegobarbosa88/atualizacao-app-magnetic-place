@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Wallet, ChevronDown } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import { formatCurrency } from '../../../utils/formatUtils';
-import { FT } from '../../../styles/designTokens';
+import { FT, SCALE } from '../../../styles/designTokens';
 
 // Tons dentro da família emerald/rose já usada nos badges de tendência do Dashboard Geral
 // (AdminOverview.jsx) — não os tons genéricos green-500/red-500 do Tailwind.
@@ -64,7 +64,7 @@ export default function FinancialSummaryPanel({ badgeTotals, badgeDetails, ytdTo
             </PieChart>
           </ResponsiveContainer>
           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-            <span className="text-[9px] font-black text-[var(--slate-dim)] uppercase">{currentMonth.getFullYear()}</span>
+            <span className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>{currentMonth.getFullYear()}</span>
             <span className={`text-lg font-black ${ytdResult >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
               {formatCurrency(ytdResult)}
             </span>
@@ -124,7 +124,7 @@ export default function FinancialSummaryPanel({ badgeTotals, badgeDetails, ytdTo
 
                         {isSubExpanded && subBadgeItems.length > 0 && (
                           <div className="mt-1 ml-4 bg-[var(--surface)] rounded-xl overflow-x-auto">
-                            <table className="w-full text-[10px]">
+                            <table className={`w-full ${SCALE.text.meta}`}>
                               <thead>
                                 <tr className="border-b border-[var(--border)]">
                                   <th className="px-3 py-2 text-left font-black text-[var(--slate-dim)] uppercase tracking-widest">Data</th>

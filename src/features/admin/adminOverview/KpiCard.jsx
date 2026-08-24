@@ -1,5 +1,5 @@
 import React from 'react';
-import { FT } from '../../../styles/designTokens';
+import { FT, SCALE } from '../../../styles/designTokens';
 
 export default function KpiCard({ icon, iconBg, iconColor, iconStyle = {}, value, subtitle, label, trend, invertTrend = false, dark = false, neutralBadge = false }) {
   const trendGood = invertTrend ? trend <= 0 : trend >= 0;
@@ -28,7 +28,7 @@ export default function KpiCard({ icon, iconBg, iconColor, iconStyle = {}, value
       <div className="flex justify-between items-start">
         <div className={`${iconBg} ${iconColor} p-3 rounded-2xl`} style={iconStyle}>{icon}</div>
         {trend !== null && trend !== undefined && trend !== 0 && (
-          <span className={`text-[10px] font-black px-2 py-1 rounded-full ${badgeClass}`}>
+          <span className={`${SCALE.text.badge} px-2 py-1 rounded-full ${badgeClass}`}>
             {trend >= 0 ? '▲' : '▼'} {Math.abs(trend)}%
           </span>
         )}
@@ -38,7 +38,7 @@ export default function KpiCard({ icon, iconBg, iconColor, iconStyle = {}, value
         {subtitle && (
           // O subtítulo não tinha o ternário que o label já tinha: usava
           // text-slate-400 nos dois cartões, o que dava 2,56:1 sobre o branco.
-          <p className={`text-[10px] font-black uppercase tracking-widest ${textoNeutro}`}>{subtitle}</p>
+          <p className={`${SCALE.text.statLabel} ${textoNeutro}`}>{subtitle}</p>
         )}
       </div>
       <p className={`text-xs font-bold uppercase tracking-wider ${textoNeutro}`}>{label}</p>
