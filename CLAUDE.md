@@ -1166,6 +1166,31 @@ filtrável de forma exclusiva. Confirmado ao vivo: filtro exclusivo funciona (28
 pesquisa continua a combinar com o filtro activo, "Onboarding pendente ↗" navega para Pendentes,
 chip activo com destaque laranja visível nos dois modos.
 
+**Horários — `handleDeleteSchedule` apagava sem `confirm()` nenhum, corrigido 2026-08-24 (isolado,
+antes do resto do redesenho da secção).** Achado ao investigar uma spec de redesenho maior:
+apagar um horário no `ScheduleManager.jsx` não tinha confirmação de nenhum tipo — nem a básica.
+Confirmado por SQL directo ao schema (`information_schema`, não por leitura do código JS): **não
+há nenhuma foreign key entre `schedules` e `workers`/`worker_schedule_history`** — zero
+constraints. `workers.assignedSchedules` é `ARRAY`, `workers.defaultScheduleId` é `text`,
+`worker_schedule_history.schedule_id` é `text`, nenhum com `ON DELETE CASCADE`/`RESTRICT`/
+`SET NULL`, porque não há constraint nenhuma a impor isso. Apagar um horário não limpa nada nos
+trabalhadores atribuídos — ficam com uma referência morta que os cálculos de horas esperadas
+(`calculateExpectedMonthlyHours`) leem em silêncio como "sem horário", sem erro visível,
+distorcendo relatórios sem aviso. Corrigido com `confirm()`/`window.confirm()` — o padrão já
+dominante no admin para "apagar com aviso dinâmico" (`FaturasAdmin.jsx`, `AjudasCalculadora.jsx`,
+`ContadorEmailsAdmin.jsx`), confirmado antes de considerar criar um modal novo. Mensagem
+distingue precisamente o que acontece: não "vão perder o horário" (implicaria limpeza automática
+que não existe), mas "N trabalhador(es)... ficará(ão) sem horário definido, sem aviso automático".
+**Achado secundário, confirmado por SQL, fora de âmbito desta correcção:** o campo
+`schedule.assignedWorkers` (contagem mostrada nos cartões/linhas, "N colaboradores") é uma cache
+denormalizada que já estava desatualizada em produção — `CALCOSA` mostrava "0 colaboradores" no
+ecrã com **2 trabalhadores reais** atribuídos (confirmado via `workers.assignedSchedules`/
+`defaultScheduleId`, a fonte viva). Provável causa: `handleUnassignSchedule` (`ScheduleContext.jsx`)
+actualiza `assignedScheduleDates` mas nunca `assignedSchedules`, por isso a remoção de atribuição
+não se reflecte no array que a contagem do cartão lê. A confirmação de apagar usa a fonte viva
+(`assignedSchedules`/`defaultScheduleId`), não o campo em cache — por isso o aviso está correcto
+mesmo quando o cartão mostra um número errado. O desfasamento em si fica registado, não corrigido.
+
 **`ItemRow.jsx` — pendência separada, padrão diferente, não convertido.** Ao contrário do
 `CorrectionsInbox.jsx`, aqui a cor não segue o estado da correção — é uma cor-chave **fixa por
 coluna** da grelha de 3 colunas (Atual/Pedido/Final): "Pedido" é sempre `text-amber-600`, "Final" é
