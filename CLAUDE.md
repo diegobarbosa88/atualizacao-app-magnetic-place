@@ -1085,6 +1085,40 @@ sessão que o instrumento de medição engana antes do código** (a meio de HMR,
 `closest('[style*="background"]')`, agora `rgba()` não composta) — reforça a regra já registada:
 desconfiar do instrumento antes de assumir que um número surpreendente é real.
 
+**Spec "Título + barra de ferramentas nas subtabs de Equipa" + "tab ativa com fundo do tom"
+(Parte A+B), 2026-08-24.** `FT.amberBg`/`FT.amber` — nomes usados na spec — **não existem** em
+`designTokens.js`; confirmado por grep antes de aplicar, usados `--tone-amber`/`--tone-amber-bg`
+em vez disso (já estabelecidos e medidos nesta mesma sessão). Regra geral, não só deste caso:
+nomes de token na spec são aproximações de quem escreve sem acesso ao repositório — confirmar
+sempre contra `designTokens.js`/`index.css`, nunca assumir que existem literalmente.
+**Parte A** — fundo da tab activa do `CorrectionsInbox.jsx` passou de `bg-white` genérico para
+`var(--tone-{amber,emerald,rose}-bg)` por estado ("Todas" fica neutro, `bg-white`). Contraste
+medido nos dois modos com composição de alpha correcta (a lição da ronda anterior):
+Abertas 4,52/5,95, Aplicadas 4,72/5,03, Rejeitadas 5,02/5,00 (claro/escuro), todos AA com folga.
+**Parte B** — antes de tocar em código, mapeado o estado real dos 4 componentes-alvo: dois já
+tinham cabeçalho (`CorrectionsInbox.jsx`, `OnboardingPendentes.jsx` — só precisavam de convergir
+`bg-amber-50`/`text-amber-600` para `var(--tone-amber-bg)`/`var(--tone-amber)` + `FONT_TITLE`) e
+dois não tinham nenhum (`WorkerValidationPanel.jsx`, `AbsenceRequestsPanel.jsx` — cabeçalho
+acrescentado de raiz, mesmo padrão de ícone+badge+`FONT_TITLE` nos quatro).
+`OnboardingPendentes.jsx` já tinha, coincidentemente, exactamente a barra de ferramentas que a
+spec pedia (só ícone de refresh) — zero mudança estrutural aí. `WorkerValidationPanel.jsx` já
+tinha o seletor de mês + toggle lista/grade que a spec pedia como barra — só faltava o cabeçalho.
+**Achado que mudava o âmbito, confirmado com o Diego antes de implementar:** os campos de
+pesquisa de Faltas/Correções não existiam — não era reposicionar algo funcional, era lógica de
+filtro nova. Implementada com estado local (`search`) por componente: em `CorrectionsInbox.jsx`
+procura no nome do cliente do grupo E no nome de trabalhador dos itens aninhados (uma correção
+pode ter itens de vários trabalhadores); em `AbsenceRequestsPanel.jsx` procura no nome do grupo
+(trabalhador), aplicado depois de agrupar. Em ambos, os contadores/badges de resumo ficam **fora**
+da pesquisa de propósito — mostram o total real, não o total do que está visível no ecrã, decisão
+confirmada explicitamente pelo Diego para os badges "N pendentes"/"N aprovados" de Faltas (a
+pesquisa é adição ao lado, não substituição). `AbsenceRequestsPanel.jsx` ganhou também uma
+mensagem "Nenhum colaborador encontrado" para zero resultados — não existia feedback nenhum antes
+(as três secções são todas condicionais, ficavam em branco silencioso).
+Confirmado ao vivo, nos quatro componentes: título+ícone renderizam, pesquisa filtra
+correctamente por nome de trabalhador E de cliente em Correções, por nome de trabalhador em
+Faltas, badges de Faltas inalterados pela pesquisa, mensagem de zero resultados a aparecer.
+Contraste do badge de ícone (idêntico nos 4, mesma classe): 4,52:1 claro / 5,95:1 escuro.
+
 **`ItemRow.jsx` — pendência separada, padrão diferente, não convertido.** Ao contrário do
 `CorrectionsInbox.jsx`, aqui a cor não segue o estado da correção — é uma cor-chave **fixa por
 coluna** da grelha de 3 colunas (Atual/Pedido/Final): "Pedido" é sempre `text-amber-600`, "Final" é
