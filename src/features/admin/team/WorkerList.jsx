@@ -91,16 +91,18 @@ function vinculoBadge(w, apoliceMap, ssFlag) {
   else if (apoliceStatus === 'excluido') apoliceProblema = 'Apólice Excluída';
   else if (apoliceStatus !== 'ativo') apoliceProblema = 'Apólice por confirmar';
 
-  // Cores fixas (não var(--...)), de propósito: este cartão usa bg-white
-  // fixo, sem par dark mode — herdar tokens que invertem compunha o fundo
-  // escuro do token sobre o branco fixo do cartão e caía para 2,81:1.
-  // O laranja usa #8a4a00, não FT.orangeDeep — mesmo fixo, FT.orangeDeep
-  // sobre FT.warnBg dá só 3,07:1 (falha AA); nunca tinha sido medido como
-  // par texto+fundo antes (só existia em hover). Se o cartão alguma vez
-  // passar a seguir o tema, reverter o verde para var(--ok)/var(--ok-bg)/
-  // var(--ok-border) — esse par mede bem — mas o laranja precisa de um
-  // par novo medido para dark mode, não var(--orange-deep)/var(--warn-bg):
-  // ver nota em CLAUDE.md.
+  // Cores fixas (não var(--...)), de propósito: o badge tem fundo próprio
+  // (FT.okBg/FT.warnBg) autocontido, não herda do cartão à volta — por
+  // isso não importa que o cartão (Card variant="item") na verdade inverta
+  // em dark mode (confirmado depois: usa a classe bg-white, que a
+  // regra-ponte de App.css converte para #1e293b). Herdar tokens que
+  // invertem aqui componha a cor errada consigo própria, não com o
+  // cartão. O laranja usa #8a4a00, não FT.orangeDeep — mesmo fixo,
+  // FT.orangeDeep sobre FT.warnBg dá só 3,07:1 (falha AA); nunca tinha
+  // sido medido como par texto+fundo antes (só existia em hover). Se o
+  // par do badge alguma vez precisar de inverter, o verde já tem
+  // var(--ok)/var(--ok-bg)/var(--ok-border) pronto — mas o laranja
+  // precisa de um par novo medido para dark mode: ver nota em CLAUDE.md.
   if (!ssProblema && !apoliceProblema) {
     return (
       <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full ${SCALE.text.meta}`} style={{ background: FT.okBg, border: `1px solid ${FT.ok}4D`, color: FT.ok }}>

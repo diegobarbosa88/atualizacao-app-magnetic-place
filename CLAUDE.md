@@ -47,6 +47,45 @@ precisa de `vercel deploy --prod` manual (deploy separado, não automático).
 
 ## Armadilhas conhecidas
 
+- **Referência central — quais fundos `bg-*` invertem em dark mode (2026-08-24).** A classe
+  Tailwind `bg-white` INVERTE em dark mode, mas só ela e mais 5 classes: uma regra-ponte global em
+  `App.css:46-93` a intercepta. Lista completa, confirmada por grep, é fechada: `.dark .bg-white`
+  (→ `#1e293b`), `.dark .bg-slate-50`/`.bg-slate-100` (→ `#0f172a`), `.dark .bg-emerald-50`/
+  `.bg-rose-50`/`.bg-amber-50` (→ `rgba(.../0.1)`). **Nenhuma outra classe `bg-*` inverte
+  sozinha** — nem `bg-orange-100`, nem `bg-emerald-100`, nem nenhum valor arbitrário
+  (`bg-[#FDF8F0]`) nem `background:'#fff'` inline (inline nunca inverte, seja qual for o valor,
+  porque a regra-ponte é um selector de classe CSS, não afecta `style`).
+  **Regra prática, a aplicar sempre antes de decidir se um fundo "fixo" precisa de texto estático
+  ou se um fundo "que segue o tema" aceita `var(...)`:** primeiro identificar qual das duas
+  mecânicas está em jogo — `className="bg-white"` (verificar contra a lista acima) vs.
+  `style={{background:'#fff'}}` inline — e só depois medir. **Medir sempre com
+  `document.documentElement.classList.add('dark')` numa página ACABADA DE RECARREGAR, nunca a meio
+  de uma sessão de HMR**: uma medição feita a meio de edições ao vivo já deu duas leituras erradas
+  nesta sessão (fundo "branco" que na verdade tinha acabado de inverter, mas o browser ainda não
+  tinha repintado no momento exacto da leitura).
+  Ferramenta de medição também corrigida: `el.closest('[style*="background"]')` para achar o fundo
+  efectivo de um texto é enganador — encontra o primeiro ANCESTRAL com a palavra "background" no
+  atributo `style`, que pode não ser o mais próximo nem o que está realmente pintado por cima
+  (dois falsos positivos de 1,5:1 apareceram assim, quando o valor real era 8,96:1). Correcto é
+  percorrer a cadeia de `parentElement` medindo `getComputedStyle(el).backgroundColor` até
+  encontrar o primeiro que não seja `rgba(0,0,0,0)`.
+  **Esta descoberta corrigiu uma cadeia de suposições erradas feitas ao vivo, todas nesta mesma
+  sessão, ao medir a meio de edições/HMR:**
+  - **`WorkerList.jsx`**: o cartão (`Card variant="item"`, usa a classe `bg-white`) afinal
+    INVERTE — a nota anterior ("cartão fixo, sem par dark mode") estava errada. Sem consequência
+    prática aí porque o badge é autocontido (fundo próprio, não herda do cartão) — comentário no
+    código corrigido, nenhuma cor mudou.
+  - **`WorkerValidationPanel.jsx`**: a tabela/os cartões (classe `bg-white`) também invertem — 4
+    usos de `FT.navy` estático ficavam ilegíveis (1,25:1) em escuro. Corrigidos para `var(--navy)`.
+  - **`AbsenceRequestsPanel.jsx`**: mistura as duas mecânicas no mesmo ficheiro — o
+    `PendingWorkerCard` exterior usa `background:'#fff'` INLINE (não inverte, a nota original
+    estava certa aí) mas o `AvisoRow` aninhado tem o seu próprio `bg-white` de CLASSE (inverte). O
+    nome do trabalhador (fundo fixo, token que invertia) e o `chipColor`/ícone de motivo (fundo que
+    afinal inverte, token estático) estavam ambos errados, em direcções opostas. Ambos corrigidos.
+  - **`CorrectionsInbox.jsx`** (spec nova, ver secção "Correções" abaixo): a pílula activa das 4
+    tabs de filtro usa `bg-white` de classe — a primeira implementação usou cor estática por
+    assumir (sem medir) que não invertia; corrigida para `var(--tone-*)` antes de chegar a commit.
+
 - **`FT.orangeDeep` (`#C97600`) sobre `FT.warnBg` (`#FBF0DE`) como par texto+fundo dá só 3,07:1 —
   falha AA (mínimo 4,5:1) — apesar de nunca ter sido medido antes de aparecer nesta combinação
   numa spec (badge condicional do cartão de colaborador, `WorkerList.jsx`, 2026-08-24).** O par só
@@ -106,16 +145,16 @@ precisa de `vercel deploy --prod` manual (deploy separado, não automático).
   invertem — aqui optou-se deliberadamente pela forma fixa `FT.*`, mesma razão documentada acima
   para o badge do cartão de colaborador: o componente não segue tema, ou o papel é fundo sólido que
   não deve inverter).
-  **Confirmado ao vivo: não é só os tokens que não invertem — o próprio cartão não segue o tema,
-  mesmo problema estrutural do `WorkerList.jsx`.** Fundo `#FFFFFF`/`#FDF8F0` fixo com `.dark` activo
-  (body escuro, `rgb(15,23,42)`, cartão continua claro) — herdado do código original
-  (`AbsenceRequestsPanel.jsx` já usava `bg-white` fixo antes do redesenho), preservado sem
-  questionar por não fazer parte do pedido. **Terceira instância do mesmo padrão**: um componente
-  cujo fundo não inverte torna moot a pergunta "os tokens de texto/badge têm par para o escuro?" —
-  não têm, mas também não precisam enquanto o fundo à volta continuar fixo. Fica registada como
-  pendência de fundo (não urgente): se `AbsenceRequestsPanel.jsx` alguma vez for convertido para
-  seguir o tema, os avatares/badges/chips desta página precisam de pares próprios para escuro nessa
-  altura — mesma nota já deixada para o `WorkerList.jsx`.
+  **Correcção a um achado anterior — ver "Referência central" no topo de Armadilhas conhecidas.**
+  O `PendingWorkerCard` exterior usa `background:'#fff'`/`'#FDF8F0'` INLINE (não inverte mesmo,
+  confirmado), mas o `AvisoRow` aninhado lá dentro tem o SEU PRÓPRIO `bg-white` de CLASSE, que
+  inverte. Nome do trabalhador (fundo fixo, `text-[var(--ink)]` invertia) media 1,21:1 em escuro —
+  corrigido para `FT.ink` estático. `chipColor`/ícone de motivo (fundo que afinal inverte, valor
+  estático) media 1,16:1/2,13:1 — corrigido: `chipColor` fica só para o chip de data autocontido,
+  `metaTextColor` novo (`var(--tone-amber)`/`var(--ink-mid)`) para o resto. Confirmado ao vivo:
+  nome 16,00/16,91:1, "solicitado há Nd" 5,03/6,85:1, motivo+cliente 10,83/8,96:1 (claro/escuro).
+  `DoneWorkerCard` (secção 3) não tinha o problema — usa a classe `bg-white`, inverte, tokens já
+  todos `var(--...)`.
   **Contador "N pendentes"/"N aprovados" — o par laranja está no limite.** `bg-orange-100`/
   `text-orange-700` (Tailwind) mede **4,56:1**, só 0,06 acima do mínimo AA (4,5:1) — medido via
   canvas do browser (`fillStyle`→`getImageData`), não por parsing manual de `oklch()`, que já
@@ -147,12 +186,13 @@ precisa de `vercel deploy --prod` manual (deploy separado, não automático).
   `FT.okBg`) são estáticos, dão o mesmo `rgb()` computado em claro e escuro — mesma razão já
   documentada para `WorkerList.jsx`/`AbsenceRequestsPanel.jsx`: o cartão/tabela à volta não segue o
   tema, por isso o token também não precisa de inverter.
-  **Quarta instância do "cartão fixo não segue dark mode".** A tabela da vista lista usa `bg-white`
-  fixo (herdado, não introduzido agora) — com `.dark` activo, o corpo da página escurece mas a
-  tabela continua branca; `FT.navy` usado para as horas (`>0h`) mede 11,74:1 porque o fundo por
-  baixo nunca escurece de facto, não por o par estar bem pensado para os dois modos. Mesma
-  pendência estrutural já registada três vezes (`WorkerList.jsx`, `AbsenceRequestsPanel.jsx`) —
-  registada aqui, não corrigida agora, à espera da limpeza de uma vez só já decidida pelo Diego.
+  **Correcção a um achado anterior — ver "Referência central" no topo de Armadilhas conhecidas.**
+  A tabela/os cartões usam a CLASSE `bg-white` (não inline) — invertem. A medição original que deu
+  "fundo continua branco" foi feita a meio de HMR; isto não era "quarta instância", era medir no
+  momento errado. `FT.navy` (estático) nas horas/ícone "Ver Portal"/calendário ficava a 1,25:1 —
+  corrigido para `var(--navy)` nos 4 sítios (horas e "Ver Portal" em lista+grade), confirmado
+  11,74:1 claro / 5,66:1 escuro. Os 2 usos de `FT.navy` no toggle lista/grade ficam estáticos de
+  propósito — usam `background:'#fff'` inline, não a classe, não invertem, par correcto.
   **Auto-correcção antes de mostrar ao Diego: `formatHours()` já devolve o formato completo
   (`"81h30"`), e a primeira escrita do ficheiro apendava um `h` a mais em 4 sítios** — vista de
   grade (`"0h00h"`), meta do modal de registos (`"81h00h total"`), e a linha de cada registo diário
