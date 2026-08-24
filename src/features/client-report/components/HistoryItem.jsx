@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Clock, ChevronDown } from 'lucide-react';
 import { STATUS } from '../constants';
+import { SCALE } from '../../../styles/designTokens';
 
 const HistoryItem = ({ correction, items }) => {
   const [open, setOpen] = useState(false);
@@ -14,8 +15,8 @@ const HistoryItem = ({ correction, items }) => {
         <div className="flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-bold text-slate-800 text-sm">{correction.month}</span>
-            <span className="text-[10px] font-mono text-slate-400">{correction.type}</span>
-            <span className={`text-[10px] font-black px-2 py-0.5 rounded-md ${STATUS[correction.status]?.cls}`}>{STATUS[correction.status]?.label}</span>
+            <span className={`${SCALE.text.meta} font-mono text-slate-400`}>{correction.type}</span>
+            <span className={`${SCALE.text.meta} px-2 py-0.5 rounded-md ${STATUS[correction.status]?.cls}`}>{STATUS[correction.status]?.label}</span>
           </div>
           <p className="text-xs text-slate-500 mt-0.5">{myItems.length} alteração(ões) • submetido {correction.submitted_at?.slice(0, 10)}</p>
         </div>
@@ -29,7 +30,7 @@ const HistoryItem = ({ correction, items }) => {
           {myItems.map((it) => (
             <div key={it.id} className="text-xs flex items-center justify-between border-t border-slate-50 pt-2">
               <span className="font-bold text-slate-700">{it.worker_name} • {it.date}</span>
-              <span className={`text-[10px] font-black px-2 py-0.5 rounded-md ${STATUS[correction.status]?.cls}`}>{it.item_status}</span>
+              <span className={`${SCALE.text.meta} px-2 py-0.5 rounded-md ${STATUS[correction.status]?.cls}`}>{it.item_status}</span>
             </div>
           ))}
         </div>

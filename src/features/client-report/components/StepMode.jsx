@@ -1,11 +1,12 @@
 import React from 'react';
 import { MessageCircle, Sparkles } from 'lucide-react';
+import { SCALE } from '../../../styles/designTokens';
 
 const StepMode = ({ onPick, onCancel }) => (
   <div className="animate-fade-in max-w-4xl mx-auto py-6">
     <div className="text-center mb-10">
       <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter mb-2">Como deseja reportar?</h2>
-      <p className="text-slate-500 font-bold uppercase text-[10px] tracking-[0.3em]">Escolha o método mais simples</p>
+      <p className="text-slate-500 font-bold uppercase text-[9px] tracking-[0.3em]">Escolha o método mais simples</p>
     </div>
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       <button onClick={() => onPick('quick')} className="group bg-white p-8 rounded-3xl border-2 border-slate-100 hover:border-indigo-600 transition-all text-left">
@@ -20,7 +21,7 @@ const StepMode = ({ onPick, onCancel }) => (
       </button>
     </div>
     <div className="mt-10 text-center">
-      <button onClick={onCancel} className="text-slate-400 hover:text-slate-700 font-black text-[10px] uppercase tracking-widest">Voltar</button>
+      <button onClick={onCancel} className={`text-slate-400 hover:text-slate-700 ${SCALE.text.badge}`}>Voltar</button>
     </div>
   </div>
 );

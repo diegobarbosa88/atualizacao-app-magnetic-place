@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { ChevronLeft } from 'lucide-react';
+import { SCALE } from '../../../styles/designTokens';
 
 const StepQuick = ({ onSubmit, onBack, busy }) => {
   const [text, setText] = useState('');
   return (
     <div className="animate-fade-in max-w-2xl mx-auto py-6">
       <div className="bg-white rounded-3xl border border-slate-100 p-8 shadow-sm">
-        <button onClick={onBack} className="flex items-center gap-2 text-slate-400 hover:text-slate-700 font-black text-[10px] uppercase tracking-widest mb-6">
+        <button onClick={onBack} className={`flex items-center gap-2 text-slate-400 hover:text-slate-700 ${SCALE.text.badge} mb-6`}>
           <ChevronLeft size={14} /> Mudar método
         </button>
         <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tight mb-2">Descreva a divergência</h2>
