@@ -62,8 +62,26 @@ export const ScheduleProvider = ({ children }) => {
   }, [scheduleForm, workers, saveToDb]);
 
   const handleDeleteSchedule = useCallback(async (scheduleId) => {
+    // Não há FK entre schedules e workers/worker_schedule_history (confirmado
+    // no schema — zero constraints) — apagar não limpa nem bloqueia nada.
+    // Os trabalhadores atribuídos ficam com uma referência morta em
+    // assignedSchedules/defaultScheduleId, que os cálculos de horas esperadas
+    // leem em silêncio como "sem horário", sem erro visível. Por isso o aviso
+    // descreve o que realmente acontece (dados órfãos), não uma limpeza
+    // automática que não existe.
+    const affectedCount = workers.filter(w =>
+      (w.assignedSchedules || []).includes(scheduleId) || w.defaultScheduleId === scheduleId
+    ).length;
+
+    const message = affectedCount > 0
+      ? affectedCount === 1
+        ? '1 trabalhador atribuído a este horário ficará sem horário definido, sem aviso automático a ele. Confirmas?'
+        : `${affectedCount} trabalhadores atribuídos a este horário ficarão sem horário definido, sem aviso automático a eles. Confirmas?`
+      : 'Tens a certeza que queres apagar este horário?';
+
+    if (!window.confirm(message)) return;
     await handleDelete('schedules', scheduleId);
-  }, [handleDelete]);
+  }, [handleDelete, workers]);
 
   // 11-06: Atribuir horário com datas — cria período em histórico
   const handleAssignScheduleWithDates = useCallback(async (workerId, scheduleId, dataInicio, dataFim) => {
