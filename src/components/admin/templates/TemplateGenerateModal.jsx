@@ -1,7 +1,7 @@
 import React from 'react';
 import { Loader2, Send, Users } from 'lucide-react';
 import ModalShell from '../../common/ModalShell';
-import { FT } from '../../../styles/designTokens';
+import { FT, SCALE } from '../../../styles/designTokens';
 
 export default function TemplateGenerateModal({
   template,
@@ -49,7 +49,7 @@ export default function TemplateGenerateModal({
         </p>
         <div>
           <label className="block text-xs font-bold text-[var(--ink-soft)] uppercase tracking-widest mb-1">
-            Cliente (para tags <code className="font-mono text-[10px]">{'{client_*}'}</code>)
+            Cliente (para tags <code className={`font-mono ${SCALE.text.meta}`}>{'{client_*}'}</code>)
           </label>
           <select
             value={selectedClientId}
@@ -62,7 +62,7 @@ export default function TemplateGenerateModal({
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>
-          <p className="text-[10px] text-[var(--slate-dim)] mt-1">Se omitido, as tags client_* ficam vazias no documento.</p>
+          <p className={`${SCALE.text.meta} text-[var(--slate-dim)] mt-1`}>Se omitido, as tags client_* ficam vazias no documento.</p>
         </div>
         <div className="max-h-80 overflow-y-auto border border-[var(--border)] rounded-xl divide-y divide-[var(--border-soft)]">
           {workers.length === 0 ? (
@@ -83,7 +83,7 @@ export default function TemplateGenerateModal({
                 <Users className="w-4 h-4 text-[var(--slate)]" />
                 <span className="text-sm flex-1">{w.name}</span>
                 {!w.email && (
-                  <span className="text-[10px] font-bold text-amber-600" title="Sem email — não receberá notificação">
+                  <span className={`${SCALE.text.meta} text-amber-600`} title="Sem email — não receberá notificação">
                     sem email
                   </span>
                 )}

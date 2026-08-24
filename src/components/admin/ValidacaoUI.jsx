@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { CheckCircle, AlertTriangle, XCircle, AlertCircle } from 'lucide-react';
 import { ESTADOS_OPTIONS } from '../../utils/validacaoHelpers';
+import { SCALE } from '../../styles/designTokens';
 
 // ─── Divergência com sinal ────────────────────────────────────────────────────
 export function DivergenciaBadge({ sinal, className = 'text-sm font-black' }) {
@@ -35,7 +36,7 @@ export function EstadoPicker({ atual, onChange, size = 16 }) {
             {ESTADOS_OPTIONS.map(o => (
               <button key={o.id}
                 onClick={() => { setAberto(false); if (o.id !== atual) onChange(o.id); }}
-                className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-[var(--surface)] ${o.id === atual ? 'bg-[var(--surface)]' : ''}`}
+                className={`flex items-center gap-2 px-2 py-1.5 rounded-lg ${SCALE.text.statLabel} hover:bg-[var(--surface)] ${o.id === atual ? 'bg-[var(--surface)]' : ''}`}
               >
                 <o.Icon size={12} className={o.color} /> {o.label}
               </button>

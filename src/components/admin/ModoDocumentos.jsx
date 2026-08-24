@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Loader2, Upload, FileDown, Trash2 } from 'lucide-react';
 import { STATUS_DOC } from '../../utils/validacaoHelpers';
 import { useApp } from '../../context/AppContext';
-import { FT } from '../../styles/designTokens';
+import { FT, SCALE } from '../../styles/designTokens';
 
 // ─── Modo Documentos ──────────────────────────────────────────────────────────
 const ModoDocumentos = ({ workers }) => {
@@ -72,12 +72,12 @@ const ModoDocumentos = ({ workers }) => {
       <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
         <div className="flex flex-col sm:flex-row gap-2">
           <select value={filtroWorker} onChange={e => setFiltroWorker(e.target.value)}
-            className="text-[10px] font-black uppercase tracking-widest border border-[var(--border)] rounded-xl px-3 py-2 bg-white text-[var(--ink-soft)] focus:outline-none focus:border-[var(--navy)]">
+            className={`${SCALE.text.statLabel} border border-[var(--border)] rounded-xl px-3 py-2 bg-white text-[var(--ink-soft)] focus:outline-none focus:border-[var(--navy)]`}>
             <option value="">Todos os trabalhadores</option>
             {workersComDocs.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
           </select>
           <select value={filtroStatus} onChange={e => setFiltroStatus(e.target.value)}
-            className="text-[10px] font-black uppercase tracking-widest border border-[var(--border)] rounded-xl px-3 py-2 bg-white text-[var(--ink-soft)] focus:outline-none focus:border-[var(--navy)]">
+            className={`${SCALE.text.statLabel} border border-[var(--border)] rounded-xl px-3 py-2 bg-white text-[var(--ink-soft)] focus:outline-none focus:border-[var(--navy)]`}>
             <option value="">Todos os estados</option>
             {Object.entries(STATUS_DOC).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
           </select>
@@ -85,7 +85,7 @@ const ModoDocumentos = ({ workers }) => {
         <div className="flex items-center gap-2">
           {selecionados.size > 0 && (
             <button onClick={enviarSelecionados} disabled={enviandoLote}
-              className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-white px-3 py-2 rounded-xl transition-colors disabled:opacity-40 hover:opacity-90"
+              className={`flex items-center gap-1.5 text-white px-3 py-2 rounded-xl transition-colors disabled:opacity-40 hover:opacity-90 ${SCALE.text.badge}`}
               style={{ backgroundColor: FT.navy }}>
               {enviandoLote ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
               Enviar ({selecionados.size})
@@ -109,10 +109,10 @@ const ModoDocumentos = ({ workers }) => {
                       className="accent-emerald-600 cursor-pointer" />
                   )}
                 </th>
-                <th className="px-4 py-2.5 text-left text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Trabalhador</th>
-                <th className="px-4 py-2.5 text-left text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Documento</th>
-                <th className="hidden sm:table-cell px-4 py-2.5 text-left text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Data</th>
-                <th className="px-4 py-2.5 text-center text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Estado</th>
+                <th className={`px-4 py-2.5 text-left ${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Trabalhador</th>
+                <th className={`px-4 py-2.5 text-left ${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Documento</th>
+                <th className={`hidden sm:table-cell px-4 py-2.5 text-left ${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Data</th>
+                <th className={`px-4 py-2.5 text-center ${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Estado</th>
                 <th className="px-4 py-2.5"></th>
               </tr>
             </thead>
@@ -131,8 +131,8 @@ const ModoDocumentos = ({ workers }) => {
                     <td className="px-4 py-3 font-bold text-[var(--ink)]">{worker?.name ?? doc.workerId}</td>
                     <td className="px-4 py-3">
                       <p className="text-[var(--ink-mid)] font-bold">{doc.tipo}</p>
-                      <p className="text-[10px] text-[var(--slate-dim)]">{doc.nomeFicheiro}</p>
-                      <p className="sm:hidden text-[10px] text-[var(--slate-dim)] mt-0.5">
+                      <p className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>{doc.nomeFicheiro}</p>
+                      <p className={`sm:hidden ${SCALE.text.meta} text-[var(--slate-dim)] mt-0.5`}>
                         {doc.dataEmissao ? new Date(doc.dataEmissao).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short', year: 'numeric' }) : ''}
                       </p>
                     </td>
@@ -140,7 +140,7 @@ const ModoDocumentos = ({ workers }) => {
                       {doc.dataEmissao ? new Date(doc.dataEmissao).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <span className={`inline-flex px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${estado.cls}`}>
+                      <span className={`inline-flex px-2 py-0.5 rounded-full ${SCALE.text.badge} ${estado.cls}`}>
                         {estado.label}
                       </span>
                     </td>

@@ -10,7 +10,7 @@ import { convertDocxToPdf } from '../../../utils/pdfCoService';
 import { PDFDocument } from 'pdf-lib';
 import ModalShell from '../../common/ModalShell';
 import FieldBadge from './FieldBadge';
-import { FT } from '../../../styles/designTokens';
+import { FT, SCALE } from '../../../styles/designTokens';
 
 const PRESETS = [
   { label: 'Inferior Direito', x: 130, y: 30 },
@@ -222,7 +222,7 @@ export default function TemplateEditorModal({ template, supabase, onClose, onSav
                     className={`flex items-center gap-2 text-xs text-left px-2 py-1 rounded-lg border transition-all ${isCopied ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-[var(--border)] hover:border-[var(--slate)] hover:bg-[var(--surface)]'}`}>
                     <code className={isCopied ? 'font-mono text-emerald-700' : 'font-mono'} style={isCopied ? {} : { color: 'var(--slate-dim)' }}>{tag}</code>
                     <span className="text-[var(--slate-dim)] truncate flex-1">{f.label}</span>
-                    <span className={`text-[10px] font-black uppercase tracking-widest ${isCopied ? 'text-emerald-600' : 'text-[var(--slate-dim)]'}`}>
+                    <span className={`${SCALE.text.statLabel} ${isCopied ? 'text-emerald-600' : 'text-[var(--slate-dim)]'}`}>
                       {isCopied ? 'Copiado' : 'Copiar'}
                     </span>
                   </button>
@@ -246,11 +246,11 @@ export default function TemplateEditorModal({ template, supabase, onClose, onSav
                   <iframe src={`${pdfPreviewUrl}#toolbar=0&navpanes=0&scrollbar=0&view=Fit`}
                     className="absolute inset-0 w-full h-full rounded-lg border border-[var(--border)] bg-white"
                     title="Preview última página" />
-                  <div className="absolute bg-sky-500/70 rounded text-white text-[10px] font-bold flex items-center justify-center pointer-events-none border-2 border-sky-700"
+                  <div className={`absolute bg-sky-500/70 rounded text-white flex items-center justify-center pointer-events-none border-2 border-sky-700 ${SCALE.text.badge}`}
                     style={{ width: `${(70 / 210) * 100}%`, height: `${(25 / 297) * 100}%`, left: `${(stampX / 210) * 100}%`, bottom: `${(stampY / 297) * 100}%` }}>
                     TRABALHADOR
                   </div>
-                  <div className="absolute bg-amber-500/70 rounded text-white text-[10px] font-bold flex items-center justify-center pointer-events-none border-2 border-amber-700"
+                  <div className={`absolute bg-amber-500/70 rounded text-white flex items-center justify-center pointer-events-none border-2 border-amber-700 ${SCALE.text.badge}`}
                     style={{ width: `${(70 / 210) * 100}%`, height: `${(25 / 297) * 100}%`, left: `${(stampAdminX / 210) * 100}%`, bottom: `${(stampAdminY / 297) * 100}%` }}>
                     EMPRESA
                   </div>

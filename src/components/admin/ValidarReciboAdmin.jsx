@@ -5,6 +5,7 @@ import ModoHistorico from './ModoHistorico';
 import ModoBursting from './ModoBursting';
 import ModoDocumentos from './ModoDocumentos';
 import ModoReextracao from './ModoReextracao';
+import { SCALE } from '../../styles/designTokens';
 
 const ValidarReciboAdmin = ({ workers = [] }) => {
   const { logs = [], systemSettings, saveSystemSettings, saveToDb } = useApp();
@@ -29,7 +30,7 @@ const ValidarReciboAdmin = ({ workers = [] }) => {
           { id: 'reextracao', icon: FileSearch,  label: 'Reextração' },
         ].map(({ id, icon: Icon, label }) => (
           <button key={id} onClick={() => setModo(id)}
-            className={`flex items-center gap-1.5 px-3 pb-2.5 pt-1 text-[11px] font-black uppercase tracking-wider transition-all border-b-2 -mb-px ${modo === id ? 'border-[var(--orange)] text-[var(--navy)]' : 'border-transparent text-[var(--slate-dim)] hover:text-[var(--navy)]'}`}>
+            className={`flex items-center gap-1.5 px-3 pb-2.5 pt-1 transition-all border-b-2 -mb-px ${SCALE.text.badge} ${modo === id ? 'border-[var(--orange)] text-[var(--navy)]' : 'border-transparent text-[var(--slate-dim)] hover:text-[var(--navy)]'}`}>
             <Icon size={13} /> {label}
           </button>
         ))}

@@ -3,6 +3,7 @@ import { FileText, Plus, Trash2, Eye, Edit3, Send, Loader2 } from 'lucide-react'
 import { useApp } from '../../context/AppContext';
 import { downloadTemplateBytes } from '../../utils/docxTemplateService';
 import DocxPreviewModal from '../common/DocxPreviewModal';
+import { SCALE } from '../../styles/designTokens';
 import TemplateEditorModal from './templates/TemplateEditorModal';
 import Card, { CardGrid } from '../common/Card';
 import { FT, FONT_TITLE } from '../../styles/designTokens';
@@ -123,7 +124,7 @@ export default function DocumentTemplatesAdmin({
                   <FileText size={17} />
                 </div>
                 <p className="text-[1.05rem] font-bold leading-[1.15] text-[var(--ink-mid)] truncate" style={{ fontFamily: FONT_TITLE }} title={t.name}>{t.name}</p>
-                <p className="text-[11px] font-semibold text-[var(--ink-soft)] mt-1 mb-3 line-clamp-2 min-h-[2rem]">
+                <p className={`${SCALE.text.body} text-[var(--ink-soft)] mt-1 mb-3 line-clamp-2 min-h-[2rem]`}>
                   {t.description || <span className="italic text-[var(--slate-dim)]">Sem descrição</span>}
                 </p>
                 <div className="flex items-center gap-1.5 pt-[0.7rem] border-t border-[#F1EFE8]">

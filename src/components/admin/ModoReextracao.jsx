@@ -9,6 +9,7 @@ import {
   formatarMes,
   guardarValidacao,
 } from '../../utils/validacaoHelpers';
+import { SCALE } from '../../styles/designTokens';
 
 // Ferramenta para reprocessar recibos já validados em receipt_validations,
 // reextraindo os valores diretamente dos PDFs originais em vez das linhas já
@@ -214,11 +215,11 @@ const ModoReextracao = ({ workers, logs, systemSettings, workerRateHistory = [] 
       </div>
 
       {erroExistentes && (
-        <p className="text-[10px] text-red-500 font-medium px-1">Erro a carregar linhas existentes: {erroExistentes}</p>
+        <p className={`${SCALE.text.meta} text-red-500 px-1`}>Erro a carregar linhas existentes: {erroExistentes}</p>
       )}
 
       {existentes && (
-        <p className="text-[10px] text-[var(--slate-dim)] font-medium">
+        <p className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>
           {existentes.length} linha{existentes.length !== 1 ? 's' : ''} em receipt_validations no âmbito (mes {MES_MIN} a {MES_MAX}, estado='valido').
         </p>
       )}
@@ -230,7 +231,7 @@ const ModoReextracao = ({ workers, logs, systemSettings, workerRateHistory = [] 
             ? `${files.length} ficheiro${files.length > 1 ? 's' : ''} selecionado${files.length > 1 ? 's' : ''}`
             : 'Clique para selecionar os PDF(s) originais'}
         </span>
-        <span className="text-[10px] text-[var(--slate-dim)]">1 PDF com todos os recibos, ou vários PDFs separados</span>
+        <span className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>1 PDF com todos os recibos, ou vários PDFs separados</span>
         <input type="file" accept=".pdf" multiple className="hidden" onChange={handleFiles} />
       </label>
 
@@ -252,18 +253,18 @@ const ModoReextracao = ({ workers, logs, systemSettings, workerRateHistory = [] 
             ].map(({ label, val, cls }) => (
               <div key={label} className={`bg-${cls}-50 border border-${cls}-200 rounded-xl p-3 text-center`}>
                 <p className={`text-lg font-black text-${cls}-600`}>{val}</p>
-                <p className={`text-[9px] font-black uppercase tracking-widest text-${cls}-500`}>{label}</p>
+                <p className={`${SCALE.text.statLabel} text-${cls}-500`}>{label}</p>
               </div>
             ))}
           </div>
 
           {relatorio.existentesSemPdf.length > 0 && (
             <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 space-y-1">
-              <p className="text-[10px] font-black text-red-600 tracking-widest flex items-center gap-1.5">
+              <p className={`${SCALE.text.meta} text-red-600 flex items-center gap-1.5`}>
                 <AlertTriangle size={12} /> {relatorio.existentesSemPdf.length} linha(s) em receipt_validations SEM PDF correspondente nos ficheiros enviados
               </p>
               {relatorio.existentesSemPdf.map(e => (
-                <p key={e.id} className="text-[10px] text-red-500">{e.worker_name} · {formatarMes(e.mes)}</p>
+                <p key={e.id} className={`${SCALE.text.meta} text-red-500`}>{e.worker_name} · {formatarMes(e.mes)}</p>
               ))}
             </div>
           )}
@@ -275,7 +276,7 @@ const ModoReextracao = ({ workers, logs, systemSettings, workerRateHistory = [] 
                 <thead className="bg-[var(--surface)] border-b border-[var(--border-soft)]">
                   <tr>
                     {['Worker', 'Mês', 'Campo', 'Valor antigo', 'Valor novo'].map(h => (
-                      <th key={h} className="px-4 py-2.5 text-left text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">{h}</th>
+                      <th key={h} className={`px-4 py-2.5 text-left ${SCALE.text.statLabel} text-[var(--slate-dim)]`}>{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -306,38 +307,38 @@ const ModoReextracao = ({ workers, logs, systemSettings, workerRateHistory = [] 
 
           {resultadoEscrita && (
             <div className={`rounded-2xl border px-4 py-3 space-y-1 ${resultadoEscrita.falhas.length > 0 ? 'border-amber-200 bg-amber-50' : 'border-emerald-200 bg-emerald-50'}`}>
-              <p className={`text-[10px] font-black tracking-widest ${resultadoEscrita.falhas.length > 0 ? 'text-amber-700' : 'text-emerald-700'}`}>
+              <p className={`${SCALE.text.meta} ${resultadoEscrita.falhas.length > 0 ? 'text-amber-700' : 'text-emerald-700'}`}>
                 {resultadoEscrita.nAtualizadas}/{resultadoEscrita.nTentadas} linha(s) atualizadas (backup gravado em receipt_validations_backup_pre_reextracao antes de cada escrita)
               </p>
               {resultadoEscrita.falhas.map((f, i) => (
-                <p key={i} className="text-[10px] text-red-500">{f.worker} · {formatarMes(f.mes)}: {f.erro}</p>
+                <p key={i} className={`${SCALE.text.meta} text-red-500`}>{f.worker} · {formatarMes(f.mes)}: {f.erro}</p>
               ))}
             </div>
           )}
 
           {relatorio.nFalhas > 0 && (
             <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 space-y-1">
-              <p className="text-[10px] font-black text-red-600 tracking-widest mb-1">FALHAS DE EXTRAÇÃO</p>
+              <p className={`${SCALE.text.meta} text-red-600 mb-1`}>FALHAS DE EXTRAÇÃO</p>
               {relatorio.linhas.filter(l => l.tipo === 'falha').map((l, i) => (
-                <p key={i} className="text-[10px] text-red-500">{l.origem}{l.worker ? ` (${l.worker.name})` : ''}: {l.motivo}</p>
+                <p key={i} className={`${SCALE.text.meta} text-red-500`}>{l.origem}{l.worker ? ` (${l.worker.name})` : ''}: {l.motivo}</p>
               ))}
             </div>
           )}
 
           {relatorio.nSemAmbito > 0 && (
             <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 space-y-1">
-              <p className="text-[10px] font-black text-[var(--slate-dim)] tracking-widest mb-1">FORA DE ÂMBITO (mês fora de Jan-Mai 2026, ou trabalhador não reconhecido)</p>
+              <p className={`${SCALE.text.meta} text-[var(--slate-dim)] mb-1`}>FORA DE ÂMBITO (mês fora de Jan-Mai 2026, ou trabalhador não reconhecido)</p>
               {relatorio.linhas.filter(l => l.tipo === 'sem-ambito').map((l, i) => (
-                <p key={i} className="text-[10px] text-[var(--slate-dim)]">{l.origem}: {l.worker?.name ?? l.nomeExtraido ?? '—'} · {l.mes ?? '—'}</p>
+                <p key={i} className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>{l.origem}: {l.worker?.name ?? l.nomeExtraido ?? '—'} · {l.mes ?? '—'}</p>
               ))}
             </div>
           )}
 
           {relatorio.nSemExistente > 0 && (
             <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 space-y-1">
-              <p className="text-[10px] font-black text-amber-600 tracking-widest mb-1">SEM LINHA EXISTENTE EM receipt_validations (não estava no âmbito válido/Jan-Mai)</p>
+              <p className={`${SCALE.text.meta} text-amber-600 mb-1`}>SEM LINHA EXISTENTE EM receipt_validations (não estava no âmbito válido/Jan-Mai)</p>
               {relatorio.linhas.filter(l => l.tipo === 'sem-existente').map((l, i) => (
-                <p key={i} className="text-[10px] text-amber-600">{l.worker.name} · {formatarMes(l.mes)}</p>
+                <p key={i} className={`${SCALE.text.meta} text-amber-600`}>{l.worker.name} · {formatarMes(l.mes)}</p>
               ))}
             </div>
           )}

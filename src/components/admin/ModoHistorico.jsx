@@ -7,7 +7,7 @@ import {
   Upload, Coins, Trash2, ScanSearch, ReceiptText, Files, Settings,
 } from 'lucide-react';
 import ModalShell from '../common/ModalShell';
-import { FT } from '../../styles/designTokens';
+import { FT, SCALE } from '../../styles/designTokens';
 import {
   MESES_PT,
   mesesDisponiveis,
@@ -496,7 +496,7 @@ const ModoHistorico = ({ workers, logs = [], saveToDb, systemSettings, saveSyste
             {/* Tolerâncias */}
             <div className="flex justify-end">
               <button onClick={() => setConfigAberto(o => !o)}
-                className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] hover:text-[var(--slate)] transition-colors">
+                className={`flex items-center gap-1.5 ${SCALE.text.badge} text-[var(--slate-dim)] hover:text-[var(--slate)] transition-colors`}>
                 <Settings size={12} /> Tolerâncias
                 <ChevronRight size={11} className={`transition-transform ${configAberto ? 'rotate-90' : ''}`} />
               </button>
@@ -505,13 +505,13 @@ const ModoHistorico = ({ workers, logs = [], saveToDb, systemSettings, saveSyste
               <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-3 space-y-2">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[10px] font-bold text-emerald-600 block mb-1">Válido até (€)</label>
+                    <label className={`${SCALE.text.meta} text-emerald-600 block mb-1`}>Válido até (€)</label>
                     <input type="number" min="0" step="0.01" value={tolValidoLocal}
                       onChange={e => setTolValidoLocal(e.target.value)} onBlur={guardarTolerancias}
                       className="w-full p-2 bg-white border border-[var(--border)] rounded-lg text-sm font-bold text-[var(--ink-mid)] outline-none focus:ring-2 focus:ring-emerald-500" />
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold text-yellow-600 block mb-1">Aviso até (€)</label>
+                    <label className={`${SCALE.text.meta} text-yellow-600 block mb-1`}>Aviso até (€)</label>
                     <input type="number" min="0" step="0.01" value={tolAvisoLocal}
                       onChange={e => setTolAvisoLocal(e.target.value)} onBlur={guardarTolerancias}
                       className="w-full p-2 bg-white border border-[var(--border)] rounded-lg text-sm font-bold text-[var(--ink-mid)] outline-none focus:ring-2 focus:ring-yellow-500" />
@@ -528,7 +528,7 @@ const ModoHistorico = ({ workers, logs = [], saveToDb, systemSettings, saveSyste
                   ? `${files.length} ficheiro${files.length > 1 ? 's' : ''} selecionado${files.length > 1 ? 's' : ''}`
                   : 'Clique para selecionar PDF(s)'}
               </span>
-              <span className="text-[10px] text-[var(--slate-dim)]">1 PDF agregado ou vários PDFs individuais</span>
+              <span className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>1 PDF agregado ou vários PDFs individuais</span>
               <input type="file" accept=".pdf" multiple className="hidden" onChange={e => { setFiles(Array.from(e.target.files).filter(f => f.type === 'application/pdf')); setErroProcessamento(null); }} />
             </label>
 
@@ -597,19 +597,19 @@ const ModoHistorico = ({ workers, logs = [], saveToDb, systemSettings, saveSyste
                 <button onClick={() => toggleMes(mes)} className="w-full flex items-center justify-between px-4 py-2.5 bg-[var(--surface)] hover:bg-[var(--surface-dim)] transition-colors border-b border-[var(--border-soft)]">
                   <div className="flex items-center gap-2">
                     <ChevronRight size={13} className={`text-[var(--slate)] transition-transform ${colapsado ? '' : 'rotate-90'}`} />
-                    <span className="text-[11px] font-black uppercase tracking-widest text-[var(--ink-soft)]">
+                    <span className={`${SCALE.text.statLabel} text-[var(--ink-soft)]`}>
                       {mes !== 'sem-mes' ? formatarMes(mes) : 'Sem data'}
                     </span>
                   </div>
-                  <span className="text-[10px] text-[var(--slate-dim)]">{regs.length} recibo{regs.length !== 1 ? 's' : ''}</span>
+                  <span className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>{regs.length} recibo{regs.length !== 1 ? 's' : ''}</span>
                 </button>
                 {!colapsado && <table className="w-full text-xs">
                   <thead className="border-b border-[var(--border-soft)]">
                     <tr>
-                      <th className="px-3 py-2 text-left text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Trabalhador</th>
-                      <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Líquido</th>
-                      <th className="px-3 py-2 text-center text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Divergência</th>
-                      <th className="px-3 py-2 text-center text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Estado</th>
+                      <th className={`px-3 py-2 text-left ${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Trabalhador</th>
+                      <th className={`px-3 py-2 text-right ${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Líquido</th>
+                      <th className={`px-3 py-2 text-center ${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Divergência</th>
+                      <th className={`px-3 py-2 text-center ${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Estado</th>
                       <th className="px-3 py-2 w-8"></th>
                     </tr>
                   </thead>
@@ -642,7 +642,7 @@ const ModoHistorico = ({ workers, logs = [], saveToDb, systemSettings, saveSyste
                             <td className="px-3 py-2.5" onClick={e => e.stopPropagation()}>
                               <div className="flex items-center justify-center gap-1.5">
                                 <EstadoPicker atual={estadoAtual} onChange={novo => alterarEstado(r.id, novo)} />
-                                <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${ESTADO_BADGE[estadoAtual] ?? 'bg-[var(--surface-dim)] text-[var(--ink-soft)]'}`}>
+                                <span className={`inline-block px-2 py-0.5 rounded-full ${SCALE.text.badge} ${ESTADO_BADGE[estadoAtual] ?? 'bg-[var(--surface-dim)] text-[var(--ink-soft)]'}`}>
                                   {ESTADO_PT[estadoAtual] ?? estadoAtual}
                                 </span>
                               </div>
@@ -664,12 +664,12 @@ const ModoHistorico = ({ workers, logs = [], saveToDb, systemSettings, saveSyste
                                     ['IRS',              r.irs_extraido != null ? `${Number(r.irs_extraido).toFixed(2)}€` : '—'],
                                   ].map(([label, val]) => (
                                     <div key={label} className="bg-white rounded-xl p-2.5 text-center border border-[var(--border-soft)]">
-                                      <p className="text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-1">{label}</p>
+                                      <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1`}>{label}</p>
                                       <p className="text-sm font-black text-[var(--ink)]">{val}</p>
                                     </div>
                                   ))}
                                 </div>
-                                {r.mensagem && <p className="text-[10px] text-[var(--slate-dim)] mt-1">{r.mensagem}</p>}
+                                {r.mensagem && <p className={`${SCALE.text.meta} text-[var(--slate-dim)] mt-1`}>{r.mensagem}</p>}
                               </td>
                             </tr>
                           )}
