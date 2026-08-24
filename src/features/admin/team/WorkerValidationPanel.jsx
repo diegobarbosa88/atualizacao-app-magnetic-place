@@ -215,7 +215,7 @@ export default function WorkerValidationPanel({ onLogin }) {
           <div className="flex items-center gap-1.5 bg-white p-1.5 rounded-xl shadow-sm border border-[var(--border-soft)]">
             <button onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))} className="p-1.5 hover:bg-[var(--surface)] rounded-lg transition-all text-[var(--slate)]"><ChevronLeft size={15} /></button>
             <div className="flex items-center gap-1.5 px-2 border-x border-[var(--border-soft)]">
-              <Calendar size={13} style={{ color: FT.navy }} />
+              <Calendar size={13} style={{ color: 'var(--navy)' }} />
               <span className="text-xs font-black uppercase text-[var(--ink-mid)]">{month.toLocaleDateString('pt-PT', { month: 'short', year: 'numeric' })}</span>
             </div>
             <button onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))} className="p-1.5 hover:bg-[var(--surface)] rounded-lg transition-all text-[var(--slate)]"><ChevronRight size={15} /></button>
@@ -254,7 +254,7 @@ export default function WorkerValidationPanel({ onLogin }) {
                       <span className="font-bold text-[var(--ink)] truncate">{w.name}</span>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-right font-black tabular-nums" style={{ color: w.totalHours > 0 ? FT.navy : 'var(--slate-dim)' }}>{formatHours(w.totalHours)}</td>
+                  <td className="px-4 py-3 text-right font-black tabular-nums" style={{ color: w.totalHours > 0 ? 'var(--navy)' : 'var(--slate-dim)' }}>{formatHours(w.totalHours)}</td>
                   <td className="px-4 py-3 text-center">
                     <span
                       className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full ${SCALE.text.badge}`}
@@ -267,7 +267,7 @@ export default function WorkerValidationPanel({ onLogin }) {
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-1">
                       <button onClick={() => setLogsModalWorker(w)} className="p-1.5 text-[var(--slate)] hover:bg-[var(--surface-dim)] hover:text-[var(--ink-mid)] rounded-lg transition-all" title="Ver Registos"><ClipboardList size={13} /></button>
-                      <button onClick={() => verPortal(w)} className="p-1.5 rounded-lg transition-all hover:bg-[var(--surface-dim)]" style={{ color: FT.navy }} title="Ver Portal"><Search size={13} /></button>
+                      <button onClick={() => verPortal(w)} className="p-1.5 rounded-lg transition-all hover:bg-[var(--surface-dim)]" style={{ color: 'var(--navy)' }} title="Ver Portal"><Search size={13} /></button>
                       {!w.isApproved ? (
                         <button onClick={async () => { const id = "appr_" + w.id + "_" + monthStr; try { await saveToDb('approvals', id, { id, workerId: w.id, month: monthStr, timestamp: new Date().toISOString() }); } catch (err) { alert('Erro: ' + err?.message); } }} className="p-1.5 text-emerald-500 hover:bg-emerald-50 rounded-lg transition-all" title="Aprovar"><UserCheck size={13} /></button>
                       ) : (
@@ -294,7 +294,7 @@ export default function WorkerValidationPanel({ onLogin }) {
                   {w.isApproved && <CheckCircle size={10} />}
                   {w.isApproved ? 'aprovado' : 'pendente'}
                 </span>
-                <span className="text-lg font-black tabular-nums" style={{ color: w.totalHours > 0 ? FT.navy : 'var(--slate-dim)' }}>{formatHours(w.totalHours)}</span>
+                <span className="text-lg font-black tabular-nums" style={{ color: w.totalHours > 0 ? 'var(--navy)' : 'var(--slate-dim)' }}>{formatHours(w.totalHours)}</span>
               </div>
               <div className="flex items-center gap-2.5 mb-4">
                 <div className="w-[26px] h-[26px] rounded-full flex items-center justify-center shrink-0 text-white text-[10px] font-black" style={{ background: FT.slateDim }}>
@@ -306,7 +306,7 @@ export default function WorkerValidationPanel({ onLogin }) {
                 <button onClick={() => setLogsModalWorker(w)} className={`flex-1 flex flex-col items-center justify-center gap-1 py-2.5 text-[var(--ink-soft)] hover:bg-[var(--surface-dim)] rounded-xl transition-all border border-[var(--border)] ${SCALE.text.badge}`} title="Ver Registos">
                   <ClipboardList size={14} /> Registos
                 </button>
-                <button onClick={() => verPortal(w)} className={`flex-1 flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl transition-all hover:bg-[var(--surface-dim)] ${SCALE.text.badge}`} style={{ color: FT.navy }} title="Ver Portal">
+                <button onClick={() => verPortal(w)} className={`flex-1 flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl transition-all hover:bg-[var(--surface-dim)] ${SCALE.text.badge}`} style={{ color: 'var(--navy)' }} title="Ver Portal">
                   <Search size={14} /> Portal
                 </button>
                 {!w.isApproved ? (
