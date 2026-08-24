@@ -4,7 +4,7 @@ import { CheckCircle, AlertCircle, XCircle, Clock, Building2, ChevronDown, Layou
 import { formatDocDate } from '../../../utils/dateUtils';
 import { useApp } from '../../../context/AppContext';
 import { applyCreationRequest, rejectCorrection, applyCorrection, markResolved } from '../../../utils/correctionsApi';
-import { FT, SCALE } from '../../../styles/designTokens';
+import { FT, SCALE, FONT_TITLE, FONT_MONO } from '../../../styles/designTokens';
 import { calculateDuration } from '../../../utils/formatUtils';
 import CorrectionDetail from './CorrectionDetail';
 import { STATUS_LABEL, TYPE_LABEL } from './correctionsUtils';
@@ -85,8 +85,8 @@ function ClientCorrectionsPanel({ filtered, clients, workers, itemsByCorrection,
             </div>
             <div className="text-left min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-bold text-[var(--ink-mid)] text-sm truncate">{client?.name || g.clientId || 'Cliente'}</span>
-                <span className="text-xs font-mono text-[var(--slate-dim)]">{g.month}</span>
+                <span className="font-bold text-[var(--ink-mid)] text-sm truncate" style={{ fontFamily: FONT_TITLE }}>{client?.name || g.clientId || 'Cliente'}</span>
+                <span className="text-xs text-[var(--slate-dim)]" style={{ fontFamily: FONT_MONO }}>{g.month}</span>
               </div>
               <span className="text-xs text-[var(--slate-dim)]">
                 {g.corrections.length} pedido{g.corrections.length !== 1 ? 's' : ''} • {pendingCount > 0 ? `${pendingCount} pendente${pendingCount !== 1 ? 's' : ''}` : 'resolvido'}
@@ -240,8 +240,8 @@ function WorkerCorrectionsPanel({ filtered, clients, workers, itemsByCorrection,
             </div>
             <div className="text-left min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-bold text-[var(--ink-mid)] text-sm truncate">{client?.name || g.clientId || 'Cliente'}</span>
-                <span className="text-xs font-mono text-[var(--slate-dim)]">{g.month}</span>
+                <span className="font-bold text-[var(--ink-mid)] text-sm truncate" style={{ fontFamily: FONT_TITLE }}>{client?.name || g.clientId || 'Cliente'}</span>
+                <span className="text-xs text-[var(--slate-dim)]" style={{ fontFamily: FONT_MONO }}>{g.month}</span>
               </div>
               <span className="text-xs text-[var(--slate-dim)]">
                 {allItemCount} item{allItemCount !== 1 ? 's' : ''} • {pendingCount > 0 ? `${pendingCount} pendente${pendingCount !== 1 ? 's' : ''}` : 'resolvido'}
