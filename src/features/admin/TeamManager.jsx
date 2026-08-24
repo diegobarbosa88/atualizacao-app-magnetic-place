@@ -58,7 +58,12 @@ const TeamManagerContent = ({ onLogin }) => {
     handleDeleteWorker,
   } = useTeam();
 
-  const [showInactive, setShowInactive] = useState(false);
+  // Substitui o antigo showInactive (booleano) — os 3 chips clicáveis do
+  // cabeçalho (Colaboradores/Ativos/Inativos) cobrem o mesmo território e
+  // mais (Inativos sozinho não era possível antes), por isso a checkbox
+  // "Mostrar inativos" foi removida em vez de mantida a par de um controlo
+  // que já a torna redundante.
+  const [workerFilter, setWorkerFilter] = useState('ativos');
   const [vhModal, setVhModal] = useState({ show: false, workerId: null, workerName: '' });
   const [empModal, setEmpModal] = useState({ show: false, workerId: null, workerName: '' });
   const [scannerOpen, setScannerOpen] = useState(false);
@@ -119,7 +124,7 @@ const TeamManagerContent = ({ onLogin }) => {
   ).length;
 
   const displayWorkers = workers
-    .filter(w => showInactive || w.status !== 'inativo')
+    .filter(w => workerFilter === 'ativos' ? w.status !== 'inativo' : workerFilter === 'inativos' ? w.status === 'inativo' : true)
     .filter(w => !workersSearch || w.name.toLowerCase().includes(workersSearch.toLowerCase()) || (w.profissao || '').toLowerCase().includes(workersSearch.toLowerCase()));
 
   const sortedWorkers = [...displayWorkers].sort((a, b) => {
@@ -171,10 +176,14 @@ const TeamManagerContent = ({ onLogin }) => {
         activeTab={teamSubTab}
         onTabChange={setTeamSubTab}
         stats={[
-          { label: 'Colaboradores', value: workers.length, colorText: FT.navy, dotColor: FT.slate },
-          { label: 'Ativos', value: workers.length - inactiveCount, colorText: '#0d7a4b', dotColor: '#1cb476' },
-          { label: 'Inativos', value: inactiveCount, colorText: '#516375', dotColor: '#94a3b8' },
-          { label: 'Onboarding pendente', value: pendingOnboardingCount, colorText: '#92660a', dotColor: '#e8a317' },
+          { label: 'Colaboradores', value: workers.length, colorText: FT.navy, dotColor: FT.slate, active: workerFilter === 'all', onClick: () => setWorkerFilter('all') },
+          { label: 'Ativos', value: workers.length - inactiveCount, colorText: '#0d7a4b', dotColor: '#1cb476', active: workerFilter === 'ativos', onClick: () => setWorkerFilter('ativos') },
+          { label: 'Inativos', value: inactiveCount, colorText: '#516375', dotColor: '#94a3b8', active: workerFilter === 'inativos', onClick: () => setWorkerFilter('inativos') },
+          // Não é filtro — worker_onboarding_submissions é uma tabela diferente de
+          // workers, não haveria nada para mostrar na lista. Comporta-se como link:
+          // navega para a subtab Pendentes, onde os dados realmente vivem. A seta
+          // "↗" sinaliza que este item não é como os outros três.
+          { label: 'Onboarding pendente ↗', value: pendingOnboardingCount, colorText: '#92660a', dotColor: '#e8a317', onClick: () => setTeamSubTab('onboarding') },
         ]}
       />
 
@@ -211,12 +220,6 @@ const TeamManagerContent = ({ onLogin }) => {
           />
         </div>
         <div className="flex items-center gap-2">
-          {inactiveCount > 0 && (
-            <label className="flex items-center gap-2 text-xs font-bold text-[var(--ink-soft)] cursor-pointer">
-              <input type="checkbox" checked={showInactive} onChange={e => setShowInactive(e.target.checked)} className="rounded border-[var(--border)]" />
-              Mostrar inativos ({inactiveCount})
-            </label>
-          )}
           <div className="flex items-center bg-[var(--surface)] border border-[var(--border)] rounded-xl p-1">
             <button onClick={() => setWorkersView('grid')} className={`p-2 rounded-lg transition-all ${workersView === 'grid' ? 'text-white' : 'text-[var(--slate)] hover:text-[var(--ink-soft)]'}`} style={workersView === 'grid' ? { backgroundColor: FT.navy } : {}} title="Vista em Grade"><LayoutGrid size={18} /></button>
             <button onClick={() => setWorkersView('list')} className={`p-2 rounded-lg transition-all ${workersView === 'list' ? 'text-white' : 'text-[var(--slate)] hover:text-[var(--ink-soft)]'}`} style={workersView === 'list' ? { backgroundColor: FT.navy } : {}} title="Vista em Lista"><List size={18} /></button>
