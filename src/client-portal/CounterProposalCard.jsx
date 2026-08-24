@@ -1,5 +1,6 @@
 import React from 'react';
 import { Sparkles, X, CheckCircle } from 'lucide-react';
+import { SCALE } from '../styles/designTokens';
 
 export default function CounterProposalCard({ notif, handleAcceptContestation, handleDismissNotif, handleApproveCreationRequest, handleRejectCreationRequest, t, goToView }) {
     return (
@@ -22,7 +23,7 @@ export default function CounterProposalCard({ notif, handleAcceptContestation, h
                                 <div className="space-y-6">
                                     {notif.payload.reason && (
                                         <div className="bg-amber-50 p-4 rounded-2xl border border-amber-100">
-                                            <p className="text-[9px] font-black text-amber-500 uppercase tracking-widest mb-1">{t('admin_justification')}</p>
+                                            <p className={`${SCALE.text.statLabel} text-amber-500 mb-1`}>{t('admin_justification')}</p>
                                             <p className="text-xs text-amber-800 font-medium italic">"{notif.payload.reason}"</p>
                                         </div>
                                     )}
@@ -32,12 +33,12 @@ export default function CounterProposalCard({ notif, handleAcceptContestation, h
                                                 <span className="font-black text-slate-800 text-sm uppercase">{worker.name}</span>
                                                 <div className="flex items-center gap-3">
                                                     <div className="flex flex-col items-center">
-                                                        <span className="text-[7px] text-slate-400 font-bold uppercase">Original</span>
-                                                        <span className="text-[10px] text-slate-500 font-black">{worker.totalHours || worker.originalTotal}h</span>
+                                                        <span className={`${SCALE.text.statLabel} text-slate-400`}>Original</span>
+                                                        <span className={`${SCALE.text.meta} text-slate-500`}>{worker.totalHours || worker.originalTotal}h</span>
                                                     </div>
                                                     <div className="text-slate-300">→</div>
                                                     <div className="flex flex-col items-center bg-indigo-50 px-2 py-1 rounded-lg">
-                                                        <span className="text-[7px] text-indigo-500 font-bold uppercase">Admin</span>
+                                                        <span className={`${SCALE.text.statLabel} text-indigo-500`}>Admin</span>
                                                         <span className="text-xs text-indigo-700 font-black">{worker.editedTotalHours}h</span>
                                                     </div>
                                                 </div>
@@ -48,15 +49,15 @@ export default function CounterProposalCard({ notif, handleAcceptContestation, h
                                                     if (!isModified) return null;
                                                     return (
                                                         <div key={dIdx} className="bg-slate-50 p-3 rounded-2xl border border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-3">
-                                                            <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider">{day.date || day.dateLabel}</span>
-                                                            <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-slate-100 shadow-sm text-[10px]">
+                                                            <span className={`${SCALE.text.statLabel} text-slate-500`}>{day.date || day.dateLabel}</span>
+                                                            <div className={`flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-slate-100 shadow-sm ${SCALE.text.meta}`}>
                                                                 <div className="flex items-center gap-1.5">
                                                                     <span className="text-slate-400 font-bold">Orig:</span>
                                                                     <span className="text-slate-500 font-black">{day.originalShift || (day.entry + '-' + day.exit)}</span>
                                                                 </div>
                                                                 <div className="w-px h-3 bg-slate-100"></div>
                                                                 <div className="flex items-center gap-1.5">
-                                                                    <span className="text-indigo-600 font-bold uppercase text-[8px]">Admin:</span>
+                                                                    <span className={`text-indigo-600 ${SCALE.text.statLabel}`}>Admin:</span>
                                                                     <span className="text-indigo-700 font-black">{(day.adminEntry || day.editedEntry)}-{(day.adminExit || day.editedExit)}</span>
                                                                 </div>
                                                                 <div className="w-px h-3 bg-slate-100"></div>
@@ -105,17 +106,17 @@ export default function CounterProposalCard({ notif, handleAcceptContestation, h
                                             return (
                                                 <div key={i} className="flex items-center justify-between bg-white p-3 rounded-xl border border-amber-200 mt-2 shadow-sm">
                                                     <div className="flex flex-col items-center">
-                                                        <span className="text-[8px] text-slate-400 font-bold uppercase">Original</span>
+                                                        <span className={`${SCALE.text.statLabel} text-slate-400`}>Original</span>
                                                         <span className="text-slate-500 font-black">{orig}h</span>
                                                     </div>
                                                     <div className="text-slate-300 font-bold">→</div>
                                                     <div className="flex flex-col items-center bg-amber-50 px-3 py-1 rounded-lg border border-amber-100">
-                                                        <span className="text-[8px] text-amber-500 font-bold uppercase">Cliente</span>
+                                                        <span className={`${SCALE.text.statLabel} text-amber-500`}>Cliente</span>
                                                         <span className="text-amber-600 font-black">{sugieren}h</span>
                                                     </div>
                                                     <div className="text-slate-300 font-bold">→</div>
                                                     <div className="flex flex-col items-center bg-indigo-50 px-3 py-1 rounded-lg border border-indigo-100">
-                                                        <span className="text-[8px] text-indigo-500 font-bold uppercase">Admin</span>
+                                                        <span className={`${SCALE.text.statLabel} text-indigo-500`}>Admin</span>
                                                         <span className="text-indigo-700 font-black">{contra}h</span>
                                                     </div>
                                                 </div>
@@ -129,17 +130,17 @@ export default function CounterProposalCard({ notif, handleAcceptContestation, h
                                             return (
                                                 <div key={i} className="flex items-center justify-between bg-white p-3 rounded-xl border border-indigo-100 mt-2 shadow-sm">
                                                     <div className="flex flex-col items-center">
-                                                        <span className="text-[8px] text-slate-400 font-bold uppercase">Original</span>
+                                                        <span className={`${SCALE.text.statLabel} text-slate-400`}>Original</span>
                                                         <span className="text-slate-500 font-black">{orig}h</span>
                                                     </div>
                                                     <div className="text-slate-300 font-bold">→</div>
                                                     <div className="flex flex-col items-center bg-amber-50 px-3 py-1 rounded-lg border border-amber-100">
-                                                        <span className="text-[8px] text-amber-500 font-bold uppercase">Cliente</span>
+                                                        <span className={`${SCALE.text.statLabel} text-amber-500`}>Cliente</span>
                                                         <span className="text-amber-600 font-black">{sugieren}h</span>
                                                     </div>
                                                     <div className="text-slate-300 font-bold">→</div>
                                                     <div className="flex flex-col items-center bg-indigo-50 px-3 py-1 rounded-lg border border-indigo-100">
-                                                        <span className="text-[8px] text-indigo-500 font-bold uppercase">Admin</span>
+                                                        <span className={`${SCALE.text.statLabel} text-indigo-500`}>Admin</span>
                                                         <span className="text-indigo-700 font-black">{contra}h</span>
                                                     </div>
                                                 </div>
@@ -155,7 +156,7 @@ export default function CounterProposalCard({ notif, handleAcceptContestation, h
                                                 else if (label.includes('Admin')) valueClass = 'text-xs text-indigo-600 font-mono font-bold';
                                                 return (
                                                     <div key={i} className="flex items-center ml-4 gap-2 py-0.5">
-                                                        <span className="text-[10px] text-slate-500">{label}:</span>
+                                                        <span className={`${SCALE.text.meta} text-slate-500`}>{label}:</span>
                                                         <span className={valueClass}>{value}</span>
                                                     </div>
                                                 );
@@ -196,13 +197,13 @@ export default function CounterProposalCard({ notif, handleAcceptContestation, h
                                             };
                                             setTimeout(scrollToSignature, 150);
                                         }}
-                                        className="bg-emerald-600 text-white px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 active:scale-95 flex items-center gap-2"
+                                        className={`bg-emerald-600 text-white px-8 py-3 rounded-xl hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 active:scale-95 flex items-center gap-2 ${SCALE.text.badge}`}
                                     >
                                         <CheckCircle size={14} /> {t('validate_hours')}
                                     </button>
                                     <button
                                         onClick={() => handleDismissNotif(notif.id)}
-                                        className="bg-slate-100 text-slate-500 px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-200 transition-all active:scale-95"
+                                        className={`bg-slate-100 text-slate-500 px-6 py-3 rounded-xl hover:bg-slate-200 transition-all active:scale-95 ${SCALE.text.badge}`}
                                     >
                                         {t('close')}
                                     </button>
@@ -211,13 +212,13 @@ export default function CounterProposalCard({ notif, handleAcceptContestation, h
                                 <>
                                     <button
                                         onClick={() => handleAcceptContestation(notif)}
-                                        className="bg-emerald-600 text-white px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 active:scale-95 flex items-center gap-2"
+                                        className={`bg-emerald-600 text-white px-8 py-3 rounded-xl hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 active:scale-95 flex items-center gap-2 ${SCALE.text.badge}`}
                                     >
                                         <CheckCircle size={14} /> {t('accept_counter')}
                                     </button>
                                     <button
                                         onClick={() => handleDismissNotif(notif.id)}
-                                        className="bg-slate-100 text-slate-500 px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-200 transition-all active:scale-95"
+                                        className={`bg-slate-100 text-slate-500 px-6 py-3 rounded-xl hover:bg-slate-200 transition-all active:scale-95 ${SCALE.text.badge}`}
                                     >
                                         {t('ignore_notif')}
                                     </button>
@@ -226,13 +227,13 @@ export default function CounterProposalCard({ notif, handleAcceptContestation, h
                                 <>
                                     <button
                                         onClick={() => handleApproveCreationRequest(notif)}
-                                        className="bg-emerald-600 text-white px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 active:scale-95 flex items-center gap-2"
+                                        className={`bg-emerald-600 text-white px-8 py-3 rounded-xl hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 active:scale-95 flex items-center gap-2 ${SCALE.text.badge}`}
                                     >
                                         <CheckCircle size={14} /> Aprovar
                                     </button>
                                     <button
                                         onClick={() => handleRejectCreationRequest(notif)}
-                                        className="bg-rose-600 text-white px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-rose-700 transition-all active:scale-95"
+                                        className={`bg-rose-600 text-white px-6 py-3 rounded-xl hover:bg-rose-700 transition-all active:scale-95 ${SCALE.text.badge}`}
                                     >
                                         Rejeitar
                                     </button>
@@ -240,7 +241,7 @@ export default function CounterProposalCard({ notif, handleAcceptContestation, h
                             ) : (
                                 <button
                                     onClick={() => handleDismissNotif(notif.id)}
-                                    className="bg-slate-100 text-slate-500 px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-200 transition-all active:scale-95"
+                                    className={`bg-slate-100 text-slate-500 px-8 py-3 rounded-xl hover:bg-slate-200 transition-all active:scale-95 ${SCALE.text.badge}`}
                                 >
                                     {t('close')}
                                 </button>

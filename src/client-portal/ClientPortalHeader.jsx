@@ -1,5 +1,6 @@
 import React from 'react';
 import { Bell, LogOut, LogIn } from 'lucide-react';
+import { SCALE } from '../styles/designTokens';
 
 export default function ClientPortalHeader({
   systemSettings, lang, changeLang, selectedTab, t,
@@ -38,7 +39,7 @@ export default function ClientPortalHeader({
               <button onClick={() => setShowNotifDropdown(s => !s)} className="relative p-1.5 text-slate-500 hover:text-slate-800 transition-all">
                 <Bell size={18} />
                 {activeNow.length > 0 && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">{activeNow.length}</span>
+                  <span className={`absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 text-white rounded-full flex items-center justify-center ${SCALE.text.badge}`}>{activeNow.length}</span>
                 )}
               </button>
               {showNotifDropdown && (
@@ -56,7 +57,7 @@ export default function ClientPortalHeader({
                         return (
                           <div key={log.id} className="p-3 border-b border-slate-50 last:border-0">
                             <p className="font-black text-slate-700 text-xs">{w?.name || 'Colaborador'}</p>
-                            <p className="text-slate-400 text-[10px]">{t('on_duty_since')} {log.startTime}</p>
+                            <p className={`text-slate-400 ${SCALE.text.meta}`}>{t('on_duty_since')} {log.startTime}</p>
                           </div>
                         );
                       })

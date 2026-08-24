@@ -1,5 +1,6 @@
 import React from 'react';
 import { ChevronDown, X, Clock } from 'lucide-react';
+import { SCALE } from '../styles/designTokens';
 
 const calculateHoursDiff = (entry, exit, breakStart, breakEnd) => {
     if (!entry || !exit || !entry.includes(':') || !exit.includes(':')) return 0;
@@ -44,7 +45,7 @@ export default function WorkerSubmissionsPanel({ workerSubmissionsResolved, work
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-3">
-                                        <span className={`text-[10px] font-black px-3 py-1.5 rounded-xl ${isApproved ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                                        <span className={`${SCALE.text.meta} px-3 py-1.5 rounded-xl ${isApproved ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
                                             {isApproved ? '✅ Aprovado' : '❌ Rejeitado'}
                                         </span>
                                         <button onClick={(e) => { e.stopPropagation(); handleDismissNotif(notif.id); }} className="p-1 text-slate-400 hover:text-slate-600">
@@ -68,17 +69,17 @@ export default function WorkerSubmissionsPanel({ workerSubmissionsResolved, work
                                                         </div>
                                                         <div className="flex items-center justify-between gap-4 text-xs">
                                                             <div>
-                                                                <span className="text-slate-400 font-bold uppercase text-[9px]">Original</span>
+                                                                <span className={`text-slate-400 ${SCALE.text.statLabel}`}>Original</span>
                                                                 <p className="text-slate-500">{item.before?.startTime && item.before?.endTime ? `${item.before.startTime}-${item.before.endTime}` : 'Sem registo'}</p>
-                                                                {beforeHours !== null && <span className="text-[10px] text-slate-400">({beforeHours}h)</span>}
+                                                                {beforeHours !== null && <span className={`${SCALE.text.meta} text-slate-400`}>({beforeHours}h)</span>}
                                                             </div>
                                                             {item.proposed?.startTime && (
                                                                 <>
                                                                     <div className="text-emerald-600 font-bold">→</div>
                                                                     <div className="bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100">
-                                                                        <span className="text-[9px] text-emerald-600 font-bold uppercase">Proposto</span>
+                                                                        <span className={`text-emerald-600 ${SCALE.text.statLabel}`}>Proposto</span>
                                                                         <p className="text-emerald-700 font-bold">{`${item.proposed.startTime}-${item.proposed.endTime}`}</p>
-                                                                        {proposedHours !== null && <span className="text-[10px] text-emerald-600">({proposedHours}h)</span>}
+                                                                        {proposedHours !== null && <span className={`${SCALE.text.meta} text-emerald-600`}>({proposedHours}h)</span>}
                                                                     </div>
                                                                 </>
                                                             )}
@@ -118,13 +119,13 @@ export default function WorkerSubmissionsPanel({ workerSubmissionsResolved, work
                                     <div className="flex items-center gap-3">
                                         <button
                                             onClick={(e) => { e.stopPropagation(); handleApproveCreationRequest(notif); }}
-                                            className="bg-emerald-600 text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-700 transition-colors"
+                                            className={`bg-emerald-600 text-white px-4 py-2 rounded-xl hover:bg-emerald-700 transition-colors ${SCALE.text.badge}`}
                                         >
                                             Aprovar
                                         </button>
                                         <button
                                             onClick={(e) => { e.stopPropagation(); handleRejectCreationRequest(notif); }}
-                                            className="bg-rose-500 text-white px-3 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-rose-600 transition-colors"
+                                            className={`bg-rose-500 text-white px-3 py-2 rounded-xl hover:bg-rose-600 transition-colors ${SCALE.text.badge}`}
                                         >
                                             Rejeitar
                                         </button>
@@ -150,15 +151,15 @@ export default function WorkerSubmissionsPanel({ workerSubmissionsResolved, work
                                                         </div>
                                                         <div className="flex items-center justify-between gap-4 text-xs">
                                                             <div>
-                                                                <span className="text-slate-400 font-bold uppercase text-[9px]">Original</span>
+                                                                <span className={`text-slate-400 ${SCALE.text.statLabel}`}>Original</span>
                                                                 <p className="text-slate-500">{item.before?.startTime && item.before?.endTime ? `${item.before.startTime}-${item.before.endTime}` : 'Sem registo'}</p>
-                                                                {beforeHours !== null && <span className="text-[10px] text-slate-400">({beforeHours}h)</span>}
+                                                                {beforeHours !== null && <span className={`${SCALE.text.meta} text-slate-400`}>({beforeHours}h)</span>}
                                                             </div>
                                                             <div className="text-emerald-600 font-bold">→</div>
                                                             <div className="bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100">
-                                                                <span className="text-[9px] text-emerald-600 font-bold uppercase">Proposto</span>
+                                                                <span className={`text-emerald-600 ${SCALE.text.statLabel}`}>Proposto</span>
                                                                 <p className="text-emerald-700 font-bold">{item.proposed?.startTime && item.proposed?.endTime ? `${item.proposed.startTime}-${item.proposed.endTime}` : 'N/A'}</p>
-                                                                {proposedHours !== null && <span className="text-[10px] text-emerald-600">({proposedHours}h)</span>}
+                                                                {proposedHours !== null && <span className={`${SCALE.text.meta} text-emerald-600`}>({proposedHours}h)</span>}
                                                             </div>
                                                         </div>
                                                     </div>

@@ -3,6 +3,7 @@ import { Clock, Check, X, ChevronDown, ClipboardList } from 'lucide-react';
 import { CLIENT_REQUESTS_CUTOFF, approveWorkerRequest, rejectWorkerRequest } from '../utils/clientPortalApi';
 import { calculateDuration } from '../utils/formatUtils';
 import { roundTimeToIntervalTimeUp, roundTimeToIntervalTimeDown, getIntervalSettings } from '../utils/timeUtils';
+import { SCALE } from '../styles/designTokens';
 
 const calculateHoursDiff = (entry, exit, breakStart, breakEnd) => {
   if (!entry || !exit || !entry.includes(':') || !exit.includes(':')) return 0;
@@ -65,11 +66,11 @@ function RequestCard({ correction, items, clientId, clientName, supabase, onActi
         <span className={`w-2 h-2 rounded-full flex-shrink-0 ${isDeletion ? 'bg-rose-400' : 'bg-indigo-400'}`} />
         <div className="flex-1 min-w-0">
           <p className="font-black text-slate-800 text-sm truncate">{workerName}</p>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+          <p className={`${SCALE.text.statLabel} text-slate-400`}>
             {items.length} item{items.length > 1 ? 's' : ''} · {correction.month || dateLabel(items[0]?.date)}
           </p>
         </div>
-        <span className={`text-[10px] font-black px-2 py-1 rounded-lg border flex-shrink-0 ${isDeletion ? 'text-rose-600 bg-rose-50 border-rose-200' : 'text-indigo-600 bg-indigo-50 border-indigo-200'}`}>
+        <span className={`${SCALE.text.meta} px-2 py-1 rounded-lg border flex-shrink-0 ${isDeletion ? 'text-rose-600 bg-rose-50 border-rose-200' : 'text-indigo-600 bg-indigo-50 border-indigo-200'}`}>
           {isDeletion ? 'Eliminação' : 'Criação'}
         </span>
         <ChevronDown size={14} className={`text-slate-400 flex-shrink-0 transition-transform ${expanded ? 'rotate-180' : ''}`} />
@@ -86,24 +87,24 @@ function RequestCard({ correction, items, clientId, clientName, supabase, onActi
             return (
               <div key={item.id} className="bg-slate-50 rounded-xl p-3 border border-slate-100 space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">{dateLabel(item.date)}</span>
+                  <span className={`${SCALE.text.statLabel} text-slate-500`}>{dateLabel(item.date)}</span>
                   {isDel
-                    ? <span className="text-[10px] font-black text-rose-600">Eliminar</span>
-                    : proposedHours !== null && <span className="text-[10px] font-bold text-indigo-600">{proposedHours}h</span>
+                    ? <span className={`${SCALE.text.meta} text-rose-600`}>Eliminar</span>
+                    : proposedHours !== null && <span className={`${SCALE.text.meta} text-indigo-600`}>{proposedHours}h</span>
                   }
                 </div>
                 {item.before?.startTime && (
                   <div className="flex items-center gap-2 text-xs text-slate-400">
-                    <span className="font-bold text-[9px] uppercase">Antes</span>
+                    <span className={SCALE.text.statLabel}>Antes</span>
                     <span className="font-mono">{item.before.startTime} → {item.before.endTime || '…'}</span>
                   </div>
                 )}
                 {!isDel && item.proposed?.startTime && (
                   <div className="flex items-center gap-2 text-xs text-indigo-700 font-bold">
-                    <span className="font-bold text-[9px] uppercase text-indigo-400">Proposto</span>
+                    <span className={`${SCALE.text.statLabel} text-indigo-400`}>Proposto</span>
                     <span className="font-mono">{item.proposed.startTime} → {item.proposed.endTime || '…'}</span>
                     {item.proposed.breakStart && (
-                      <span className="text-indigo-300 font-normal text-[10px]">⏸ {item.proposed.breakStart}–{item.proposed.breakEnd || '…'}</span>
+                      <span className={`text-indigo-300 ${SCALE.text.meta}`}>⏸ {item.proposed.breakStart}–{item.proposed.breakEnd || '…'}</span>
                     )}
                   </div>
                 )}
@@ -190,20 +191,20 @@ function HistoryCard({ correction, items }) {
           <span className="font-bold text-slate-700 text-xs truncate flex-1 min-w-0">
             {items[0]?.worker_name || 'Colaborador'}
           </span>
-          <span className={`text-[10px] font-black px-2 py-0.5 rounded-lg flex-shrink-0 ${isApproved ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
+          <span className={`${SCALE.text.badge} px-2 py-0.5 rounded-lg flex-shrink-0 ${isApproved ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
             {isApproved ? '✓' : '✗'}
           </span>
           <ChevronDown size={12} className={`text-slate-300 flex-shrink-0 transition-transform ${expanded ? 'rotate-180' : ''}`} />
         </div>
         {/* Linha secundária */}
         <div className="flex items-center gap-2 mt-0.5 ml-5">
-          {correction.month && <span className="text-[10px] text-slate-400">{correction.month}</span>}
+          {correction.month && <span className={`${SCALE.text.meta} text-slate-400`}>{correction.month}</span>}
           {reviewDate && (
-            <span className={`text-[10px] font-bold ${isApproved ? 'text-emerald-600' : 'text-rose-500'}`}>
+            <span className={`${SCALE.text.meta} ${isApproved ? 'text-emerald-600' : 'text-rose-500'}`}>
               {isApproved ? 'Aprovado' : 'Rejeitado'} {reviewDate}
             </span>
           )}
-          {byClient && <span className="text-[9px] font-bold text-indigo-400 bg-indigo-50 px-1.5 py-0.5 rounded">por si</span>}
+          {byClient && <span className={`${SCALE.text.meta} text-indigo-400 bg-indigo-50 px-1.5 py-0.5 rounded`}>por si</span>}
         </div>
       </button>
 
@@ -211,7 +212,7 @@ function HistoryCard({ correction, items }) {
         <div className="px-4 pb-3 border-t border-slate-50 pt-2 space-y-1.5">
           {items.map(item => (
             <div key={item.id} className="flex items-center gap-3 text-xs text-slate-500">
-              <span className="font-bold text-[9px] uppercase text-slate-400 w-16 shrink-0">{item.date}</span>
+              <span className={`${SCALE.text.statLabel} text-slate-400 w-16 shrink-0`}>{item.date}</span>
               {item.proposed?.startTime
                 ? <span className="font-mono">{item.proposed.startTime} → {item.proposed.endTime}</span>
                 : <span className="text-rose-400">Eliminação</span>
@@ -263,7 +264,7 @@ export default function WorkerRequestsView({ effectiveClientId, clientName, corr
         </div>
       ) : (
         <div className="space-y-2">
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">
+          <p className={`${SCALE.text.statLabel} text-slate-400 px-1`}>
             {pending.length} a aguardar aprovação
           </p>
           {pending.map(c => (
@@ -283,7 +284,7 @@ export default function WorkerRequestsView({ effectiveClientId, clientName, corr
       {/* Histórico */}
       {history.length > 0 && (
         <div className="space-y-1.5">
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Histórico</p>
+          <p className={`${SCALE.text.statLabel} text-slate-400 px-1`}>Histórico</p>
           {history.slice(0, 20).map(c => (
             <HistoryCard key={c.id} correction={c} items={getItems(c.id)} />
           ))}

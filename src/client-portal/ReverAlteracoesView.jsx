@@ -1,5 +1,6 @@
 import React from 'react';
 import PrecisionReportReview from '../components/correcoes/PrecisionReportReview';
+import { SCALE } from '../styles/designTokens';
 
 export default function ReverAlteracoesView({ correctionMode, draftData, draftTotal, originalTotal, reportJustification, handlePrecisionConfirm, handleTimeChange, goToView, generateCorrectionMessage, saveToDb, clientData, initialClientId, initialMonth }) {
     if (correctionMode === 'manual') {
@@ -48,7 +49,7 @@ export default function ReverAlteracoesView({ correctionMode, draftData, draftTo
 
             <div className="bg-slate-50 rounded-3xl border border-slate-200 p-6 md:p-8 mb-10">
                 <div className="flex justify-between items-center mb-8 pb-6 border-b border-slate-200">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total do Período</span>
+                    <span className={`${SCALE.text.statLabel} text-slate-400`}>Total do Período</span>
                     <div className="flex items-center gap-4 font-black text-2xl">
                         <span className="text-slate-400 line-through decoration-rose-400/50">{originalTotal}h</span>
                         <svg className="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
@@ -63,14 +64,14 @@ export default function ReverAlteracoesView({ correctionMode, draftData, draftTo
                             <div key={w.id} className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
                                 <div className="flex justify-between items-center mb-5 pb-4 border-b border-slate-100">
                                     <span className="font-black text-slate-800">{w.name}</span>
-                                    <span className="text-[10px] font-black uppercase text-slate-400">Total Sugerido: <span className="text-indigo-600 text-sm ml-1 bg-indigo-50 px-2 py-1 rounded-lg">{w.editedTotalHours}h</span></span>
+                                    <span className={`${SCALE.text.statLabel} text-slate-400`}>Total Sugerido: <span className="text-indigo-600 text-sm ml-1 bg-indigo-50 px-2 py-1 rounded-lg">{w.editedTotalHours}h</span></span>
                                 </div>
                                 <div className="space-y-3">
                                     {relevantDays.map(day => {
                                         const changed = isDayChanged(day);
                                         return (
                                             <div key={day.date} className={`flex flex-col sm:flex-row sm:justify-between sm:items-center p-4 rounded-xl gap-3 ${changed ? 'bg-amber-50 border border-amber-100' : 'bg-slate-50 border border-transparent'}`}>
-                                                <span className="font-bold text-slate-600 text-[10px] uppercase tracking-wider">{day.date}</span>
+                                                <span className={`text-slate-600 ${SCALE.text.statLabel}`}>{day.date}</span>
                                                 <div className={`flex flex-col sm:flex-row items-center gap-3 text-xs px-4 py-2 rounded-lg shadow-sm ${changed ? 'bg-white border border-amber-200' : 'bg-white/50 border border-slate-100'}`}>
                                                     {changed ? (
                                                         <>
@@ -114,14 +115,14 @@ export default function ReverAlteracoesView({ correctionMode, draftData, draftTo
 
                 {reportJustification && (
                     <div className="mt-8 pt-6 border-t border-slate-200">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Comentário Adicional</p>
+                        <p className={`${SCALE.text.statLabel} text-slate-400 mb-3`}>Comentário Adicional</p>
                         <p className="text-sm text-slate-700 italic font-medium bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">"{reportJustification}"</p>
                     </div>
                 )}
             </div>
 
             <div className="flex justify-end gap-4">
-                <button onClick={() => goToView('editar_relatorio')} className="px-8 py-4 font-black text-[10px] uppercase tracking-widest text-slate-500 bg-white border border-slate-200 hover:bg-slate-50 hover:text-slate-800 rounded-xl transition-all shadow-sm">Voltar</button>
+                <button onClick={() => goToView('editar_relatorio')} className={`px-8 py-4 text-slate-500 bg-white border border-slate-200 hover:bg-slate-50 hover:text-slate-800 rounded-xl transition-all shadow-sm ${SCALE.text.badge}`}>Voltar</button>
                 <button onClick={async () => {
                     const correcoesTexto = generateCorrectionMessage(true);
                     const fullMonthSnapshot = draftData;
@@ -155,7 +156,7 @@ export default function ReverAlteracoesView({ correctionMode, draftData, draftTo
                     const newNotifWithCorrecaoId = { ...newNotif, payload: { ...newNotif.payload, correcao_id: correcaoId } };
                     await saveToDb('app_notifications', notifId, newNotifWithCorrecaoId);
                     goToView('sucesso_reporte');
-                }} className="px-8 py-4 font-black text-[10px] uppercase tracking-widest text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-all shadow-xl shadow-indigo-600/30 active:scale-95">Confirmar e Enviar</button>
+                }} className={`px-8 py-4 text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-all shadow-xl shadow-indigo-600/30 active:scale-95 ${SCALE.text.badge}`}>Confirmar e Enviar</button>
             </div>
         </div>
     );

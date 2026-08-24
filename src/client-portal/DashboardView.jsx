@@ -1,6 +1,7 @@
 import React from 'react';
 import { Calendar, Activity, ChevronLeft, ChevronRight, LogOut, LogIn, Coffee, PlayCircle, Navigation, MapPin, CheckCircle, Edit2 } from 'lucide-react';
 import ModalShell from '../components/common/ModalShell';
+import { SCALE } from '../styles/designTokens';
 
 const calculateHoursDiff = (entry, exit, breakStart, breakEnd) => {
     if (!entry || !exit || !entry.includes(':') || !exit.includes(':')) return 0;
@@ -62,28 +63,28 @@ export default function DashboardView({ logs, workers, clients, effectiveClientI
         ].filter(Boolean);
         return (
             <div key={log.id} className="px-5 py-3 border-b border-slate-100 last:border-0">
-                {worker && <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">{worker.name}</p>}
+                {worker && <p className={`${SCALE.text.statLabel} text-slate-400 mb-1`}>{worker.name}</p>}
                 <div className="flex items-center gap-3 flex-wrap">
                     <div className="flex items-center gap-1.5">
-                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">{t('entry')}</span>
+                        <span className={`${SCALE.text.statLabel} text-slate-400`}>{t('entry')}</span>
                         <span className={`text-sm font-black font-mono ${isOpen && !inBreak ? 'text-emerald-700' : 'text-slate-700'}`}>{log.startTime || '–'}</span>
                         <LocationDot lat={log.check_in_lat} lng={log.check_in_lng} verified={log.geo_verified} />
-                        {isOpen && !inBreak && <span className="text-[9px] font-bold text-emerald-500">{formatElapsed(log.startTime)}</span>}
+                        {isOpen && !inBreak && <span className={`${SCALE.text.meta} text-emerald-500`}>{formatElapsed(log.startTime)}</span>}
                     </div>
                     <span className="text-slate-200">|</span>
                     <div className="flex items-center gap-1.5">
-                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">{t('break_label')}</span>
+                        <span className={`${SCALE.text.statLabel} text-slate-400`}>{t('break_label')}</span>
                         {log.breakStart ? (
                             <>
                                 <span className={`text-sm font-black font-mono ${inBreak ? 'text-amber-600' : 'text-slate-600'}`}>{log.breakStart}{log.breakEnd ? ` → ${log.breakEnd}` : ' → …'}</span>
                                 <LocationDot lat={log.break_start_lat} lng={log.break_start_lng} verified={null} />
-                                {inBreak && <span className="text-[9px] font-bold text-amber-500">{formatElapsed(log.breakStart)}</span>}
+                                {inBreak && <span className={`${SCALE.text.meta} text-amber-500`}>{formatElapsed(log.breakStart)}</span>}
                             </>
                         ) : <span className="text-slate-300 font-bold text-sm">–</span>}
                     </div>
                     <span className="text-slate-200">|</span>
                     <div className="flex items-center gap-1.5">
-                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">{t('exit_label')}</span>
+                        <span className={`${SCALE.text.statLabel} text-slate-400`}>{t('exit_label')}</span>
                         <span className="text-sm font-black font-mono text-slate-700">{log.endTime || '–'}</span>
                         {log.endTime && <LocationDot lat={log.check_out_lat} lng={log.check_out_lng} verified={null} />}
                     </div>
@@ -91,7 +92,7 @@ export default function DashboardView({ logs, workers, clients, effectiveClientI
                     <span className="text-sm font-black text-indigo-700">{h > 0 ? `${h.toFixed(2)}h` : '–'}</span>
                     {logHasGps && (
                         <button onClick={(e) => { e.stopPropagation(); setExpandedLogLocations(prev => { const n = new Set(prev); n.has(log.id) ? n.delete(log.id) : n.add(log.id); return n; }); }}
-                            className={`ml-auto flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-black transition-all ${isLocExpanded ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50'}`}>
+                            className={`ml-auto flex items-center gap-1 px-2 py-1 rounded-lg transition-all ${SCALE.text.meta} ${isLocExpanded ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50'}`}>
                             <Navigation size={9} /> {t('locations')}
                         </button>
                     )}
@@ -100,12 +101,12 @@ export default function DashboardView({ logs, workers, clients, effectiveClientI
                     <div className="mt-2 p-3 bg-slate-50 rounded-xl border border-slate-100">
                         <div className="flex flex-wrap gap-1.5">
                             {thisClient?.morada && (
-                                <a href={moradaMapsLink(thisClient.morada)} target="_blank" rel="noreferrer" className="flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-black text-indigo-700 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 transition-all">
+                                <a href={moradaMapsLink(thisClient.morada)} target="_blank" rel="noreferrer" className={`flex items-center gap-1 px-2 py-1 rounded-lg text-indigo-700 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 transition-all ${SCALE.text.meta}`}>
                                     <MapPin size={10} /> {thisClient.morada}
                                 </a>
                             )}
                             {gpsPoints.map(p => (
-                                <a key={p.label} href={mapsLink(p.lat, p.lng)} target="_blank" rel="noreferrer" className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-black border ${p.cls} hover:opacity-75 transition-all`}>
+                                <a key={p.label} href={mapsLink(p.lat, p.lng)} target="_blank" rel="noreferrer" className={`flex items-center gap-1 px-2 py-1 rounded-lg border ${SCALE.text.meta} ${p.cls} hover:opacity-75 transition-all`}>
                                     <MapPin size={10} /> {p.label}
                                 </a>
                             ))}
@@ -121,7 +122,7 @@ export default function DashboardView({ logs, workers, clients, effectiveClientI
             <div className="flex flex-col lg:flex-row lg:items-end w-full gap-8 mb-10 pb-8 border-b border-zinc-200">
                 <div className="flex-1">
                     <div className="flex items-center gap-4 mb-5">
-                        <span className="px-2.5 py-1 rounded-md bg-zinc-900 text-zinc-50 text-[10px] font-bold uppercase tracking-widest shadow-sm">
+                        <span className={`px-2.5 py-1 rounded-md bg-zinc-900 text-zinc-50 shadow-sm ${SCALE.text.badge}`}>
                             {t('client_panel')}
                         </span>
                         <div className="w-1 h-1 rounded-full bg-zinc-300 hidden sm:block" />
@@ -154,7 +155,7 @@ export default function DashboardView({ logs, workers, clients, effectiveClientI
 
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <div className="bg-white rounded-[2rem] shadow-lg border border-slate-100 p-4 text-center flex flex-col items-center gap-2">
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{t('period')}</p>
+                    <p className={`${SCALE.text.statLabel} text-slate-400`}>{t('period')}</p>
                     <div className="flex items-center gap-1">
                         <button
                             onClick={() => { const idx = availableMonths.indexOf(selectedMonth); if (idx < availableMonths.length - 1) setSelectedMonth(availableMonths[idx + 1]); }}
@@ -170,11 +171,11 @@ export default function DashboardView({ logs, workers, clients, effectiveClientI
                     </div>
                 </div>
                 <div className="bg-indigo-600 rounded-[2rem] shadow-lg shadow-indigo-200 p-6 text-center">
-                    <p className="text-[9px] font-black text-indigo-300 uppercase tracking-widest mb-2">{t('total_hours')}</p>
+                    <p className={`${SCALE.text.statLabel} text-indigo-300 mb-2`}>{t('total_hours')}</p>
                     <p className="text-3xl font-black text-white">{originalTotal}h</p>
                 </div>
                 <div className="bg-white rounded-[2rem] shadow-lg border border-slate-100 p-6 text-center col-span-2 md:col-span-1">
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">{t('workers')}</p>
+                    <p className={`${SCALE.text.statLabel} text-slate-400 mb-2`}>{t('workers')}</p>
                     <p className="text-3xl font-black text-slate-800">{originalWorkersData.length}</p>
                 </div>
             </div>
@@ -215,14 +216,14 @@ export default function DashboardView({ logs, workers, clients, effectiveClientI
                                             </div>
                                             <div>
                                                 <p className="font-black text-slate-900 text-sm">{worker?.name || 'Colaborador'}</p>
-                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{worker?.profissao || worker?.role || '—'}</p>
+                                                <p className={`${SCALE.text.statLabel} text-slate-400`}>{worker?.profissao || worker?.role || '—'}</p>
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <p className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-lg inline-block ${inBreak ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                                            <p className={`${SCALE.text.badge} px-2 py-1 rounded-lg inline-block ${inBreak ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
                                                 {inBreak ? t('on_break') : elapsed}
                                             </p>
-                                            <p className="text-[9px] font-bold text-slate-400 mt-1 uppercase tracking-widest">
+                                            <p className={`${SCALE.text.statLabel} text-slate-400 mt-1`}>
                                                 Desde {log.startTime}
                                             </p>
                                         </div>
@@ -253,11 +254,11 @@ export default function DashboardView({ logs, workers, clients, effectiveClientI
                         <div className="bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden">
                             <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
                                 <h3 className="font-black text-slate-800 text-lg uppercase tracking-tighter">{t('calendar')} — {new Date(calYear, calMonth - 1).toLocaleDateString(t('locale'), { month: 'long', year: 'numeric' })}</h3>
-                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{Object.keys(logsByDate).length} {t('days')}</span>
+                                <span className={`${SCALE.text.statLabel} text-slate-400`}>{Object.keys(logsByDate).length} {t('days')}</span>
                             </div>
                             <div className="grid grid-cols-7 border-b border-slate-100 px-1">
                                 {weekDayLabels.map(d => (
-                                    <div key={d} className="py-2 text-center text-[11px] font-black uppercase tracking-widest text-slate-400">{d}</div>
+                                    <div key={d} className={`py-2 text-center ${SCALE.text.statLabel} text-slate-400`}>{d}</div>
                                 ))}
                             </div>
                             <div className="grid grid-cols-7 p-1 gap-0">
@@ -291,7 +292,7 @@ export default function DashboardView({ logs, workers, clients, effectiveClientI
                                                 <div className="flex items-center justify-between px-3 pt-0.5">
                                                     <span className="text-s font-black text-white/60 leading-none">{dayNum}</span>
                                                     <div className="flex items-center gap-1">
-                                                        <span className="text-[7px] font-black text-emerald-300 uppercase tracking-widest">ao vivo</span>
+                                                        <span className={`${SCALE.text.statLabel} text-emerald-300`}>ao vivo</span>
                                                         <span className="relative flex h-2.7 w-2.7">
                                                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-75" />
                                                             <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
@@ -313,7 +314,7 @@ export default function DashboardView({ logs, workers, clients, effectiveClientI
                                                     </div>
                                                 ) : (
                                                     <div className="flex-1 flex items-center justify-center">
-                                                        <p className="text-[9px] font-bold text-emerald-300/60 text-center">{t('nobody_working')}</p>
+                                                        <p className={`${SCALE.text.meta} text-emerald-300/60 text-center`}>{t('nobody_working')}</p>
                                                     </div>
                                                 )}
                                             </div>
@@ -328,7 +329,7 @@ export default function DashboardView({ logs, workers, clients, effectiveClientI
                                             {hasLogs && (
                                                 <div className="flex-1 flex flex-col items-center justify-center gap-0.5">
                                                     <p className={`text-base font-black leading-none ${isSelected ? 'text-white' : 'text-slate-500'}`}>{dayTotal.toFixed(1)}h</p>
-                                                    <p className={`text-[10px] font-bold leading-none ${isSelected ? 'text-indigo-200' : 'text-slate-400'}`}>{dayLogs.length} {dayLogs.length === 1 ? t('record_singular') : t('record_plural')}</p>
+                                                    <p className={`${SCALE.text.meta} leading-none ${isSelected ? 'text-indigo-200' : 'text-slate-400'}`}>{dayLogs.length} {dayLogs.length === 1 ? t('record_singular') : t('record_plural')}</p>
                                                 </div>
                                             )}
                                         </div>
@@ -372,7 +373,7 @@ export default function DashboardView({ logs, workers, clients, effectiveClientI
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <p className="font-black text-slate-700 text-xs truncate">{worker.name}</p>
-                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wide">{worker.role}</p>
+                                        <p className={`${SCALE.text.statLabel} text-slate-400`}>{worker.role}</p>
                                     </div>
                                     <span className="text-sm font-black text-indigo-600">{worker.totalHours}h</span>
                                     {onManageLogs && (

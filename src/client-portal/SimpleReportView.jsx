@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ChevronLeft, ChevronDown, ChevronUp, AlertCircle, Trash2, RotateCcw } from 'lucide-react';
 import TimeTextInput from '../components/common/TimeTextInput';
+import { SCALE } from '../styles/designTokens';
 
 export default function SimpleReportView({ draftData, handleTimeChange, handleDeleteDay, handleRevertDay, draftTotal, originalTotal, reportJustification, setReportJustification, handlePrecisionConfirm, goToView, clientData, t }) {
     const [expandedWorkers, setExpandedWorkers] = useState(() => draftData.map(w => w.id));
@@ -42,25 +43,25 @@ export default function SimpleReportView({ draftData, handleTimeChange, handleDe
             <div className="flex items-center gap-4">
                 <button
                     onClick={() => goToView('inicio')}
-                    className="flex items-center gap-1.5 text-slate-400 hover:text-slate-700 font-black text-[10px] uppercase tracking-widest transition-colors"
+                    className={`flex items-center gap-1.5 text-slate-400 hover:text-slate-700 transition-colors ${SCALE.text.badge}`}
                 >
                     <ChevronLeft size={16} /> Cancelar
                 </button>
                 <div className="flex-1">
                     <h2 className="text-xl font-black text-slate-800 uppercase tracking-tighter">Reportar Divergência</h2>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{clientData?.period}</p>
+                    <p className={`${SCALE.text.statLabel} text-slate-400 mt-0.5`}>{clientData?.period}</p>
                 </div>
             </div>
 
             {/* Totais */}
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex items-center justify-between gap-4">
                 <div className="text-center">
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Original</p>
+                    <p className={`${SCALE.text.statLabel} text-slate-400 mb-1`}>Original</p>
                     <p className="text-2xl font-black text-slate-500">{originalTotal}h</p>
                 </div>
                 <div className="text-slate-300 font-black text-xl">→</div>
                 <div className="text-center">
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Proposto</p>
+                    <p className={`${SCALE.text.statLabel} text-slate-400 mb-1`}>Proposto</p>
                     <p className={`text-2xl font-black ${hasDiff ? 'text-indigo-600' : 'text-slate-500'}`}>{draftTotal}h</p>
                 </div>
                 {hasDiff && (
@@ -90,12 +91,12 @@ export default function SimpleReportView({ draftData, handleTimeChange, handleDe
                                 </div>
                                 <div className="text-left">
                                     <p className="font-black text-slate-800 text-sm">{worker.name}</p>
-                                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wide">{worker.role}</p>
+                                    <p className={`${SCALE.text.statLabel} text-slate-400`}>{worker.role}</p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-3">
                                 {changedCount > 0 && (
-                                    <span className="text-[9px] font-black bg-amber-100 text-amber-700 px-2 py-1 rounded-lg">
+                                    <span className={`${SCALE.text.meta} bg-amber-100 text-amber-700 px-2 py-1 rounded-lg`}>
                                         {changedCount} alt.
                                     </span>
                                 )}
@@ -120,11 +121,11 @@ export default function SimpleReportView({ draftData, handleTimeChange, handleDe
                                             return (
                                                 <div key={day.rawDate} className={`px-5 py-3 ${deleted ? 'bg-rose-50/60' : changed ? 'bg-amber-50/50' : ''}`}>
                                                     <div className="flex items-center justify-between mb-2">
-                                                        <span className={`text-[10px] font-black uppercase tracking-wide ${deleted ? 'text-rose-400 line-through' : 'text-slate-500'}`}>{day.date}</span>
+                                                        <span className={`${SCALE.text.statLabel} ${deleted ? 'text-rose-400 line-through' : 'text-slate-500'}`}>{day.date}</span>
                                                         <div className="flex items-center gap-2">
-                                                            {deleted && <span className="text-[9px] font-black text-rose-600 bg-rose-100 px-1.5 py-0.5 rounded">eliminado</span>}
-                                                            {!deleted && changed && <span className="text-[9px] font-black text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded">editado</span>}
-                                                            {!deleted && !changed && day.editedHours > 0 && <span className="text-[10px] font-black text-indigo-600">{day.editedHours}h</span>}
+                                                            {deleted && <span className={`${SCALE.text.meta} text-rose-600 bg-rose-100 px-1.5 py-0.5 rounded`}>eliminado</span>}
+                                                            {!deleted && changed && <span className={`${SCALE.text.meta} text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded`}>editado</span>}
+                                                            {!deleted && !changed && day.editedHours > 0 && <span className={`${SCALE.text.meta} text-indigo-600`}>{day.editedHours}h</span>}
                                                             {deleted && handleRevertDay && (
                                                                 <button
                                                                     onClick={() => handleRevertDay(worker.id, day.rawDate)}
@@ -146,7 +147,7 @@ export default function SimpleReportView({ draftData, handleTimeChange, handleDe
                                                         </div>
                                                     </div>
                                                     {deleted ? (
-                                                        <p className="text-[10px] font-bold text-rose-400">
+                                                        <p className={`${SCALE.text.meta} text-rose-400`}>
                                                             Era: {origEntry(day) || '--:--'} → {origExit(day) || '--:--'}
                                                             {(day.breakStart || day.breakEnd) && ` · Pausa: ${day.breakStart || '--:--'} – ${day.breakEnd || '--:--'}`}
                                                         </p>
@@ -154,7 +155,7 @@ export default function SimpleReportView({ draftData, handleTimeChange, handleDe
                                                         <div className="flex flex-wrap items-center gap-3">
                                                             {/* Entrada */}
                                                             <div className="flex items-center gap-1.5">
-                                                                <span className="text-[9px] font-black text-slate-400 uppercase">Entrada</span>
+                                                                <span className={`${SCALE.text.statLabel} text-slate-400`}>Entrada</span>
                                                                 <TimeTextInput
                                                                     value={day.editedEntry || ''}
                                                                     onChange={val => handleTimeChange(worker.id, day.rawDate, 'entry', val)}
@@ -163,7 +164,7 @@ export default function SimpleReportView({ draftData, handleTimeChange, handleDe
                                                             </div>
                                                             {/* Saída */}
                                                             <div className="flex items-center gap-1.5">
-                                                                <span className="text-[9px] font-black text-slate-400 uppercase">Saída</span>
+                                                                <span className={`${SCALE.text.statLabel} text-slate-400`}>Saída</span>
                                                                 <TimeTextInput
                                                                     value={day.editedExit || ''}
                                                                     onChange={val => handleTimeChange(worker.id, day.rawDate, 'exit', val)}
@@ -172,7 +173,7 @@ export default function SimpleReportView({ draftData, handleTimeChange, handleDe
                                                             </div>
                                                             {/* Pausa */}
                                                             <div className="flex items-center gap-1.5">
-                                                                <span className="text-[9px] font-black text-slate-400 uppercase">Pausa</span>
+                                                                <span className={`${SCALE.text.statLabel} text-slate-400`}>Pausa</span>
                                                                 <TimeTextInput
                                                                     value={day.editedBreakStart || ''}
                                                                     onChange={val => handleTimeChange(worker.id, day.rawDate, 'breakStart', val)}
@@ -186,7 +187,7 @@ export default function SimpleReportView({ draftData, handleTimeChange, handleDe
                                                                 />
                                                             </div>
                                                             {changed && (
-                                                                <span className="ml-auto text-[10px] font-black text-amber-700 bg-amber-100 px-2 py-0.5 rounded-lg">{day.editedHours}h</span>
+                                                                <span className={`ml-auto ${SCALE.text.meta} text-amber-700 bg-amber-100 px-2 py-0.5 rounded-lg`}>{day.editedHours}h</span>
                                                             )}
                                                         </div>
                                                     )}
@@ -198,7 +199,7 @@ export default function SimpleReportView({ draftData, handleTimeChange, handleDe
                                 <div className="px-5 py-3 border-t border-slate-50">
                                     <button
                                         onClick={() => setShowAllDays(prev => ({ ...prev, [worker.id]: !seeAll }))}
-                                        className="text-[10px] font-black text-slate-400 hover:text-indigo-600 uppercase tracking-widest transition-colors"
+                                        className={`text-slate-400 hover:text-indigo-600 transition-colors ${SCALE.text.badge}`}
                                     >
                                         {seeAll ? '↑ Ocultar dias sem registo' : '↓ Mostrar todos os dias do mês'}
                                     </button>
@@ -211,7 +212,7 @@ export default function SimpleReportView({ draftData, handleTimeChange, handleDe
 
             {/* Justificação */}
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3">
+                <label className={`${SCALE.text.statLabel} text-slate-400 block mb-3`}>
                     Justificação <span className="text-rose-400">*</span>
                 </label>
                 <textarea
@@ -235,14 +236,14 @@ export default function SimpleReportView({ draftData, handleTimeChange, handleDe
             <div className="flex gap-3 justify-end">
                 <button
                     onClick={() => goToView('inicio')}
-                    className="px-6 py-3 font-black text-[10px] uppercase tracking-widest text-slate-500 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl transition-all"
+                    className={`px-6 py-3 text-slate-500 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl transition-all ${SCALE.text.badge}`}
                 >
                     Cancelar
                 </button>
                 <button
                     onClick={handleSubmit}
                     disabled={isSubmitting}
-                    className={`px-8 py-3 font-black text-[10px] uppercase tracking-widest rounded-xl transition-all shadow-lg flex items-center gap-2 ${
+                    className={`px-8 py-3 rounded-xl transition-all shadow-lg flex items-center gap-2 ${SCALE.text.badge} ${
                         !isSubmitting
                             ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-200 active:scale-95'
                             : 'bg-slate-200 text-slate-400 cursor-not-allowed'

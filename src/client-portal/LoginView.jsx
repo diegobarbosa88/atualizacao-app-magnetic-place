@@ -1,5 +1,6 @@
 import React from 'react';
 import { AlertCircle } from 'lucide-react';
+import { SCALE } from '../styles/designTokens';
 
 export default function LoginView({ t, lang, changeLang, loginNif, setLoginNif, loginEmail, setLoginEmail, loginError, handleLogin, submitting, systemSettings }) {
     return (
@@ -28,7 +29,7 @@ export default function LoginView({ t, lang, changeLang, loginNif, setLoginNif, 
                 <div className="relative z-10 my-auto py-10">
                     <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 rounded-full px-4 py-2 mb-8">
                         <span className="w-2 h-2 bg-indigo-300 rounded-full animate-pulse" />
-                        <span className="text-white/80 text-[11px] font-black uppercase tracking-[0.2em]">{t('restricted_area')}</span>
+                        <span className={`text-white/80 ${SCALE.text.badge}`}>{t('restricted_area')}</span>
                     </div>
                     <h1 className="text-6xl md:text-7xl lg:text-8xl font-black uppercase leading-[0.9] tracking-tighter">
                         <span className="text-white">{t('panel_title_1')}<br /></span>
@@ -40,7 +41,7 @@ export default function LoginView({ t, lang, changeLang, loginNif, setLoginNif, 
                     </div>
                 </div>
 
-                <p className="relative z-10 text-white/30 text-[10px] font-bold uppercase tracking-widest">
+                <p className={`relative z-10 text-white/30 ${SCALE.text.statLabel}`}>
                     © {new Date().getFullYear()} Magnetic Place Unipessoal Lda
                 </p>
             </div>
@@ -55,13 +56,13 @@ export default function LoginView({ t, lang, changeLang, loginNif, setLoginNif, 
                                 <span className="inline-flex h-3.5 w-5 rounded-sm overflow-hidden flex-shrink-0 shadow-sm">
                                     <span className="w-2/5 bg-green-700" /><span className="w-3/5 bg-red-600" />
                                 </span>
-                                <span className="text-[9px] font-black text-slate-600">PT</span>
+                                <span className={`${SCALE.text.badge} text-slate-600`}>PT</span>
                             </button>
                             <button onClick={() => changeLang('es')} title="Español" className={`flex items-center gap-1.5 px-3 py-2 transition-all border-l border-slate-200 ${lang === 'es' ? 'bg-indigo-50' : 'bg-white opacity-50 hover:opacity-80'}`}>
                                 <span className="inline-flex flex-col h-3.5 w-5 rounded-sm overflow-hidden flex-shrink-0 shadow-sm">
                                     <span className="flex-1 bg-red-600" /><span className="flex-[2] bg-yellow-400" /><span className="flex-1 bg-red-600" />
                                 </span>
-                                <span className="text-[9px] font-black text-slate-600">ES</span>
+                                <span className={`${SCALE.text.badge} text-slate-600`}>ES</span>
                             </button>
                         </div>
                     </div>
@@ -71,24 +72,24 @@ export default function LoginView({ t, lang, changeLang, loginNif, setLoginNif, 
                         <img src={systemSettings?.companyLogo || '/MAGNETIC (3).png'} alt="Logo" className="h-10 w-auto object-contain" onError={e => e.target.style.display = 'none'} />
                         <div>
                             <p className="font-black text-slate-900 text-sm uppercase tracking-tight leading-none">Magnetic Place</p>
-                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Unipessoal Lda</p>
+                            <p className={`${SCALE.text.statLabel} text-slate-400`}>Unipessoal Lda</p>
                         </div>
                     </div>
 
                     <div className="mb-8">
-                        <p className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em] mb-2">{t('welcome')}</p>
+                        <p className={`${SCALE.text.statLabel} text-indigo-500 mb-2`}>{t('welcome')}</p>
                         <h2 className="text-4xl font-black text-slate-900 uppercase tracking-tighter leading-none">{t('sign_in_1')}<br />{t('sign_in_2')}</h2>
                         <p className="text-slate-400 text-sm font-medium mt-3 leading-relaxed">{t('sign_in_desc')}</p>
                     </div>
 
                     <form className="space-y-4" onSubmit={e => { e.preventDefault(); handleLogin(); }}>
                         <div>
-                            <label className="block text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-2">Email</label>
+                            <label className={`block ${SCALE.text.statLabel} text-slate-400 mb-2`}>Email</label>
                             <input type="email" value={loginEmail} onChange={e => setLoginEmail(e.target.value)} placeholder={t('email_placeholder')} autoComplete="email"
                                 className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-800 placeholder-slate-300 font-bold text-sm focus:outline-none focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-100 transition-all" />
                         </div>
                         <div>
-                            <label className="block text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-2">Senha (NIF)</label>
+                            <label className={`block ${SCALE.text.statLabel} text-slate-400 mb-2`}>Senha (NIF)</label>
                             <input type="password" value={loginNif} onChange={e => setLoginNif(e.target.value)} placeholder="••••••••" autoComplete="current-password"
                                 className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-800 placeholder-slate-300 font-bold text-sm focus:outline-none focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-100 transition-all" />
                         </div>

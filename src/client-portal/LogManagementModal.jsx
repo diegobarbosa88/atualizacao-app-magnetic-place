@@ -4,6 +4,7 @@ import ModalShell from '../components/common/ModalShell';
 import { createLogByClient, updateLogByClient, deleteLogByClient } from '../utils/clientPortalApi';
 import { calculateDuration } from '../utils/formatUtils';
 import { roundTimeToIntervalTimeUp, roundTimeToIntervalTimeDown, getIntervalSettings } from '../utils/timeUtils';
+import { SCALE } from '../styles/designTokens';
 
 const calculateHoursDiff = (entry, exit, breakStart, breakEnd) => {
   if (!entry || !exit || !entry.includes(':') || !exit.includes(':')) return 0;
@@ -21,7 +22,7 @@ const EMPTY_FORM = { date: '', startTime: '', endTime: '', breakStart: '', break
 function TimeInput({ label, value, onChange }) {
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-[9px] font-black uppercase tracking-widest text-slate-400">{label}</label>
+      <label className={`${SCALE.text.statLabel} text-slate-400`}>{label}</label>
       <input
         type="time"
         value={value || ''}
@@ -75,9 +76,9 @@ function AddLogForm({ clientId, clientName, workerId, workerName, selectedMonth,
 
   return (
     <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-4 space-y-3">
-      <p className="text-[10px] font-black uppercase tracking-widest text-indigo-600">Novo Registo</p>
+      <p className={`${SCALE.text.statLabel} text-indigo-600`}>Novo Registo</p>
       <div className="flex flex-col gap-1">
-        <label className="text-[9px] font-black uppercase tracking-widest text-slate-400">Data</label>
+        <label className={`${SCALE.text.statLabel} text-slate-400`}>Data</label>
         <input
           type="date"
           value={form.date}
@@ -149,7 +150,7 @@ function EditLogForm({ log, clientId, clientName, workerId, workerName, supabase
 
   return (
     <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mt-2 space-y-3">
-      <p className="text-[9px] font-black uppercase tracking-widest text-amber-600">A editar registo de {log.date}</p>
+      <p className={`${SCALE.text.statLabel} text-amber-600`}>A editar registo de {log.date}</p>
       <div className="grid grid-cols-2 gap-2">
         <TimeInput label="Entrada" value={form.startTime} onChange={v => set('startTime', v)} />
         <TimeInput label="Saída" value={form.endTime} onChange={v => set('endTime', v)} />
@@ -195,11 +196,11 @@ function LogRow({ log, clientId, clientName, workerId, workerName, supabase, onD
   };
 
   const sourceTag = log.source === 'client_portal' ? (
-    <span className="text-[8px] font-bold text-indigo-400 bg-indigo-50 px-1.5 py-0.5 rounded">portal</span>
+    <span className={`${SCALE.text.meta} text-indigo-400 bg-indigo-50 px-1.5 py-0.5 rounded`}>portal</span>
   ) : log.source === 'gps_auto' ? (
-    <span className="text-[8px] font-bold text-emerald-400 bg-emerald-50 px-1.5 py-0.5 rounded">GPS</span>
+    <span className={`${SCALE.text.meta} text-emerald-400 bg-emerald-50 px-1.5 py-0.5 rounded`}>GPS</span>
   ) : log.source === 'manual_admin' ? (
-    <span className="text-[8px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">admin</span>
+    <span className={`${SCALE.text.meta} text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded`}>admin</span>
   ) : null;
 
   return (
@@ -211,7 +212,7 @@ function LogRow({ log, clientId, clientName, workerId, workerName, supabase, onD
             <span>{log.startTime || '–'}</span>
             <span className="text-slate-300">→</span>
             <span>{log.endTime || '…'}</span>
-            {log.breakStart && <span className="text-[10px] text-slate-400">(⏸ {log.breakStart}–{log.breakEnd || '…'})</span>}
+            {log.breakStart && <span className={`${SCALE.text.meta} text-slate-400`}>(⏸ {log.breakStart}–{log.breakEnd || '…'})</span>}
           </div>
           {sourceTag}
         </div>
@@ -229,11 +230,11 @@ function LogRow({ log, clientId, clientName, workerId, workerName, supabase, onD
           )}
           {confirmDelete && (
             <>
-              <span className="text-[10px] font-bold text-rose-600">Confirmar?</span>
-              <button onClick={handleDelete} disabled={loading} className="px-2 py-1 bg-rose-600 text-white text-[10px] font-black rounded-lg hover:bg-rose-700 disabled:opacity-50">
+              <span className={`${SCALE.text.meta} text-rose-600`}>Confirmar?</span>
+              <button onClick={handleDelete} disabled={loading} className={`px-2 py-1 bg-rose-600 text-white rounded-lg hover:bg-rose-700 disabled:opacity-50 ${SCALE.text.meta}`}>
                 {loading ? '…' : 'Sim'}
               </button>
-              <button onClick={() => setConfirmDelete(false)} className="px-2 py-1 bg-slate-100 text-slate-600 text-[10px] font-black rounded-lg hover:bg-slate-200">
+              <button onClick={() => setConfirmDelete(false)} className={`px-2 py-1 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 ${SCALE.text.meta}`}>
                 Não
               </button>
             </>
