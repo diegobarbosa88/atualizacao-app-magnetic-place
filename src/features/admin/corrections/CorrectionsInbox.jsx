@@ -516,16 +516,17 @@ const CorrectionsInbox = ({ initialCorrectionId, onCorrectionNavigated, forcedSo
       {/* Status filter tabs */}
       <div className="flex overflow-x-auto gap-1 mb-6 bg-[var(--surface-dim)] p-1 rounded-2xl w-full">
         {[
-          // var(--tone-*), não valores estáticos: a pílula ativa é bg-white, que inverte em
-          // dark mode via a regra-ponte de App.css (.dark .bg-white, com !important) — logo
-          // o texto tem de inverter também. Reutiliza os tokens de tom já usados nos cartões
-          // de correção abaixo, para não criar um segundo vocabulário de cor.
-          ['open',     AlertCircle, 'text-[var(--tone-amber)]',  totalOpenCount],
-          ['applied',  CheckCircle, 'text-[var(--tone-emerald)]', counts.applied],
-          ['rejected', XCircle,     'text-[var(--tone-rose)]',    counts.rejected],
-          ['all',      LayoutList,  'text-[var(--slate-dim)]',   null],
-        ].map(([k, Icon, iconColor, count]) => (
-          <button key={k} onClick={() => setFilter(k)} className={`flex-shrink-0 relative flex items-center justify-center gap-1 py-2 rounded-xl transition-all ${filter === k ? 'bg-white shadow-sm' : 'hover:text-[var(--ink-soft)]'}`}>
+          // Fundo ativo na cor -bg do próprio tom, não branco genérico — reforça a
+          // identidade de cada estado. var(--tone-*), não valores estáticos: já
+          // invertem (custom properties com par claro/escuro em index.css), mesmos
+          // tokens já usados nos cartões de correção abaixo, sem segundo vocabulário.
+          // "Todas" fica neutro (bg-white, que também já inverte via regra-ponte).
+          ['open',     AlertCircle, 'text-[var(--tone-amber)]',   'bg-[var(--tone-amber-bg)]',   totalOpenCount],
+          ['applied',  CheckCircle, 'text-[var(--tone-emerald)]', 'bg-[var(--tone-emerald-bg)]', counts.applied],
+          ['rejected', XCircle,     'text-[var(--tone-rose)]',    'bg-[var(--tone-rose-bg)]',    counts.rejected],
+          ['all',      LayoutList,  'text-[var(--slate-dim)]',    'bg-white',                    null],
+        ].map(([k, Icon, iconColor, activeBg, count]) => (
+          <button key={k} onClick={() => setFilter(k)} className={`flex-shrink-0 relative flex items-center justify-center gap-1 py-2 rounded-xl transition-all ${filter === k ? `${activeBg} shadow-sm` : 'hover:text-[var(--ink-soft)]'}`}>
             <Icon size={13} className={filter === k ? iconColor : 'text-[var(--slate)]'} />
             <span className={`${SCALE.text.badge} whitespace-nowrap ${filter === k ? iconColor : 'text-[var(--slate-dim)]'}`}>
               {k === 'open' ? 'Abertas' : k === 'applied' ? 'Aplicadas' : k === 'rejected' ? 'Rejeitadas' : 'Todas'}
