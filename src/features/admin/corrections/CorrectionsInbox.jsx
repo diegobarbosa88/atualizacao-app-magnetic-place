@@ -542,8 +542,12 @@ const CorrectionsInbox = ({ initialCorrectionId, onCorrectionNavigated, forcedSo
         />
       )}
 
-      {/* Status filter tabs */}
-      <div className="flex overflow-x-auto gap-1 mb-6 bg-[var(--surface-dim)] p-1 rounded-2xl w-full">
+      {/* Status filter tabs — fundo var(--panel), não var(--surface-dim): --surface-dim é
+          exactamente o fundo da própria página (AdminDashboard), por isso o contentor ficava
+          invisível — só a pílula da tab activa aparecia, lendo-se como "4 botões soltos" em
+          vez de "1 contentor com 4 tabs". var(--panel) é branco/#131d28, distinto do fundo da
+          página nos dois modos. */}
+      <div className="flex overflow-x-auto gap-1 mb-6 bg-[var(--panel)] p-1 rounded-2xl w-full border border-[var(--border-soft)]">
         {[
           // Fundo ativo na cor -bg do próprio tom, não branco genérico — reforça a
           // identidade de cada estado. var(--tone-*), não valores estáticos: já
@@ -555,7 +559,7 @@ const CorrectionsInbox = ({ initialCorrectionId, onCorrectionNavigated, forcedSo
           ['rejected', XCircle,     'text-[var(--tone-rose)]',    'bg-[var(--tone-rose-bg)]',    counts.rejected],
           ['all',      LayoutList,  'text-[var(--slate-dim)]',    'bg-white',                    null],
         ].map(([k, Icon, iconColor, activeBg, count]) => (
-          <button key={k} onClick={() => setFilter(k)} className={`flex-shrink-0 relative flex items-center justify-center gap-1 py-2 rounded-xl transition-all ${filter === k ? `${activeBg} shadow-sm` : 'hover:text-[var(--ink-soft)]'}`}>
+          <button key={k} onClick={() => setFilter(k)} className={`flex-1 relative flex items-center justify-center gap-1 py-2 rounded-xl transition-all ${filter === k ? `${activeBg} shadow-sm` : 'hover:text-[var(--ink-soft)]'}`}>
             <Icon size={13} className={filter === k ? iconColor : 'text-[var(--slate)]'} />
             <span className={`${SCALE.text.badge} whitespace-nowrap ${filter === k ? iconColor : 'text-[var(--slate-dim)]'}`}>
               {k === 'open' ? 'Abertas' : k === 'applied' ? 'Aplicadas' : k === 'rejected' ? 'Rejeitadas' : 'Todas'}
