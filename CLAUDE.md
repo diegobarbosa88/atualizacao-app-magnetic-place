@@ -47,6 +47,133 @@ precisa de `vercel deploy --prod` manual (deploy separado, não automático).
 
 ## Armadilhas conhecidas
 
+- **`FT.orangeDeep` (`#C97600`) sobre `FT.warnBg` (`#FBF0DE`) como par texto+fundo dá só 3,07:1 —
+  falha AA (mínimo 4,5:1) — apesar de nunca ter sido medido antes de aparecer nesta combinação
+  numa spec (badge condicional do cartão de colaborador, `WorkerList.jsx`, 2026-08-24).** O par só
+  existia até agora em contextos que mascaravam o problema — `WorkerProfile.jsx:191` usa-o num
+  `onMouseEnter` (hover, transitório, menos crítico), e a maioria dos outros usos de
+  `FT.orangeDeep` no projeto não está pareada com `FT.warnBg`, está sobre fundo branco/neutro
+  ambiente (contraste diferente, não verificado aqui). **Confirmados dois casos reais do mesmo par
+  quebrado, fora de hover:** `WorkerProfile.jsx:129-130` — não é o mesmo elemento (129 é
+  `orangeDeep` isolado, 130 é um span à parte com `FT.warn`/`FT.warnBg`, esse ainda pior, 2,44:1) —
+  e **`GeoSuggestionCard.jsx:58+61`**, esse sim o par exato (`background: FT.warnBg` no `<div>`,
+  `color: FT.orangeDeep` no `<p>` lá dentro), **sempre visível quando a condição dispara** (aviso de
+  registo sem saída no dashboard do trabalhador), não hover — candidato mais forte a corrigir a
+  seguir. Nenhum destes foi tocado — fica registado, não corrigido, por estar fora do âmbito da
+  mudança que o encontrou.
+  Correção aplicada só no sítio novo (`WorkerList.jsx`, `vinculoBadge`): `#8a4a00` em vez de
+  `FT.orangeDeep` — 6,08:1, mais escuro só o suficiente para passar AA com folga, mesma família
+  visual (mesma lógica já usada para o `--orange-hover`: valor mínimo suficiente, não o mais
+  extremo). Cores fixas de propósito nesse badge, não `var(--...)`, porque o cartão onde vive usa
+  `bg-white` fixo, sem seguir `.dark` — **esta é a segunda pendência a lembrar junto**: quando esse
+  cartão for convertido para seguir o tema, o verde do badge pode reverter para
+  `var(--ok)`/`var(--ok-bg)`/`var(--ok-border)` sem mais nada (esse par já mede bem nos dois modos),
+  mas o laranja precisa de um par novo medido para escuro — não reverter para
+  `var(--orange-deep)`/`var(--warn-bg)`, é exactamente o par que falha.
+  **Fundo tingido de "item mais urgente" — precedente fixado em `AbsenceRequestsPanel.jsx`
+  (2026-08-24), não no cartão de colaborador.** Quando a spec do cartão propôs este padrão
+  (Mudança 1), ficou deliberadamente por implementar — sem instância real a que comparar. A
+  primeira instância real é o destaque do trabalhador com o pedido de falta mais antigo pendente:
+  fundo `#FDF8F0`, barra de acento esquerda 6px `FT.orange`, só no primeiro item da lista (e só se
+  tiver pendente). Texto por cima medido e confirmado com `#8a4a00` (mesmo valor do badge acima,
+  não `FT.orangeDeep` — falha AA aqui também, 3,27:1 sobre este fundo tingido e 3,46:1 sobre o
+  branco dos restantes itens; `#8a4a00` dá 6,49:1 e 6,86:1 respectivamente). **Se o fundo tingido do
+  cartão de colaborador avançar um dia, reutilizar `#FDF8F0` + `#8a4a00` daqui — não é preciso medir
+  de novo, já está resolvido para esta família de fundo/texto.**
+
+- **Redesenho completo de `AbsenceRequestsPanel.jsx` (2026-08-24) — accordion de dois níveis
+  substituído por 3 secções (Aguardando há mais tempo / Restantes pendentes / Sem pendências).**
+  Achados de verificação antes de implementar, todos confirmados contra o código/dados reais, não
+  assumidos: (1) o projeto usa só `lucide-react`, zero Tabler apesar de a spec pedir ícones `ti-*`
+  — mapeados para equivalentes reais (`ClockAlert`, `ListChecks`, `Users`, `Palmtree`, `Thermometer`,
+  `Stethoscope`, `Home`, `User`, `HelpCircle`); (2) a lista de motivos (`absence_reasons`) tem 6
+  valores, não os 3 que a spec previa, e é **editável pelo admin em Definições** — nunca fechada,
+  por isso `HelpCircle` serve de fallback para qualquer motivo fora do mapa, confirmado com dados
+  reais (motivo "Outro" existe na BD e caiu no fallback correctamente); (3) **avatares com iniciais
+  brancas — o mesmo padrão de erro pela quarta vez nesta sessão.** A spec pedia `slate` (secção 2) e
+  `okBg` (secção 3) como fundo do avatar; medidos: branco/`slate` dá 2,89:1 (falha AA), branco/
+  `okBg` dá **1,14:1** (falha catastrófica — `okBg` é o tom claro do verde, nunca foi pensado como
+  par de texto branco). Corrigido para as 3 variantes usarem a mesma fórmula (branco sobre cor
+  sólida): `navy` (11,74:1), `slateDim` (5,10:1, não `slate`), `ok` (5,05:1, não `okBg`) — todos
+  `FT.*` fixos, não `var(--...)`, mesmo raciocínio do badge do cartão de colaborador. **Confirmado
+  ao vivo, nos dois modos, que não há mais nenhum sítio na app com texto branco sobre `FT.okBg`** —
+  todos os outros usos já emparelham `okBg` (fundo) com `ok` (texto), o par correcto; esta pendência
+  fica fechada, não é uma quinta instância em aberto.
+  **Confirmação de dark mode, pedida explicitamente antes de fechar:** os valores `#8a4a00`,
+  `#FDF8F0`, `FT.navy`, `FT.slateDim`, `FT.ok` são todos estáticos — medidos ao vivo nos dois modos,
+  dão exactamente os mesmos `rgb()` computados nos dois. Não há necessidade de par separado para
+  escuro nestes tokens específicos (ao contrário de `--ok`/`--warn`/`--bad` como CSS vars, que
+  invertem — aqui optou-se deliberadamente pela forma fixa `FT.*`, mesma razão documentada acima
+  para o badge do cartão de colaborador: o componente não segue tema, ou o papel é fundo sólido que
+  não deve inverter).
+  **Confirmado ao vivo: não é só os tokens que não invertem — o próprio cartão não segue o tema,
+  mesmo problema estrutural do `WorkerList.jsx`.** Fundo `#FFFFFF`/`#FDF8F0` fixo com `.dark` activo
+  (body escuro, `rgb(15,23,42)`, cartão continua claro) — herdado do código original
+  (`AbsenceRequestsPanel.jsx` já usava `bg-white` fixo antes do redesenho), preservado sem
+  questionar por não fazer parte do pedido. **Terceira instância do mesmo padrão**: um componente
+  cujo fundo não inverte torna moot a pergunta "os tokens de texto/badge têm par para o escuro?" —
+  não têm, mas também não precisam enquanto o fundo à volta continuar fixo. Fica registada como
+  pendência de fundo (não urgente): se `AbsenceRequestsPanel.jsx` alguma vez for convertido para
+  seguir o tema, os avatares/badges/chips desta página precisam de pares próprios para escuro nessa
+  altura — mesma nota já deixada para o `WorkerList.jsx`.
+  **Contador "N pendentes"/"N aprovados" — o par laranja está no limite.** `bg-orange-100`/
+  `text-orange-700` (Tailwind) mede **4,56:1**, só 0,06 acima do mínimo AA (4,5:1) — medido via
+  canvas do browser (`fillStyle`→`getImageData`), não por parsing manual de `oklch()`, que já
+  enganou este mesmo tipo de medição antes nesta migração. `bg-emerald-100`/`text-emerald-700`
+  (aprovados) mede 4,72:1, folga confortável. Registado, não corrigido — está tecnicamente dentro
+  do AA, mas sem margem de segurança; fica para decisão se vale a pena um tom mais escuro
+  (`orange-800`) só para dar folga, mesma lógica do `--orange-hover`.
+  **Decisão de implementação, não pedida explicitamente na spec — regista-se por transparência:**
+  o aviso mostrado sempre visível na linha principal do cartão (o mais urgente) também ficou
+  clicável para revelar Notificar Cliente/Arquivar/Apagar, exactamente como os avisos dentro do
+  "+N avisos". A spec só descrevia essas três acções como vivendo "dentro do +N avisos expandido,
+  ao nível do aviso individual" — mas um trabalhador com um único pedido nunca teria badge "+N"
+  (zero avisos extra), o que apagaria por completo o acesso a Arquivar/Apagar para o caso mais
+  comum. Tratado como o mesmo mecanismo aplicado a todos os avisos, não só aos "extra" — confirmado
+  ao vivo que funciona sem o badge "+N" presente.
+
+- **Redesenho de `WorkerValidationPanel.jsx` (2026-08-24) — vista lista + vista grade, badges de
+  Estado, avatares, contador de resumo.** Checklist confirmou Estado estritamente binário
+  (`isApproved` booleano derivado de `approvals.find(...)`, nunca um terceiro valor) e
+  `SCALE.radius.card` = `rounded-[1.2rem]` (19,2px) batendo exactamente com o valor já usado.
+  **Quinta instância do par laranja quebrado, e a primeira vez que é o par `warn`/`warnBg`
+  (não `orangeDeep`/`warnBg`) a aparecer numa spec nova.** Medido: `warn`/`warnBg` dá **2,44:1**
+  (falha AA catastroficamente, já registado como o pior caso em `WorkerProfile.jsx:130`); `ok`/
+  `okBg` (proposto para "aprovado") dá 4,42:1, abaixo do limiar de segurança já estabelecido para
+  texto pequeno nesta sessão. Substituídos por `#8a4a00`/`FT.warnBg` (6,08:1, reutilizado pela
+  terceira vez) para "pendente" e um par novo, `#1f6b47`/`FT.okBg` (5,66:1), para "aprovado" — mais
+  escuro que `ok` (`#2E7D4F`) só o suficiente para dar folga real, mesma lógica do `--orange-hover`.
+  Confirmado ao vivo nos dois modos: os quatro valores (`#8a4a00`, `#1f6b47`, `FT.warnBg`,
+  `FT.okBg`) são estáticos, dão o mesmo `rgb()` computado em claro e escuro — mesma razão já
+  documentada para `WorkerList.jsx`/`AbsenceRequestsPanel.jsx`: o cartão/tabela à volta não segue o
+  tema, por isso o token também não precisa de inverter.
+  **Quarta instância do "cartão fixo não segue dark mode".** A tabela da vista lista usa `bg-white`
+  fixo (herdado, não introduzido agora) — com `.dark` activo, o corpo da página escurece mas a
+  tabela continua branca; `FT.navy` usado para as horas (`>0h`) mede 11,74:1 porque o fundo por
+  baixo nunca escurece de facto, não por o par estar bem pensado para os dois modos. Mesma
+  pendência estrutural já registada três vezes (`WorkerList.jsx`, `AbsenceRequestsPanel.jsx`) —
+  registada aqui, não corrigida agora, à espera da limpeza de uma vez só já decidida pelo Diego.
+  **Auto-correcção antes de mostrar ao Diego: `formatHours()` já devolve o formato completo
+  (`"81h30"`), e a primeira escrita do ficheiro apendava um `h` a mais em 4 sítios** — vista de
+  grade (`"0h00h"`), meta do modal de registos (`"81h00h total"`), e a linha de cada registo diário
+  dentro do modal (`"11h00h"`). A vista de lista usava ainda uma função própria (`fmtH`, formato
+  `"81H"`, sem minutos) inconsistente com o resto da app. Só apareceu ao ler o texto real renderizado
+  no browser (`get_page_text`/`outerHTML`) — nem o eslint nem o `vite build` acusam duplicação de
+  string. Corrigido: os 4 sítios passaram a usar só `formatHours(...)`, sem sufixo, e a vista de
+  lista passou a usar `formatHours` em vez do `fmtH` próprio, para as duas vistas mostrarem o mesmo
+  formato. Confirmado ao vivo depois da correcção: `"0h00"`, `"81h00"`, `"146h30"` nas duas vistas.
+  Fluxo Aprovar/Anular testado ao vivo de ponta a ponta (grava e apaga um registo real em
+  `approvals`) — badge muda para "aprovado", botão "Anular" aparece, e o revert devolve o estado
+  exacto anterior (28 pendentes / 0 aprovados).
+  **O padrão de par de estado quebrado já vai em cinco instâncias** (`slate`/`slate-dim`,
+  `navy`/`navy-solid`, `orangeDeep`/`warnBg`, `okBg`+branco, agora `warn`/`warnBg`) — deixou de ser
+  coincidência. Cada uma foi descoberta de forma reativa, só ao ir usar o par numa spec nova; é
+  provável que existam mais instâncias já em produção, nunca medidas por não termos ido lá por
+  acaso. **Quando se abrir a frente própria de "ponte de cor de estado" (já pendente, ver secção
+  abaixo), começar por um varrimento sistemático de todos os pares texto+fundo que usam tokens de
+  estado (`ok`/`warn`/`bad` e as suas variantes `-bg`) em toda a app — não só corrigir os que forem
+  aparecendo por acaso.**
+
 - **A investigar formalmente — `403 Sem permissão para executar esta ação` apareceu três vezes na
   mesma sessão admin, em três features sem relação entre si.** Ordem de aparição: impersonação de
   trabalhador ("Ver Portal" em `/admin/team`, sem sequer chegar a mostrar o erro à 4ª tentativa —
@@ -89,6 +216,13 @@ precisa de `vercel deploy --prod` manual (deploy separado, não automático).
 - `npx vite build` passar não prova nada sobre props erradas, ícones perdidos ou imports órfãos.
   Correr também `npx eslint .` e confirmar no browser (localhost:4179). Não há suite de testes E2E
   fiável para regressões visuais.
+- **Eslint e build não apanham texto errado, só sintaxe — qualquer mudança que toque em formatação
+  de texto renderizado precisa sempre de verificação visual ao vivo, não é opcional.** Confirmado em
+  `WorkerValidationPanel.jsx` (2026-08-24): `formatHours()` já devolve o formato completo
+  (`"81h30"`), e uma primeira escrita do ficheiro apendou um `h` a mais em 4 sítios (`"0h00h"`,
+  `"81h00h total"`) — sintaticamente válido, `eslint`/`vite build` limpos nos dois casos, só visível
+  ao ler o texto real renderizado (`get_page_text`/`outerHTML`, não screenshot). A mesma classe de
+  erro já tinha aparecido com `fmtH`/`formatHours` inconsistentes entre vistas do mesmo ficheiro.
 - Migrações Supabase: `supabase db query --linked -f <ficheiro>`, **nunca** `db push`. Depois de DDL
   direto, `NOTIFY pgrst, 'reload schema';`.
 - PDFs têm dois motores: jsPDF (programático, imune a CSS) e html2canvas (captura o DOM, sensível a
