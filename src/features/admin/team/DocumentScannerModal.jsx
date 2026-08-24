@@ -4,7 +4,7 @@ import { useSafeTeam } from '../contexts/TeamContext';
 import { callGeminiVision } from '../../../utils/aiUtils';
 import { encontrarWorker } from '../../../utils/validacaoHelpers';
 import { MAPA_SCANNER_ACT, inferirCategoria, getValidadeStatus, getDiasRestantes } from '../../../constants/rhCategories';
-import { FT } from '../../../styles/designTokens';
+import { FT, SCALE } from '../../../styles/designTokens';
 import {
   ScanSearch, X, Upload, Loader2, CheckCircle, AlertTriangle,
   User, FileText, Save, Search, RefreshCw, ChevronDown, ChevronUp,
@@ -98,10 +98,10 @@ function ValidadeInfo({ dataValidade, iconSize = 11 }) {
   return (
     <div className={`flex items-center gap-1.5 border rounded-lg px-2.5 py-1.5 mt-1 ${v.box}`}>
       <Calendar size={iconSize} className={`flex-shrink-0 ${v.txt}`} />
-      <span className={`text-[9px] font-bold ${v.txt}`}>Válido até: </span>
-      <span className={`text-[10px] font-black ${v.strong}`}>{dataValidade}</span>
+      <span className={`${SCALE.text.meta} ${v.txt}`}>Válido até: </span>
+      <span className={`${SCALE.text.meta} ${v.strong}`}>{dataValidade}</span>
       {status !== 'ok' && dias != null && (
-        <span className={`text-[9px] font-bold ml-auto ${v.txt}`}>
+        <span className={`${SCALE.text.meta} ml-auto ${v.txt}`}>
           {status === 'expirado' ? `expirado há ${Math.abs(dias)}d` : `${dias}d restantes`}
         </span>
       )}
@@ -401,7 +401,7 @@ const DocumentScannerModal = ({ open, onClose }) => {
                   <Upload size={32} />
                   <p className="font-bold text-sm">Arrasta ou clica para carregar</p>
                   <p className="text-xs">JPG, PNG, WEBP, PDF — podes selecionar vários ficheiros</p>
-                  <p className="text-[10px] text-[var(--slate-dim)] font-bold mt-1">Frente e verso são detetados e agrupados automaticamente</p>
+                  <p className={`${SCALE.text.meta} text-[var(--slate-dim)] mt-1`}>Frente e verso são detetados e agrupados automaticamente</p>
                 </div>
                 <input ref={inputRef} type="file" accept="image/*,application/pdf" multiple className="hidden" onChange={e => handleFilesChange(e.target.files)} />
               </div>
@@ -412,7 +412,7 @@ const DocumentScannerModal = ({ open, onClose }) => {
                     <div key={i} className="flex items-center gap-3 px-3 py-2">
                       <FileText size={14} className="text-[var(--slate)] flex-shrink-0" />
                       <span className="text-xs font-bold text-[var(--ink-mid)] truncate flex-1">{f.name}</span>
-                      <span className="text-[10px] text-[var(--slate-dim)] font-bold flex-shrink-0">{(f.size / 1024).toFixed(0)} KB</span>
+                      <span className={`${SCALE.text.meta} text-[var(--slate-dim)] flex-shrink-0`}>{(f.size / 1024).toFixed(0)} KB</span>
                       <button onClick={() => setFiles(prev => prev.filter((_, j) => j !== i))} className="text-[var(--slate)] hover:text-red-400 transition-colors flex-shrink-0"><X size={12} /></button>
                     </div>
                   ))}
@@ -452,15 +452,15 @@ const DocumentScannerModal = ({ open, onClose }) => {
               <div className="grid grid-cols-3 gap-2 text-center">
                 <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3">
                   <p className="text-lg font-black text-emerald-700">{savedCount}</p>
-                  <p className="text-[10px] font-black text-emerald-600 uppercase">Guardados</p>
+                  <p className={`${SCALE.text.statLabel} text-emerald-600`}>Guardados</p>
                 </div>
                 <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-3">
                   <p className="text-lg font-black" style={{ color: 'var(--navy)' }}>{matchedCount}</p>
-                  <p className="text-[10px] font-black uppercase text-[var(--slate-dim)]">Para guardar</p>
+                  <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Para guardar</p>
                 </div>
                 <div className="bg-amber-50 border border-amber-100 rounded-xl p-3">
                   <p className="text-lg font-black text-amber-700">{results.filter(r => !r.matchedWorker && r.status === 'done').length}</p>
-                  <p className="text-[10px] font-black text-amber-600 uppercase">Sem match</p>
+                  <p className={`${SCALE.text.statLabel} text-amber-600`}>Sem match</p>
                 </div>
               </div>
 
@@ -507,11 +507,11 @@ const DocumentScannerModal = ({ open, onClose }) => {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-black" style={{ color: 'var(--navy)' }}>{tipoDoc} — Frente &amp; Verso</p>
-                          {worker && <p className="text-[10px] text-[var(--slate-dim)] font-bold">{worker.name}</p>}
+                          {worker && <p className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>{worker.name}</p>}
                         </div>
                         {isSaved && <CheckCircle size={14} className="text-emerald-500 flex-shrink-0" />}
-                        {!isSaved && worker && <span className="text-[10px] font-black text-emerald-600 bg-emerald-100 border border-emerald-200 px-2 py-0.5 rounded-full flex-shrink-0">{worker.name}</span>}
-                        {!worker && <span className="text-[10px] font-black text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full flex-shrink-0">Sem match</span>}
+                        {!isSaved && worker && <span className={`${SCALE.text.meta} text-emerald-600 bg-emerald-100 border border-emerald-200 px-2 py-0.5 rounded-full flex-shrink-0`}>{worker.name}</span>}
+                        {!worker && <span className={`${SCALE.text.meta} text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full flex-shrink-0`}>Sem match</span>}
                         {groupExpanded ? <ChevronUp size={14} className="text-[var(--slate)] flex-shrink-0" /> : <ChevronDown size={14} className="text-[var(--slate)] flex-shrink-0" />}
                       </button>
 
@@ -522,7 +522,7 @@ const DocumentScannerModal = ({ open, onClose }) => {
                             <div className="grid grid-cols-2 gap-2">
                               {[{ r: rf, label: 'Frente' }, { r: rv, label: 'Verso' }].map(({ r: side, label }) => (
                                 <div key={label} className="space-y-1">
-                                  <p className="text-[9px] font-black text-[var(--slate-dim)] uppercase tracking-widest text-center">{label}</p>
+                                  <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] text-center`}>{label}</p>
                                   {side?.preview ? (
                                     <img src={side.preview} alt={label} className="w-full h-32 object-cover rounded-lg border border-[var(--border)]" />
                                   ) : (
@@ -539,16 +539,16 @@ const DocumentScannerModal = ({ open, onClose }) => {
                           <div className="bg-white border border-[var(--border)] rounded-xl p-3 space-y-2">
                             <div className="flex items-center gap-1 mb-1">
                               <FileText size={11} style={{ color: FT.slate }} />
-                              <span className="text-[9px] font-black text-[var(--slate-dim)] uppercase">Informação do documento</span>
+                              <span className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Informação do documento</span>
                             </div>
                             {nomeWorker && (
-                              <div><span className="text-[9px] text-[var(--slate-dim)] font-bold">Nome: </span><span className="text-[10px] font-black text-[var(--ink-mid)]">{nomeWorker}</span></div>
+                              <div><span className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>Nome: </span><span className={`${SCALE.text.meta} text-[var(--ink-mid)]`}>{nomeWorker}</span></div>
                             )}
                             {nif && (
-                              <div><span className="text-[9px] text-[var(--slate-dim)] font-bold">NIF: </span><span className="text-[10px] font-black text-[var(--ink-mid)]">{nif}</span></div>
+                              <div><span className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>NIF: </span><span className={`${SCALE.text.meta} text-[var(--ink-mid)]`}>{nif}</span></div>
                             )}
                             {emissao && (
-                              <div><span className="text-[9px] text-[var(--slate-dim)] font-bold">Emissão: </span><span className="text-[10px] font-black text-[var(--ink-mid)]">{emissao}</span></div>
+                              <div><span className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>Emissão: </span><span className={`${SCALE.text.meta} text-[var(--ink-mid)]`}>{emissao}</span></div>
                             )}
                             <ValidadeInfo dataValidade={validade} />
                           </div>
@@ -624,8 +624,8 @@ const DocumentScannerModal = ({ open, onClose }) => {
                       {r.status === 'analyzing' && <Loader2 size={14} style={{ color: FT.slate }} className="animate-spin flex-shrink-0" />}
                       {r.status === 'error' && <AlertTriangle size={14} className="text-red-500 flex-shrink-0" />}
                       {r.status === 'done' && r.saved && <CheckCircle size={14} className="text-emerald-500 flex-shrink-0" />}
-                      {r.status === 'done' && !r.saved && r.matchedWorker && <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full flex-shrink-0">{r.matchedWorker.name}</span>}
-                      {r.status === 'done' && !r.saved && !r.matchedWorker && <span className="text-[10px] font-black text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full flex-shrink-0">Sem match</span>}
+                      {r.status === 'done' && !r.saved && r.matchedWorker && <span className={`${SCALE.text.meta} text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full flex-shrink-0`}>{r.matchedWorker.name}</span>}
+                      {r.status === 'done' && !r.saved && !r.matchedWorker && <span className={`${SCALE.text.meta} text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full flex-shrink-0`}>Sem match</span>}
                       {r.expanded ? <ChevronUp size={14} className="text-[var(--slate)] flex-shrink-0" /> : <ChevronDown size={14} className="text-[var(--slate)] flex-shrink-0" />}
                     </button>
 
@@ -642,15 +642,15 @@ const DocumentScannerModal = ({ open, onClose }) => {
                             )}
                             <div className="grid grid-cols-2 gap-2">
                               <div className="bg-[var(--surface)] rounded-lg p-3 space-y-1.5">
-                                <div className="flex items-center gap-1 mb-1"><User size={11} style={{ color: FT.slate }} /><span className="text-[9px] font-black text-[var(--slate-dim)] uppercase">Trabalhador</span></div>
+                                <div className="flex items-center gap-1 mb-1"><User size={11} style={{ color: FT.slate }} /><span className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Trabalhador</span></div>
                                 {[['Nome', r.extractedData.trabalhador?.nome_completo], ['NIF', r.extractedData.trabalhador?.nif], ['NISS', r.extractedData.trabalhador?.niss]].map(([l, v]) => v && (
-                                  <div key={l}><span className="text-[9px] text-[var(--slate-dim)] font-bold">{l}: </span><span className="text-[10px] font-black text-[var(--ink-mid)]">{v}</span></div>
+                                  <div key={l}><span className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>{l}: </span><span className={`${SCALE.text.meta} text-[var(--ink-mid)]`}>{v}</span></div>
                                 ))}
                               </div>
                               <div className="bg-[var(--surface)] rounded-lg p-3 space-y-1.5">
-                                <div className="flex items-center gap-1 mb-1"><FileText size={11} style={{ color: FT.slate }} /><span className="text-[9px] font-black text-[var(--slate-dim)] uppercase">Documento</span></div>
+                                <div className="flex items-center gap-1 mb-1"><FileText size={11} style={{ color: FT.slate }} /><span className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Documento</span></div>
                                 {[['Tipo', r.extractedData.documento?.tipo_documento], ['Emissão', r.extractedData.documento?.data_emissao]].map(([l, v]) => v && (
-                                  <div key={l}><span className="text-[9px] text-[var(--slate-dim)] font-bold">{l}: </span><span className="text-[10px] font-black text-[var(--ink-mid)]">{v}</span></div>
+                                  <div key={l}><span className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>{l}: </span><span className={`${SCALE.text.meta} text-[var(--ink-mid)]`}>{v}</span></div>
                                 ))}
                                 <ValidadeInfo dataValidade={r.extractedData.documento?.data_validade} iconSize={9} />
                               </div>
@@ -659,7 +659,7 @@ const DocumentScannerModal = ({ open, onClose }) => {
                             {r.saved ? (
                               <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
                                 <div className="flex items-center gap-2"><CheckCircle size={14} className="text-emerald-600" /><span className="text-xs font-black text-emerald-800">Guardado</span></div>
-                                {r.savedUrl && <a href={r.savedUrl} target="_blank" rel="noreferrer" className="text-[10px] font-black text-emerald-700 underline">Abrir →</a>}
+                                {r.savedUrl && <a href={r.savedUrl} target="_blank" rel="noreferrer" className={`${SCALE.text.meta} text-emerald-700 underline`}>Abrir →</a>}
                               </div>
                             ) : r.matchedWorker ? (
                               <>

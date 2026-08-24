@@ -5,7 +5,7 @@ import { consultarComunicacoesPendentes, invalidarComunicacoesPendentes } from '
 import { impersonarTrabalhador } from '../../../utils/impersonateWorker';
 import { Search, Edit2, Trash2, CheckCircle, ShieldCheck, ShieldOff, MoreVertical, FolderOpen, SendHorizonal, AlertTriangle, Shield } from 'lucide-react';
 import SSComunicacaoModal from './SSComunicacaoModal';
-import { FT } from '../../../styles/designTokens';
+import { FT, SCALE } from '../../../styles/designTokens';
 import Card from '../../../components/common/Card';
 import { FONT_TITLE, FONT_MONO } from '../../../styles/designTokens';
 
@@ -64,7 +64,7 @@ function MiniTimeline({ w, ssFlag }) {
       <span className="w-[7px] h-[7px] rounded-full shrink-0" style={{ backgroundColor: FT.navy }} />
       <span className={`w-3 h-[2px] shrink-0 ${cessacaoState === 'done' ? 'bg-emerald-500' : 'bg-[var(--border)]'}`} />
       <span className={`w-[7px] h-[7px] rounded-full shrink-0 ${dotCls(cessacaoState)}`} />
-      <span className={`text-[9px] font-black uppercase tracking-wide ml-1 truncate ${labelCls}`}>{label}</span>
+      <span className={`${SCALE.text.statLabel} ml-1 truncate ${labelCls}`}>{label}</span>
     </div>
   );
 }
@@ -73,27 +73,27 @@ function apoliceBadge(w, apoliceMap) {
   const status = apoliceMap[w.id]?.status;
   if (status === 'ativo') {
     return (
-      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-black bg-emerald-50 border border-emerald-200 text-emerald-600">
+      <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-600 ${SCALE.text.meta}`}>
         <Shield size={8} /> Apólice Ativa
       </span>
     );
   }
   if (status === 'solicitado' || status === 'pendente') {
     return (
-      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-black bg-amber-50 border border-amber-200 text-amber-600">
+      <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-600 ${SCALE.text.meta}`}>
         <AlertTriangle size={8} /> Apólice Solicitada
       </span>
     );
   }
   if (status === 'excluido') {
     return (
-      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-black bg-[var(--surface-dim)] border border-[var(--border)] text-[var(--ink-soft)]">
+      <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[var(--surface-dim)] border border-[var(--border)] text-[var(--ink-soft)] ${SCALE.text.meta}`}>
         <ShieldOff size={8} /> Apólice Excluída
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-black bg-amber-50 border border-amber-200 text-amber-600">
+    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-600 ${SCALE.text.meta}`}>
       <AlertTriangle size={8} /> Apólice por confirmar
     </span>
   );
@@ -188,20 +188,20 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
             <tr className="border-b border-[var(--border-soft)] bg-[var(--surface)]">
               <th
                 onClick={() => setWorkersSort(prev => ({ key: 'name', direction: prev.key === 'name' && prev.direction === 'asc' ? 'desc' : 'asc' }))}
-                className="text-left px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest cursor-pointer hover:text-[var(--ink-mid)] transition-colors"
+                className={`text-left px-4 py-3 ${SCALE.text.statLabel} text-[var(--slate-dim)] cursor-pointer hover:text-[var(--ink-mid)] transition-colors`}
               >
                 Colaborador {workersSort.key === 'name' ? (workersSort.direction === 'asc' ? '↑' : '↓') : ''}
               </th>
               <th
                 onClick={() => setWorkersSort(prev => ({ key: 'schedule', direction: prev.key === 'schedule' && prev.direction === 'asc' ? 'desc' : 'asc' }))}
-                className="hidden sm:table-cell text-left px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest cursor-pointer hover:text-[var(--ink-mid)] transition-colors"
+                className={`hidden sm:table-cell text-left px-4 py-3 ${SCALE.text.statLabel} text-[var(--slate-dim)] cursor-pointer hover:text-[var(--ink-mid)] transition-colors`}
               >
                 Horário · Unidade {workersSort.key === 'schedule' ? (workersSort.direction === 'asc' ? '↑' : '↓') : ''}
               </th>
-              <th className="text-left px-3 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">
+              <th className={`text-left px-3 py-3 ${SCALE.text.statLabel} text-[var(--slate-dim)]`}>
                 Estado
               </th>
-              <th className="text-right px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">
+              <th className={`text-right px-4 py-3 ${SCALE.text.statLabel} text-[var(--slate-dim)]`}>
                 Ações
               </th>
             </tr>
@@ -221,7 +221,7 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                         <p className="text-xs text-[var(--slate-dim)] truncate">{w.profissao || 'Staff'}</p>
                         <div className="mt-1"><MiniTimeline w={w} ssFlag={ssComunicacoesMap[w.nis]} /></div>
                         <div className="mt-1">{apoliceBadge(w, apoliceMap)}</div>
-                        {w.valorHora && <p className="text-[10px] text-[var(--slate-dim)] font-bold mt-0.5">{w.valorHora}€/h</p>}
+                        {w.valorHora && <p className={`${SCALE.text.meta} text-[var(--slate-dim)] mt-0.5`}>{w.valorHora}€/h</p>}
                       </div>
                     </div>
                   </td>
@@ -229,7 +229,7 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                   {/* Horário · Unidade (oculto em mobile) */}
                   <td className="hidden sm:table-cell px-4 py-3">
                     <p className="text-xs font-bold text-[var(--slate-dim)] truncate">{schedule?.name || 'N/A'}</p>
-                    <p className="text-[10px] text-[var(--slate-dim)] truncate">{client?.name || 'N/A'}</p>
+                    <p className={`${SCALE.text.meta} text-[var(--slate-dim)] truncate`}>{client?.name || 'N/A'}</p>
                   </td>
 
                   {/* Estado — dois toggles compactos */}
@@ -271,36 +271,36 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                               className="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-amber-50 group transition-colors"
                             >
                               <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-amber-100 text-amber-500 group-hover:bg-amber-200 transition-colors shrink-0"><Edit2 size={11} /></span>
-                              <span className="text-[11px] font-semibold text-[var(--ink-mid)] group-hover:text-amber-700">Editar</span>
+                              <span className={`${SCALE.text.body} text-[var(--ink-mid)] group-hover:text-amber-700`}>Editar</span>
                             </button>
                             <button
                               onClick={() => { verPortal(w); setOpenMenuId(null); }}
                               className="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-[var(--surface)] group transition-colors"
                             >
                               <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-[var(--surface-dim)] group-hover:bg-[var(--border)] transition-colors shrink-0" style={{ color: 'var(--slate-dim)' }}><Search size={11} /></span>
-                              <span className="text-[11px] font-semibold text-[var(--ink-mid)] group-hover:text-[var(--ink)]">Ver Portal</span>
+                              <span className={`${SCALE.text.body} text-[var(--ink-mid)] group-hover:text-[var(--ink)]`}>Ver Portal</span>
                             </button>
                             <button
                               onClick={() => { onVerPasta?.(w.id); setOpenMenuId(null); }}
                               className="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-emerald-50 group transition-colors"
                             >
                               <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-emerald-100 text-emerald-500 group-hover:bg-emerald-200 transition-colors shrink-0"><FolderOpen size={11} /></span>
-                              <span className="text-[11px] font-semibold text-[var(--ink-mid)] group-hover:text-emerald-700">Ver Pasta</span>
+                              <span className={`${SCALE.text.body} text-[var(--ink-mid)] group-hover:text-emerald-700`}>Ver Pasta</span>
                             </button>
                             <div className="mx-3 my-1 border-t border-[var(--border-soft)]" />
                             <button
                               onClick={() => { onOpenEmpHistory(w.id, w.name); setOpenMenuId(null); }}
                               className="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-[var(--surface)] group transition-colors"
                             >
-                              <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-[var(--surface-dim)] group-hover:bg-[var(--border)] transition-colors shrink-0 text-[11px] leading-none">📅</span>
-                              <span className="text-[11px] font-semibold text-[var(--ink-mid)]">Períodos</span>
+                              <span className={`flex items-center justify-center w-6 h-6 rounded-lg bg-[var(--surface-dim)] group-hover:bg-[var(--border)] transition-colors shrink-0 leading-none ${SCALE.text.body}`}>📅</span>
+                              <span className={`${SCALE.text.body} text-[var(--ink-mid)]`}>Períodos</span>
                             </button>
                             <button
                               onClick={() => { onOpenVHHistory(w.id, w.name); setOpenMenuId(null); }}
                               className="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-[var(--surface)] group transition-colors"
                             >
-                              <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-[var(--surface-dim)] group-hover:bg-[var(--border)] transition-colors shrink-0 text-[11px] leading-none">📊</span>
-                              <span className="text-[11px] font-semibold text-[var(--ink-mid)]">Valor/hora</span>
+                              <span className={`flex items-center justify-center w-6 h-6 rounded-lg bg-[var(--surface-dim)] group-hover:bg-[var(--border)] transition-colors shrink-0 leading-none ${SCALE.text.body}`}>📊</span>
+                              <span className={`${SCALE.text.body} text-[var(--ink-mid)]`}>Valor/hora</span>
                             </button>
                             {/* Segurança Social */}
                             {(w.status === 'ativo' && !w.ss_admissao_comunicada_em) && (
@@ -312,8 +312,8 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                                 >
                                   <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-amber-100 text-amber-600 group-hover:bg-amber-200 transition-colors shrink-0"><SendHorizonal size={11} /></span>
                                   <div className="text-left">
-                                    <span className="text-[11px] font-semibold text-[var(--ink-mid)] group-hover:text-amber-700">Comunicar Admissão</span>
-                                    {ssAmbiente === 'teste' && <p className="text-[8px] text-orange-500 font-bold leading-none">TESTE</p>}
+                                    <span className={`${SCALE.text.body} text-[var(--ink-mid)] group-hover:text-amber-700`}>Comunicar Admissão</span>
+                                    {ssAmbiente === 'teste' && <p className={`${SCALE.text.statLabel} text-orange-500 leading-none`}>TESTE</p>}
                                   </div>
                                 </button>
                               </>
@@ -327,8 +327,8 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                                 >
                                   <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-amber-100 text-amber-600 group-hover:bg-amber-200 transition-colors shrink-0"><SendHorizonal size={11} /></span>
                                   <div className="text-left">
-                                    <span className="text-[11px] font-semibold text-[var(--ink-mid)] group-hover:text-amber-700">Comunicar Cessação</span>
-                                    {ssAmbiente === 'teste' && <p className="text-[8px] text-orange-500 font-bold leading-none">TESTE</p>}
+                                    <span className={`${SCALE.text.body} text-[var(--ink-mid)] group-hover:text-amber-700`}>Comunicar Cessação</span>
+                                    {ssAmbiente === 'teste' && <p className={`${SCALE.text.statLabel} text-orange-500 leading-none`}>TESTE</p>}
                                   </div>
                                 </button>
                               </>
@@ -336,10 +336,10 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                             <div className="mx-3 my-1 border-t border-[var(--border-soft)]" />
                             {confirmDeleteWorkerId === w.id ? (
                               <div className="mx-2 mb-1 p-2 bg-rose-50 rounded-lg border border-rose-100">
-                                <p className="text-[9px] font-black text-rose-500 uppercase tracking-wider mb-1.5">Confirmar apagar?</p>
+                                <p className={`${SCALE.text.statLabel} text-rose-500 mb-1.5`}>Confirmar apagar?</p>
                                 <div className="flex gap-1">
-                                  <button onClick={() => { handleDelete(w.id); setConfirmDeleteWorkerId(null); setOpenMenuId(null); }} className="flex-1 py-1 bg-rose-600 text-white text-[9px] font-black rounded-lg hover:bg-rose-700 transition-colors">Sim</button>
-                                  <button onClick={() => setConfirmDeleteWorkerId(null)} className="flex-1 py-1 bg-white border border-[var(--border)] text-[var(--ink-soft)] text-[9px] font-black rounded-lg hover:bg-[var(--surface)] transition-colors">Não</button>
+                                  <button onClick={() => { handleDelete(w.id); setConfirmDeleteWorkerId(null); setOpenMenuId(null); }} className={`flex-1 py-1 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors ${SCALE.text.meta}`}>Sim</button>
+                                  <button onClick={() => setConfirmDeleteWorkerId(null)} className={`flex-1 py-1 bg-white border border-[var(--border)] text-[var(--ink-soft)] rounded-lg hover:bg-[var(--surface)] transition-colors ${SCALE.text.meta}`}>Não</button>
                                 </div>
                               </div>
                             ) : (
@@ -348,7 +348,7 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                                 className="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-rose-50 group transition-colors"
                               >
                                 <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-rose-100 text-rose-500 group-hover:bg-rose-200 transition-colors shrink-0"><Trash2 size={11} /></span>
-                                <span className="text-[11px] font-semibold text-rose-500 group-hover:text-rose-600">Apagar</span>
+                                <span className={`${SCALE.text.body} text-rose-500 group-hover:text-rose-600`}>Apagar</span>
                               </button>
                             )}
                           </div>
@@ -386,7 +386,7 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
           // a 230px o conteúdo ficava espremido.
           <Card key={w.id} variant="item" interactive onClick={() => onEdit(w)} className="!px-3 !py-3">
             <div className="flex justify-between items-start mb-2">
-              <div className={`px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase border flex items-center gap-1 ${w.status === 'inativo' ? 'text-rose-600 border-rose-200 bg-rose-50' : 'text-emerald-600 border-emerald-200 bg-emerald-50'}`}>
+              <div className={`px-1.5 py-0.5 rounded-full border flex items-center gap-1 ${SCALE.text.statLabel} ${w.status === 'inativo' ? 'text-rose-600 border-rose-200 bg-rose-50' : 'text-emerald-600 border-emerald-200 bg-emerald-50'}`}>
                 {w.status !== 'inativo' && <CheckCircle size={8} />}
                 {w.status === 'inativo' ? 'Inativo' : 'Ativo'}
               </div>
@@ -402,8 +402,8 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                 )}
                 {confirmDeleteWorkerId === w.id ? (
                   <div className="flex items-center gap-1">
-                    <button onClick={() => { handleDelete(w.id); setConfirmDeleteWorkerId(null); }} className="px-1.5 py-0.5 bg-red-600 text-white text-[10px] font-bold rounded-lg">Sim</button>
-                    <button onClick={() => setConfirmDeleteWorkerId(null)} className="px-1.5 py-0.5 bg-[var(--border)] text-[var(--ink-soft)] text-[10px] font-bold rounded-lg">Não</button>
+                    <button onClick={() => { handleDelete(w.id); setConfirmDeleteWorkerId(null); }} className={`px-1.5 py-0.5 bg-red-600 text-white rounded-lg ${SCALE.text.meta}`}>Sim</button>
+                    <button onClick={() => setConfirmDeleteWorkerId(null)} className={`px-1.5 py-0.5 bg-[var(--border)] text-[var(--ink-soft)] rounded-lg ${SCALE.text.meta}`}>Não</button>
                   </div>
                 ) : (
                   <button onClick={() => setConfirmDeleteWorkerId(w.id)} className="p-1 text-[var(--slate)] hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all border border-[var(--border-soft)]"><Trash2 size={10} /></button>
@@ -411,15 +411,15 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
               </div>
             </div>
             <div className="flex items-center gap-2 mb-2">
-              <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-[10px] font-black" style={{ backgroundColor: FT.navy, color: FT.orange }}>{getInitials(w.name)}</div>
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${SCALE.text.meta}`} style={{ backgroundColor: FT.navy, color: FT.orange }}>{getInitials(w.name)}</div>
               <div className="min-w-0">
                 <h4 className="text-[0.95rem] font-bold leading-[1.15] text-[var(--ink-mid)] truncate" style={{ fontFamily: FONT_TITLE }} title={w.name}>{w.name}</h4>
-                <p className="text-[9.5px] text-[var(--slate-dim)] font-semibold truncate" style={{ fontFamily: FONT_MONO }}>{w.profissao || 'Staff'}</p>
+                <p className={`${SCALE.text.meta} text-[var(--slate-dim)] truncate`} style={{ fontFamily: FONT_MONO }}>{w.profissao || 'Staff'}</p>
               </div>
             </div>
             <div className="mb-1.5 overflow-hidden"><MiniTimeline w={w} ssFlag={ssComunicacoesMap[w.nis]} /></div>
             <div className="mb-2">{apoliceBadge(w, apoliceMap)}</div>
-            <div className="text-[9px] text-[var(--slate-dim)] font-bold space-y-0.5 border-t border-[var(--border-soft)] pt-1.5">
+            <div className={`${SCALE.text.meta} text-[var(--slate-dim)] space-y-0.5 border-t border-[var(--border-soft)] pt-1.5`}>
               <div className="flex items-center gap-1 truncate">
                 <span>⏱</span> <span className="truncate">{schedules.find(s => s.id === w.defaultScheduleId)?.name || 'N/A'}</span>
               </div>

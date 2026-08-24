@@ -3,6 +3,7 @@ import { CalendarX, Copy, CheckCircle, Clock, ChevronDown, ChevronUp, ThumbsUp, 
 import { useApp } from '../../../context/AppContext';
 import { deleteAbsenceRequest } from '../../../utils/absenceRequestsApi';
 import { notifyEvent, TARGET } from '../../../utils/notifyEvent';
+import { SCALE } from '../../../styles/designTokens';
 
 export default function AbsenceRequestsPanel({ requests, systemSettings, clients }) {
   const { supabase, setAbsenceRequests, currentUser } = useApp();
@@ -105,7 +106,7 @@ export default function AbsenceRequestsPanel({ requests, systemSettings, clients
       <div className="bg-white rounded-2xl border border-[var(--border-soft)] shadow-sm px-6 py-10 text-center">
         <CalendarX size={28} className="text-[var(--slate)] mx-auto mb-3" />
         <p className="text-xs font-black uppercase text-[var(--slate-dim)] tracking-widest">Sem avisos de falta</p>
-        <p className="text-[10px] text-[var(--slate-dim)] font-bold mt-1">Os avisos dos colaboradores aparecerão aqui.</p>
+        <p className={`${SCALE.text.meta} text-[var(--slate-dim)] mt-1`}>Os avisos dos colaboradores aparecerão aqui.</p>
       </div>
     );
   }
@@ -126,22 +127,22 @@ export default function AbsenceRequestsPanel({ requests, systemSettings, clients
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               {!isApproved && (
-                <span className="bg-orange-500 text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">Novo</span>
+                <span className={`bg-orange-500 text-white px-2 py-0.5 rounded-full ${SCALE.text.badge}`}>Novo</span>
               )}
               {isApproved && (
-                <span className="flex items-center gap-1 text-[9px] font-black text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full uppercase">
+                <span className={`flex items-center gap-1 text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full ${SCALE.text.badge}`}>
                   <ThumbsUp size={9} /> OK dado
                 </span>
               )}
             </div>
-            <p className="text-[10px] font-bold text-[var(--slate-dim)] mt-0.5 flex items-center gap-1">
+            <p className={`${SCALE.text.meta} text-[var(--slate-dim)] mt-0.5 flex items-center gap-1`}>
               <Clock size={9} /> {createdLabel}
             </p>
           </div>
           {!isApproved && (
             <button
               onClick={(e) => { e.stopPropagation(); handleApprove(req); }}
-              className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-emerald-700 transition-all"
+              className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-all ${SCALE.text.badge}`}
             >
               <ThumbsUp size={12} /> Dar OK
             </button>
@@ -152,19 +153,19 @@ export default function AbsenceRequestsPanel({ requests, systemSettings, clients
         {openIds.has(req.id) && <div className="px-5 py-4 space-y-2">
           <div className="flex flex-wrap items-start gap-x-4 gap-y-1">
             <div>
-              <p className="text-[9px] font-black uppercase text-[var(--slate-dim)] tracking-widest">Motivo</p>
+              <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Motivo</p>
               <p className="text-xs font-black text-[var(--ink-mid)]">{req.reason}</p>
             </div>
             {client && (
               <div>
-                <p className="text-[9px] font-black uppercase text-[var(--slate-dim)] tracking-widest">Unidade</p>
+                <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Unidade</p>
                 <p className="text-xs font-black text-[var(--ink-mid)]">{client.name}</p>
               </div>
             )}
           </div>
 
           <div>
-            <p className="text-[9px] font-black uppercase text-[var(--slate-dim)] tracking-widest mb-2">
+            <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] mb-2`}>
               Dias ausente <span className="font-bold normal-case tracking-normal text-[var(--slate-dim)]">({sortedDates.length})</span>
             </p>
             {sortedDates.length > 0 ? (
@@ -177,9 +178,9 @@ export default function AbsenceRequestsPanel({ requests, systemSettings, clients
                   const isWeekend = d.getDay() === 0 || d.getDay() === 6;
                   return (
                     <span key={ds} className={`inline-flex flex-col items-center px-2.5 py-1.5 rounded-xl text-center leading-none ${isWeekend ? 'bg-[var(--surface-dim)] text-[var(--ink-soft)]' : 'bg-orange-100 text-orange-700'}`}>
-                      <span className="text-[8px] font-black uppercase tracking-wider">{weekday}</span>
+                      <span className={SCALE.text.statLabel}>{weekday}</span>
                       <span className="text-sm font-black">{dayNum}</span>
-                      <span className="text-[8px] font-bold opacity-70">{month}</span>
+                      <span className={`${SCALE.text.meta} opacity-70`}>{month}</span>
                     </span>
                   );
                 })}
@@ -189,18 +190,18 @@ export default function AbsenceRequestsPanel({ requests, systemSettings, clients
 
           {req.notes && (
             <div>
-              <p className="text-[9px] font-black uppercase text-[var(--slate-dim)] tracking-widest mb-1">Notas</p>
+              <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1`}>Notas</p>
               <p className="text-xs text-[var(--ink-soft)]">{req.notes}</p>
             </div>
           )}
 
           {notifyClient && client?.email && (
             <div className="mt-3 bg-amber-50 border border-amber-100 rounded-xl p-3">
-              <p className="text-[9px] font-black uppercase text-amber-700 tracking-widest mb-1">Notificar Cliente</p>
-              <p className="text-[10px] font-bold text-[var(--ink-soft)] mb-2">{client.email}</p>
+              <p className={`${SCALE.text.statLabel} text-amber-700 mb-1`}>Notificar Cliente</p>
+              <p className={`${SCALE.text.meta} text-[var(--ink-soft)] mb-2`}>{client.email}</p>
               <button
                 onClick={() => handleCopyEmail(req)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 text-white rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-amber-600 transition-all"
+                className={`flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 text-white rounded-xl hover:bg-amber-600 transition-all ${SCALE.text.badge}`}
               >
                 {copiedId === req.id ? <><CheckCircle size={11} /> Copiado!</> : <><Copy size={11} /> Copiar Mensagem</>}
               </button>
@@ -211,20 +212,20 @@ export default function AbsenceRequestsPanel({ requests, systemSettings, clients
             {isApproved && (
               <button
                 onClick={() => handleRevert(req)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--surface-dim)] text-[var(--ink-soft)] rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-orange-100 hover:text-orange-700 transition-all"
+                className={`flex items-center gap-1.5 px-3 py-1.5 bg-[var(--surface-dim)] text-[var(--ink-soft)] rounded-xl hover:bg-orange-100 hover:text-orange-700 transition-all ${SCALE.text.badge}`}
               >
                 <RotateCcw size={11} /> Reverter
               </button>
             )}
             <button
               onClick={() => handleArchive(req)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--surface-dim)] text-[var(--ink-soft)] rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-red-50 hover:text-red-500 transition-all"
+              className={`flex items-center gap-1.5 px-3 py-1.5 bg-[var(--surface-dim)] text-[var(--ink-soft)] rounded-xl hover:bg-red-50 hover:text-red-500 transition-all ${SCALE.text.badge}`}
             >
               <Archive size={11} /> Arquivar
             </button>
             <button
               onClick={() => handleDelete(req)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--surface-dim)] text-[var(--ink-soft)] rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-red-100 hover:text-red-600 transition-all"
+              className={`flex items-center gap-1.5 px-3 py-1.5 bg-[var(--surface-dim)] text-[var(--ink-soft)] rounded-xl hover:bg-red-100 hover:text-red-600 transition-all ${SCALE.text.badge}`}
             >
               <Trash2 size={11} /> Apagar
             </button>
@@ -261,12 +262,12 @@ export default function AbsenceRequestsPanel({ requests, systemSettings, clients
               <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
                 <p className="text-xs font-black text-[var(--ink)]">{group.name}</p>
                 {pendingCount > 0 && (
-                  <span className="bg-orange-500 text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
+                  <span className={`bg-orange-500 text-white px-2 py-0.5 rounded-full ${SCALE.text.badge}`}>
                     {pendingCount} pendente{pendingCount > 1 ? 's' : ''}
                   </span>
                 )}
               </div>
-              <span className="text-[9px] font-bold text-[var(--slate-dim)]">{sortedReqs.length} aviso{sortedReqs.length !== 1 ? 's' : ''}</span>
+              <span className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>{sortedReqs.length} aviso{sortedReqs.length !== 1 ? 's' : ''}</span>
               {isOpen ? <ChevronUp size={14} className="text-[var(--slate)] shrink-0" /> : <ChevronDown size={14} className="text-[var(--slate)] shrink-0" />}
             </div>
             {isOpen && (() => {
@@ -285,7 +286,7 @@ export default function AbsenceRequestsPanel({ requests, systemSettings, clients
                     <>
                       <button
                         onClick={() => togglePendingGroup(group.id)}
-                        className="w-full px-4 py-2 flex items-center gap-2 text-[10px] font-black uppercase text-orange-400 bg-orange-50 rounded-xl hover:text-orange-600 hover:bg-orange-100 transition-all"
+                        className={`w-full px-4 py-2 flex items-center gap-2 text-orange-400 bg-orange-50 rounded-xl hover:text-orange-600 hover:bg-orange-100 transition-all ${SCALE.text.badge}`}
                       >
                         {pendingOpen ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
                         {pendingOpen ? 'Mostrar menos' : `Ver mais ${restPending.length} pendente${restPending.length !== 1 ? 's' : ''}`}
@@ -298,7 +299,7 @@ export default function AbsenceRequestsPanel({ requests, systemSettings, clients
                     <>
                       <button
                         onClick={() => toggleApprovedGroup(group.id)}
-                        className="w-full px-4 py-2 flex items-center gap-2 text-[10px] font-black uppercase text-[var(--ink-soft)] bg-[var(--surface)] rounded-xl hover:text-[var(--ink-soft)] hover:bg-[var(--surface-dim)] transition-all"
+                        className={`w-full px-4 py-2 flex items-center gap-2 text-[var(--ink-soft)] bg-[var(--surface)] rounded-xl hover:text-[var(--ink-soft)] hover:bg-[var(--surface-dim)] transition-all ${SCALE.text.badge}`}
                       >
                         {approvedOpen ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
                         {approvedOpen ? 'Mostrar menos' : `Ver mais ${restApproved.length} com OK dado`}

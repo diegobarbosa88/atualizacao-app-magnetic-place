@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useApp } from '../../../context/AppContext';
-import { FT } from '../../../styles/designTokens';
+import { FT, SCALE } from '../../../styles/designTokens';
 import { Users, Eye, CheckCircle, XCircle, Loader2, RefreshCw, Clock, AlertCircle, ShieldCheck } from 'lucide-react';
 import ModalShell from '../../../components/common/ModalShell';
 import SelectProfissaoEmpresa from '../../../components/SelectProfissaoEmpresa';
@@ -20,14 +20,14 @@ const ADMIN_FIELDS_VAZIO = {
   comunicar_ss: false, solicitar_seguro: false,
 };
 
-const labelCls = 'block text-[10px] font-bold uppercase tracking-wide text-[var(--slate-dim)] mb-1';
+const labelCls = `block ${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1`;
 const inputCls = 'w-full bg-white border border-[var(--border)] rounded-lg py-[3px] px-2.5 text-sm font-semibold text-[var(--ink)] outline-none focus:border-[var(--navy)] focus:ring-2 focus:ring-[#1B3A57]/10 transition-all';
 
 function Row({ label, value }) {
   if (!value) return null;
   return (
     <div className="flex gap-2 py-1.5 border-b border-[var(--border-soft)] last:border-0">
-      <span className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-wide w-28 shrink-0 pt-0.5">{label}</span>
+      <span className={`${SCALE.text.statLabel} text-[var(--slate-dim)] w-28 shrink-0 pt-0.5`}>{label}</span>
       <span className="text-sm font-semibold text-[var(--ink-mid)] break-all">{value}</span>
     </div>
   );
@@ -174,7 +174,7 @@ export default function OnboardingPendentes() {
           <div className="bg-amber-50 p-2 rounded-xl text-amber-600"><Clock size={18} /></div>
           <div>
             <h3 className="font-black text-base text-[var(--ink)] uppercase tracking-tight">Pedidos Pendentes</h3>
-            <p className="text-[10px] text-[var(--slate-dim)] font-bold">Formulários de onboarding aguardando aprovação</p>
+            <p className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>Formulários de onboarding aguardando aprovação</p>
           </div>
         </div>
         <button onClick={loadSubmissions} className="p-2 text-[var(--slate)] hover:text-[var(--ink-soft)] hover:bg-[var(--surface-dim)] rounded-xl transition-all" title="Atualizar">
@@ -193,10 +193,10 @@ export default function OnboardingPendentes() {
           <table className="min-w-full text-sm">
             <thead>
               <tr className="border-b border-[var(--border-soft)] bg-[var(--surface)]">
-                <th className="text-left px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Colaborador</th>
-                <th className="text-left px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest hidden sm:table-cell">Profissão</th>
-                <th className="text-left px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Submetido em</th>
-                <th className="text-right px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Ações</th>
+                <th className={`text-left px-4 py-3 ${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Colaborador</th>
+                <th className={`text-left px-4 py-3 ${SCALE.text.statLabel} text-[var(--slate-dim)] hidden sm:table-cell`}>Profissão</th>
+                <th className={`text-left px-4 py-3 ${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Submetido em</th>
+                <th className={`text-right px-4 py-3 ${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -213,14 +213,14 @@ export default function OnboardingPendentes() {
                     <p className="text-xs font-bold text-[var(--slate-dim)]">
                       {new Date(s.submitted_at).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                     </p>
-                    <p className="text-[10px] text-[var(--slate-dim)]">
+                    <p className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>
                       {new Date(s.submitted_at).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
                     </p>
                   </td>
                   <td className="px-4 py-3 text-right">
                     <button
                       onClick={() => openModal(s)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase text-white hover:opacity-90 transition-all ml-auto"
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white hover:opacity-90 transition-all ml-auto ${SCALE.text.badge}`}
                       style={{ backgroundColor: FT.navy }}
                     >
                       <Eye size={12} /> Rever
@@ -264,7 +264,7 @@ export default function OnboardingPendentes() {
                   <button
                     onClick={handleRejeitar}
                     disabled={saving}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase bg-rose-600 text-white hover:bg-rose-700 transition-all disabled:opacity-50"
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-600 text-white hover:bg-rose-700 transition-all disabled:opacity-50 ${SCALE.text.badge}`}
                   >
                     {saving ? <Loader2 size={12} className="animate-spin" /> : <XCircle size={12} />}
                     Confirmar
@@ -294,7 +294,7 @@ export default function OnboardingPendentes() {
                 <button
                   key={t}
                   onClick={() => setModalTab(t)}
-                  className={`px-4 py-2 -mb-px border-b-2 text-[11px] font-black uppercase tracking-wide transition-all
+                  className={`px-4 py-2 -mb-px border-b-2 ${SCALE.text.badge} transition-all
                     ${modalTab === t ? 'border-[var(--orange)] text-[var(--navy)]' : 'border-transparent text-[var(--slate-dim)] hover:text-[var(--navy)]'}`}
                 >
                   {t === 'dados' ? 'Dados submetidos' : 'Completar registo'}
@@ -323,7 +323,7 @@ export default function OnboardingPendentes() {
                 </Section>
 
                 <div className="pt-2">
-                  <p className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest mb-2">Editar campos se necessário</p>
+                  <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] mb-2`}>Editar campos se necessário</p>
                   <div className="grid grid-cols-2 gap-3">
                     {[
                       { key: 'nome', label: 'Nome' },
@@ -367,7 +367,7 @@ export default function OnboardingPendentes() {
               <div className="space-y-4">
                 <div className="bg-amber-50 rounded-xl p-4 flex gap-3">
                   <AlertCircle className="text-amber-500 shrink-0 mt-0.5" size={16} />
-                  <p className="text-[11px] text-amber-700 font-bold leading-relaxed">
+                  <p className={`${SCALE.text.body} text-amber-700 leading-relaxed`}>
                     Estes campos definem o contrato do colaborador. Data de início e vencimento base vêm pré-preenchidos do convite, quando definidos ao gerá-lo — reveja antes de aprovar.
                   </p>
                 </div>
@@ -409,7 +409,7 @@ export default function OnboardingPendentes() {
                 </div>
 
                 <div className="pt-1">
-                  <p className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest mb-2">Contrato e Segurança Social</p>
+                  <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] mb-2`}>Contrato e Segurança Social</p>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className={labelCls}>Tipo de Contrato</label>
@@ -480,7 +480,7 @@ export default function OnboardingPendentes() {
                 </div>
 
                 <div className="pt-1">
-                  <p className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest mb-2">Afetação</p>
+                  <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] mb-2`}>Afetação</p>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className={labelCls}>Cliente Padrão</label>
@@ -502,7 +502,7 @@ export default function OnboardingPendentes() {
                 </div>
 
                 <div className="pt-2 border-t border-[var(--border-soft)]">
-                  <p className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                  <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] mb-2 flex items-center gap-1.5`}>
                     <ShieldCheck size={11} /> Ao aprovar, agendar para o dia anterior ao início
                   </p>
                   <div className="bg-[var(--surface)] rounded-xl p-3 space-y-2">
@@ -518,7 +518,7 @@ export default function OnboardingPendentes() {
                         className="w-4 h-4 rounded border-[var(--border)]" />
                       <span className="text-xs font-semibold text-[var(--ink-soft)]">Solicitar inclusão no seguro de acidentes de trabalho</span>
                     </label>
-                    <p className="text-[10px] text-[var(--slate-dim)] leading-relaxed pt-1">
+                    <p className={`${SCALE.text.meta} text-[var(--slate-dim)] leading-relaxed pt-1`}>
                       Nada é comunicado agora. O Trabalhador Virtual pede-te autorização por WhatsApp no dia
                       anterior à data de início e só executa depois de confirmares — precisa de uma data de início preenchida acima.
                     </p>
@@ -536,7 +536,7 @@ export default function OnboardingPendentes() {
 function Section({ title, children }) {
   return (
     <div>
-      <p className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest mb-2">{title}</p>
+      <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] mb-2`}>{title}</p>
       <div className="bg-[var(--surface)] rounded-xl px-4 py-1">
         {children}
       </div>

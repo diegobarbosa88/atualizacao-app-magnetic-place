@@ -4,7 +4,7 @@ import {
   HelpCircle, Loader2, ArrowRight,
 } from 'lucide-react';
 import ModalShell from '../../../components/common/ModalShell';
-import { FT } from '../../../styles/designTokens';
+import { FT, SCALE } from '../../../styles/designTokens';
 import { PROFISSOES_EMPRESA, findProfissaoByCodigo } from '../../../data/profissoesEmpresa';
 import { CNP_PROFISSOES } from '../../../data/cnpProfissoes';
 
@@ -348,14 +348,14 @@ export default function ImportarContratosSSDModal({ workers, onClose, onImportad
   const AcaoBadge = ({ alt, workerId }) => {
     if (alt.acao === 'sem_mapeamento') {
       return (
-        <span className="flex items-center gap-1 text-amber-600 font-bold text-[10px]">
+        <span className={`flex items-center gap-1 text-amber-600 ${SCALE.text.meta}`}>
           <HelpCircle size={11} /> Sem mapeamento
         </span>
       );
     }
     if (alt.acao === 'atualizar') {
       return (
-        <span className="flex items-center gap-1 font-bold text-[10px]" style={{ color: 'var(--slate-dim)' }}>
+        <span className={`flex items-center gap-1 ${SCALE.text.meta}`} style={{ color: 'var(--slate-dim)' }}>
           <ArrowRight size={11} /> Atualizar
         </span>
       );
@@ -366,14 +366,14 @@ export default function ImportarContratosSSDModal({ workers, onClose, onImportad
       <div className="flex gap-1">
         <button
           onClick={() => setDecisao(workerId, alt.campo, 'aplicar')}
-          className={`px-2 py-0.5 rounded text-[10px] font-black transition-all ${decisao === 'aplicar' ? 'text-white' : 'bg-[var(--surface-dim)] text-[var(--ink-soft)] hover:bg-[var(--border)]'}`}
+          className={`px-2 py-0.5 rounded transition-all ${SCALE.text.meta} ${decisao === 'aplicar' ? 'text-white' : 'bg-[var(--surface-dim)] text-[var(--ink-soft)] hover:bg-[var(--border)]'}`}
           style={decisao === 'aplicar' ? { backgroundColor: FT.navy } : {}}
         >
           Usar CSV
         </button>
         <button
           onClick={() => setDecisao(workerId, alt.campo, 'ignorar')}
-          className={`px-2 py-0.5 rounded text-[10px] font-black transition-all ${decisao === 'ignorar' ? 'bg-[var(--navy-solid)] text-white' : 'bg-[var(--surface-dim)] text-[var(--ink-soft)] hover:bg-[var(--border)]'}`}
+          className={`px-2 py-0.5 rounded transition-all ${SCALE.text.meta} ${decisao === 'ignorar' ? 'bg-[var(--navy-solid)] text-white' : 'bg-[var(--surface-dim)] text-[var(--ink-soft)] hover:bg-[var(--border)]'}`}
         >
           Manter
         </button>
@@ -486,12 +486,12 @@ export default function ImportarContratosSSDModal({ workers, onClose, onImportad
                     {/* Nome / NISS */}
                     <div className="px-5 py-2 bg-[var(--surface)] flex items-center gap-2.5">
                       <div className="w-5 h-5 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: FT.navy }}>
-                        <span className="text-[8px] font-black uppercase" style={{ color: FT.orange }}>{worker.name.charAt(0)}</span>
+                        <span className={SCALE.text.statLabel} style={{ color: FT.orange }}>{worker.name.charAt(0)}</span>
                       </div>
                       <p className="text-xs font-black text-[var(--ink-mid)]">{worker.name}</p>
-                      <span className="text-[10px] text-[var(--slate-dim)] font-mono">· {worker.nis}</span>
+                      <span className={`${SCALE.text.meta} text-[var(--slate-dim)] font-mono`}>· {worker.nis}</span>
                       {semAlts && (
-                        <span className="ml-auto flex items-center gap-1 text-[10px] font-bold text-emerald-500">
+                        <span className={`ml-auto flex items-center gap-1 ${SCALE.text.meta} text-emerald-500`}>
                           <CheckCircle2 size={11} /> Já sincronizado
                         </span>
                       )}
@@ -503,10 +503,10 @@ export default function ImportarContratosSSDModal({ workers, onClose, onImportad
                         <table className="w-full text-xs">
                           <thead>
                             <tr className="border-b border-[var(--border-soft)]">
-                              <th className="text-left px-5 py-1.5 text-[10px] font-bold text-[var(--slate-dim)] uppercase tracking-wider" style={{width:'22%'}}>Campo</th>
-                              <th className="text-left px-3 py-1.5 text-[10px] font-bold text-[var(--slate-dim)] uppercase tracking-wider" style={{width:'28%'}}>Valor Atual (App)</th>
-                              <th className="text-left px-3 py-1.5 text-[10px] font-bold text-[var(--slate-dim)] uppercase tracking-wider" style={{width:'28%'}}>Valor SS Direta</th>
-                              <th className="text-left px-3 py-1.5 text-[10px] font-bold text-[var(--slate-dim)] uppercase tracking-wider">Ação</th>
+                              <th className={`text-left px-5 py-1.5 ${SCALE.text.statLabel} text-[var(--slate-dim)]`} style={{width:'22%'}}>Campo</th>
+                              <th className={`text-left px-3 py-1.5 ${SCALE.text.statLabel} text-[var(--slate-dim)]`} style={{width:'28%'}}>Valor Atual (App)</th>
+                              <th className={`text-left px-3 py-1.5 ${SCALE.text.statLabel} text-[var(--slate-dim)]`} style={{width:'28%'}}>Valor SS Direta</th>
+                              <th className={`text-left px-3 py-1.5 ${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Ação</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -516,8 +516,8 @@ export default function ImportarContratosSSDModal({ workers, onClose, onImportad
                                 className={`border-b border-[var(--border-soft)] last:border-0 ${alt.acao === 'sem_mapeamento' ? 'bg-amber-50/40' : alt.acao === 'conflito' ? 'bg-[var(--surface)]' : ''}`}
                               >
                                 <td className="px-5 py-2 font-semibold text-[var(--ink-mid)]">{alt.label}</td>
-                                <td className="px-3 py-2 text-[var(--slate-dim)] text-[11px]">{alt.valorAtual}</td>
-                                <td className="px-3 py-2 font-semibold text-[var(--ink)] text-[11px]">{alt.valorCSV}</td>
+                                <td className={`px-3 py-2 text-[var(--slate-dim)] ${SCALE.text.body}`}>{alt.valorAtual}</td>
+                                <td className={`px-3 py-2 text-[var(--ink)] ${SCALE.text.body}`}>{alt.valorCSV}</td>
                                 <td className="px-3 py-2">
                                   <AcaoBadge alt={alt} workerId={worker.id} />
                                 </td>
@@ -534,16 +534,16 @@ export default function ImportarContratosSSDModal({ workers, onClose, onImportad
               {/* Não encontrados */}
               {naoEncontr.length > 0 && (
                 <div className="px-5 py-4 border-t border-[var(--border-soft)] bg-rose-50/30">
-                  <p className="text-[10px] font-black uppercase tracking-wider text-rose-500 mb-2 flex items-center gap-1.5">
+                  <p className={`${SCALE.text.statLabel} text-rose-500 mb-2 flex items-center gap-1.5`}>
                     <AlertTriangle size={11} /> Não encontrados na app — {naoEncontr.length} linha{naoEncontr.length !== 1 ? 's' : ''}
                   </p>
-                  <p className="text-[10px] text-[var(--slate-dim)] mb-2">
+                  <p className={`${SCALE.text.meta} text-[var(--slate-dim)] mb-2`}>
                     NISS sem correspondência. Confirma que o campo NIS do trabalhador está preenchido corretamente.
                   </p>
                   <div className="space-y-1">
                     {naoEncontr.map(({ niss, nome }) => (
                       <div key={niss} className="flex items-center gap-3 text-xs text-[var(--slate-dim)]">
-                        <span className="font-mono text-[10px] text-[var(--slate-dim)] w-28 shrink-0">{niss}</span>
+                        <span className={`font-mono ${SCALE.text.meta} text-[var(--slate-dim)] w-28 shrink-0`}>{niss}</span>
                         <span>{nome}</span>
                       </div>
                     ))}

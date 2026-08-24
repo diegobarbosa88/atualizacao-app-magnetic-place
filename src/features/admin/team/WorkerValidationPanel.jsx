@@ -9,6 +9,7 @@ import { useApp } from '../../../context/AppContext';
 import { calculateDuration, formatHours } from '../../../utils/formatUtils';
 import { toISODateLocal } from '../../../utils/dateUtils';
 import { impersonarTrabalhador } from '../../../utils/impersonateWorker';
+import { SCALE } from '../../../styles/designTokens';
 
 const SOURCE_CFG = {
   gps_auto:     { label: 'GPS',        bg: 'bg-emerald-100', text: 'text-emerald-700' },
@@ -55,11 +56,11 @@ function WorkerLogsModal({ worker, logs, month, onClose }) {
         {/* Legend */}
         <div className="px-6 pt-4 flex flex-wrap gap-1.5">
           {Object.entries(SOURCE_CFG).map(([key, cfg]) => (
-            <span key={key} className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest ${cfg.bg} ${cfg.text}`}>
+            <span key={key} className={`inline-flex items-center px-2 py-0.5 rounded-lg ${SCALE.text.badge} ${cfg.bg} ${cfg.text}`}>
               {cfg.label}
             </span>
           ))}
-          <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest bg-[var(--surface-dim)] text-[var(--ink-soft)]">
+          <span className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-lg bg-[var(--surface-dim)] text-[var(--ink-soft)] ${SCALE.text.badge}`}>
             <Pencil size={8} /> Editado
           </span>
         </div>
@@ -73,7 +74,7 @@ function WorkerLogsModal({ worker, logs, month, onClose }) {
               const [y, m, d] = date.split('-');
               return (
                 <div key={date}>
-                  <p className="text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-1.5">
+                  <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1.5`}>
                     {d}/{m}/{y}
                   </p>
                   <div className="space-y-1.5">
@@ -85,7 +86,7 @@ function WorkerLogsModal({ worker, logs, month, onClose }) {
                         <div key={log.id} className="flex items-center justify-between bg-[var(--surface)] rounded-2xl px-4 py-3 gap-3">
                           <div className="flex items-center gap-2 flex-wrap min-w-0">
                             {client && (
-                              <span className="text-[9px] font-black bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-lg border border-indigo-100 uppercase shrink-0">
+                              <span className={`${SCALE.text.badge} bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-lg border border-indigo-100 shrink-0`}>
                                 {client.name}
                               </span>
                             )}
@@ -95,18 +96,18 @@ function WorkerLogsModal({ worker, logs, month, onClose }) {
                             </span>
                             {/* Source badge */}
                             {srcCfg && (
-                              <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest shrink-0 ${srcCfg.bg} ${srcCfg.text}`}>
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-lg shrink-0 ${SCALE.text.badge} ${srcCfg.bg} ${srcCfg.text}`}>
                                 {srcCfg.label}
                               </span>
                             )}
                             {!srcCfg && !log.source && (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest shrink-0 bg-[var(--surface-dim)] text-[var(--ink-soft)]">
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-lg shrink-0 bg-[var(--surface-dim)] text-[var(--ink-soft)] ${SCALE.text.badge}`}>
                                 Desconhecido
                               </span>
                             )}
                             {/* Edited badge */}
                             {log.edited_at && (
-                              <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest shrink-0 bg-[var(--surface-dim)] text-[var(--ink-soft)]">
+                              <span className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-lg shrink-0 bg-[var(--surface-dim)] text-[var(--ink-soft)] ${SCALE.text.badge}`}>
                                 <Pencil size={8} />
                                 Editado
                                 {SOURCE_CFG[log.edited_source] && (
@@ -118,7 +119,7 @@ function WorkerLogsModal({ worker, logs, month, onClose }) {
                             )}
                             {/* GPS verified indicator */}
                             {log.geo_verified && (
-                              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest shrink-0 bg-emerald-50 text-emerald-600">
+                              <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-lg shrink-0 bg-emerald-50 text-emerald-600 ${SCALE.text.badge}`}>
                                 <MapPin size={7} /> Verificado
                               </span>
                             )}
@@ -129,13 +130,13 @@ function WorkerLogsModal({ worker, logs, month, onClose }) {
                               <div className="flex items-center gap-1">
                                 <button
                                   onClick={async () => { await handleDelete('logs', log.id); setDeleting(null); }}
-                                  className="px-2 py-1 bg-rose-500 text-white text-[9px] font-black rounded-lg uppercase"
+                                  className={`px-2 py-1 bg-rose-500 text-white rounded-lg ${SCALE.text.badge}`}
                                 >
                                   Confirmar
                                 </button>
                                 <button
                                   onClick={() => setDeleting(null)}
-                                  className="px-2 py-1 bg-[var(--border)] text-[var(--ink-soft)] text-[9px] font-black rounded-lg uppercase"
+                                  className={`px-2 py-1 bg-[var(--border)] text-[var(--ink-soft)] rounded-lg ${SCALE.text.badge}`}
                                 >
                                   Cancelar
                                 </button>
@@ -220,10 +221,10 @@ export default function WorkerValidationPanel({ onLogin }) {
         <div className="bg-white rounded-2xl border border-[var(--border-soft)] shadow-sm overflow-x-auto animate-in fade-in slide-in-from-bottom-2 duration-300">
           <table className="w-full text-sm min-w-[400px]">
             <thead><tr className="border-b border-[var(--border-soft)] bg-[var(--surface)]">
-              <th className="text-left px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Colaborador</th>
-              <th className="text-right px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Horas</th>
-              <th className="text-center px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Estado</th>
-              <th className="text-right px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Ações</th>
+              <th className={`text-left px-4 py-3 ${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Colaborador</th>
+              <th className={`text-right px-4 py-3 ${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Horas</th>
+              <th className={`text-center px-4 py-3 ${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Estado</th>
+              <th className={`text-right px-4 py-3 ${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Ações</th>
             </tr></thead>
             <tbody>
               {sortedWorkers.map(w => (
@@ -256,7 +257,7 @@ export default function WorkerValidationPanel({ onLogin }) {
           {sortedWorkers.map(w => (
             <div key={w.id} className="bg-white p-5 rounded-2xl border border-[var(--border-soft)] shadow-sm hover:shadow-md hover:border-indigo-200 hover:-translate-y-0.5 transition-all duration-200">
               <div className="flex justify-between items-start mb-3">
-                <div className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase border flex items-center gap-1 ${w.isApproved ? 'text-emerald-600 border-emerald-200 bg-emerald-50' : 'text-amber-500 border-amber-200 bg-amber-50'}`}>
+                <div className={`px-2.5 py-1 rounded-full border flex items-center gap-1 ${SCALE.text.badge} ${w.isApproved ? 'text-emerald-600 border-emerald-200 bg-emerald-50' : 'text-amber-500 border-amber-200 bg-amber-50'}`}>
                   {w.isApproved && <CheckCircle size={10} />}
                   {w.isApproved ? 'Aprovado' : 'Pendente'}
                 </div>
@@ -264,18 +265,18 @@ export default function WorkerValidationPanel({ onLogin }) {
               </div>
               <h4 className="font-black text-[var(--ink)] text-sm uppercase truncate mb-4">{w.name}</h4>
               <div className="flex gap-2">
-                <button onClick={() => setLogsModalWorker(w)} className="flex-1 flex items-center justify-center gap-1.5 py-2 text-[var(--ink-soft)] hover:bg-[var(--surface-dim)] rounded-xl text-[10px] font-black uppercase transition-all border border-[var(--border)]" title="Ver Registos">
+                <button onClick={() => setLogsModalWorker(w)} className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-[var(--ink-soft)] hover:bg-[var(--surface-dim)] rounded-xl transition-all border border-[var(--border)] ${SCALE.text.badge}`} title="Ver Registos">
                   <ClipboardList size={12} /> Registos
                 </button>
-                <button onClick={() => verPortal(w)} className="flex-1 flex items-center justify-center gap-1.5 py-2 text-indigo-600 hover:bg-indigo-50 rounded-xl text-[10px] font-black uppercase transition-all border border-indigo-100" title="Ver Portal">
+                <button onClick={() => verPortal(w)} className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all border border-indigo-100 ${SCALE.text.badge}`} title="Ver Portal">
                   <Search size={12} /> Portal
                 </button>
                 {!w.isApproved ? (
-                  <button onClick={async () => { const id = "appr_" + w.id + "_" + monthStr; try { await saveToDb('approvals', id, { id, workerId: w.id, month: monthStr, timestamp: new Date().toISOString() }); } catch (err) { alert('Erro ao aprovar: ' + (err?.message || err)); } }} className="flex-1 flex items-center justify-center gap-1.5 py-2 text-emerald-600 hover:bg-emerald-50 rounded-xl text-[10px] font-black uppercase transition-all border border-emerald-100">
+                  <button onClick={async () => { const id = "appr_" + w.id + "_" + monthStr; try { await saveToDb('approvals', id, { id, workerId: w.id, month: monthStr, timestamp: new Date().toISOString() }); } catch (err) { alert('Erro ao aprovar: ' + (err?.message || err)); } }} className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all border border-emerald-100 ${SCALE.text.badge}`}>
                     <UserCheck size={12} /> Aprovar
                   </button>
                 ) : (
-                  <button onClick={async () => { try { await handleDelete('approvals', w.approval.id); } catch (err) { alert('Erro ao anular: ' + (err?.message || err)); } }} className="flex-1 flex items-center justify-center gap-1.5 py-2 text-rose-500 hover:bg-rose-50 rounded-xl text-[10px] font-black uppercase transition-all border border-rose-100">
+                  <button onClick={async () => { try { await handleDelete('approvals', w.approval.id); } catch (err) { alert('Erro ao anular: ' + (err?.message || err)); } }} className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-all border border-rose-100 ${SCALE.text.badge}`}>
                     <RotateCcw size={12} /> Anular
                   </button>
                 )}

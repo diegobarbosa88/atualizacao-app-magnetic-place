@@ -12,7 +12,7 @@ import { findProfissaoByCodigo } from '../../../data/profissoesEmpresa';
 import { authFetch } from '../../../utils/authFetch';
 import { consultarComunicacoesPendentes, invalidarComunicacoesPendentes } from './ssComunicacoesPendentes';
 import SSComunicacaoModal from './SSComunicacaoModal';
-import { FT } from '../../../styles/designTokens';
+import { FT, SCALE } from '../../../styles/designTokens';
 
 const fmtTs = iso => {
   if (!iso) return null;
@@ -22,7 +22,7 @@ const fmtTs = iso => {
 
 const inp = 'w-full bg-white border border-[var(--border)] rounded-lg py-[3px] px-2.5 text-sm font-semibold outline-none focus:border-[var(--navy)] focus:ring-2 focus:ring-[#1B3A57]/10 transition-all';
 const fmtDate = iso => { if (!iso) return 'atual'; const p = iso.split('T')[0].split('-'); return `${p[2]}/${p[1]}/${p[0].slice(2)}`; };
-const lbl = 'block text-[10px] font-bold uppercase tracking-wide text-[var(--slate-dim)] mb-1';
+const lbl = `block ${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1`;
 
 const TABS = [
   { key: 'pessoal',   label: 'Pessoal',        Icon: User },
@@ -52,7 +52,7 @@ function VinculoTimeline({ workerForm, apoliceSeguro, onAbrirSS, ssFlag }) {
 
   return (
     <div className="border-t border-b border-[var(--border-soft)] -mx-4 sm:-mx-5 px-4 sm:px-5 py-4 bg-[var(--surface)]">
-      <p className="text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-3">Ciclo de Vida do Vínculo</p>
+      <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] mb-3`}>Ciclo de Vida do Vínculo</p>
       <div className="flex items-start">
 
         {/* Admissão */}
@@ -69,35 +69,35 @@ function VinculoTimeline({ workerForm, apoliceSeguro, onAbrirSS, ssFlag }) {
             <div className="h-[2.5px] flex-1" style={{ background: temInicio ? '#10b981' : undefined, backgroundImage: !temInicio ? 'repeating-linear-gradient(90deg, #e2e8f0 0 6px, transparent 6px 11px)' : undefined }} />
           </div>
           <div className="mt-2">
-            <p className="text-[9px] font-black uppercase tracking-wide text-[var(--slate-dim)]">Admissão</p>
+            <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Admissão</p>
             <p className="text-xs font-black text-[var(--ink-mid)] my-0.5">{temInicio ? fmtDate(workerForm.dataInicio) : '— sem data'}</p>
             {temInicio ? (
               ssFlag?.prioridade === 'rejeitada' ? (
                 <button
                   type="button"
                   onClick={() => onAbrirSS('admissao')}
-                  className="inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded-full bg-rose-50 border border-rose-200 text-rose-700 hover:bg-rose-100 transition-colors cursor-pointer"
+                  className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-rose-50 border border-rose-200 text-rose-700 hover:bg-rose-100 transition-colors cursor-pointer ${SCALE.text.meta}`}
                   title={ssFlag.motivo || 'Rejeitada pela SS'}
                 >
                   <AlertTriangle size={9} /> SS rejeitou — reenviar
                 </button>
               ) : ssFlag?.prioridade === 'presa' ? (
-                <span className="inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded-full bg-orange-50 border border-orange-200 text-orange-700" title="A processar há vários dias — confirmar no portal da SS Direta">
+                <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-orange-50 border border-orange-200 text-orange-700 ${SCALE.text.meta}`} title="A processar há vários dias — confirmar no portal da SS Direta">
                   <AlertTriangle size={9} /> SS presa a processar
                 </span>
               ) : admissaoFeita ? (
-                <span className="inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700">✓ SS comunicada</span>
+                <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 ${SCALE.text.meta}`}>✓ SS comunicada</span>
               ) : (
                 <button
                   type="button"
                   onClick={() => onAbrirSS('admissao')}
-                  className="inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100 transition-colors cursor-pointer"
+                  className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100 transition-colors cursor-pointer ${SCALE.text.meta}`}
                 >
                   <SendHorizonal size={9} /> SS por comunicar
                 </button>
               )
             ) : (
-              <span className="inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded-full bg-[var(--surface-dim)] border border-[var(--border)] text-[var(--ink-soft)]">sem data</span>
+              <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[var(--surface-dim)] border border-[var(--border)] text-[var(--ink-soft)] ${SCALE.text.meta}`}>sem data</span>
             )}
           </div>
         </div>
@@ -111,11 +111,11 @@ function VinculoTimeline({ workerForm, apoliceSeguro, onAbrirSS, ssFlag }) {
             <div className="h-[2.5px] flex-1" style={{ backgroundImage: 'repeating-linear-gradient(90deg, #e2e8f0 0 6px, transparent 6px 11px)' }} />
           </div>
           <div className="mt-2">
-            <p className="text-[9px] font-black uppercase tracking-wide text-[var(--slate-dim)]">Hoje</p>
+            <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Hoje</p>
             <p className="text-xs font-black text-[var(--ink-mid)] my-0.5">
               {temFim ? 'Período fechado' : diasAtivo !== null ? `Ativo — ${diasAtivo}d` : 'Sem período aberto'}
             </p>
-            <span className="inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded-full bg-[var(--surface-dim)] border border-[var(--border)] text-[var(--ink-soft)]">
+            <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[var(--surface-dim)] border border-[var(--border)] text-[var(--ink-soft)] ${SCALE.text.meta}`}>
               {temFim ? 'encerrado' : temInicio ? 'em curso' : 'n/a'}
             </span>
           </div>
@@ -131,22 +131,22 @@ function VinculoTimeline({ workerForm, apoliceSeguro, onAbrirSS, ssFlag }) {
             {cessacaoFeita ? <Check size={13} /> : <Circle size={11} fill="currentColor" />}
           </div>
           <div className="mt-2">
-            <p className="text-[9px] font-black uppercase tracking-wide text-[var(--slate-dim)]">Cessação</p>
+            <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Cessação</p>
             <p className="text-xs font-black text-[var(--ink-mid)] my-0.5">{temFim ? fmtDate(workerForm.dataFim) : 'sem data'}</p>
             {temFim ? (
               cessacaoFeita ? (
-                <span className="inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700">✓ SS comunicada</span>
+                <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 ${SCALE.text.meta}`}>✓ SS comunicada</span>
               ) : (
                 <button
                   type="button"
                   onClick={() => onAbrirSS('cessacao')}
-                  className="inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100 transition-colors cursor-pointer"
+                  className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100 transition-colors cursor-pointer ${SCALE.text.meta}`}
                 >
                   <SendHorizonal size={9} /> SS por comunicar
                 </button>
               )
             ) : (
-              <span className="inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded-full bg-[var(--surface-dim)] border border-[var(--border)] text-[var(--ink-soft)]">n/a</span>
+              <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[var(--surface-dim)] border border-[var(--border)] text-[var(--ink-soft)] ${SCALE.text.meta}`}>n/a</span>
             )}
           </div>
         </div>
@@ -157,7 +157,7 @@ function VinculoTimeline({ workerForm, apoliceSeguro, onAbrirSS, ssFlag }) {
           {apoliceSeguro.status === 'ativo'
             ? <ShieldCheck size={11} className="text-emerald-600 shrink-0" />
             : <AlertTriangle size={11} className="text-amber-500 shrink-0" />}
-          <span className="text-[10px] font-bold text-[var(--slate-dim)]">
+          <span className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>
             Apólice de Seguro: <span className={apoliceSeguro.status === 'ativo' ? 'text-emerald-600' : 'text-amber-600'}>{apoliceSeguro.status[0].toUpperCase()}{apoliceSeguro.status.slice(1)}</span>
           </span>
         </div>
@@ -284,7 +284,7 @@ const WorkerForm = () => {
           {/* Pessoal */}
           {activeTab === 'pessoal' && (
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] flex items-center gap-1.5 mb-3">
+              <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] flex items-center gap-1.5 mb-3`}>
                 <User size={10} /> Dados do Colaborador
               </p>
               <div className="grid grid-cols-2 gap-3">
@@ -341,7 +341,7 @@ const WorkerForm = () => {
                   </button>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wide text-amber-500 mb-1">Modo Limitado</label>
+                  <label className={`block ${SCALE.text.statLabel} text-amber-500 mb-1`}>Modo Limitado</label>
                   <button type="button" onClick={tog('limited_entry_mode')} className={`w-full flex items-center justify-between p-2.5 rounded-lg border text-xs font-semibold transition-all ${workerForm.limited_entry_mode ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-white border-[var(--border)] text-[var(--slate-dim)]'}`}>
                     <span className="flex items-center gap-1.5"><ShieldOff size={11} /> Pedido de Registo</span>
                     <div className={`w-8 h-4 rounded-full relative transition-all ${workerForm.limited_entry_mode ? 'bg-amber-400' : 'bg-[var(--border)]'}`}>
@@ -357,7 +357,7 @@ const WorkerForm = () => {
           {activeTab === 'contrato' && (
             <div className="space-y-5">
               <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] flex items-center gap-1.5 mb-3">
+                <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] flex items-center gap-1.5 mb-3`}>
                   <CalendarRange size={10} /> Vínculo
                 </p>
                 <div className="grid grid-cols-2 gap-3">
@@ -386,7 +386,7 @@ const WorkerForm = () => {
                             ss_cessacao_num_registo: null,
                           }));
                         }}
-                        className="w-full text-[10px] font-bold uppercase tracking-wide px-2.5 py-2 rounded-lg border border-dashed transition-all hover:bg-[var(--surface)]"
+                        className={`w-full ${SCALE.text.badge} px-2.5 py-2 rounded-lg border border-dashed transition-all hover:bg-[var(--surface)]`}
                         style={{ color: 'var(--navy)', borderColor: FT.navy }}
                         title="Fecha o período atual (guarda no histórico ao gravar) e prepara um novo período em aberto — limpa também as comunicações de admissão/cessação à SS para poderes comunicar de novo."
                       >
@@ -397,13 +397,13 @@ const WorkerForm = () => {
                   {!workerForm.dataFim && !!workerForm.dataInicio && (
                     <div className="col-span-2 flex items-start gap-2 bg-amber-50 border border-amber-100 rounded-lg px-2.5 py-2">
                       <AlertTriangle size={11} className="text-amber-500 shrink-0 mt-0.5" />
-                      <p className="text-[10px] text-amber-700 font-semibold leading-relaxed">Cessação por preparar — sem data de fim, não é possível comunicar a cessação à SS.</p>
+                      <p className={`text-amber-700 leading-relaxed ${SCALE.text.body}`}>Cessação por preparar — sem data de fim, não é possível comunicar a cessação à SS.</p>
                     </div>
                   )}
                   {employmentHistory.length > 0 && (
                     <div className="col-span-2 border-l-2 border-[var(--border-soft)] pl-2 space-y-0.5">
                       {employmentHistory.map(p => (
-                        <p key={p.id} className="text-[9px] text-[var(--slate-dim)] font-mono leading-tight">
+                        <p key={p.id} className={`${SCALE.text.meta} text-[var(--slate-dim)] font-mono leading-tight`}>
                           {fmtDate(p.data_inicio)} → {p.data_fim ? fmtDate(p.data_fim) : <span className="font-bold" style={{ color: 'var(--navy)' }}>atual</span>}
                         </p>
                       ))}
@@ -413,7 +413,7 @@ const WorkerForm = () => {
               </div>
 
               <div className="border-t border-[var(--border-soft)] pt-4">
-                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] flex items-center gap-1.5 mb-3">
+                <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] flex items-center gap-1.5 mb-3`}>
                   <ShieldCheck size={10} /> Enquadramento PSI
                 </p>
                 <div className="grid grid-cols-2 gap-3">
@@ -494,7 +494,7 @@ const WorkerForm = () => {
           {activeTab === 'financeiro' && (
             <div className="space-y-5">
               <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500 flex items-center gap-1.5 mb-3">
+                <p className={`${SCALE.text.statLabel} text-emerald-500 flex items-center gap-1.5 mb-3`}>
                   <Wallet size={10} /> Financeiro
                 </p>
                 <div className="grid grid-cols-2 gap-3">
@@ -516,7 +516,7 @@ const WorkerForm = () => {
                     {valorHoraHistory.length > 0 && (
                       <div className="mt-1 border-l-2 border-emerald-100 pl-2 space-y-0.5">
                         {valorHoraHistory.map(h => (
-                          <p key={h.id} className="text-[9px] text-[var(--slate-dim)] font-mono leading-tight">
+                          <p key={h.id} className={`${SCALE.text.meta} text-[var(--slate-dim)] font-mono leading-tight`}>
                             {h.valor_anterior ?? '—'} → <span className="text-emerald-600">{h.valor_novo}€</span> · {fmtDate(h.data_alteracao)}
                           </p>
                         ))}
@@ -539,7 +539,7 @@ const WorkerForm = () => {
               </div>
 
               <div className="border-t border-[var(--border-soft)] pt-4">
-                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] flex items-center gap-1.5 mb-3">
+                <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] flex items-center gap-1.5 mb-3`}>
                   <Receipt size={10} /> IRS — Situação Fiscal
                 </p>
                 <div className="grid grid-cols-2 gap-3">
@@ -563,7 +563,7 @@ const WorkerForm = () => {
           {/* Afetação — aba própria, mesmo nível das outras três (Clientes + Horários lado a lado) */}
           {activeTab === 'afetacao' && (
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] flex items-center gap-1.5 mb-3">
+              <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] flex items-center gap-1.5 mb-3`}>
                 <Building2 size={10} /> Afetação — Clientes &amp; Horários
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -609,7 +609,7 @@ function AfetacaoCards({
       <div className="rounded-xl border border-[var(--border)] overflow-hidden">
         <div className="flex items-center gap-2 px-3 py-2 bg-[var(--surface)] border-b border-[var(--border-soft)]">
           <Building2 size={12} className="text-[var(--slate)]" />
-          <span className="text-[10px] font-black uppercase tracking-widest text-[var(--ink-soft)]">Clientes</span>
+          <span className={`${SCALE.text.statLabel} text-[var(--ink-soft)]`}>Clientes</span>
         </div>
         <div className="max-h-[150px] overflow-y-auto p-2 space-y-0.5 bg-white">
           {clients.map(c => {
@@ -623,13 +623,13 @@ function AfetacaoCards({
                   const current = workerForm.assignedClients || [];
                   setWorkerForm(prev => ({ ...prev, assignedClients: current.includes(c.id) ? current.filter(id => id !== c.id) : [...current, c.id] }));
                 }} />
-                <span className="text-[10px] font-bold truncate" style={{ color: isAssigned ? FT.navy : '#475569' }}>{c.name}</span>
+                <span className={`${SCALE.text.meta} truncate`} style={{ color: isAssigned ? FT.navy : '#475569' }}>{c.name}</span>
               </label>
             );
           })}
         </div>
         <div className="px-2 py-2 border-t border-[var(--border-soft)] bg-[var(--surface)]">
-          <label className="text-[9px] font-bold uppercase text-[var(--slate-dim)] block mb-1">Padrão</label>
+          <label className={`${SCALE.text.badge} text-[var(--slate-dim)] block mb-1`}>Padrão</label>
           <select value={workerForm.defaultClientId || ''} onChange={e => setWorkerForm(prev => ({ ...prev, defaultClientId: e.target.value }))} className="w-full bg-white border border-[var(--border)] rounded-lg p-2 text-xs font-semibold outline-none focus:border-[var(--navy)] transition-all">
             <option value="">Selecionar</option>
             {clients.filter(c => workerForm.assignedClients?.includes(c.id)).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -638,8 +638,8 @@ function AfetacaoCards({
         {(workerForm.assignedClients?.length > 0) && <>
           <div className="flex items-center gap-1.5 px-3 py-1.5 border-t border-[var(--border-soft)] bg-[var(--surface)]">
             <CalendarRange size={9} className="text-[var(--slate)]" />
-            <span className="text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Períodos</span>
-            {!workerForm.id && <span className="ml-auto text-[9px] text-amber-500 font-bold">Guarde primeiro</span>}
+            <span className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Períodos</span>
+            {!workerForm.id && <span className={`ml-auto text-amber-500 ${SCALE.text.meta}`}>Guarde primeiro</span>}
           </div>
           <div className="p-2 space-y-1 bg-white">
             {clients.filter(c => workerForm.assignedClients?.includes(c.id)).map(c => {
@@ -648,23 +648,23 @@ function AfetacaoCards({
               return (
                 <div key={c.id} className="border border-[var(--border-soft)] rounded-lg overflow-hidden">
                   <button type="button" onClick={() => setExpandedClientPeriods(prev => ({ ...prev, [c.id]: !prev[c.id] }))} className="w-full flex items-center justify-between px-2.5 py-1.5 hover:bg-[var(--surface)] transition-colors">
-                    <span className="text-[9px] font-black uppercase truncate" style={{ color: 'var(--navy)' }}>{c.name}</span>
+                    <span className={`${SCALE.text.badge} truncate`} style={{ color: 'var(--navy)' }}>{c.name}</span>
                     <ChevronDown size={11} className={`text-[var(--slate)] shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
                   </button>
                   {isOpen && (
                     <div className="px-2 pb-2 pt-1.5 space-y-1.5 border-t border-[var(--border-soft)] bg-[var(--surface)]">
                       <div className="grid grid-cols-2 gap-1.5">
                         <div>
-                          <label className="text-[8px] font-bold uppercase text-[var(--slate-dim)] block mb-0.5">Início</label>
-                          <input type="date" value={dates.dataInicio || ''} onChange={e => setWorkerForm(prev => ({ ...prev, assignedClientDates: { ...(prev.assignedClientDates || {}), [c.id]: { ...dates, dataInicio: e.target.value } } }))} className="w-full bg-white border border-[var(--border)] rounded p-1.5 text-[10px] font-bold outline-none focus:border-[var(--navy)] transition-all" />
+                          <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)] block mb-0.5`}>Início</label>
+                          <input type="date" value={dates.dataInicio || ''} onChange={e => setWorkerForm(prev => ({ ...prev, assignedClientDates: { ...(prev.assignedClientDates || {}), [c.id]: { ...dates, dataInicio: e.target.value } } }))} className={`w-full bg-white border border-[var(--border)] rounded p-1.5 outline-none focus:border-[var(--navy)] transition-all ${SCALE.text.meta}`} />
                         </div>
                         <div>
-                          <label className="text-[8px] font-bold uppercase text-[var(--slate-dim)] block mb-0.5">Fim</label>
-                          <input type="date" value={dates.dataFim || ''} onChange={e => setWorkerForm(prev => ({ ...prev, assignedClientDates: { ...(prev.assignedClientDates || {}), [c.id]: { ...dates, dataFim: e.target.value } } }))} className="w-full bg-white border border-[var(--border)] rounded p-1.5 text-[10px] font-bold outline-none focus:border-[var(--navy)] transition-all" />
+                          <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)] block mb-0.5`}>Fim</label>
+                          <input type="date" value={dates.dataFim || ''} onChange={e => setWorkerForm(prev => ({ ...prev, assignedClientDates: { ...(prev.assignedClientDates || {}), [c.id]: { ...dates, dataFim: e.target.value } } }))} className={`w-full bg-white border border-[var(--border)] rounded p-1.5 outline-none focus:border-[var(--navy)] transition-all ${SCALE.text.meta}`} />
                         </div>
                       </div>
                       {workerForm.id && (
-                        <button onClick={() => handleSaveClientDates(c.id, dates.dataInicio || new Date().toISOString().split('T')[0], dates.dataFim || '')} className={`w-full flex items-center justify-center gap-1 py-1 rounded text-[9px] font-black uppercase transition-all text-white ${saveSuccessClientId === c.id ? 'bg-emerald-500' : ''}`} style={saveSuccessClientId === c.id ? {} : { backgroundColor: FT.navy }}>
+                        <button onClick={() => handleSaveClientDates(c.id, dates.dataInicio || new Date().toISOString().split('T')[0], dates.dataFim || '')} className={`w-full flex items-center justify-center gap-1 py-1 rounded transition-all text-white ${SCALE.text.badge} ${saveSuccessClientId === c.id ? 'bg-emerald-500' : ''}`} style={saveSuccessClientId === c.id ? {} : { backgroundColor: FT.navy }}>
                           {saveSuccessClientId === c.id ? <><CheckCircle2 size={9} /> Gravado</> : <><Save size={9} /> Gravar</>}
                         </button>
                       )}
@@ -681,7 +681,7 @@ function AfetacaoCards({
       <div className="rounded-xl border border-[var(--border)] overflow-hidden">
         <div className="flex items-center gap-2 px-3 py-2 bg-[var(--surface)] border-b border-[var(--border-soft)]">
           <Timer size={12} className="text-[var(--slate)]" />
-          <span className="text-[10px] font-black uppercase tracking-widest text-[var(--ink-soft)]">Horários</span>
+          <span className={`${SCALE.text.statLabel} text-[var(--ink-soft)]`}>Horários</span>
         </div>
         <div className="max-h-[150px] overflow-y-auto p-2 space-y-0.5 bg-white">
           {schedules.map(s => {
@@ -695,13 +695,13 @@ function AfetacaoCards({
                   const current = workerForm.assignedSchedules || [];
                   setWorkerForm(prev => ({ ...prev, assignedSchedules: current.includes(s.id) ? current.filter(id => id !== s.id) : [...current, s.id] }));
                 }} />
-                <span className="text-[10px] font-bold truncate" style={{ color: isAssigned ? FT.navy : '#475569' }}>{s.name}</span>
+                <span className={`${SCALE.text.meta} truncate`} style={{ color: isAssigned ? FT.navy : '#475569' }}>{s.name}</span>
               </label>
             );
           })}
         </div>
         <div className="px-2 py-2 border-t border-[var(--border-soft)] bg-[var(--surface)]">
-          <label className="text-[9px] font-bold uppercase text-[var(--slate-dim)] block mb-1">Padrão</label>
+          <label className={`${SCALE.text.badge} text-[var(--slate-dim)] block mb-1`}>Padrão</label>
           <select value={workerForm.defaultScheduleId || ''} onChange={e => setWorkerForm(prev => ({ ...prev, defaultScheduleId: e.target.value }))} className="w-full bg-white border border-[var(--border)] rounded-lg p-2 text-xs font-semibold outline-none focus:border-[var(--navy)] transition-all">
             <option value="">Selecionar</option>
             {schedules.filter(s => workerForm.assignedSchedules?.includes(s.id)).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -710,8 +710,8 @@ function AfetacaoCards({
         {(workerForm.assignedSchedules?.length > 0) && <>
           <div className="flex items-center gap-1.5 px-3 py-1.5 border-t border-[var(--border-soft)] bg-[var(--surface)]">
             <CalendarRange size={9} className="text-[var(--slate)]" />
-            <span className="text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Períodos</span>
-            {!workerForm.id && <span className="ml-auto text-[9px] text-amber-500 font-bold">Guarde primeiro</span>}
+            <span className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Períodos</span>
+            {!workerForm.id && <span className={`ml-auto text-amber-500 ${SCALE.text.meta}`}>Guarde primeiro</span>}
           </div>
           <div className="p-2 space-y-1 bg-white">
             {schedules.filter(s => workerForm.assignedSchedules?.includes(s.id)).map(s => {
@@ -720,23 +720,23 @@ function AfetacaoCards({
               return (
                 <div key={s.id} className="border border-[var(--border-soft)] rounded-lg overflow-hidden">
                   <button type="button" onClick={() => setExpandedSchedulePeriods(prev => ({ ...prev, [s.id]: !prev[s.id] }))} className="w-full flex items-center justify-between px-2.5 py-1.5 hover:bg-[var(--surface)] transition-colors">
-                    <span className="text-[9px] font-black uppercase truncate" style={{ color: 'var(--navy)' }}>{s.name}</span>
+                    <span className={`${SCALE.text.badge} truncate`} style={{ color: 'var(--navy)' }}>{s.name}</span>
                     <ChevronDown size={11} className={`text-[var(--slate)] shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
                   </button>
                   {isOpen && (
                     <div className="px-2 pb-2 pt-1.5 space-y-1.5 border-t border-[var(--border-soft)] bg-[var(--surface)]">
                       <div className="grid grid-cols-2 gap-1.5">
                         <div>
-                          <label className="text-[8px] font-bold uppercase text-[var(--slate-dim)] block mb-0.5">Início</label>
-                          <input type="date" value={dates.dataInicio || ''} onChange={e => setWorkerForm(prev => ({ ...prev, assignedScheduleDates: { ...(prev.assignedScheduleDates || {}), [s.id]: { ...dates, dataInicio: e.target.value } } }))} className="w-full bg-white border border-[var(--border)] rounded p-1.5 text-[10px] font-bold outline-none focus:border-[var(--navy)] transition-all" />
+                          <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)] block mb-0.5`}>Início</label>
+                          <input type="date" value={dates.dataInicio || ''} onChange={e => setWorkerForm(prev => ({ ...prev, assignedScheduleDates: { ...(prev.assignedScheduleDates || {}), [s.id]: { ...dates, dataInicio: e.target.value } } }))} className={`w-full bg-white border border-[var(--border)] rounded p-1.5 outline-none focus:border-[var(--navy)] transition-all ${SCALE.text.meta}`} />
                         </div>
                         <div>
-                          <label className="text-[8px] font-bold uppercase text-[var(--slate-dim)] block mb-0.5">Fim</label>
-                          <input type="date" value={dates.dataFim || ''} onChange={e => setWorkerForm(prev => ({ ...prev, assignedScheduleDates: { ...(prev.assignedScheduleDates || {}), [s.id]: { ...dates, dataFim: e.target.value } } }))} className="w-full bg-white border border-[var(--border)] rounded p-1.5 text-[10px] font-bold outline-none focus:border-[var(--navy)] transition-all" />
+                          <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)] block mb-0.5`}>Fim</label>
+                          <input type="date" value={dates.dataFim || ''} onChange={e => setWorkerForm(prev => ({ ...prev, assignedScheduleDates: { ...(prev.assignedScheduleDates || {}), [s.id]: { ...dates, dataFim: e.target.value } } }))} className={`w-full bg-white border border-[var(--border)] rounded p-1.5 outline-none focus:border-[var(--navy)] transition-all ${SCALE.text.meta}`} />
                         </div>
                       </div>
                       {workerForm.id && (
-                        <button onClick={() => handleSaveScheduleDates(s.id, dates.dataInicio || new Date().toISOString().split('T')[0], dates.dataFim || '')} className={`w-full flex items-center justify-center gap-1 py-1 rounded text-[9px] font-black uppercase transition-all text-white ${saveSuccessScheduleId === s.id ? 'bg-emerald-500' : ''}`} style={saveSuccessScheduleId === s.id ? {} : { backgroundColor: FT.navy }}>
+                        <button onClick={() => handleSaveScheduleDates(s.id, dates.dataInicio || new Date().toISOString().split('T')[0], dates.dataFim || '')} className={`w-full flex items-center justify-center gap-1 py-1 rounded transition-all text-white ${SCALE.text.badge} ${saveSuccessScheduleId === s.id ? 'bg-emerald-500' : ''}`} style={saveSuccessScheduleId === s.id ? {} : { backgroundColor: FT.navy }}>
                           {saveSuccessScheduleId === s.id ? <><CheckCircle2 size={9} /> Gravado</> : <><Save size={9} /> Gravar</>}
                         </button>
                       )}
