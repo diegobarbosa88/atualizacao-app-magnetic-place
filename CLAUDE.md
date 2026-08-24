@@ -47,8 +47,41 @@ precisa de `vercel deploy --prod` manual (deploy separado, não automático).
 
 ## Armadilhas conhecidas
 
-- `src/AppLayout.jsx` e `src/features/admin/AdminTopbar.jsx` são código morto; nada os importa.
-  O `main.jsx` monta o `src/app.jsx`.
+- **A investigar formalmente — `403 Sem permissão para executar esta ação` apareceu três vezes na
+  mesma sessão admin, em três features sem relação entre si.** Ordem de aparição: impersonação de
+  trabalhador ("Ver Portal" em `/admin/team`, sem sequer chegar a mostrar o erro à 4ª tentativa —
+  simplesmente não teve efeito visível), importação Gmail (`GmailConfigPanel.jsx`, durante o lote de
+  design `faturas`), e TOConline (botão "Carregar" na aba "Documentos", durante o lote `toconline`,
+  mesmo com `ligado: true` confirmado). Três domínios funcionais distintos, três endpoints/fluxos
+  diferentes, mesma mensagem, mesma conta admin. Deixou de poder ser tratado como "limitação pontual
+  desta sessão" — o padrão sugere ou uma regra de permissão da conta mal configurada, ou algo
+  estrutural em como esta sessão de admin foi criada/autenticada. Junta-se à prioridade de
+  segurança/permissões já identificada como maior, a retomar — não é um bloqueio de lote de design,
+  é um item de segurança/permissões a investigar por si. Nenhuma investigação de causa raiz foi feita
+  ainda (estava fora de âmbito de todos os lotes onde apareceu); confirmar primeiro se é reprodutível
+  fora do contexto dos lotes de design antes de assumir qualquer hipótese sobre a causa.
+- `src/AppLayout.jsx` é código morto; nada o importa. O `main.jsx` monta o `src/app.jsx`.
+  (`AdminTopbar.jsx`, que também era código morto, foi apagado no commit `1a25004` — já não existe.)
+- Há dois ficheiros diferentes chamados `FaturasTab.jsx` — `src/features/admin/FaturasTab.jsx`
+  (usado por `FaturacaoAdmin.jsx`, gera PDF) e `src/features/admin/cost-reports/FaturasTab.jsx`
+  (usado por `CostReports.jsx`, tem `.recon-scope`). Confirmar sempre o caminho completo antes de
+  mexer num dos dois — e **sempre citar o caminho completo em qualquer comunicação sobre um lote que
+  toque um dos dois**, nunca só o nome do ficheiro, para nunca ficar ambíguo qual está em causa.
+- Mesma armadilha com `LoginView.jsx` — `src/features/auth/LoginView.jsx` (login do admin/
+  trabalhador, usado por `app.jsx`) e `src/client-portal/LoginView.jsx` (login do portal do
+  cliente, usado por `ClientPortal.jsx`). Consumidores disjuntos, sem risco real de import cruzado,
+  mas mesma regra: **sempre citar o caminho completo** em qualquer comunicação sobre um lote que
+  toque um dos dois. Achado da auditoria de bloqueadores (`AUDITORIA-BLOQUEADORES.md`, E.1).
+- **Um ficheiro sem `.recon-scope`/marcador sensível escrito nele pode herdar o contexto na mesma,
+  por ser renderizado como filho dentro de outro ficheiro que o tem.** Um grep direto ao ficheiro
+  diz "limpo" e engana — só aparece ao seguir a árvore de renderização (imports + onde o componente
+  é montado). Já aconteceu duas vezes: `salarios/AssocTransacaoModal.jsx`, `SalarioEmployeeCard.jsx`,
+  `JustificarModal.jsx` (nenhum tem `.recon-scope` próprio, mas são filhos de `SalariosTab.jsx`, que
+  tem); e `reconciliacao/ResultadosTabs.jsx`, `OrfaoBancoModal.jsx`, `HistoricoSection.jsx`,
+  `AssocClienteModal.jsx`, `AssociacaoManualModal.jsx` (filhos de `ReconciliacaoAdmin.jsx`). Antes de
+  classificar um ficheiro como "fora de qualquer zona sensível", confirmar quem o importa e onde é
+  montado, não só o que o próprio ficheiro contém — vale para `.recon-scope`, para ficheiros de
+  dinheiro, e para qualquer outra zona sensível que apareça no futuro, não só para este lote.
 - Breakpoints Tailwind (`lg:`, `md:`) medem a viewport, não o contentor — partem layouts dentro de
   modais de largura fixa. Usar container queries (`@container` no pai + `@md:` no filho).
 - Ficheiros com terminações de linha mistas (LF/CRLF); substituições por script falham
@@ -81,6 +114,22 @@ usam dividem-se em dois grupos:
 - `src/components/common/AdminSignDrawModal.jsx` e `src/components/worker/SignDrawModal.jsx` — pads
   de assinatura; o `<canvas>` é dimensionado a partir de `parent.clientWidth/clientHeight` num
   container flex que o shell não fornece — a área de desenho colapsaria para ~200px em mobile.
+  **Terceiro caso do mesmo padrão, encontrado em 2026-08-24 durante o lote `SCALE.text` de
+  `features/public`:** `src/features/public/OnboardingCommitmentStep.jsx:182`
+  (`const cssW = parent.clientWidth;`) — pad de assinatura do fluxo de onboarding público (rota
+  `?view=onboarding&token=...`, fora do `AppProvider`), não é modal e nunca tinha sido mapeado nesta
+  lista. O contentor do canvas tem `style={{ height: 180 }}` fixo (não medido a partir do conteúdo),
+  por isso a conversão de rótulos de texto vizinhos para `SCALE.text` não deveria afetar a largura/
+  altura do canvas — mas ficou deliberadamente fora do lote por decisão do Diego, sem checkpoint ao
+  vivo possível (precisa de token de convite válido). Antes de mexer neste ficheiro no futuro,
+  confirmar ao vivo com um token real, não só por leitura de código.
+  **Quarto caso, encontrado em 2026-08-24 durante o lote `SCALE.text` de `client-portal`:**
+  `src/client-portal/useSignatureCanvas.js:22` (`canvas.width = parent.clientWidth;`), consumido por
+  `src/client-portal/ValidarView.jsx:154` — pad de assinatura da aprovação mensal de horas pelo
+  cliente. O `parent.clientWidth` mede o `<div id="signature-canvas-area">` (linha 153), que não tem
+  nenhum `text-[Npx]` a converter — os dois rótulos de texto do lote (linhas 150 e 159) estão fora
+  desse contentor, por isso a conversão não lhe deveria tocar, mas confirmar ao vivo antes de dar como
+  seguro.
 - `src/components/common/WorkerDocuments.jsx` (visualizador acroform, linha ~475) — não é um modal,
   é um wrapper à volta do `DocumentViewer` com painel/header/footer próprios e um
   `applyFitToWidth`/`ResizeObserver` que calcula escala a partir da largura do contentor; dentro do
@@ -408,6 +457,97 @@ perguntar. E usar sempre a mesma métrica: o script conta **ocorrências**, não
   `worker-dashboard/WorkerScheduleTab.jsx`. Ficaram de fora do lote do `--orange-hover` de propósito:
   têm o defeito ao contrário — com texto branco, escurecer é que ajuda, e clarear o hover pioraria.
   Tratar quando a migração chegar ao dashboard do trabalhador.
+- **A lista de "6 ficheiros de `components/common` fora do alcance" estava incompleta — havia um
+  sétimo.** `CompanySignatureSettings.jsx` (aba "Geral" de Configurações, primeiro ecrã que abre)
+  tinha 19 ocorrências de indigo/azul cru, zero tokens, zero import de `designTokens` — nunca tinha
+  sido tocado, `git log` confirma a última alteração em 2026-06-03/04, **antes** do commit que
+  introduziu a identidade navy/laranja (`6e7d42f`, 2026-08-09). Corrigido em 2026-08-24: botão
+  "Guardar" e os 4 cartões de estilo de carimbo (antes indigo/azul sem diferença semântica entre
+  si — convergidos para o mesmo acento laranja, é seleção única, não estado) para tokens; caixas de
+  erro/sucesso para `--tone-rose`/`--tone-emerald` (os tokens da ponte de cor de estado, secção
+  acima). **Fica como aviso: se `git log -- <ficheiro>` mostrar a última alteração antes de
+  2026-08-09, é candidato a ter o mesmo problema, independentemente de já ter aparecido nalgum
+  levantamento anterior** — a varredura por `grep` de `features/admin`+`components/admin` nunca
+  cobriu `components/common` de forma sistemática, só os casos já denunciados por queixa directa.
+- **Varredura sistemática do sinal "`git log` &lt; 2026-08-09" em `components/common`/`components/worker`
+  — decisão fechada por grupo, 2026-08-24.** Depois do `CompanySignatureSettings.jsx`, correu-se o
+  mesmo sinal a todos os ficheiros dessas duas pastas, não só aos já denunciados. 18 candidatos,
+  divididos em três grupos:
+  - **Portal do cliente converge para navy/laranja** — decisão: não é caso de identidade própria
+    como o `.recon-scope`, é resíduo por nunca ter sido tocado. Corrigidos: `DocumentViewer.jsx`
+    (viewer de assinatura do trabalhador — atenção, este usa a convenção `components/worker`,
+    laranja+texto **branco**+escurece no hover, não a do admin), `DateMultiPicker.jsx` (widget
+    genérico, usado em `AdminReports.jsx`). `ClientTimesheetReport.jsx` só a barra de ferramentas
+    (zona `no-print`) — o corpo do relatório A4 fica intocado de propósito, é gerado por
+    `html2canvas-pro` a partir do DOM real e tem CSS próprio (`ClientTimesheetReport.css`) já a
+    fixar as mesmas cores com `!important` para impressão; convergir o corpo faria o PDF variar
+    com o tema do utilizador, que é o problema errado a resolver. `ClientPortalNavbar.jsx` **não
+    era candidato — era código morto**, confirmado por sonda única + controlo positivo: substituído
+    por `ClientPortalHeader.jsx` (import real em `ClientPortal.jsx:405`) sem nunca ter sido apagado;
+    apagado nesta sessão.
+  - **`VerificationPortal.jsx` mantém identidade própria (`blue-*`/`gray-*`), não converge.**
+    Página pública standalone (`app.jsx:444`, condicional a `?view=verify&id=`), lida só via QR
+    code gerado em `useSignatureStamp.jsx:12-18` — nunca navegada dentro da app, cria o próprio
+    cliente Supabase em vez de usar o contexto partilhado. Parado desde a criação (`67ea50b`,
+    2026-05-11); o único commit posterior foi só de segurança, confirmado que não toca
+    `className`/`style`. Diferença chave do portal do cliente: aquele é navegação normal dentro da
+    experiência da app, isto é um certificado autónomo lido por alguém que nunca viu o resto da
+    Magnetic Place — faz sentido a identidade neutra separada da marca comercial. Corrigidas só as
+    inconsistências **dentro da própria identidade**, não convergência para os tokens da app: o
+    `DetailRow` (linha ~58-65) usava `slate-*`/`indigo-600` enquanto o resto do ficheiro usa
+    `gray-*`/`blue-600`; e mais 5 casos de `bg-slate-50`/`text-slate-500`/`text-slate-400` nos três
+    estados do ecrã raiz (loading/erro/sucesso) e no cartão de erro, trocados para o `gray-*`
+    equivalente pela mesma razão — alinhamento do ficheiro consigo mesmo, não com o resto da app.
+  - **6 componentes de carimbo/certificado — não mexer, identidade intencional documentada.**
+    `CompanyClassicStamp.jsx`, `CompanyCorporateStamp.jsx`, `CompanyValidationStamp.jsx`,
+    `ValidationStampAdmin.jsx` são as 4 pré-visualizações ao vivo dentro de
+    `CompanySignatureSettings.jsx` — mas **o PDF real não reutiliza este código**: é gerado à parte
+    em `src/utils/pdf/pdfSigningAdminStamp.js`/`pdfSigningAdminVariants.js` (`pdf-lib`). Ou seja,
+    estes 4 são JSX normal renderizado ao vivo no browser, **não protegidos por iframe/canvas** — a
+    razão para não mexer é só de design (`CompanyCorporateStamp.jsx:7-14` nomeia `NAVY`/`GOLD`/
+    `PAPER` com comentário a descrever o efeito pretendido), não imunidade técnica. Se algum dia
+    isto mudar, precisa de decisão de design, não é operação livre de risco só por "está protegido".
+    `ValidationStamp.jsx`/`ValidationStampWithQR.jsx` são diferentes: alimentam o carimbo com QR do
+    Fluxo 2 (`useSignatureStamp.jsx` → `useSignDocument.js`, o iframe isolado + `html2pdf` já
+    documentado acima) — aqui sim, duplamente protegidos: intenção **e** imunes a CSS.
+    `CompanyLogo.jsx`/`TimeTextInput.jsx`/`workerDocuments/useDocumentPreview.js` ficaram de fora
+    da categoria "identidade própria" — são utilitários sem opinião de cor (o `4f46e5` residual no
+    `CompanyLogo.jsx:8` está enterrado num parâmetro de URL de avatar de fallback, impacto
+    desprezível, não vale tratar).
+- **Um sintoma de "código antigo no telemóvel" nem sempre é ficheiro por corrigir — verificar
+  primeiro se é cache do PWA antes de caçar no código.** O `ScheduleForm.jsx` foi apontado como
+  desatualizado num telemóvel, mas o código já estava migrado (confirmado por `git diff
+  origin/master` vazio) e o próprio servidor local, verificado ao vivo no browser, servia a versão
+  correcta. O `sw.js` já usa `self.skipWaiting()` + `clients.claim()` (`src/sw.js:13,39-41`), a
+  configuração mais agressiva de atualização possível — mas isso só troca o service worker em
+  segundo plano; uma aba/instalação do PWA que ficou aberta desde antes do deploy continua a correr
+  o bundle antigo já carregado em memória até ser **fechada por completo e reaberta** (um simples
+  refresh de navegação pode não bastar num PWA instalado). Antes de investigar código a partir de
+  uma queixa "isto está desatualizado no telemóvel", confirmar: (1) `git diff origin/master` no
+  ficheiro suspeito — vazio significa que o código já está certo; (2) abrir o mesmo URL no browser
+  da máquina de desenvolvimento para confirmar o que o servidor está mesmo a servir agora.
+  **Bloqueado, não esquecido:** falta o Diego confirmar no telemóvel real se fechar o PWA por
+  completo (não só refresh) resolve o sintoma original do `ScheduleForm.jsx`. Não assumir resolvido
+  nem avançar mais nada que dependa dessa resposta até ela chegar.
+- **`getComputedStyle().borderWidth` a mostrar um valor diferente do declarado não é sempre bug —
+  em ecrã de 1x DPI, larguras de borda fracionárias (`1.5px`) arredondam para o pixel físico mais
+  próximo no valor "usado" que o browser devolve.** Confirmado ao criar `SCALE.border.control`
+  (2026-08-25): `border-[1.5px]` aplicado a um elemento real mostrava `1px` computado — pareceu bug
+  do token, mas `border-2` (2px, inteiro) no mesmo teste dava exatamente `2px`, e o `border-style`/
+  `border-color` da mesma classe aplicavam-se corretamente, só a largura sub-pixel arredondava. É o
+  mesmo comportamento que o código já tinha *antes* da conversão para token — sem regressão nenhuma,
+  só pareceu uma quando comparado a olho. **Reiniciei o servidor `vite dev` a meio desta investigação
+  sem necessidade** (pensei que fosse cache do JIT do Tailwind, mesma família do problema do
+  `ScheduleForm` acima, mas era outra coisa) — sem dano, mas ficasse registado: antes de reiniciar
+  processos a resolver um "computed style errado", testar primeiro com um valor de controlo inteiro
+  (`border-2`) para distinguir arredondamento de sub-pixel de classe realmente não aplicada.
+  **Armadilha de metodologia à parte:** testar classes Tailwind criando elementos via
+  `document.createElement` + `className` no browser só funciona para classes que já existem em
+  código-fonte real e scaneado — o JIT do Tailwind não gera CSS para uma string inventada só porque
+  apareceu no DOM em runtime. Um teste com uma classe nunca escrita em ficheiro nenhum dá sempre
+  "0px"/sem efeito, **por não ter sido gerada**, não porque a sintaxe esteja errada — quase levou a
+  concluir (erradamente) que a sintaxe `border-[Npx]` estava globalmente partida nesta versão do
+  Tailwind.
 - **Navegar por URL, não por cliques.** O admin usa react-router e `setActiveTab` é literalmente
   `navigate('/admin/' + tab)`, por isso `http://localhost:4179/admin/<seccao>` abre qualquer ecrã
   directamente. Clicar na barra lateral com refs do browser é frágil: os refs desalinham quando os
@@ -524,12 +664,35 @@ para quem um dia a tomar não ter de as redescobrir:
   Medido antes e depois: o rótulo "RECONCILIADOS" subiu de 2,54:1 para 6,48:1; o botão TOConline
   activo mantém-se em 11,74:1 (branco sobre `--navy-solid`, que não muda). Verificado nos três
   consumidores (`ReconciliacaoAdmin`, `CostReports`, `SalariosTab`).
+  **A verificação em `SalariosTab.jsx` cobriu só o `.recon-stat`, não a extensão real do
+  acoplamento — achado 2026-08-25.** `SalariosTab.jsx:696-719` tem um bloco `.recon-scope` inteiro
+  à volta de um cartão de "Lote SEPA" (transações bancárias não emparelhadas): `recon-group-card`,
+  `recon-group-header`, `recon-group-title`, `recon-group-total`, `recon-group-body`,
+  `recon-mini-row`, mais `var(--recon-mono)`/`var(--text-faint)` em `style` inline — substancialmente
+  mais do que a faixa de estatísticas já medida. Mesma decisão de fundo (identidade intencional,
+  não converge sem decisão explícita), só a extensão real não estava documentada até agora.
   **Descoberta ao verificar: os 2,54:1 já existiam no modo CLARO, sem ligação ao dark.** `--text-faint`
   (#9CA3AF) sobre `--card` (#FFFFFF) falha AA nos dois modos porque nenhum dos dois muda com o tema —
   não foi o meu lote nem o modo escuro que partiu isto, nasceu assim, portado literalmente do mockup
   aprovado. É o único dos seis tokens de texto do mockup que falha (os outros cinco passam, entre
   4,33:1 e 14,68:1) — usado em 7 sítios. **Fica por decidir**: mudar `--text-faint` muda o mockup
   aprovado mesmo em modo claro, não é conversão de tema.
+- **A mesma identidade própria também cobre tipografia, não só cor — achado 2026-08-25 durante o
+  levantamento do lote `SCALE.text` de `reconciliacao`.** `reconciliacao-mockup.css` define a sua
+  própria escala de tamanho por classe (`.recon-stat-value` 20px, `.recon-group-title` 13.5px,
+  `.recon-group-subtitle` 11.5px, `.recon-mini-status`/`.recon-status-pill` 10.5px, `.recon-desc`
+  11.5px, etc. — passos de meio pixel, mesma assinatura de "intenção" já vista no
+  `FormacaoElearningFlow.jsx`). Levantamento confirmado por árvore de render, não por grep de
+  ficheiro: `ReconciliacaoAdmin.jsx` abre `.recon-scope` na linha 343 e só fecha na 771 (de 773
+  linhas totais) — envolve praticamente o render inteiro — e os 5 ficheiros de
+  `features/admin/reconciliacao/` (`AssocClienteModal.jsx`, `AssociacaoManualModal.jsx`,
+  `HistoricoSection.jsx`, `OrfaoBancoModal.jsx`, `ResultadosTabs.jsx`) **não são importados por
+  nenhum outro ficheiro do `src/`** — confirmado por grep — logo 100% do que renderizam está dentro
+  do `.recon-scope`. Nenhum dos dois usa portal (`createPortal`), por isso não há via de escape da
+  cascata. Total: **68 ocorrências de `text-[Npx]`** nestes 6 ficheiros — nenhuma convertida, mesma
+  decisão de fundo já tomada para a cor: identidade intencional do mockup aprovado, não converge sem
+  decisão explícita do Diego. Módulo `reconciliacao` da fila `SCALE.text` fica assim **resolvido por
+  exclusão total**, não "por fazer" — a investigação está completa, a decisão é não mexer.
 - **Os 13 `color: 'var(--navy)'` que ficavam presos ao valor local ficaram resolvidos como efeito
   colateral do bloco `.dark .recon-scope` acima — não foram tocados directamente.** Vivem em
   `.recon-stat-value`, cujo fundo é `.recon-stat { background: var(--card) }` — a mesma variável que
@@ -606,27 +769,606 @@ círculos a 50% definidos em CSS (logótipo, botões redondos, pontos), nenhum d
 0 usos, e o `card` (`rounded-[1.2rem]`) só passou a ter 2 por receber normalizações. Ou se mantêm
 por virem a ser adoptados, ou saem da escala por não descreverem nada real — mas isso decide-se à
 parte, não no meio de uma conversão.
+**Confirmação, não achado novo (2026-08-25):** o "0 usos" do `tab` já era um artefacto de âmbito,
+não um facto sobre a app — `src/components/common/SectionHeaderShell.jsx:68` usa `rounded-[7px]`
+exactamente, coincidindo com o degrau `tab`, mas vive fora de `features/admin`+`components/admin`,
+o âmbito que a Fase 2 mediu. Mesma armadilha que os três ficheiros de `components/common` que
+escaparam à migração de cor antes de serem descobertos — reforça que qualquer contagem "X usos"
+feita só nesses dois diretórios precisa de nota explícita de âmbito, não é a app inteira.
 
-**Ponte de cor de estado — projecto próprio, ainda não iniciado.** Categoria à parte: não é
-migração de neutros nem cor de marca, é o modo escuro das cores de estado, e é o maior bloco que
-resta.
+**Ponte de cor de estado — iniciada em 2026-08-23/24.** Categoria à parte: não é migração de
+neutros nem cor de marca, é o modo escuro das cores de estado. Domínios de correções e faturação
+fechados; CorrectionsInbox/ItemRow, validade de documento e alertas ficam por fazer.
 
-- **O quê:** o bloco-ponte do `App.css` cobre três fundos de estado (`.dark .bg-emerald-50`,
-  `.bg-rose-50`, `.bg-amber-50`) e **nenhum texto de estado**. Ficam de fora 24 fundos com
-  modificador de opacidade (`bg-amber-50/50` compila para outra classe, que o selector por classe
-  exacta não apanha) e **1.025 ocorrências** de
-  `text-{amber,emerald,rose,red,indigo,violet,orange,…}-{600,700,800}`.
-- **Porque não se corrige metade:** a regra actual não muda só o fundo, muda também o `color` do
-  elemento, e os filhos herdam-no — mas um `text-amber-700` tem cor própria e não herda. Medido:
-  hoje esse texto fica escuro sobre creme claro (4,93:1, passa); alargando só os fundos fica escuro
-  sobre escuro (3,03:1, falha); com fundo *e* texto invertidos dá 9,11:1. **Fundo e texto de estado
-  são um par: mexer num sem o outro é regressão.** Foi tentado e revertido.
-- **O que é preciso antes de começar:** medir onde é que esses 1.025 textos assentam em fundos que
-  **não** invertem — clareá-los todos resolveria a maioria e partiria esses. O
-  `scripts/fundo-do-ancestral.pl` serve para triar; a medição no browser decide.
-- **Tamanho e tratamento:** 1.025 ocorrências é um projecto novo, não a continuação de um lote —
-  merece levantamento próprio, ordem decidida e sub-lotes com checkpoint, como qualquer módulo
-  grande desta migração.
+**Porque não se corrige metade (a razão de sempre ter sido um projecto à parte):** a regra-ponte do
+`App.css` (`.dark .bg-emerald-50` etc.) não muda só o fundo, muda também o `color` do elemento, e os
+filhos herdam-no — mas um `text-amber-700` com cor própria não herda. Medido: hoje esse texto fica
+escuro sobre creme claro (4,93:1, passa); alargando só os fundos fica escuro sobre escuro (3,03:1,
+falha); com fundo *e* texto invertidos dá 9,11:1. **Fundo e texto de estado são um par: mexer num
+sem o outro é regressão.** Foi tentado e revertido antes de se decidir tratar isto como projecto
+próprio.
+
+**Levantamento confirmado por censo completo (não amostra), corrido com script, não estimado:**
+`text-{16 famílias realmente em uso}-{peso}` soma **1.512** ocorrências em 149 ficheiros — a
+estimativa antiga de "~1.025" só cobria 7 famílias × pesos 600/700/800; dentro desse recorte exacto
+dava 982, próximo. Descontando zonas já excluídas por decisão (`.recon-scope` 69 — confirmados
+linha a linha, não por presença do import, que tinha dado 127 por engano numa primeira passagem —,
+`SSComunicacaoModal` 30, `AppLayout.jsx` morto 17, e mapas de cor-à-escolha novos não registados
+antes: `RecibosCalculadora.jsx:3669-3671`, `OnboardingForm.jsx:723-727`), ficam **1.377 candidatas
+reais**. Censo completo classificou-as todas: **775 já sobre fundo que hoje inverte** (`bg-white`,
+`bg-slate-50/100`, ou um dos 3 fundos de estado já cobertos pela ponte), **459 sobre fundo que não
+inverte**, **143 não determináveis por indentação** — dessas, rastreio ficheiro-a-ficheiro (incluindo
+entre ficheiros, via `<Card>`/`ModalShell`) resolveu 141: 117 caem em "já inverte", **21 estão fora
+de âmbito por impossibilidade estrutural** (`LoginView.jsx`, `OnboardingForm.jsx`,
+`WorkerHeroStats.jsx` — as rotas `/onboarding/:token` e `/partilha/resumo` nunca montam o
+`AppProvider`, `main.jsx:6-33`, por isso a classe `.dark` nunca chega a existir nessa árvore React),
+3 são condicionais (`CelEditTd.jsx`), e **2 ficam genuinamente por resolver**
+(`ValidacaoUI.jsx:10` `DivergenciaBadge`, reutilizado em 3 ficheiros; ponto de montagem de
+`SessaoRow.jsx` não encontrado). Confirmados também **24 fundos com modificador de opacidade**
+(`bg-amber-50/50`), como a estimativa antiga já dizia.
+
+**Decisão fechada: não convergir para `TONES`/`--ok`/`--warn`/`--bad`.** Comparação OKLCH→sRGB (com
+a fórmula validada contra vermelho/verde/azul puro antes de confiar nela) mostrou que `--bad`
+(vermelho-tijolo, matiz 9°) e o `rose` do Tailwind (vermelho-magenta, matiz 344°) são famílias de
+cor visivelmente diferentes, não tons mais claros/escuros da mesma — convergir mudaria o aspecto
+sem ganho de design. Cada domínio ganha tokens de estado próprios, derivados das cores Tailwind já
+em uso consistente em cada um, não dos 3 tokens que já existiam.
+
+**Tokens partilhados definidos em `index.css` (ao lado de `--ok/--warn/--bad`), com contraste
+calculado, não estimado:**
+
+| Tom | Claro (texto / bg) | Contraste claro | Escuro (degrau Tailwind) | vs. `--surface` | vs. véu |
+|---|---|--:|---|--:|--:|
+| `--tone-amber` | `#bb4d00` / `#fef3c6` | 4,52:1 | `#fe9a00` (amber-500) | 7,70:1 | 6,41:1 |
+| `--tone-emerald` | `#007a55` / `#d0fae5` | 4,72:1 | `#00bc7d` (emerald-500) | 6,65:1 | 5,42:1 |
+| `--tone-rose` | `#c70036` / `#ffe4e6` | 5,02:1 | `#ff637e` (rose-400) | 5,75:1 | 5,33:1 |
+| `--tone-indigo` | `#432dd7` / `#e0e7ff` | 6,57:1 | `#7c86ff` (indigo-400) | 5,25:1 | 4,71:1 |
+
+Calculado com script Node (matriz OKLCH→sRGB, mesma validação) a partir do `tailwindcss/colors` real
+do projeto, calibrado contra o que os pares já aprovados atingem (`--ok/--warn/--bad`: 6,2–8,0:1
+contra `--surface`, 5,1–5,8:1 contra o próprio véu). **Dois valores que tinha escrito de cabeça numa
+primeira passagem (`--tone-amber`, `--tone-rose`) estavam errados** — só apanhados ao calcular em
+vez de estimar, mesma lição de sempre desta migração. O `--tone-indigo` escuro é o mais apertado dos
+quatro (4,71:1, mal passa AA) — o degrau seguinte mais claro (`indigo-300`) sairia da gama de
+calibração, visivelmente mais lavado que os outros três lado a lado; aceite pela consistência visual
+entre os 4 tons.
+
+**Domínios fechados (2026-08-24):**
+- **Correções** — os 4 mapas exportados de `correctionsUtils.js` (`STATUS_LABEL`, `ITEM_STATUS`,
+  `KIND_LABEL`, `deltaClass`) convertidos para os tokens partilhados. `TYPE_LABEL` (rápido/precisão/
+  criação) fica intocado — é eixo de tipo, não de estado, fora do âmbito desta ponte.
+- **Faturação/pagamento** — novo `cost-reports/pagamentoStatusUtils.js` (`PAYMENT_STATUS`),
+  consumido por `ClientesTab.jsx`, `cost-reports/FaturasTab.jsx`, `SalariosTab.jsx` (cartões "Match
+  Exato"/"Pendentes") e `salarios/SalarioEmployeeCard.jsx`. `ClientesTab.jsx` convergiu de rose para
+  âmbar em "pendente" — era a exceção, os outros três já usavam âmbar. O `SalarioEmployeeCard.jsx`
+  só apareceu ao verificar ao vivo no browser (é a fonte real do badge "X pendente(s)" por linha em
+  Reconciliação → Salários); não estava na lista original de 3 ficheiros. Confirmado nos dois modos
+  com cor computada no browser, não só por leitura de código.
+
+**`CorrectionsInbox.jsx` — resolvido em 2026-08-25.** O padrão `corrIsPending`/`corrIsApplied` →
+amber/emerald/rose não era um badge isolado — é o esquema de cor de ~25 sítios no ficheiro (fundo
+de cartão, borda, cabeçalho, nome do trabalhador, data, badges, texto de pausa), em dois painéis
+(`ClientCorrectionsPanel`, `WorkerCorrectionsPanel`) escritos independentemente. Confirmado ao vivo,
+nos dois painéis: a hierarquia de peso Tailwind (label < meta < value < identity) repete-se
+**identicamente** nas três cores, prova de intenção real, não ruído — decisão: **4 variantes de
+papel por tom, nomeadas pela função** (`--tone-{amber,emerald,rose}-label/-meta/-value/-identity`,
+claro+escuro, em `index.css`). Um suposto 5º peso (`amber-500`, notas de pausa) só apareceu por a
+amostra inicial não ter um item com pausa — decisão: funde com `-label`, não abre categoria própria.
+Duas divergências acidentais entre os dois painéis, corrigidas na mesma passagem (mesma lógica do
+badge "Novo" em rose já corrigido antes): `ClientCorrectionsPanel` usava a família `orange`
+(Tailwind), não `amber`, para o mesmo estado "pendente" — convergido; e a data do item usava o peso
+`value`(800) em `ClientCorrectionsPanel` contra `meta`(700) em `WorkerCorrectionsPanel` para o mesmo
+dado — convergido para `meta`. Verificado nos dois modos, nos dois painéis, ao vivo.
+**Achado à parte, não corrigido — as linhas `bg-white/70` dos itens dentro do cartão** (mesmo
+ficheiro, ambos os painéis) não invertem no modo escuro, ficam como uma faixa clara dentro do
+cartão âmbar/emerald/rose escuro. Não fazia parte do pedido desta passagem, fica por resolver.
+
+**`ItemRow.jsx` — pendência separada, padrão diferente, não convertido.** Ao contrário do
+`CorrectionsInbox.jsx`, aqui a cor não segue o estado da correção — é uma cor-chave **fixa por
+coluna** da grelha de 3 colunas (Atual/Pedido/Final): "Pedido" é sempre `text-amber-600`, "Final" é
+sempre `text-emerald-500`, independentemente de o item estar pendente, aceite ou rejeitado. Aplicar
+os tokens de papel (`-label`/`-meta`/`-value`/`-identity`) aqui seria forçar uma solução desenhada
+para hierarquia-por-estado a um problema de identidade-por-coluna — não encaixa. Fica por decidir
+como tratar (provavelmente tokens novos, papel "coluna", não "estado"), sem pressa.
+
+**Ainda não iniciados:**
+- **Validade de documento** — `DocumentScannerModal.jsx` e `WorkerDocsFolderView.jsx` confirmados
+  ao vivo (`bg-amber-50`/`bg-emerald-50` no pai com `text-amber-600/800` nos filhos — mesmo
+  mecanismo de regressão do parágrafo acima, já presente hoje sem eu ter tocado em nada; e
+  `bg-red-100 text-red-700` para "a expirar"). Há pelo menos mais 3 ficheiros com mapas
+  `VALIDADE_CLS`/`ESTADO_CFG` duplicados e não centralizados (`CertificacoesValidadeTab.jsx`,
+  `ListaAcoesTab.jsx`, `ElearningAcoesTab.jsx`) — não comparados lado a lado por falta de dados de
+  teste no ambiente de dev.
+- **Alertas** (`AlertasAdmin.jsx`) — decisão explícita de **não** forçar convergência de peso: o
+  ficheiro usa `-50/600` (mais claro que o `-100/700` de correções/faturação) e fica com classes
+  Tailwind literais, sem tokens, sem `.dark`. Revisitar só se isso incomodar visualmente.
+
+### Fase 3 — tamanho de texto (`SCALE.text`) e largura de contorno (`SCALE.border`)
+
+**Três bugs de método descobertos e corrigidos repetidamente ao longo de toda a Fase 3 — consolidados
+aqui para a próxima sessão começar já com os greps certos, em vez de repetir a descoberta módulo a
+módulo.** Apareceram em `ModoDocumentos.jsx`, `EquipaTab.jsx`, `CsvMappingCard.jsx` e
+`AdminReports.jsx`, entre outros — nenhum destes ficheiros tinha nada em especial, o padrão é
+genuinamente recorrente sempre que se converte `text-[Npx]` → `SCALE.text.X` em massa.
+
+1. **`replace_all` numa substring nua (não o atributo inteiro) deixa `${SCALE.text.X}` preso dentro
+   de uma string plana.** Quando o alvo do `old_string`/`new_string` é só o miolo das classes
+   (`text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]`) em vez do atributo
+   `className="..."` completo, o resultado fica `className="${SCALE.text.statLabel} ..."` — uma
+   string JSX plana com um template literal por dentro, que nunca interpola e renderiza a expressão
+   como texto literal. **Regra sem excepção: o `old_string`/`new_string` tem de incluir sempre
+   `className="` no início e a aspa de fecho no fim, convertendo para `` className={`...`} `` no
+   mesmo passo — nunca só o conteúdo entre aspas —, mesmo quando parece seguro por o alvo ser um
+   `replace_all` de várias ocorrências idênticas.**
+2. **O grep de verificação tem de ser `className="[^"]*\${`, nunca `className="\${`.** A versão
+   estreita só apanha o bug quando `${` aparece imediatamente a seguir à aspa de abertura; a
+   maioria dos casos reais tem outras classes antes (`className="block text-amber-500 ${...}"`), que
+   o padrão estreito não vê. Correr o grep alargado **depois de cada lote de edições, não só no
+   fim do ficheiro** — é barato e apanha o erro antes de se acumular.
+3. **Contar ocorrências com `grep -o '...' | wc -l`, nunca `grep -c`.** `grep -c` conta linhas com
+   pelo menos um acerto, não ocorrências — uma linha com duas classes `text-[Npx]` (par responsivo
+   `text-[10px] sm:text-[13px]`, ou vários `<code className="text-[10px]">` na mesma linha em
+   `AdminSettings.jsx:412`) conta como 1, não 2, e o total fica silenciosamente por baixo. Foi assim
+   que `ValidationPortal.jsx` (24 ocorrências reais) escapou ao primeiro varrimento da raiz de
+   `features/admin` — a contagem inicial por ficheiro não o listava por estar a subcontar outro
+   ficheiro adjacente para o mesmo total aproximado, e só uma recontagem final com `-o` o expôs.
+
+**Achado inicial, 2026-08-25: os tokens que estavam prestes a ser desenhados já existiam.**
+Censo de valores `px` arbitrários em classes Tailwind (`text-[Npx]`, `w-[Npx]`, etc.) em todo o
+`src/`: **2.153 ocorrências, 62 valores distintos, 78,6% dos ficheiros `.jsx`.** Concentração mais
+forte do que a dos raios (39% no `rounded-xl`): os 4 valores mais usados — `10px`(58,8%), `9px`
+(21,6%), `11px`(5,5%), `8px`(3,9%) — somam **89,7% do total**, e **91,8% do censo é `text-`**.
+A escala `text-` do Tailwind nem sequer desce abaixo de 12px (`text-xs`) — não havia degrau vizinho
+a "roubar" o uso, como no caso do `rounded-xl`; estes valores são arbitrários por necessidade
+estrutural, não por preguiça. `src/styles/designTokens.js:127-138` já tinha `SCALE.text.meta`(10px)/
+`.badge`(9,5px)/`.statLabel`(8,5px)/`.body`(11px), definidos e nomeados, mas com **2 call sites em
+todo o `src/`** (`Badge.jsx`, `SectionHeaderShell.jsx`) — mesma pendência já registada em
+`PLANO-DESIGN.md:316-323` ("tokens à espera do call site certo"), agora com prova de que o call site
+já existe, em centenas de sítios, cada um a reinventar a receita em vez de importar o token.
+
+**Decisão: os valores reais são a fonte de verdade, o token ajusta-se a eles — mesma lógica dos
+raios órfãos.** `badge` 9,5px→**9px**, `statLabel` 8,5px→**8px**, sem discussão (arredondamento
+"invisível", já feito várias vezes nesta migração). `meta`(10px) e `body`(11px) já batiam
+exatamente, confirmados contra o papel encontrado numa amostra de 66 ocorrências em 15 ficheiros:
+`uppercase`+`tracking` é sinal mais forte de "rótulo" do que o valor em px por si só; `8px` tende a
+rótulo-kicker/badge (sem prosa), `11px` tende a texto corrido sem uppercase (bate com `body`), `10px`
+é "coringa" — aparece nos três papéis, coerente com ser o mais frequente do censo (texto pequeno por
+omissão). **Isto é um eixo diferente da ponte de cor de estado — tipo de conteúdo (rótulo/prosa/
+dado), não hierarquia de importância dentro de um cartão. Dois sistemas paralelos e complementares,
+não um a substituir o outro; não misturar os dois vocabulários.**
+
+**`SCALE.border.control` (novo, `border-[1.5px]`)** — contorno de controlo interativo (inputs,
+botões secundários, chips/opções selecionáveis), nunca separador estático. 11 usos confirmados,
+concentrados em 2 ficheiros (`ClientForm.jsx` 7, `FormacaoElearningFlow.jsx` 3) do mesmo autor, mais
+1 caso equivalente via `style` inline no mesmo `FormacaoElearningFlow.jsx:146` (cor vem de `FT.slate`,
+JS runtime — Tailwind JIT não resolve arbitrary value com variável em runtime — ficou como `1.5px`
+literal, com comentário a apontar para o token, não unificado). Nome escolhido por decisão explícita
+apesar de colidir de propósito com `SCALE.radius.control` (papéis diferentes — raio vs. largura de
+contorno —, categorias `SCALE` diferentes, sem colisão técnica).
+
+**Convertido nesta sessão:** os 11 `className` + o token criado e as duas correções de 0,5px em
+`designTokens.js`.
+
+**Adoção de `SCALE.text` — em curso, sub-lotes por módulo, do menor para o maior.**
+Decisão de princípio (2026-08-25), válida para todo o lote, não só o primeiro módulo: **quando um
+elemento já está a desempenhar o papel de um token (`meta`/`badge`/`statLabel`/`body`) mas com
+peso/tracking ligeiramente diferente da receita exacta, converge para o token — não deixar por
+"quase igual".** Divergências pequenas e diferentes de sítio para sítio são assinatura de "cada um
+escreveu a receita à sua maneira" (resíduo), não de intenção — se fosse intenção, o mesmo desvio
+repetir-se-ia de forma consistente entre módulos, e não é o que se observa. Só voltar a perguntar
+caso a caso se a convergência mudar claramente a leitura visual (ex. um peso que existe para dar
+ênfase a um alerta, não só estética) — não para toda divergência de 1 grau de peso.
+- `features/admin/adminOverview` (4 occ, 2 ficheiros) — ✅ feito, primeiro módulo (mesma zona do
+  primeiro lote da migração de neutros). Confirmado antes/depois ao vivo (zoom 3× + `git stash`) na
+  pill de tendência do `KpiCard.jsx`: 10px/`font-black`→9px/`font-bold`+uppercase+tracking — legível
+  nos dois estados, sem perda de hierarquia visual. `FinancialSummaryPanel.jsx:67` (legenda do ano
+  sobre o total YTD) reclassificada de `badge` para `statLabel` a meio — é uma legenda por cima de um
+  valor grande, não uma pill colorida; a diferença de papel importa mais do que bater com o tamanho
+  mais próximo.
+- `features/admin/schedules/ScheduleForm.jsx` (17 occ) — ✅ feito, checkpoint ao vivo completo (dois
+  modos). Rótulos de campo → `statLabel`, chip de toggle → `badge`, link de ação não-uppercase →
+  `meta`. Confirmado no browser: "Nome do Turno" com `fontSize:8px, fontWeight:800, uppercase,
+  letterSpacing:0.88px`, exatamente `statLabel`.
+- `features/admin/fornecedores/FornecedorList.jsx` + `FornecedorForm.jsx` (21 occ) — ✅ feito,
+  checkpoint ao vivo completo (dois modos). 3 spans de cabeçalho de secção ("Dados da empresa" etc.)
+  usam `meta` + `tracking-widest` em vez de `statLabel` de propósito — não eram uppercase no
+  original, e `statLabel` força uppercase; confirmado `textTransform:"none"` ao vivo antes de decidir.
+- `components/worker/RequestEntryCard.jsx` (21 de 22 occ) — código feito (eslint/build limpos), mas
+  **checkpoint ao vivo bloqueado, aceite por decisão do Diego (2026-08-24)**: `RequestEntryCard.jsx`
+  só renderiza quando o trabalhador está em `limited_entry_mode` (ou o cliente por omissão tem
+  `triggers_limited_mode`) — testar com um trabalhador normal mostra `components/common/
+  EntryForm.jsx` (ficheiro diferente, não tocado, ver a nota de colisão acima). Confirmei por SQL um
+  trabalhador em modo limitado (`w1775490101706`, Gabriel Gois Saraiva), mas "Ver Portal" devolveu
+  `403 Forbidden`/"Sem permissão para executar esta ação" mesmo após sessão admin recarregada de
+  raiz — parece restrição real de permissão da conta, não sessão obsoleta. 1 ocorrência deixada de
+  propósito: linha ~348, `text-[9px] sm:text-[10px]` responsivo de dois tamanhos, não encaixa no
+  modelo de token de tamanho único.
+- `features/auth/LoginView.jsx` (14 occ) — código feito, checkpoint ao vivo bloqueado (só renderiza
+  com sessão terminada, sem credenciais disponíveis nesta sessão) — aceite por decisão do Diego
+  (2026-08-24), mesma razão do `RequestEntryCard.jsx`: mecanismo `${SCALE.text.x}` já provado
+  pixel-a-pixel noutros módulos.
+- `features/public/OnboardingForm.jsx` (6 occ) + `ResumoMensalPublico.jsx` (11 occ) — código feito
+  (eslint zero avisos, build limpo). Checkpoint ao vivo bloqueado nos dois: `OnboardingForm.jsx`
+  precisa de um token de convite válido (rota `/onboarding/:token`); `ResumoMensalPublico.jsx` é
+  alcançável sem token em `/partilha/resumo`, mas exige `?token=...` gerado em Definições →
+  Utilizadores e Acesso → "Acesso do Contabilista", que por sua vez **pede password de admin** — não
+  tentei obtê-la. Aceite por decisão do Diego (2026-08-24), mesma categoria dos dois módulos
+  anteriores. `OnboardingCommitmentStep.jsx` (9 occ) ficou **fora do lote**, por decisão do Diego —
+  ver a nota do padrão de canvas frágil acima (Fluxo 2), pendência registada, sem conversão feita.
+- `features/admin/faturas/` (29 occ, 4 ficheiros: `ContadorEmailsAdmin.jsx` 13,
+  `TOConlinePanel.jsx` 11, `GmailConfigPanel.jsx` 4, `FaturaConfigPanel.jsx` 1 — `ApoliceSegurosImportPanel.jsx`/
+  `CelEditTd.jsx` já não tinham ocorrências) — ✅ feito, checkpoint ao vivo completo nos 4 ficheiros,
+  dois modos (`/admin/faturacao` abas Importar/Contador + `/admin/toconline`). `<th>`/rótulos de
+  campo → `statLabel`, pills de estado e botões de ação → `badge`, texto corrido/metadados → `body`/
+  `meta`. Nota de execução: um `replace_all` inicial no `GmailConfigPanel.jsx` trocou o texto do
+  token mas manteve `className="..."` (string simples) em vez de `className={\`...\`}` — ficava
+  como classe CSS literal `${SCALE.text.statLabel}`, nunca interpolada. Apanhado antes do commit por
+  grep de confirmação, corrigido nas 4 ocorrências.
+- `features/admin/pagamentos/` (36 occ, 4 ficheiros: `FilaAprovacaoTab.jsx` 17,
+  `ImpostoPdfUploadModal.jsx` 8, `NovoPagamentoModal.jsx` 7, `PagamentosTab.jsx` 4) — ✅ feito,
+  checkpoint ao vivo completo, dois modos (`/admin/pagamentos`, abas Fornecedores/Fila de Pag., mais
+  os dois modais). Verificado antes de tocar: sem canvas frágil, sem `.recon-scope`, sem overlap com
+  SS — módulo limpo confirmado. Mesmo erro do `className` literal vs interpolado do lote `faturas`
+  repetiu-se no `NovoPagamentoModal.jsx` (`replace_all` de 6 rótulos idênticos) — apanhado e corrigido
+  do mesmo jeito, antes do build.
+- `features/admin/client/` (48 occ na recontagem de hoje, não os 41 estimados originalmente — 3
+  ficheiros: `ClientPortalAuditPanel.jsx` 21, `ClientForm.jsx` 14, `ClientEnviosPanel.jsx` 13) —
+  ✅ feito, checkpoint ao vivo completo, dois modos, nos 3 ficheiros e nas 2 vistas (lista/grade) do
+  `ClientEnviosPanel.jsx`. Achado relevante confirmado ao vivo: vários casos (badge "raio Xm" sobre
+  o mapa, contador "N selec." de horários, chips de horário com nomes como "manhã"/"teste") não eram
+  uppercase no original — usei `SCALE.text.meta` em vez de `badge`/`statLabel` propositadamente
+  nesses, para não forçar caixa alta que não existia; confirmado ao vivo que o resultado preserva a
+  caixa original (`textTransform: none`) enquanto o tamanho converge. Mesmo erro do `className`
+  literal vs interpolado repetiu-se em 2 `replace_all` (`ClientForm.jsx`, `ClientPortalAuditPanel.jsx`)
+  — apanhado e corrigido antes do build, como nos lotes anteriores.
+- `features/admin/formacao-interna/` (41 occ, 8 ficheiros) — ✅ feito. `formacaoAdminUiKit.jsx`
+  (2, `ResumoCard`/`BarraProgresso` partilhados) converteu-se uma vez e beneficiou todos os
+  consumidores do módulo. Checkpoint ao vivo completo para `NovaAcaoForm.jsx` (label constante
+  `LABEL`, secção e-learling com questionário, "+ Opção"/"+ Adicionar Pergunta") e para o `ResumoCard`
+  de `ListaAcoesTab.jsx`/`ElearningAcoesTab.jsx`, dois modos. **Sem checkpoint ao vivo possível para
+  as linhas de tabela e pills de estado** de `ListaAcoesTab.jsx`, `ElearningAcoesTab.jsx`,
+  `HorasPorTrabalhadorTab.jsx`, `CertificacoesValidadeTab.jsx`, `RegistoIndividualTab.jsx` — o
+  ambiente de dev não tem dados de formação seedados (todos os ecrãs mostraram "Sem dados"/"Nenhuma
+  ação registada"). Confiança alta por outra via: o padrão exato (`<tr>` → `statLabel`, pill colorida
+  → `badge`) já foi verificado ao vivo dezenas de vezes noutros ficheiros nesta sessão, e
+  eslint/build ficaram limpos.
+- `features/client-report/` (48 occ, 6 ficheiros) — ✅ feito, código convertido e limpo (eslint/build
+  ok) nos 6. **Achado relevante, fora do âmbito de tokens:** `ClientReportFlow.jsx` (export default)
+  é código morto, junto com os 4 componentes que só ele consome — `StepMode.jsx`, `StepQuick.jsx`,
+  `MonthStatusBadge.jsx`, `HistoryItem.jsx`. Confirmado por grep de imports (zero em todo o `src/`)
+  e por sonda única no bundle: `"Tipo de reporte"`/`"Escolha como quer reportar a divergência..."`
+  (só existem nestes ficheiros) dão 0 em todos os chunks do `dist/`, enquanto `"Ajuste de Precisão"`
+  (controlo positivo, do `StepPrecision.jsx`) dá 2. **Só o `StepPrecision` — um export nomeado do
+  mesmo `ClientReportFlow.jsx` — está vivo**, consumido por
+  `src/features/admin/corrections/CorrectionDetail.jsx`, que por sua vez só é montado quando
+  `CorrectionsInbox.jsx` recebe um `initialCorrectionId` (deep-link a partir de uma notificação
+  específica de correção "precision" de cliente — não há navegação normal que lá chegue). Não apaguei
+  nada — é achado a reportar, não decisão tomada. Por causa disto, o checkpoint ao vivo só foi
+  possível para o `StepPrecision` isolado, e mesmo esse ficou por confirmar pixel-a-pixel nesta
+  sessão por não ter conseguido reproduzir o deep-link sem dados de teste reais.
+- `features/admin/corrections/` (59 occ, 4 ficheiros: `CorrectionDetail.jsx` 27,
+  `CorrectionsInbox.jsx` 17, `ItemRow.jsx` 14, `TimesCell.jsx` 1) — ✅ feito. **Sobreposição real
+  confirmada com a ponte de cor de estado** (`CorrectionsInbox.jsx` já tinha os tokens de papel
+  `-label/-meta/-value/-identity`): SCALE.text (tamanho/peso/caixa) e os tokens de papel (cor) tocam
+  propriedades CSS diferentes — o Tailwind resolve `text-[10px]` como `font-size` e
+  `text-[var(--tone-amber-meta)]` como `color` no mesmo `text-[]`, porque infere a propriedade pelo
+  tipo do valor (comprimento vs cor). Confirmado ao vivo, não só em teoria: "Solicitado" mede
+  `8px/800/uppercase` (statLabel) com `#e17100` (`--tone-amber-label`); "Precisão · Submetido:" mede
+  `10px/600` (meta) com `#bb4d00` (`--tone-amber-meta`); "✓ Aceite" mede `10px/600/none` (meta,
+  caixa preservada) com `#007a55` (`--tone-emerald`) — os três com o token de tamanho e o de cor a
+  coexistir sem conflito, numa correção real ("Empresa Teste") em `/admin/clients` → Correções.
+  `ItemRow.jsx` usa um padrão diferente (cor fixa por coluna, não por papel de estado — já registado
+  como pendência à parte) — sem sobreposição de sistemas aí, só SCALE.text. Checkpoint ao vivo
+  completo para `CorrectionsInbox.jsx`, dois modos; `ItemRow.jsx`/`CorrectionDetail.jsx` só por
+  padrão de código idêntico já verificado (mesma razão do deep-link não reproduzível do achado
+  `ClientReportFlow.jsx` acima — `CorrectionDetail.jsx` só monta com `initialCorrectionId`).
+- `features/admin/documents/` (68 occ, 6 ficheiros: `WorkerDocsFolderView.jsx` 32,
+  `ReportsEmbedded.jsx` 12, `DocumentsTable.jsx` 11, `UploadManualModal.jsx` 8,
+  `DocumentsFilters.jsx` 4, `SortableTh.jsx` 1) — ✅ feito. Verificado antes de tocar:
+  `WorkerDocsFolderView.jsx` tem um `<iframe srcDoc={...} sandbox="allow-scripts">` (visualizador de
+  documento, não é o iframe de assinatura do Fluxo 2) e nenhum canvas dimensionado por
+  `parent.clientWidth` — não é zona sensível, confirmado antes de converter. Checkpoint ao vivo
+  completo em `/admin/documentos`, dois modos, para `WorkerDocsFolderView.jsx` (cartões "Por
+  colaborador", `DocCard`/`DocCardPair`), `DocumentsTable.jsx` (vista "Por categoria", `<th>` via
+  `SortableTh.jsx`) e `UploadManualModal.jsx`. **Achado à parte, não corrigido:** `npx eslint` acusa 2
+  erros pré-existentes (`react-hooks/static-components`) em `WorkerDocsFolderView.jsx:354-364` —
+  `PreviewThumb` é declarado dentro do render de `DocCardPair`, o que reinicia o seu estado a cada
+  render. Confirmei com `git stash`/lint/`git stash pop` que já existia antes desta sessão, sem
+  relação com a conversão de tokens — fora de âmbito, fica registado para quem for arrumar
+  `components/admin` ou `components/common`.
+- `features/admin/toconline/` (103 occ, 6 ficheiros) — ✅ feito, em 4 sub-lotes internos (mesma
+  lógica dos módulos grandes da migração de neutros): `ModalDocToc.jsx`(1)+`TOConlineClientes.jsx`(2)
+  → `CriarDocumentoModal.jsx`(8) → `TOConlineBankAccounts.jsx`(13) → `TOConlineRelatorios.jsx`(16) →
+  `FaturarClienteModal.jsx`(63, o maior de toda a fila `SCALE.text` até agora). Cuidado redobrado
+  mantido: confirmei ausência de canvas/iframe sensível em todos antes de tocar; em
+  `FaturarClienteModal.jsx:1050` deixei deliberadamente por converter a `<table className="text-
+  [10px]">` da pré-visualização da fatura — é a base de tamanho herdada por todas as células de
+  dados (preços, quantidades, IVA) de um documento financeiro, e `SCALE.text.meta` traria
+  `font-semibold` de propósito para as células que hoje ficam a peso normal; risco desproporcional
+  ao ganho, registado como exceção, não esquecido.
+  **Checkpoint ao vivo bloqueado para 5 dos 6 ficheiros — duas causas distintas, nenhuma minha:**
+  (1) `TOConlineClientes.jsx`/`TOConlineRelatorios.jsx`/`TOConlineBankAccounts.jsx` estão atrás de um
+  único `ligado` verificado uma vez em `TOConlineAdmin.jsx:51-61` (`/api/toconline/status`), que
+  devolveu `false` nesta sessão — mostram sempre "TOConline não ligado", independentemente do que a
+  aba "Documentos" mostra (essa usa uma verificação própria, em `TOConlinePanel.jsx`, e deu `true`).
+  (2) Mesmo a aba "Documentos" a dar `ligado`, clicar "Carregar" devolveu `403 Sem permissão para
+  executar esta ação` — terceira vez nesta sessão que a mesma mensagem aparece em features
+  completamente diferentes (impersonação de trabalhador, importação Gmail, agora TOConline),
+  confirma ser uma limitação real da conta admin desta sessão, não um efeito do meu lote.
+  `ModalDocToc.jsx` também ficou por confirmar (só abre a partir de uma linha de documento real, que
+  o 403 impediu de carregar). Tentei uma via alternativa para `FaturarClienteModal.jsx` — o botão
+  "Faturar" em `AjudasCustoAdmin.jsx`/`AjudasCalculadora.jsx` não depende do `ligado` — mas o único
+  caminho até lá passava por "Simular" em Ajudas de Custo → Estimativa Mensal, que **grava dados
+  reais** (`ajudas_estimativas_fatura`), não é pré-visualização; não cliquei. Confiança por eslint +
+  build limpos e por o padrão de conversão ser idêntico a dezenas de casos já confirmados ao vivo
+  nesta sessão (`TOConlinePanel.jsx`, já verificado no lote `faturas`).
+- `features/worker/` (recontado ao vivo: **121** occ, 16 ficheiros — a estimativa da fila (104) estava
+  desatualizada) — ✅ feito, 15 ficheiros convertidos + 1 deixado inteiro por decisão:
+  `InServiceCard.jsx`(1), `WorkerDashboard.jsx`(2 — confirmado `import SignatureCanvas` morto, zero
+  usos no ficheiro, não é zona sensível apesar do grep inicial), `GeoSuggestionCard.jsx`(3),
+  `ManualTimeEntryCard.jsx`(3), `TimeEntryModal.jsx`(4), `FormacaoModal.jsx`(5, 1 fora — título a
+  16px, não corresponde a nenhum dos 4 tamanhos do `SCALE.text`), `IncompleteLogModal.jsx`(5),
+  `WorkerScheduleTab.jsx`(6), `WorkerCalendar.jsx`(7, 2 fora — número do dia e total de horas dentro
+  da célula do calendário, ambos `font-black` com função de destaque real; o total de horas colidiria
+  ainda com o `uppercase` forçado do `badge`, mudando "8h" para "8H"), `WorkerHeroStats.jsx`(7, 1 fora
+  — relógio a 64/80px), `WorkerProfile.jsx`(9), `AbsenceRequestModal.jsx`(11),
+  `WorkerNavBar.jsx`(11, 1 fora — `text-[9px] sm:text-[10px]` no nome do trabalhador tem tamanho
+  responsivo por breakpoint, que os tokens `SCALE.text` não suportam), `PendingAlertsModal.jsx`(12),
+  `PendingCorrectionsPanel.jsx`(16, 3 fora — o valor `font-black` da comparação antes/depois nos itens
+  de correção, mesma lógica de ênfase do `WorkerCalendar.jsx`). **`FormacaoElearningFlow.jsx`(19)
+  ficou inteiro por converter, decisão registada:** tem escala tipográfica própria e consistente
+  (9.5, 13, 13.5, 14, 14.5, 15, 19, 22, 34px — passos de meio pixel repetidos por todo o ficheiro, não
+  valores soltos), usada só neste ecrã de quiz/e-learning; só 3 das 19 ocorrências coincidem por
+  acaso com tamanhos do `SCALE.text` (11px×2, 10px×1) e convergê-las isoladamente fragmentaria a
+  escala própria sem nenhum ganho — é "intenção", não resíduo, pelo critério já estabelecido nesta
+  migração. Também é o ficheiro sensível do módulo (canvas de assinatura dimensionado por
+  `parent.clientWidth`, linha 91) — nada foi tocado perto dele.
+  `npx eslint`/`npx vite build` limpos no módulo inteiro (só warnings pré-existentes, sem relação).
+  **Checkpoint ao vivo não alcançado:** o botão "Ver Portal" (impersonação de trabalhador, em
+  `/admin/team`) não produziu efeito visível em três tentativas nesta sessão — consistente com o
+  padrão de `403 Sem permissão` já registado três vezes antes neste mesmo lote (TOConline, Gmail,
+  impersonação), mas desta vez sem sequer chegar a mostrar o erro. Confiança apoiada em eslint+build
+  limpos e no padrão de conversão idêntico a dezenas de casos já confirmados ao vivo nesta sessão.
+- `client-portal/` (recontado ao vivo: **129** occ, 11 ficheiros — a estimativa da fila (124) estava
+  próxima mas não exacta) — ✅ feito, 10 ficheiros convertidos (`GenericNotificationCard.jsx` tinha 0,
+  fora de âmbito): `ClientPortalHeader.jsx`(2), `ReverAlteracoesView.jsx`(6),
+  [`src/client-portal/LoginView.jsx`](src/client-portal/LoginView.jsx)(8 — caminho completo citado de
+  propósito, colide de nome com `src/features/auth/LoginView.jsx` já registado acima),
+  `LogManagementModal.jsx`(11), `WorkerSubmissionsPanel.jsx`(11), `ValidarView.jsx`(12),
+  `WorkerRequestsView.jsx`(15), `SimpleReportView.jsx`(19), `CounterProposalCard.jsx`(21),
+  `DashboardView.jsx`(24, 2 fora — `text-[11.7px]`/`text-[9.9px]` na célula "hoje" do mini-calendário,
+  parte de um ajuste ao sub-pixel que já inclui `m-0.3`/`mt-0.7`/`h-2.7 w-2.7` vizinhos, a mesma lógica
+  de "escala própria" do `FormacaoElearningFlow.jsx`, só que aqui restrita a duas linhas em vez do
+  ficheiro inteiro). **Quinto caso da família de canvas de assinatura sensível, encontrado neste
+  módulo:** `src/client-portal/useSignatureCanvas.js:22` (`canvas.width = parent.clientWidth`),
+  consumido por `ValidarView.jsx:154` — registado na lista de Fluxo 2 acima. O `#signature-canvas-area`
+  não tinha nenhum `text-[Npx]` a converter, confirmado antes e depois de tocar no ficheiro.
+  `npx eslint`/`npx vite build` limpos no módulo inteiro (só warnings pré-existentes).
+  **Checkpoint ao vivo parcial:** `LoginView.jsx` confirmado ao vivo em `http://localhost:4179/?
+  client=teste` (a query `?client=` activa a vista `client_portal` em `AppContext.jsx:56-57`) — pill
+  "Área Reservada", seletor PT/ES, rótulos "Email"/"Senha (NIF)" e botão "Entrar" todos correctos, sem
+  regressão. As vistas pós-login (`DashboardView`, `ValidarView`, etc.) não foram alcançadas por
+  faltarem credenciais reais de cliente nesta sessão — confiança apoiada em eslint+build limpos e no
+  padrão de conversão idêntico a dezenas de casos já confirmados ao vivo nesta sessão.
+- Ordem confirmada dos módulos limpos (sem sobreposição com dinheiro/`.recon-scope`/PDF), do menor:
+  `adminOverview`(4, feito) → `auth`(14, feito) → `schedules`(17, feito) → `fornecedores`(21, feito) →
+  `components/worker`(22, feito) → `public`(27, feito — 17 de 26, `OnboardingCommitmentStep.jsx`
+  pendente) → `faturas`(29, feito) → `pagamentos`(36, feito) → `client`(41/48, feito) →
+  `formacao-interna`(41, feito) → `client-report`(48, feito) → `corrections`(59, feito) →
+  `documents`(68, feito) → `toconline`(103, feito) → `features/worker`(121, feito) →
+  `client-portal`(129, feito). **A fila de módulos limpos está esgotada.**
+- Módulos com sobreposição confirmada (dinheiro/`.recon-scope`/PDF, direta ou herdada) ficam para
+  **depois** de todos os limpos, mesma lógica dos ficheiros de dinheiro na migração de cor:
+  `salarios`(59, feito — a estimativa da fila (23) estava desactualizada) →
+  `reconciliacao`(68 recontadas, resolvido por exclusão total — `.recon-scope` cobre os 6 ficheiros
+  inteiros, ver pendência acima) → `components/common`(69 recontadas, feito) →
+  `components/admin`(123, feito) → `cost-reports`(127, feito) →
+  `team`(198, feito — a estimativa da fila (197) estava 1 abaixo) →
+  `features/admin` raiz(425, feito — a estimativa da fila (490) estava acima; ver detalhe abaixo).
+  **A fila da Fase 3 está esgotada — não fica nenhum módulo `SCALE.text` por fazer.**
+  **`components/common` — 9 ficheiros, dois deles de alto alcance (`ModalShell.jsx`, usado por 41/47
+  modais; `SectionHeaderShell.jsx`, usado em ~19 secções do admin), verificados ao vivo com medição
+  antes de dar o módulo como fechado.** `ModalShell.jsx`(2, 1 fora — `text-[12px]` do `meta`, fora dos
+  4 tamanhos), `SubTabBar.jsx`(2), `SectionHeaderShell.jsx`(3 — já tinha 2 dos 4 tokens `SCALE.text`
+  citados no achado da Fase 3 como "call sites à espera", agora com o 3º valor, o `text-[9.5px]` que
+  originou o arredondamento do `badge` para 9px, finalmente a usar o token em vez do literal),
+  `DateMultiPicker.jsx`(4, 1 combina `SCALE.text.badge` com `text-[var(--tone-rose)]` no mesmo
+  elemento — mesma coexistência tamanho/cor já confirmada em `corrections` e `salarios`),
+  `EntryForm.jsx`(10), `WorkerDocuments.jsx`(10, 1 fora — string HTML `SIGNATURE_PLACEHOLDER_HTML`
+  injectada num iframe sandboxed via `injectTailwindCDN`, "Aguardando Assinatura", tratada com a
+  mesma cautela do Fluxo 2 apesar de o `canvasRef`/`getContext` do ficheiro serem código morto
+  confirmado — zero `<canvas>` na JSX, só o `<iframe>` de pré-visualização é real e é read-only),
+  `VerificationPortal.jsx`(12 — identidade de cor própria já decidida no passado não se estende ao
+  tamanho: os 12 valores são 9/10/11px inteiros, sem a assinatura de meio-pixel que marca uma escala
+  própria deliberada, convergidos normalmente), `ClientTimesheetReport.jsx`(13, 9 fora — tudo dentro
+  de `.a4-paper`, o corpo do relatório capturado por `html2canvas-pro` para o PDF final, mesmo
+  princípio já usado no `FaturarClienteModal.jsx`: só a barra de ferramentas `no-print` converge, o
+  render de linha 520 em diante fica intocado), `CompanySignatureSettings.jsx`(13). **Checkpoint ao
+  vivo:** medido em `/admin/team` — a linha "Nome · Profissão" dentro de um `ModalShell` mede
+  `8px/800/uppercase/0.88px` (== `statLabel`); as sub-abas do `SectionHeaderShell` ("Colaboradores",
+  "Faltas", ...) medem `9px/700/uppercase` (== `badge`). `npx eslint`/`npx vite build` limpos no
+  módulo inteiro.
+  **`components/admin` — 12 ficheiros, 123 ocorrências recontadas (bateu com a estimativa da fila),
+  mas só 73 são trabalho — 50 são código morto confirmado.** `ModoLote.jsx`(32) e `SessaoRow.jsx`(18)
+  não são importados em ficheiro nenhum do `src/`, estão ausentes do bundle `dist/` (confirmado com
+  sonda única + controlo positivo/negativo — "Limites de validação" e "Apagar processamento", ambas
+  ausentes; controlo positivo "ERROS DE ENVIO" do `ModoBursting.jsx`, presente), e o histórico do git
+  dá a razão exacta: commit `35afa4e` ("refactor: fundir Validar+Histórico em fluxo unificado por
+  mês", 2026-06-08) removeu deliberadamente `import ModoLote` e `<ModoLote .../>` de
+  `ValidarReciboAdmin.jsx`, reduzindo as tabs para "Recibos / Burst / Documentos" (`ModoReextracao`
+  juntou-se depois). `SessaoRow.jsx` era o renderizador de linha do `ModoLote` (extraído no mesmo
+  commit de split `e703eea`) e ficou órfão pela mesma razão. **Não convertidos — não é trabalho sobre
+  código que ninguém vê — nem apagados, não é decisão a tomar de passagem; registado para quem um dia
+  arrumar código morto.** Dos 6 ficheiros vivos: `DocumentTemplatesAdmin.jsx`(1),
+  `ValidacaoUI.jsx`(1, `EstadoPicker`, reutilizado por `ModoLote`/`SessaoRow`/`ModoHistorico` — a
+  ocorrência em si não tem sobreposição de tom de cor, confirmado antes de tocar),
+  `ValidarReciboAdmin.jsx`(1), `templates/FieldBadge.jsx`(1, converge para `meta` em vez de `badge`
+  apesar do formato de etiqueta — o conteúdo é o nome literal de uma variável de template, forçar
+  maiúsculas mudaria o que o utilizador vê escrito), `templates/TemplateEditorModal.jsx`(3),
+  `templates/TemplateGenerateModal.jsx`(3, um deles é `<code>{'{client_*}'}</code>`, mesmo cuidado de
+  preservar o literal), `ModoDocumentos.jsx`(10), `ModoHistorico.jsx`(13), `ModoReextracao.jsx`(15,
+  13 das 15 convergem para `meta` em vez do papel óbvio de `statLabel` — os textos de relatório
+  combinam um prefixo já em maiúsculas com uma frase em minúsculas na mesma etiqueta, ex. "FORA DE
+  ÂMBITO (mês fora de Jan-Mai 2026...)" — forçar `uppercase` mudaria a frase inteira, incluindo nomes
+  de tabela reais como `receipt_validations`), `ModoBursting.jsx`(25, 1 fora — `<table
+  className="text-[10px]">` base de uma tabela editável com inputs de nome de ficheiro por linha,
+  mesmo princípio do `FaturarClienteModal.jsx`: risco desproporcional ao ganho). **Achado à parte,
+  apanhado e corrigido no próprio lote:** um `replace_all` em `ModoDocumentos.jsx` deixou 4 `<th>`
+  com `className="..."` plana em vez de crase, apesar de o `${SCALE.text.statLabel}` estar no meio da
+  string em vez de no início — o `grep 'className="\${'` habitual (que só apanha o padrão logo a
+  seguir à aspa) não encontrou o bug; só apareceu ao alargar para
+  `grep 'className="[^"]*\${'` (apanha o padrão em qualquer posição dentro da string). Confirmado por
+  varrimento a todo o `src/` que não se repetia mais nenhures — fica como padrão de verificação mais
+  rigoroso para o resto da fila. **Checkpoint ao vivo** em `/admin/reconciliacao/recibos`: as tabs
+  "Recibos/Burst/Documentos" medem `9px/700/uppercase` (`badge`); a legenda "21 recibos" mede
+  `10px/600/none` (`meta`, minúsculas preservadas); os cabeçalhos "Trabalhador/Líquido/Divergência/
+  Estado" medem `8px/uppercase` (`statLabel`). `npx eslint`/`npx vite build` limpos (só warnings
+  pré-existentes, incluindo nos dois ficheiros mortos, que não toquei).
+  **`cost-reports` — 127 ocorrências, todas convertidas, zero exceções.** 8 ficheiros:
+  `EquipaTab.jsx`(4), `LinkPagamentoModal.jsx`(5), `ClientesTab.jsx`(7), `LinkFaturaModal.jsx`(7),
+  `MargemTab.jsx`(7), [`src/features/admin/cost-reports/FaturasTab.jsx`](src/features/admin/cost-reports/FaturasTab.jsx)(20 —
+  caminho completo citado de propósito, colide de nome com `src/features/admin/FaturasTab.jsx` já
+  registado acima), `DespesasTab.jsx`(29), `AjudasCalculadora.jsx`(48, o maior e mais sensível — já
+  era o único ficheiro de dinheiro desta pasta a ter lote próprio na migração de cor). **5 dos 8
+  ficheiros (`EquipaTab`, `ClientesTab`, `MargemTab`, `cost-reports/FaturasTab`, `DespesasTab`) têm
+  `.recon-scope` — confirmado, ficheiro a ficheiro, que a `<div className="recon-scope">` abre e
+  fecha só à volta de uma faixa de 3 cartões de resumo (`recon-stat-strip`), sem nenhuma classe
+  `text-[Npx]` lá dentro; a tabela com todas as ocorrências-alvo fica sempre num `<div>` irmão,
+  fora do scope.** Diferente do `ReconciliacaoAdmin.jsx` (scope à volta do render inteiro) e do
+  `SalariosTab.jsx` (scope à volta de um cartão específico no meio do ficheiro) — aqui o scope é uma
+  faixa isolada no topo, sem sobreposição real com nada convertido. **Bug do mesmo tipo já apanhado
+  em `components/admin` reapareceu logo no primeiro ficheiro** (`EquipaTab.jsx`): um `replace_all`
+  numa substring nua («`text-[10px] font-black uppercase tracking-widest">Nome`») deixou o
+  `${SCALE.text.statLabel}` dentro de um `className="..."` plano. Apanhado de imediato pelo grep
+  rigoroso (`className="[^"]*\${`) e corrigido — reforça que a causa raiz é o hábito de poupar
+  esforço com `replace_all` numa substring em vez de trocar o atributo `className` inteiro; a partir
+  daqui, sempre que o `className` original for uma string plana, a substituição inclui sempre a
+  troca para crase no mesmo passo, nunca só o miolo. **Checkpoint ao vivo** em `/admin/costs`: os
+  cabeçalhos "Nome/Total Horas/Custo (€)" do `EquipaTab.jsx` medem `8px/uppercase` (`statLabel`); no
+  separador "Ajudas" (`AjudasCalculadora.jsx`, o ficheiro de dinheiro mais delicado do módulo), o
+  rótulo "Sem dados" e todos os cabeçalhos da tabela de previsão ("Cliente/Horas/Valor Fatura/%
+  Total/Ajudas Incluídas") medem `8px/uppercase` — sem regressão. `npx eslint`/`npx vite build`
+  limpos no módulo inteiro.
+  **`team` — 198 ocorrências recontadas (a fila estimava 197), maior módulo até agora, 9 ficheiros,
+  8 convertidos + 1 excluído por decisão.** `SSComunicacaoModal.jsx`(6) **não convertido** — estende
+  para o SCALE.text a mesma exclusão já registada para cor/ModalShell (comunica à Segurança Social,
+  ver Fluxo 1 acima); o grep de verificação do módulo confirma que estas 6 são as únicas
+  `text-[Npx]` que sobram em `src/features/admin/team/`. **Risco da SS não é uniforme dentro do
+  módulo — distinção nova, confirmada por grep:** `ImportarContratosSSDModal.jsx`(16) tem "SS" no
+  nome mas é um parser de CSV exportado pela SS, sem nenhuma chamada a `api/seguranca-social`/
+  `authFetch`/`fetch(` — convertido normalmente, com cuidado extra de caso em NISS/códigos de
+  profissão exibidos. `ChangeRequestsPanel.jsx`(10), `OnboardingPendentes.jsx`(18, inclui o `labelCls`
+  partilhado por ~17 rótulos do formulário de revisão de onboarding, um deles SS-adjacente — "Cód.
+  Local de Trabalho (SS)"), `WorkerValidationPanel.jsx`(19), `AbsenceRequestsPanel.jsx`(21),
+  `DocumentScannerModal.jsx`(28, pesado para `meta` de propósito — mostra nomes/NIFs/datas reais de
+  documentos, onde forçar maiúsculas alteraria o que se lê), `WorkerList.jsx`(32, inclui os itens de
+  menu "Comunicar Admissão"/"Comunicar Cessação" — só o tamanho do texto muda, a submissão real
+  continua a viver só no `SSComunicacaoModal.jsx`, por isso convergem sem risco).
+  **`WorkerForm.jsx`(48, o maior ficheiro do módulo) — o componente-pai que renderiza o
+  `SSComunicacaoModal` como `ModalShell` aninhado (a razão já registada para essa exclusão).**
+  Timeline "Ciclo de Vida do Vínculo": os 3 rótulos de etapa (Admissão/Hoje/Cessação) e o cabeçalho
+  → `statLabel`; os 9 pills de estado SS ("✓ SS comunicada", "SS por comunicar", "SS rejeitou —
+  reenviar", "SS presa a processar", "sem data", "n/a", "encerrado/em curso") → `meta`, nenhum tinha
+  `uppercase` no `className` original, e o conteúdo é estado dinâmico real, não decoração — forçar
+  maiúsculas mudaria o que se lê. "Apólice de Seguro: {Ativo/Inativo}" (linha 160) → `meta`, mesmo
+  motivo. Os nomes de cliente/horário nas listas de checkbox (`{c.name}`/`{s.name}`, sem `uppercase`
+  no original) → `meta`; os mesmos nomes truncados dentro do acordeão de "Períodos" (com `uppercase`
+  já presente no original) → `badge`, caso em que convergir preserva a renderização atual em vez de a
+  mudar. Rótulos de campo (`lbl`, a constante partilhada por ~20 campos do formulário) e os 4
+  cabeçalhos de secção ("Dados do Colaborador", "Vínculo", "Enquadramento PSI", "Financeiro", "IRS —
+  Situação Fiscal", "Afetação — Clientes & Horários") → `statLabel`. Botão de ação "↻ Iniciar Novo
+  Período (reentrada)" e os botões "Gravar/Gravado" dos cartões de período → `badge` (uppercase já
+  presente). Aviso de cessação por preparar (frase completa, `leading-relaxed`) → `body`, único uso de
+  `body` no módulo. Os 4 `<input type="date">` (Início/Fim de períodos de cliente e de horário) →
+  `meta`, valor de formulário sem transformação de caixa. **Achado de execução:** os 4 pares de
+  rótulo/valor "Padrão", "Períodos", "Guarde primeiro", "Início", "Fim" repetem-se identicamente entre
+  o cartão de Clientes e o de Horários — únicos casos deste módulo em que `replace_all` foi seguro,
+  porque as duas ocorrências exigem exatamente a mesma conversão; os `<input>` de data, apesar de
+  também parecerem duplicados na classe, precisaram de contexto (`assignedClientDates` vs
+  `assignedScheduleDates`, `dataInicio` vs `dataFim`) para não colidir. `grep 'className="[^"]*\${'`
+  correu logo a seguir a cada lote de edições, não só no fim — zero ocorrências do bug em todo o
+  ficheiro. **Checkpoint ao vivo** em `/admin/team`, editando "Adriel de Jesus dos Santos": "Ciclo de
+  Vida do Vínculo"/"Admissão"/"Hoje"/"Nome"/"Profissão"/"Modo Limitado"/"Clientes" medem
+  `8px/800/uppercase/0.88px` (`statLabel`); "✓ SS comunicada" e o nome do cliente "Grandes Mecanizados
+  del Norte, S.A." medem `10px/600/none` (`meta`), com o nome do cliente confirmado a preservar a
+  caixa original, não forçado a maiúsculas. `npx eslint`/`npx vite build` limpos no módulo inteiro (só
+  os avisos pré-existentes já conhecidos, sem relação com esta conversão).
+  **`features/admin` raiz — último módulo da fila, 425 ocorrências convertidas em 27 ficheiros
+  (a estimativa da fila (490) estava acima; recontagem via `grep -o` em vez de `grep -c`, depois de o
+  primeiro método ter sub-contado linhas com duas ocorrências — ex. `text-[10px] sm:text-[13px]` numa
+  só linha). Fecha a Fase 3 (`SCALE.text`) inteira: não fica nenhum módulo por fazer.**
+  Ordem (do menor): `AdminPasswordModal.jsx`/`DocumentsAdmin.jsx`/`FornecedorManager.jsx`/
+  `TagBadge.jsx`(1 cada) → `HistoricoDeslocacao.jsx`(2) → `ContadorAcessoPanel.jsx`(3) →
+  `TOConlineAdmin.jsx`(4) → `AdminOverview.jsx`(5) → `AdminClassicNav.jsx`(6, sem import de
+  `designTokens` nenhum antes — acrescentado de raiz) → `AdminSidebar.jsx`(7) →
+  `FinancialReportOverlay.jsx`(5, 4 fora) → `TeamManager.jsx`(9) → `RelatorioModal.jsx`(10) →
+  `AlertasAdmin.jsx`(11) → `CsvMappingCard.jsx`(10, 1 fora) → `ScheduleManager.jsx`(11) →
+  `AdminReports.jsx`(16) → `ClientManager.jsx`(17) → `ContabilidadeTab.jsx`(17) →
+  `AdminSettings.jsx`(22, recontada — a contagem por linha dava 20, mas a linha 412 tinha 3
+  `<code>` de nomes de variável de ambiente na mesma linha) → `NotificationsAdmin.jsx`(20) →
+  `FaturasAdmin.jsx`(21) → [`src/features/admin/FaturasTab.jsx`](src/features/admin/FaturasTab.jsx)
+  (26, 1 fora — caminho completo citado de propósito, colide de nome com
+  `src/features/admin/cost-reports/FaturasTab.jsx` já registado acima) → `AdminDashboard.jsx`(37,
+  3 fora) → `AjudasCustoAdmin.jsx`(68, 1 fora) → `RecibosCalculadora.jsx`(72, o maior ficheiro de
+  todo o `SCALE.text`, zero exceções) → `ValidationPortal.jsx`(22, 2 fora — achado à parte, ver
+  abaixo).
+  **Duas pendências já resolvidas por módulos anteriores apareceram de novo no varrimento da raiz —
+  não são trabalho novo.** `SalariosTab.jsx`(3) e `ReconciliacaoAdmin.jsx`(24) continuam com
+  `text-[Npx]` por decisão já tomada nos módulos `salarios` e `reconciliacao` (exceções de dinheiro/
+  `.recon-scope` documentadas acima) — o varrimento por pasta apanha-os de novo porque não sabe de
+  módulos, só de ficheiros; confirmado que não é regressão nem trabalho esquecido antes de os excluir
+  da contagem.
+  **`AjudasCustoAdmin.jsx` — a extrema uniformidade do ficheiro (quase todas as 69 ocorrências eram
+  literalmente a mesma string `text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]`
+  em `<th>`, variando só o alinhamento) permitiu convergir para `statLabel` com 5 `replace_all` — um
+  por combinação alinhamento×padding — em vez de 39 edições individuais, sem nenhum risco extra: o
+  alvo do token é idêntico nos 39 casos, só o texto da coluna e o `px-4 py-2/3` à volta mudam, e
+  nenhum dos dois é tocado pela substituição.** Reduziu um ficheiro de 69 ocorrências a menos de 20
+  chamadas de `Edit`.
+  **Reapareceu, duas vezes neste módulo, o mesmo bug de sempre — `replace_all` numa substring nua em
+  vez do atributo `className` inteiro — apesar de ser exactamente o padrão que este lote já sabia
+  evitar.** Em `CsvMappingCard.jsx` e `AdminReports.jsx`, ao convergir 5-6 rótulos de campo
+  idênticos com um único `replace_all`, o texto substituído foi só o miolo
+  (`text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] ml-1`) sem incluir
+  `className="` nem a aspa de fecho — deixou `${SCALE.text.statLabel}` dentro de uma string plana em
+  `className="${SCALE.text.statLabel} ..."`, apanhado de imediato pelo grep rigoroso
+  (`className="[^"]*\${`) e corrigido no mesmo passo. **A lição reforçada: a garantia contra este bug
+  não é "já vi este padrão antes", é a disciplina mecânica de incluir sempre `className="` → `` className={`...`} `` no mesmo `old_string`/`new_string`, mesmo num `replace_all` de uma substring
+  que parece inofensiva.** Confirmado zero ocorrências do bug em todo o módulo depois da correcção.
+  **Achado, não decisão tomada — `ValidationPortal.jsx` pode ser código morto, mas a prova não é
+  conclusiva.** Zero imports em todo o `src/` (`ValidationPortalProvider`/`ValidationPortal` não
+  aparecem fora do próprio ficheiro e do seu contexto dedicado), mas duas sondas candidatas
+  (`"Anular validação?"`, `"Erro ao anular:"`) deram falso positivo no bundle — ambas as frases
+  existem também em `src/features/admin/client/ClientEnviosPanel.jsx` (módulo `client`, confirmado
+  vivo), que partilha código quase idêntico com este ficheiro; a presença no bundle não distingue as
+  duas origens. Git log mostra histórico real e recente (`e3158c8`, `d710e1a`, commits de feature até
+  2026), não uma sobra órfã óbvia. Convertido normalmente (é seguro de qualquer forma, vivo ou morto)
+  — fica registado para quem um dia arrumar código morto confirmar com uma sonda genuinamente única
+  (string que não exista em `ClientEnviosPanel.jsx`) antes de decidir.
+  **Checkpoint ao vivo** em `/admin/recibos` (RecibosCalculadora, o ficheiro de dinheiro mais
+  sensível de toda a Fase 3): "TRABALHADOR"/"① DADOS DO TRABALHADOR"/"TOTAL ABONOS"/
+  "LÍQUIDO A RECEBER"/"MAPA DE AJUDAS DE CUSTO" medem `8px/800/uppercase` (`statLabel`); o nome do
+  trabalhador "Adriel de Jesus dos Santos" preserva a caixa original, sem forçar maiúsculas. Em
+  `/admin/ajudas-custo`: cabeçalho de tabela "Cliente" mede `8px/800/uppercase`, o nome do cliente
+  "Caldereria Kortaberri, S.L" preserva a caixa. Em `/admin/overview`, o dropdown de notificações do
+  `AdminDashboard.jsx` mede "Pedido de Ausência" a `8px/800/uppercase` e a data/hora a `10px/600/none`,
+  nome do trabalhador preservado. `npx eslint`/`npx vite build` limpos no módulo inteiro (só os
+  avisos pré-existentes já conhecidos nestes ficheiros, sem relação com esta conversão).
+  **`salarios` — primeiro módulo de dinheiro desta frente, feito com verificação extra de
+  coexistência cor/tamanho.** 5 ficheiros: `JustificarModal.jsx`(5), `SalarioEmployeeCard.jsx`(8),
+  `AssocTransacaoModal.jsx`(11, 1 fora — `text-[12px]` da descrição do movimento bancário, fora dos 4
+  tamanhos do `SCALE.text`), `SalariosTab.jsx`(35, 3 fora — 2× `text-[12px]` de mensagens de estado
+  vazio, e 1 dentro do bloco `.recon-scope` de "Lote SEPA" já documentado, linhas 696-735, não tocado
+  por decisão já registada), `ImportarIBANsModal.jsx`(0, fora de âmbito). **Antes de tocar em
+  `SalarioEmployeeCard.jsx`, confirmado ao vivo com dados reais (não só por leitura de código) que o
+  padrão `text-[10px] ... text-[var(--tone-amber)]` já existente na linha 34 resolve `fontSize` e
+  `color` como declarações CSS separadas** — medido no browser: `fontSize: 10px`, `color: rgb(187, 77,
+  0)` (= `--tone-amber`), a mesma mecânica já confirmada em `corrections`, agora reconfirmada de forma
+  independente com o badge real "N pendente(s)" em `/admin/reconciliacao/salarios`. Depois da
+  conversão para `SCALE.text.badge`, medido de novo: `fontSize: 9px`, mesma `color`, cor preservada.
+  Checkpoint ao vivo completo: resumo (`Trabalhadores`/`Match Exato`/`Pendentes` a 8px/800/uppercase,
+  confirmado via `getComputedStyle`), filtros de mês, e um cartão de trabalhador expandido (badges
+  "Saldo Pendente", valores, botão "Justificar") — sem regressão visual em nenhum.
 
 **Cor de marca fora do alcance dos tokens.** Categoria à parte das anteriores: aqui o problema não é
 uma variável que colide, é cor que os tokens não conseguem alcançar de todo. Não se resolve com mais
