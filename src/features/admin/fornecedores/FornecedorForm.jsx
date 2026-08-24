@@ -1,12 +1,12 @@
 import React from 'react';
 import { Building2, CreditCard, FileText, Loader2, Save } from 'lucide-react';
 import { useFornecedor } from '../contexts/FornecedorContext';
-import { FT } from '../../../styles/designTokens';
+import { FT, SCALE } from '../../../styles/designTokens';
 
 function Field({ label, children }) {
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">{label}</label>
+      <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>{label}</label>
       {children}
     </div>
   );
@@ -26,7 +26,7 @@ export default function FornecedorForm() {
       <div className="bg-[var(--surface)] p-4 rounded-2xl border border-[var(--border-soft)] space-y-3">
         <div className="flex items-center gap-2 mb-1">
           <Building2 size={12} className="text-[var(--slate-dim)]" />
-          <span className="text-[10px] font-black tracking-widest text-[var(--slate-dim)]">Dados da empresa</span>
+          <span className={`${SCALE.text.meta} tracking-widest text-[var(--slate-dim)]`}>Dados da empresa</span>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="md:col-span-2">
@@ -58,7 +58,7 @@ export default function FornecedorForm() {
       <div className="bg-[var(--surface)] p-4 rounded-2xl border border-[var(--border-soft)] space-y-3">
         <div className="flex items-center gap-2 mb-1">
           <CreditCard size={12} className="text-[var(--slate-dim)]" />
-          <span className="text-[10px] font-black tracking-widest text-[var(--slate-dim)]">Dados bancários</span>
+          <span className={`${SCALE.text.meta} tracking-widest text-[var(--slate-dim)]`}>Dados bancários</span>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="md:col-span-2">
@@ -86,7 +86,7 @@ export default function FornecedorForm() {
         <div className="flex items-center justify-between p-3 bg-[var(--surface)] rounded-xl border border-[var(--border-soft)]">
           <div>
             <p className="text-xs font-black text-[var(--ink-mid)]">Débito automático</p>
-            <p className="text-[10px] text-[var(--slate-dim)] mt-0.5">As faturas deste fornecedor são pagas por débito direto — excluídas da Fila de Pagamentos</p>
+            <p className={`${SCALE.text.meta} text-[var(--slate-dim)] mt-0.5`}>As faturas deste fornecedor são pagas por débito direto — excluídas da Fila de Pagamentos</p>
           </div>
           <button
             onClick={tog('debito_automatico')}
@@ -102,7 +102,7 @@ export default function FornecedorForm() {
       <div className="bg-[var(--surface)] p-4 rounded-2xl border border-[var(--border-soft)]">
         <div className="flex items-center gap-2 mb-2">
           <FileText size={12} className="text-[var(--slate-dim)]" />
-          <span className="text-[10px] font-black tracking-widest text-[var(--slate-dim)]">Notas</span>
+          <span className={`${SCALE.text.meta} tracking-widest text-[var(--slate-dim)]`}>Notas</span>
         </div>
         <textarea
           value={form.notas}

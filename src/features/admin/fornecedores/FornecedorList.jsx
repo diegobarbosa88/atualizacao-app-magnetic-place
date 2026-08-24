@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Truck, Edit2, Trash2, CreditCard, Mail, Phone, Globe, LayoutGrid, List, Search, AlertCircle } from 'lucide-react';
 import { useFornecedor } from '../contexts/FornecedorContext';
-import { FT } from '../../../styles/designTokens';
+import { FT, SCALE } from '../../../styles/designTokens';
 
 function maskIban(iban) {
   if (!iban || iban.length < 8) return iban || '—';
@@ -90,7 +90,7 @@ export default function FornecedorList() {
                   <th
                     key={col.label}
                     onClick={col.key ? () => toggleSort(col.key) : undefined}
-                    className={`px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] whitespace-nowrap ${col.key ? 'cursor-pointer hover:text-[var(--ink-soft)] select-none' : ''}`}
+                    className={`px-4 py-3 text-left ${SCALE.text.statLabel} text-[var(--slate-dim)] whitespace-nowrap ${col.key ? 'cursor-pointer hover:text-[var(--ink-soft)] select-none' : ''}`}
                   >
                     {col.label}
                     {col.key === sortKey && <span className="ml-1">{sortDir === 'asc' ? '↑' : '↓'}</span>}
@@ -103,26 +103,26 @@ export default function FornecedorList() {
                 <tr key={f.id} className="border-b border-[var(--border-soft)] hover:bg-[var(--surface)] transition-colors">
                   <td className="px-4 py-3">
                     <p className="font-black text-[var(--ink)] text-sm">{f.nome}</p>
-                    {f.nif && <p className="text-[10px] text-[var(--ink-soft)] font-mono mt-0.5">NIF {f.nif}</p>}
+                    {f.nif && <p className={`${SCALE.text.meta} text-[var(--ink-soft)] font-mono mt-0.5`}>NIF {f.nif}</p>}
                   </td>
                   <td className="px-4 py-3">
                     {f.email && <p className="text-xs text-[var(--ink-soft)]">{f.email}</p>}
-                    {f.telefone && <p className="text-[10px] text-[var(--slate-dim)] mt-0.5">{f.telefone}</p>}
+                    {f.telefone && <p className={`${SCALE.text.meta} text-[var(--slate-dim)] mt-0.5`}>{f.telefone}</p>}
                     {!f.email && !f.telefone && <span className="text-[var(--ink-soft)]">—</span>}
                   </td>
                   <td className="px-4 py-3">
                     {f.iban
-                      ? <span className="font-mono text-[11px] text-[var(--ink-soft)]">{maskIban(f.iban)}</span>
-                      : <span className="flex items-center gap-1 text-[10px] text-amber-500 font-bold"><AlertCircle size={11} /> Sem IBAN</span>
+                      ? <span className={`font-mono ${SCALE.text.body} text-[var(--ink-soft)]`}>{maskIban(f.iban)}</span>
+                      : <span className={`flex items-center gap-1 ${SCALE.text.meta} text-amber-500`}><AlertCircle size={11} /> Sem IBAN</span>
                     }
                   </td>
                   <td className="px-4 py-3">
                     {f.debito_automatico && (
-                      <span className="inline-flex items-center px-2 py-1 rounded-lg bg-[var(--surface-dim)] text-[var(--ink-soft)] text-[9px] font-black uppercase tracking-widest">D.A.</span>
+                      <span className={`inline-flex items-center px-2 py-1 rounded-lg bg-[var(--surface-dim)] text-[var(--ink-soft)] ${SCALE.text.badge}`}>D.A.</span>
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`inline-flex items-center px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${f.status === 'ativo' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'}`}>
+                    <span className={`inline-flex items-center px-2 py-1 rounded-lg ${SCALE.text.badge} ${f.status === 'ativo' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'}`}>
                       {f.status === 'ativo' ? 'Ativo' : 'Inativo'}
                     </span>
                   </td>
@@ -133,8 +133,8 @@ export default function FornecedorList() {
                       </button>
                       {confirmDeleteId === f.id ? (
                         <div className="flex items-center gap-1">
-                          <button onClick={() => handleDelete(f.id)} className="px-2 py-1 bg-red-600 text-white rounded-lg text-[9px] font-black uppercase">Sim</button>
-                          <button onClick={() => setConfirmDeleteId(null)} className="px-2 py-1 bg-[var(--surface-dim)] text-[var(--ink-soft)] rounded-lg text-[9px] font-black uppercase">Não</button>
+                          <button onClick={() => handleDelete(f.id)} className={`px-2 py-1 bg-red-600 text-white rounded-lg ${SCALE.text.badge}`}>Sim</button>
+                          <button onClick={() => setConfirmDeleteId(null)} className={`px-2 py-1 bg-[var(--surface-dim)] text-[var(--ink-soft)] rounded-lg ${SCALE.text.badge}`}>Não</button>
                         </div>
                       ) : (
                         <button onClick={() => setConfirmDeleteId(f.id)} className="p-1.5 text-[var(--slate)] hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
@@ -165,9 +165,9 @@ export default function FornecedorList() {
                 </div>
                 <div className="flex items-center gap-1">
                   {f.debito_automatico && (
-                    <span className="px-1.5 py-0.5 rounded bg-[var(--surface-dim)] text-[var(--ink-soft)] text-[8px] font-black uppercase">D.A.</span>
+                    <span className={`px-1.5 py-0.5 rounded bg-[var(--surface-dim)] text-[var(--ink-soft)] ${SCALE.text.statLabel}`}>D.A.</span>
                   )}
-                  <span className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase ${f.status === 'ativo' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600'}`}>
+                  <span className={`px-1.5 py-0.5 rounded ${SCALE.text.statLabel} ${f.status === 'ativo' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600'}`}>
                     {f.status === 'ativo' ? 'Ativo' : 'Inativo'}
                   </span>
                 </div>
@@ -186,7 +186,7 @@ export default function FornecedorList() {
                     <span className="font-mono">{maskIban(f.iban)}</span>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-1 text-[10px] text-amber-500 font-bold">
+                  <div className={`flex items-center gap-1 ${SCALE.text.meta} text-amber-500`}>
                     <AlertCircle size={11} /> Sem IBAN
                   </div>
                 )}
@@ -212,16 +212,16 @@ export default function FornecedorList() {
 
               {/* Card footer */}
               <div className="border-t border-[var(--border-soft)] px-4 py-2 flex items-center justify-end gap-1">
-                <button onClick={() => editarFornecedor(f)} className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-black uppercase hover:bg-[var(--surface-dim)] rounded-lg transition-colors" style={{ color: 'var(--slate-dim)' }}>
+                <button onClick={() => editarFornecedor(f)} className={`flex items-center gap-1.5 px-3 py-1.5 ${SCALE.text.badge} hover:bg-[var(--surface-dim)] rounded-lg transition-colors`} style={{ color: 'var(--slate-dim)' }}>
                   <Edit2 size={11} /> Editar
                 </button>
                 {confirmDeleteId === f.id ? (
                   <div className="flex items-center gap-1">
-                    <button onClick={() => handleDelete(f.id)} className="px-2 py-1.5 bg-red-600 text-white rounded-lg text-[9px] font-black uppercase">Confirmar</button>
-                    <button onClick={() => setConfirmDeleteId(null)} className="px-2 py-1.5 bg-[var(--surface-dim)] text-[var(--ink-soft)] rounded-lg text-[9px] font-black uppercase">Cancelar</button>
+                    <button onClick={() => handleDelete(f.id)} className={`px-2 py-1.5 bg-red-600 text-white rounded-lg ${SCALE.text.badge}`}>Confirmar</button>
+                    <button onClick={() => setConfirmDeleteId(null)} className={`px-2 py-1.5 bg-[var(--surface-dim)] text-[var(--ink-soft)] rounded-lg ${SCALE.text.badge}`}>Cancelar</button>
                   </div>
                 ) : (
-                  <button onClick={() => setConfirmDeleteId(f.id)} className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-black uppercase text-red-400 hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors">
+                  <button onClick={() => setConfirmDeleteId(f.id)} className={`flex items-center gap-1.5 px-3 py-1.5 ${SCALE.text.badge} text-red-400 hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors`}>
                     <Trash2 size={11} /> Apagar
                   </button>
                 )}
