@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { CheckCircle, AlertCircle, XCircle, Clock, Building2, ChevronDown, LayoutList, Users, Send, MessageCircle, FileText } from 'lucide-react';
+import { CheckCircle, AlertCircle, XCircle, Clock, Building2, ChevronDown, LayoutList, Users, Send, MessageCircle, FileText, Search } from 'lucide-react';
 import { formatDocDate } from '../../../utils/dateUtils';
 import { useApp } from '../../../context/AppContext';
 import { applyCreationRequest, rejectCorrection, applyCorrection, markResolved } from '../../../utils/correctionsApi';
@@ -381,6 +381,7 @@ const CorrectionsInbox = ({ initialCorrectionId, onCorrectionNavigated, forcedSo
   const location = useLocation();
   const [selectedId, setSelectedId] = useState(initialCorrectionId || null);
   const [expandedCards, setExpandedCards] = useState({});
+  const [search, setSearch] = useState('');
 
   const qp = new URLSearchParams(location.search);
   const sourceFilter = forcedSource || qp.get('source') || 'workers';
@@ -442,6 +443,22 @@ const CorrectionsInbox = ({ initialCorrectionId, onCorrectionNavigated, forcedSo
     return map;
   }, [correctionItems]);
 
+  // Pesquisa por nome de cliente (grupo) ou de trabalhador (dentro dos itens da correção) —
+  // aplicada depois do filtro de estado, antes de agrupar/renderizar nos painéis.
+  const searchFiltered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return filtered;
+    return filtered.filter((c) => {
+      const client = clients.find((cl) => String(cl.id) === String(c.client_id));
+      if ((client?.name || '').toLowerCase().includes(q)) return true;
+      const items = itemsByCorrection.get(c.id) || [];
+      return items.some((it) => {
+        const workerObj = workers.find((w) => String(w.id) === String(it.worker_id));
+        return (it.worker_name || workerObj?.name || '').toLowerCase().includes(q);
+      });
+    });
+  }, [filtered, search, clients, workers, itemsByCorrection]);
+
   const handleWorkerApprove = async (correction) => {
     if (!supabase) { alert('Sistema ainda não está pronto.'); return; }
     if (!confirm('Aprovar este pedido de registo? Os horários serão atualizados/criados no relatório.')) return;
@@ -495,9 +512,21 @@ const CorrectionsInbox = ({ initialCorrectionId, onCorrectionNavigated, forcedSo
 
   return (
     <div className="p-6 md:p-8">
-      <header className="mb-8 flex items-center gap-3">
-        <div className="bg-amber-50 p-2 rounded-xl text-amber-600"><AlertCircle size={20} /></div>
-        <h3 className="font-black text-base sm:text-xl text-[var(--ink)] uppercase tracking-tight">Inbox de Correções</h3>
+      <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-[var(--tone-amber-bg)] text-[var(--tone-amber)]"><AlertCircle size={16} /></div>
+          <h3 className="font-black text-base sm:text-xl text-[var(--ink)] uppercase tracking-tight" style={{ fontFamily: FONT_TITLE }}>Inbox de Correções</h3>
+        </div>
+        <div className="relative">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--slate)] pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Pesquisar cliente ou trabalhador..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-8 pr-3 py-2 text-xs border border-[var(--border)] rounded-xl bg-[var(--surface)] focus:outline-none focus:ring-2 focus:ring-indigo-300 w-48 sm:w-64"
+          />
+        </div>
       </header>
 
       {/* Source selector — hidden when forcedSource is set */}
@@ -548,7 +577,7 @@ const CorrectionsInbox = ({ initialCorrectionId, onCorrectionNavigated, forcedSo
 
         {sourceFilter === 'workers' ? (
           <WorkerCorrectionsPanel
-            filtered={filtered}
+            filtered={searchFiltered}
             clients={clients}
             workers={workers}
             itemsByCorrection={itemsByCorrection}
@@ -559,7 +588,7 @@ const CorrectionsInbox = ({ initialCorrectionId, onCorrectionNavigated, forcedSo
           />
         ) : (
           <ClientCorrectionsPanel
-            filtered={filtered}
+            filtered={searchFiltered}
             clients={clients}
             workers={workers}
             itemsByCorrection={itemsByCorrection}
