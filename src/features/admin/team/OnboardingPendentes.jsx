@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useApp } from '../../../context/AppContext';
-import { FT, SCALE } from '../../../styles/designTokens';
+import { FT, SCALE, FONT_TITLE } from '../../../styles/designTokens';
 import { Users, Eye, CheckCircle, XCircle, Loader2, RefreshCw, Clock, AlertCircle, ShieldCheck } from 'lucide-react';
 import ModalShell from '../../../components/common/ModalShell';
 import SelectProfissaoEmpresa from '../../../components/SelectProfissaoEmpresa';
@@ -171,9 +171,9 @@ export default function OnboardingPendentes() {
     <div>
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <div className="bg-amber-50 p-2 rounded-xl text-amber-600"><Clock size={18} /></div>
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-[var(--tone-amber-bg)] text-[var(--tone-amber)]"><Clock size={16} /></div>
           <div>
-            <h3 className="font-black text-base text-[var(--ink)] uppercase tracking-tight">Pedidos Pendentes</h3>
+            <h3 className="font-black text-base text-[var(--ink)] uppercase tracking-tight" style={{ fontFamily: FONT_TITLE }}>Pedidos Pendentes</h3>
             <p className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>Formulários de onboarding aguardando aprovação</p>
           </div>
         </div>
