@@ -2,7 +2,7 @@ import React from 'react';
 import { CheckCircle, AlertCircle, ChevronDown, ChevronUp, X, Undo2, MessageSquare } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
 import { fmtEur, MESES_PT_SAL } from './salarioUtils';
-import { FT } from '../../../styles/designTokens';
+import { FT, SCALE } from '../../../styles/designTokens';
 
 export default function SalarioEmployeeCard({
   employee,
@@ -28,10 +28,10 @@ export default function SalarioEmployeeCard({
         <div className="flex items-center gap-3">
           <div className={`w-2 h-2 rounded-full flex-shrink-0 ${allOk ? 'bg-emerald-500' : 'bg-amber-400'}`} />
           <span className="text-sm font-bold text-[var(--ink)]">{employee.employee_name}</span>
-          <span className="text-[10px] text-[var(--slate-dim)]">{employee.months.length} mês(es)</span>
+          <span className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>{employee.months.length} mês(es)</span>
         </div>
         <div className="flex items-center gap-3">
-          <span className={`text-[10px] font-black uppercase tracking-widest ${allOk ? 'text-emerald-600' : 'text-amber-600'}`}>
+          <span className={`${SCALE.text.badge} ${allOk ? 'text-[var(--tone-emerald)]' : 'text-[var(--tone-amber)]'}`}>
             {allOk ? 'Tudo Ok' : `${pendingMonths} pendente(s)`}
           </span>
           {isOpen ? <ChevronUp size={14} className="text-[var(--slate)]" /> : <ChevronDown size={14} className="text-[var(--slate)]" />}
@@ -59,13 +59,13 @@ export default function SalarioEmployeeCard({
                     </span>
                     <span
                       onClick={() => onJustificar({ employee_name: employee.employee_name, month: m.month, balance: m.balance })}
-                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest cursor-pointer hover:opacity-80 flex-shrink-0 ${badgeClass}`}
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full cursor-pointer hover:opacity-80 flex-shrink-0 ${SCALE.text.badge} ${badgeClass}`}
                     >
                       {isMatch || isJustified ? <CheckCircle size={9} /> : <AlertCircle size={9} />} {displayStatus}
                     </span>
                   </div>
                   {Math.abs(m.balance) > tolerancia && (
-                    <span className={`flex-shrink-0 font-black text-[10px] px-2 py-0.5 rounded-full ${m.balance > 0 ? 'bg-rose-100 text-rose-700' : 'bg-sky-100 text-sky-700'}`}>
+                    <span className={`flex-shrink-0 px-2 py-0.5 rounded-full ${SCALE.text.badge} ${m.balance > 0 ? 'bg-rose-100 text-rose-700' : 'bg-sky-100 text-sky-700'}`}>
                       {m.balance > 0
                         ? `−${fmtEur(m.balance)}`
                         : `+${fmtEur(Math.abs(m.balance))}`}
@@ -82,7 +82,7 @@ export default function SalarioEmployeeCard({
                   {!isMatch && !isJustified && (
                     <button
                       onClick={() => onJustificar({ employee_name: employee.employee_name, month: m.month, balance: m.balance })}
-                      className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-[var(--surface-dim)] hover:bg-[var(--border)] transition-colors flex-shrink-0" style={{ color: 'var(--slate-dim)' }}
+                      className={`flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[var(--surface-dim)] hover:bg-[var(--border)] transition-colors flex-shrink-0 ${SCALE.text.badge}`} style={{ color: 'var(--slate-dim)' }}
                     >
                       <MessageSquare size={10} /> Justificar
                     </button>
@@ -92,12 +92,12 @@ export default function SalarioEmployeeCard({
                 {/* Linha 3: justificação (só se existir) */}
                 {isJustified && (
                   <div className="flex items-center justify-between gap-2 bg-white border border-[var(--border-soft)] rounded-xl px-3 py-2">
-                    <span className="text-[10px] text-[var(--slate-dim)] italic min-w-0 truncate" title={justEntry.justification}>
+                    <span className={`${SCALE.text.meta} text-[var(--slate-dim)] italic min-w-0 truncate`} title={justEntry.justification}>
                       "{justEntry.justification}"
                     </span>
                     <button
                       onClick={() => onRemoverJustificacao({ employee_name: employee.employee_name, month: m.month })}
-                      className="flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest bg-[var(--surface-dim)] text-[var(--ink-soft)] hover:bg-rose-100 hover:text-rose-600 transition-colors flex-shrink-0 ml-2"
+                      className={`flex items-center gap-1 px-2 py-1 rounded-lg bg-[var(--surface-dim)] text-[var(--ink-soft)] hover:bg-rose-100 hover:text-rose-600 transition-colors flex-shrink-0 ml-2 ${SCALE.text.badge}`}
                       title="Desfazer justificação"
                     >
                       <Undo2 size={9} /> Desfazer
@@ -111,7 +111,7 @@ export default function SalarioEmployeeCard({
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => window.__toggleTipoLink(t, supabase, onTipoUpdate)}
-                            className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest cursor-pointer hover:opacity-75 transition-opacity flex-shrink-0 ${t.type === 'Adiantamento' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                            className={`px-2.5 py-1 rounded-full cursor-pointer hover:opacity-75 transition-opacity flex-shrink-0 ${SCALE.text.badge} ${t.type === 'Adiantamento' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
                             {t.type === 'Adiantamento' ? 'Adiant.' : 'Liquid.'}
                           </button>
                           <span className="text-xs text-[var(--slate-dim)]">{t.date}</span>

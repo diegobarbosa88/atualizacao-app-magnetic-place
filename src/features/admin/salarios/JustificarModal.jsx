@@ -2,7 +2,7 @@ import React from 'react';
 import { CheckCircle, Loader2 } from 'lucide-react';
 import { fmtEur, fmtMes } from './salarioUtils';
 import ModalShell from '../../../components/common/ModalShell';
-import { FT } from '../../../styles/designTokens';
+import { FT, SCALE } from '../../../styles/designTokens';
 
 export default function JustificarModal({ entry, text, onTextChange, saving, onSave, onClose }) {
   return (
@@ -15,13 +15,13 @@ export default function JustificarModal({ entry, text, onTextChange, saving, onS
       footer={
         <div className="flex gap-2 px-6 py-4">
           <button onClick={onClose}
-            className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-[var(--border)] text-[var(--ink-soft)] hover:bg-[var(--surface)] transition-colors">
+            className={`flex-1 px-4 py-2.5 rounded-2xl border border-[var(--border)] text-[var(--ink-soft)] hover:bg-[var(--surface)] transition-colors ${SCALE.text.badge}`}>
             Cancelar
           </button>
           <button
             disabled={!text.trim() || saving}
             onClick={onSave}
- className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 hover:opacity-90"
+ className={`flex-1 px-4 py-2.5 rounded-2xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 hover:opacity-90 ${SCALE.text.badge}`}
             style={{ backgroundColor: FT.orange, color: FT.navy }}
           >
             {saving ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle size={13} />} Marcar Ok
@@ -31,14 +31,14 @@ export default function JustificarModal({ entry, text, onTextChange, saving, onS
     >
       <div className="p-6 space-y-4">
         <div className="bg-amber-50 rounded-2xl px-4 py-3">
-          <p className="text-[10px] font-black uppercase tracking-widest text-amber-600 mb-1">Mês pendente</p>
+          <p className={`${SCALE.text.statLabel} text-amber-600 mb-1`}>Mês pendente</p>
           <p className="text-sm font-bold text-[var(--ink)]">{entry.employee_name}</p>
-          <p className="text-[11px] text-[var(--slate-dim)] mt-0.5">
+          <p className={`${SCALE.text.body} text-[var(--slate-dim)] mt-0.5`}>
             {fmtMes(entry.month)} · Saldo em falta: <strong className="text-red-600">{fmtEur(Math.abs(entry.balance))}</strong>
           </p>
         </div>
         <div>
-          <label className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] block mb-1">Justificação</label>
+          <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)] block mb-1`}>Justificação</label>
           <textarea
             value={text}
             onChange={e => onTextChange(e.target.value)}

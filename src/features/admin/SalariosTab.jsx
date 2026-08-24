@@ -4,7 +4,7 @@ import autoTable from 'jspdf-autotable';
 import { AlertCircle, CheckCircle, ChevronDown, ChevronRight, Coins, Download, FileText, Landmark, Loader2, Scissors, X, Zap } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { authFetch } from '../../utils/authFetch';
-import { FT } from '../../styles/designTokens';
+import { FT, SCALE } from '../../styles/designTokens';
 import { runReconciliacaoSalarial } from '../../utils/reconciliacaoSalarialEngine';
 import '../../utils/toggleTipoLink';
 import { MESES_PT_SAL, fmtEur, fmtMes } from './salarios/salarioUtils';
@@ -506,7 +506,7 @@ export default function SalariosTab({ month }) {
       {loadingSalarios ? (
         <div className="flex flex-col items-center justify-center py-12 gap-3">
           <Loader2 size={24} className="animate-spin" style={{ color: FT.slate }} />
-          <p className="text-[11px] text-[var(--slate-dim)]">A analisar pagamentos salariais…</p>
+          <p className={`${SCALE.text.body} text-[var(--slate-dim)]`}>A analisar pagamentos salariais…</p>
         </div>
       ) : !salarioResultado ? (
         <p className="text-center text-[var(--slate-dim)] py-8 text-sm">Sem dados de análise salarial.</p>
@@ -517,18 +517,18 @@ export default function SalariosTab({ month }) {
             <div className="grid grid-cols-3 gap-2">
               {[
                 { label: 'Trabalhadores', value: employeesFiltered.length, color: 'text-[var(--ink-mid)]', bg: 'bg-[var(--surface)]' },
-                { label: 'Match Exato', value: (salarioResultado?.summary?.total_exact_matches || 0) + justificacoes.length, color: 'text-emerald-700', bg: 'bg-emerald-50' },
-                { label: 'Pendentes', value: pendentesEfectivos, color: 'text-amber-700', bg: 'bg-amber-50' },
+                { label: 'Match Exato', value: (salarioResultado?.summary?.total_exact_matches || 0) + justificacoes.length, color: 'text-[var(--tone-emerald)]', bg: 'bg-[var(--tone-emerald-bg)]' },
+                { label: 'Pendentes', value: pendentesEfectivos, color: 'text-[var(--tone-amber)]', bg: 'bg-[var(--tone-amber-bg)]' },
               ].map(c => (
                 <div key={c.label} className={`${c.bg} rounded-2xl px-4 py-3 text-center min-w-0`}>
                   <p className={`text-2xl font-black ${c.color}`}>{c.value}</p>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] mt-0.5">{c.label}</p>
+                  <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] mt-0.5`}>{c.label}</p>
                 </div>
               ))}
             </div>
 
             <div className="flex flex-row sm:flex-col items-center sm:items-end gap-2 sm:gap-1 self-start sm:flex-shrink-0">
-              <label className="text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Tolerância (€)</label>
+              <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Tolerância (€)</label>
               <div className="flex items-center gap-1">
                 <input
                   type="number" min="0" step="0.01" value={tolInput}
@@ -541,7 +541,7 @@ export default function SalariosTab({ month }) {
                     localStorage.setItem('salarios_tolerancia', String(rounded));
                     analisarSalarios(undefined, rounded);
                   }}
-                  className="w-20 border border-[var(--border)] rounded-xl px-2 py-1.5 text-[11px] font-bold text-[var(--ink-mid)] text-right focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30"
+                  className={`w-20 border border-[var(--border)] rounded-xl px-2 py-1.5 text-[var(--ink-mid)] text-right focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30 ${SCALE.text.body}`}
                 />
               </div>
             </div>
@@ -608,12 +608,12 @@ export default function SalariosTab({ month }) {
             <>
               <div className="flex flex-wrap items-end gap-1 border-b border-[var(--border-soft)]">
                 <button onClick={() => setSelectedMonth(null)}
-                  className={`px-3 py-2 -mb-px border-b-2 text-[10px] font-black uppercase tracking-widest transition-all ${!selectedMonth ? 'border-[var(--orange)] text-[var(--navy)]' : 'border-transparent text-[var(--slate-dim)] hover:text-[var(--navy)]'}`}>
+                  className={`px-3 py-2 -mb-px border-b-2 transition-all ${SCALE.text.badge} ${!selectedMonth ? 'border-[var(--orange)] text-[var(--navy)]' : 'border-transparent text-[var(--slate-dim)] hover:text-[var(--navy)]'}`}>
                   Todos
                 </button>
                 {monthsAvailable.map(mes => (
                   <button key={mes} onClick={() => setSelectedMonth(mes)}
-                    className={`px-3 py-2 -mb-px border-b-2 text-[10px] font-black uppercase tracking-widest transition-all ${selectedMonth === mes ? 'border-[var(--orange)] text-[var(--navy)]' : 'border-transparent text-[var(--slate-dim)] hover:text-[var(--navy)]'}`}>
+                    className={`px-3 py-2 -mb-px border-b-2 transition-all ${SCALE.text.badge} ${selectedMonth === mes ? 'border-[var(--orange)] text-[var(--navy)]' : 'border-transparent text-[var(--slate-dim)] hover:text-[var(--navy)]'}`}>
                     {fmtMes(mes)}
                   </button>
                 ))}
@@ -643,36 +643,36 @@ export default function SalariosTab({ month }) {
           {(totaisDiferencas.aMais > 0.01 || totaisDiferencas.aMenos > 0.01) && (
             <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="bg-sky-50 border border-sky-100 rounded-2xl px-4 py-3">
-                <p className="text-[9px] font-black uppercase tracking-widest text-sky-500 mb-1">Total Pago a Mais</p>
+                <p className={`${SCALE.text.statLabel} text-sky-500 mb-1`}>Total Pago a Mais</p>
                 <p className="text-xl font-black text-sky-700">{fmtEur(totaisDiferencas.aMais)}</p>
                 {totaisDiferencas.detalheAmais.length > 0 && (
                   <div className="mt-2 space-y-1 border-t border-sky-100 pt-2">
                     {totaisDiferencas.detalheAmais.map((e, i) => (
                       <div key={i} className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
-                          <p className="text-[10px] font-bold text-sky-800 truncate">{e.name}</p>
-                          <p className="text-[9px] text-sky-400">{fmtMes(e.month)}</p>
-                          {e.justification && <p className="text-[9px] text-[var(--slate-dim)] italic truncate" title={e.justification}>"{e.justification}"</p>}
+                          <p className={`${SCALE.text.meta} text-sky-800 truncate`}>{e.name}</p>
+                          <p className={`${SCALE.text.meta} text-sky-400`}>{fmtMes(e.month)}</p>
+                          {e.justification && <p className={`${SCALE.text.meta} text-[var(--slate-dim)] italic truncate`} title={e.justification}>"{e.justification}"</p>}
                         </div>
-                        <span className="text-[10px] font-black text-sky-700 flex-shrink-0">{fmtEur(e.value)}</span>
+                        <span className={`${SCALE.text.meta} text-sky-700 flex-shrink-0`}>{fmtEur(e.value)}</span>
                       </div>
                     ))}
                   </div>
                 )}
               </div>
               <div className="bg-rose-50 border border-rose-100 rounded-2xl px-4 py-3">
-                <p className="text-[9px] font-black uppercase tracking-widest text-rose-500 mb-1">Total Pago a Menos</p>
+                <p className={`${SCALE.text.statLabel} text-rose-500 mb-1`}>Total Pago a Menos</p>
                 <p className="text-xl font-black text-rose-700">{fmtEur(totaisDiferencas.aMenos)}</p>
                 {totaisDiferencas.detalheAmenos.length > 0 && (
                   <div className="mt-2 space-y-1 border-t border-rose-100 pt-2">
                     {totaisDiferencas.detalheAmenos.map((e, i) => (
                       <div key={i} className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
-                          <p className="text-[10px] font-bold text-rose-800 truncate">{e.name}</p>
-                          <p className="text-[9px] text-rose-400">{fmtMes(e.month)}</p>
-                          {e.justification && <p className="text-[9px] text-[var(--slate-dim)] italic truncate" title={e.justification}>"{e.justification}"</p>}
+                          <p className={`${SCALE.text.meta} text-rose-800 truncate`}>{e.name}</p>
+                          <p className={`${SCALE.text.meta} text-rose-400`}>{fmtMes(e.month)}</p>
+                          {e.justification && <p className={`${SCALE.text.meta} text-[var(--slate-dim)] italic truncate`} title={e.justification}>"{e.justification}"</p>}
                         </div>
-                        <span className="text-[10px] font-black text-rose-700 flex-shrink-0">{fmtEur(e.value)}</span>
+                        <span className={`${SCALE.text.meta} text-rose-700 flex-shrink-0`}>{fmtEur(e.value)}</span>
                       </div>
                     ))}
                   </div>
@@ -684,7 +684,7 @@ export default function SalariosTab({ month }) {
           {/* Transferências não identificadas */}
           {(salarioResultado.unmatched_transactions || []).length > 0 && (
             <div className="mt-4">
-              <p className="text-[10px] font-black uppercase tracking-widest text-rose-500 mb-2 flex items-center gap-1">
+              <p className={`${SCALE.text.statLabel} text-rose-500 mb-2 flex items-center gap-1`}>
                 <AlertCircle size={11} /> Não Identificadas ({salarioResultado.unmatched_transactions.length})
               </p>
               <div className="space-y-1.5">
@@ -738,12 +738,12 @@ export default function SalariosTab({ month }) {
                   return (
                     <div key={i} className="flex items-center justify-between bg-rose-50 border border-rose-100 rounded-xl px-3 py-2">
                       <div className="flex-1 min-w-0 mr-3">
-                        <p className="text-[11px] text-[var(--ink-soft)] truncate">{tx.descricao}</p>
-                        <p className="text-[10px] text-[var(--slate-dim)]">{tx.date} · {fmtEur(tx.amount)}</p>
+                        <p className={`${SCALE.text.body} text-[var(--ink-soft)] truncate`}>{tx.descricao}</p>
+                        <p className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>{tx.date} · {fmtEur(tx.amount)}</p>
                       </div>
                       <button
                         onClick={() => { setSalarioAssocModal(tx); setSalarioAssocPattern(''); setSalarioAssocWorker(''); }}
-                        className="flex-shrink-0 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-[var(--surface-dim)] hover:bg-[var(--border)] transition-colors" style={{ color: FT.inkSoft }}
+                        className={`flex-shrink-0 px-3 py-1.5 rounded-xl bg-[var(--surface-dim)] hover:bg-[var(--border)] transition-colors ${SCALE.text.badge}`} style={{ color: FT.inkSoft }}
                       >
                         Associar
                       </button>
@@ -757,13 +757,13 @@ export default function SalariosTab({ month }) {
           {/* Aliases activos */}
           {salarioAliases.length > 0 && (
             <div className="mt-3 border-t border-[var(--border-soft)] pt-3">
-              <p className="text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-2">Aliases Guardados</p>
+              <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] mb-2`}>Aliases Guardados</p>
               <div className="flex flex-wrap gap-1.5">
                 {salarioAliases.map(a => (
                   <div key={a.id} className="flex items-center gap-1 bg-[var(--surface-dim)] rounded-xl px-2 py-1">
-                    <span className="text-[10px] text-[var(--ink-soft)] max-w-[120px] truncate">{a.pattern}</span>
-                    <span className="text-[9px] text-[var(--slate)]">→</span>
-                    <span className="text-[10px] font-bold max-w-[100px] truncate" style={{ color: 'var(--navy)' }}>{a.worker_name}</span>
+                    <span className={`${SCALE.text.meta} text-[var(--ink-soft)] max-w-[120px] truncate`}>{a.pattern}</span>
+                    <span className={`${SCALE.text.meta} text-[var(--slate)]`}>→</span>
+                    <span className={`${SCALE.text.meta} max-w-[100px] truncate`} style={{ color: 'var(--navy)' }}>{a.worker_name}</span>
                     <button
                       onClick={async () => {
                         await supabase.from('reconciliacao_salarial_aliases').delete().eq('id', a.id);
@@ -915,13 +915,13 @@ export default function SalariosTab({ month }) {
                           {(() => {
                             const nDesc = deducoes.filter(d => norm(d.worker_name) === norm(emp.employee_name) && d.month === mesAlvo).length;
                             return nDesc > 0
-                              ? <p className="text-[10px] text-amber-600 font-bold">{nDesc} desconto{nDesc > 1 ? 's' : ''} aplicado{nDesc > 1 ? 's' : ''}</p>
+                              ? <p className={`${SCALE.text.meta} text-amber-600`}>{nDesc} desconto{nDesc > 1 ? 's' : ''} aplicado{nDesc > 1 ? 's' : ''}</p>
                               : null;
                           })()}
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
                           {temAjuste && (
-                            <span className="text-[10px] font-bold bg-amber-100 text-amber-700 rounded-full px-2 py-0.5">ajustado</span>
+                            <span className={`${SCALE.text.meta} bg-amber-100 text-amber-700 rounded-full px-2 py-0.5`}>ajustado</span>
                           )}
                           <span className={`text-sm font-black ${temAjuste ? 'text-amber-700' : 'text-[var(--ink-mid)]'}`}>
                             {fmtEur(valorFinal)}
@@ -1009,7 +1009,7 @@ export default function SalariosTab({ month }) {
         }
       >
           <div className="px-5 py-3 border-b border-[var(--border-soft)]">
-            <label className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] block mb-1.5">Mês</label>
+            <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)] block mb-1.5`}>Mês</label>
             <input
               type="month"
               value={descMes}
@@ -1031,7 +1031,7 @@ export default function SalariosTab({ month }) {
                         setDescForm(formAberto ? null : { workerId: worker.id, workerName: worker.name });
                         setDescFormVal({ motivo: 'adiantamento', amount: '', descricao: '' });
                       }}
-                      className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest bg-[var(--surface-dim)] hover:bg-[var(--border)] rounded-xl px-2 py-1 transition-colors" style={{ color: FT.inkSoft }}
+                      className={`flex items-center gap-1 bg-[var(--surface-dim)] hover:bg-[var(--border)] rounded-xl px-2 py-1 transition-colors ${SCALE.text.badge}`} style={{ color: FT.inkSoft }}
                     >
                       {formAberto ? <X size={11} /> : '+'} {formAberto ? 'Cancelar' : 'Adicionar'}
                     </button>
@@ -1040,7 +1040,7 @@ export default function SalariosTab({ month }) {
                   {descWorker.length > 0 && (
                     <div className="flex flex-wrap gap-1.5 mt-2">
                       {descWorker.map(d => (
-                        <span key={d.id} className="flex items-center gap-1.5 text-[11px] font-bold bg-amber-50 text-amber-700 rounded-full px-2.5 py-1">
+                        <span key={d.id} className={`flex items-center gap-1.5 bg-amber-50 text-amber-700 rounded-full px-2.5 py-1 ${SCALE.text.body}`}>
                           {MOTIVOS_DESCONTO.find(m => m.value === d.motivo)?.label ?? d.motivo}
                           {' · '}
                           {fmtEur(d.amount)}
@@ -1061,7 +1061,7 @@ export default function SalariosTab({ month }) {
                     <div className="mt-3 bg-[var(--surface)] rounded-2xl p-3 flex flex-col gap-2">
                       <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <label className="text-[10px] font-bold text-[var(--slate-dim)] uppercase tracking-widest block mb-1">Motivo</label>
+                          <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)] block mb-1`}>Motivo</label>
                           <select
                             value={descFormVal.motivo}
                             onChange={e => setDescFormVal(p => ({ ...p, motivo: e.target.value }))}
@@ -1071,7 +1071,7 @@ export default function SalariosTab({ month }) {
                           </select>
                         </div>
                         <div>
-                          <label className="text-[10px] font-bold text-[var(--slate-dim)] uppercase tracking-widest block mb-1">Valor (€)</label>
+                          <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)] block mb-1`}>Valor (€)</label>
                           <input
                             type="number" min="0.01" step="0.01"
                             value={descFormVal.amount}
@@ -1082,7 +1082,7 @@ export default function SalariosTab({ month }) {
                         </div>
                       </div>
                       <div>
-                        <label className="text-[10px] font-bold text-[var(--slate-dim)] uppercase tracking-widest block mb-1">Nota (opcional)</label>
+                        <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)] block mb-1`}>Nota (opcional)</label>
                         <input
                           type="text"
                           value={descFormVal.descricao}
