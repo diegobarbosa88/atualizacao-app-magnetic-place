@@ -42,114 +42,157 @@ function VinculoTimeline({ workerForm, apoliceSeguro, onAbrirSS, ssFlag }) {
   const admissaoFeita = !!workerForm.ss_admissao_comunicada_em;
   const cessacaoFeita = !!workerForm.ss_cessacao_comunicada_em;
 
+  const hoje = new Date();
+  const dataInicioObj = temInicio ? new Date(workerForm.dataInicio.split('T')[0]) : null;
+  const dataFimObj = temFim ? new Date(workerForm.dataFim.split('T')[0]) : null;
+  const diasEntre = (a, b) => Math.max(0, Math.round((b - a) / 86400000));
+
+  // 4 casos cronológicos — a ordem importa: D e C são mais específicos que a
+  // simples ausência de dataFim, por isso são verificados primeiro.
+  const aindaNaoComecou = temInicio && hoje < dataInicioObj;
+  const jaCessado = temFim && hoje >= dataFimObj;
+  const casoB = !aindaNaoComecou && !jaCessado && !temFim;
+  const casoC = jaCessado;
+  const casoD = aindaNaoComecou;
+
   const diasAtivo = (() => {
     if (!temInicio) return null;
-    const inicio = new Date(workerForm.dataInicio.split('T')[0]);
-    const fim = temFim ? new Date(workerForm.dataFim.split('T')[0]) : new Date();
-    const dias = Math.max(0, Math.round((fim - inicio) / 86400000));
-    return dias;
+    const fim = temFim ? dataFimObj : hoje;
+    return diasEntre(dataInicioObj, fim);
   })();
+
+  let hojeTexto;
+  if (casoD) hojeTexto = `Admissão em ${diasEntre(hoje, dataInicioObj)}d`;
+  else if (casoC) hojeTexto = `Cessado há ${diasEntre(dataFimObj, hoje)}d`;
+  else if (casoB) hojeTexto = temInicio ? `Ativo há ${diasAtivo}d` : 'Sem período aberto';
+  else hojeTexto = temFim ? 'Período fechado' : diasAtivo !== null ? `Ativo — ${diasAtivo}d` : 'Sem período aberto';
+
+  const pillTexto = casoB ? 'sem data de cessação prevista' : (temFim ? 'encerrado' : temInicio ? 'em curso' : 'n/a');
+
+  const nodeAdmissao = (
+    <div key="admissao" className="flex flex-col items-center text-center w-[120px] sm:w-[150px] shrink-0">
+      <div className="flex items-center w-full">
+        <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border-2 z-10 ${
+          ssFlag?.prioridade === 'rejeitada' ? 'bg-rose-500 border-rose-500 text-white'
+          : ssFlag?.prioridade === 'presa' ? 'bg-orange-500 border-orange-500 text-white'
+          : admissaoFeita ? 'bg-emerald-500 border-emerald-500 text-white'
+          : temInicio ? 'text-white' : 'bg-white border-[var(--border)] text-[var(--slate)]'
+        }`} style={!admissaoFeita && temInicio && !ssFlag ? { backgroundColor: FT.navy, borderColor: FT.navy } : {}}>
+          {ssFlag?.prioridade === 'rejeitada' ? <AlertTriangle size={12} /> : admissaoFeita ? <Check size={13} /> : <Circle size={11} fill="currentColor" />}
+        </div>
+        <div className="h-[2.5px] flex-1" style={{ background: temInicio ? '#10b981' : undefined, backgroundImage: !temInicio ? 'repeating-linear-gradient(90deg, #e2e8f0 0 6px, transparent 6px 11px)' : undefined }} />
+      </div>
+      <div className="mt-2">
+        <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Admissão</p>
+        <p className="text-xs font-black text-[var(--ink-mid)] my-0.5">{temInicio ? fmtDate(workerForm.dataInicio) : '— sem data'}</p>
+        {temInicio ? (
+          ssFlag?.prioridade === 'rejeitada' ? (
+            <button
+              type="button"
+              onClick={() => onAbrirSS('admissao')}
+              className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-rose-50 border border-rose-200 text-rose-700 hover:bg-rose-100 transition-colors cursor-pointer ${SCALE.text.meta}`}
+              title={ssFlag.motivo || 'Rejeitada pela SS'}
+            >
+              <AlertTriangle size={9} /> SS rejeitou — reenviar
+            </button>
+          ) : ssFlag?.prioridade === 'presa' ? (
+            <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-orange-50 border border-orange-200 text-orange-700 ${SCALE.text.meta}`} title="A processar há vários dias — confirmar no portal da SS Direta">
+              <AlertTriangle size={9} /> SS presa a processar
+            </span>
+          ) : admissaoFeita ? (
+            <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 ${SCALE.text.meta}`}>✓ SS comunicada</span>
+          ) : (
+            <button
+              type="button"
+              onClick={() => onAbrirSS('admissao')}
+              className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100 transition-colors cursor-pointer ${SCALE.text.meta}`}
+            >
+              <SendHorizonal size={9} /> SS por comunicar
+            </button>
+          )
+        ) : (
+          <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[var(--surface-dim)] border border-[var(--border)] text-[var(--ink-soft)] ${SCALE.text.meta}`}>sem data</span>
+        )}
+      </div>
+    </div>
+  );
+
+  // Segmento seguinte só existe quando há mais um nó depois — caso A e D têm
+  // (leva a Cessação/Admissão), caso B e C não (Hoje é o último da linha).
+  const nodeHoje = (temSeguinte) => (
+    <div key="hoje" className="flex flex-col items-center text-center flex-1 shrink-0">
+      <div className="flex items-center w-full">
+        <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 border-2 z-10 text-white" style={{ backgroundColor: temInicio ? FT.navy : '#cbd5e1', borderColor: temInicio ? FT.navy : '#cbd5e1' }}>
+          <Circle size={9} fill="currentColor" />
+        </div>
+        {temSeguinte && (
+          <div className="h-[2.5px] flex-1" style={{ backgroundImage: 'repeating-linear-gradient(90deg, #e2e8f0 0 6px, transparent 6px 11px)' }} />
+        )}
+      </div>
+      <div className="mt-2">
+        <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Hoje</p>
+        <p className="text-xs font-black text-[var(--ink-mid)] my-0.5">{hojeTexto}</p>
+        <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[var(--surface-dim)] border border-[var(--border)] text-[var(--ink-soft)] ${SCALE.text.meta}`}>
+          {pillTexto}
+        </span>
+      </div>
+    </div>
+  );
+
+  const cessacaoDotStyle = cessacaoFeita ? { backgroundColor: '#10b981', borderColor: '#10b981', color: '#fff' }
+    : temFim ? { backgroundColor: FT.navy, borderColor: FT.navy, color: '#fff' }
+    : { backgroundColor: '#fff', borderColor: '#e2e8f0', color: '#cbd5e1' };
+  const cessacaoDotIcon = cessacaoFeita ? <Check size={13} /> : <Circle size={11} fill="currentColor" />;
+  const cessacaoStatus = temFim ? (
+    cessacaoFeita ? (
+      <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 ${SCALE.text.meta}`}>✓ SS comunicada</span>
+    ) : (
+      <button
+        type="button"
+        onClick={() => onAbrirSS('cessacao')}
+        className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100 transition-colors cursor-pointer ${SCALE.text.meta}`}
+      >
+        <SendHorizonal size={9} /> SS por comunicar
+      </button>
+    )
+  ) : (
+    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[var(--surface-dim)] border border-[var(--border)] text-[var(--ink-soft)] ${SCALE.text.meta}`}>n/a</span>
+  );
+
+  // Segmento seguinte só no caso C (concluído — liga a Cessação a Hoje,
+  // que passa a vir a seguir); nos outros casos Cessação é sempre o último
+  // nó, como hoje.
+  const nodeCessacao = (temSeguinte) => (
+    <div key="cessacao" className="flex flex-col items-center text-center w-[120px] sm:w-[150px] shrink-0">
+      {temSeguinte ? (
+        <div className="flex items-center w-full">
+          <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 border-2 z-10" style={cessacaoDotStyle}>{cessacaoDotIcon}</div>
+          <div className="h-[2.5px] flex-1 bg-emerald-500" />
+        </div>
+      ) : (
+        <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 border-2" style={cessacaoDotStyle}>{cessacaoDotIcon}</div>
+      )}
+      <div className="mt-2">
+        <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Cessação</p>
+        <p className="text-xs font-black text-[var(--ink-mid)] my-0.5">{temFim ? fmtDate(workerForm.dataFim) : 'sem data'}</p>
+        {cessacaoStatus}
+      </div>
+    </div>
+  );
+
+  // Ordem dos nós por caso — só a posição/presença muda, o conteúdo de cada
+  // nó é o mesmo em todos os casos.
+  let nos;
+  if (casoD) nos = [nodeHoje(true), nodeAdmissao, ...(temFim ? [nodeCessacao(false)] : [])];
+  else if (casoC) nos = [nodeAdmissao, nodeCessacao(true), nodeHoje(false)];
+  else if (casoB) nos = [nodeAdmissao, nodeHoje(false)];
+  else nos = [nodeAdmissao, nodeHoje(true), nodeCessacao(false)];
 
   return (
     <div className="border-t border-b border-[var(--border-soft)] -mx-4 sm:-mx-5 px-4 sm:px-5 py-4 bg-[var(--surface)]">
       <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] mb-3`}>Ciclo de Vida do Vínculo</p>
       <div className="flex items-start">
-
-        {/* Admissão */}
-        <div className="flex flex-col items-center text-center w-[120px] sm:w-[150px] shrink-0">
-          <div className="flex items-center w-full">
-            <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border-2 z-10 ${
-              ssFlag?.prioridade === 'rejeitada' ? 'bg-rose-500 border-rose-500 text-white'
-              : ssFlag?.prioridade === 'presa' ? 'bg-orange-500 border-orange-500 text-white'
-              : admissaoFeita ? 'bg-emerald-500 border-emerald-500 text-white'
-              : temInicio ? 'text-white' : 'bg-white border-[var(--border)] text-[var(--slate)]'
-            }`} style={!admissaoFeita && temInicio && !ssFlag ? { backgroundColor: FT.navy, borderColor: FT.navy } : {}}>
-              {ssFlag?.prioridade === 'rejeitada' ? <AlertTriangle size={12} /> : admissaoFeita ? <Check size={13} /> : <Circle size={11} fill="currentColor" />}
-            </div>
-            <div className="h-[2.5px] flex-1" style={{ background: temInicio ? '#10b981' : undefined, backgroundImage: !temInicio ? 'repeating-linear-gradient(90deg, #e2e8f0 0 6px, transparent 6px 11px)' : undefined }} />
-          </div>
-          <div className="mt-2">
-            <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Admissão</p>
-            <p className="text-xs font-black text-[var(--ink-mid)] my-0.5">{temInicio ? fmtDate(workerForm.dataInicio) : '— sem data'}</p>
-            {temInicio ? (
-              ssFlag?.prioridade === 'rejeitada' ? (
-                <button
-                  type="button"
-                  onClick={() => onAbrirSS('admissao')}
-                  className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-rose-50 border border-rose-200 text-rose-700 hover:bg-rose-100 transition-colors cursor-pointer ${SCALE.text.meta}`}
-                  title={ssFlag.motivo || 'Rejeitada pela SS'}
-                >
-                  <AlertTriangle size={9} /> SS rejeitou — reenviar
-                </button>
-              ) : ssFlag?.prioridade === 'presa' ? (
-                <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-orange-50 border border-orange-200 text-orange-700 ${SCALE.text.meta}`} title="A processar há vários dias — confirmar no portal da SS Direta">
-                  <AlertTriangle size={9} /> SS presa a processar
-                </span>
-              ) : admissaoFeita ? (
-                <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 ${SCALE.text.meta}`}>✓ SS comunicada</span>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => onAbrirSS('admissao')}
-                  className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100 transition-colors cursor-pointer ${SCALE.text.meta}`}
-                >
-                  <SendHorizonal size={9} /> SS por comunicar
-                </button>
-              )
-            ) : (
-              <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[var(--surface-dim)] border border-[var(--border)] text-[var(--ink-soft)] ${SCALE.text.meta}`}>sem data</span>
-            )}
-          </div>
-        </div>
-
-        {/* Hoje */}
-        <div className="flex flex-col items-center text-center flex-1 shrink-0">
-          <div className="flex items-center w-full">
-            <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 border-2 z-10 text-white" style={{ backgroundColor: temInicio ? FT.navy : '#cbd5e1', borderColor: temInicio ? FT.navy : '#cbd5e1' }}>
-              <Circle size={9} fill="currentColor" />
-            </div>
-            <div className="h-[2.5px] flex-1" style={{ backgroundImage: 'repeating-linear-gradient(90deg, #e2e8f0 0 6px, transparent 6px 11px)' }} />
-          </div>
-          <div className="mt-2">
-            <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Hoje</p>
-            <p className="text-xs font-black text-[var(--ink-mid)] my-0.5">
-              {temFim ? 'Período fechado' : diasAtivo !== null ? `Ativo — ${diasAtivo}d` : 'Sem período aberto'}
-            </p>
-            <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[var(--surface-dim)] border border-[var(--border)] text-[var(--ink-soft)] ${SCALE.text.meta}`}>
-              {temFim ? 'encerrado' : temInicio ? 'em curso' : 'n/a'}
-            </span>
-          </div>
-        </div>
-
-        {/* Cessação */}
-        <div className="flex flex-col items-center text-center w-[120px] sm:w-[150px] shrink-0">
-          <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 border-2" style={
-            cessacaoFeita ? { backgroundColor: '#10b981', borderColor: '#10b981', color: '#fff' }
-            : temFim ? { backgroundColor: FT.navy, borderColor: FT.navy, color: '#fff' }
-            : { backgroundColor: '#fff', borderColor: '#e2e8f0', color: '#cbd5e1' }
-          }>
-            {cessacaoFeita ? <Check size={13} /> : <Circle size={11} fill="currentColor" />}
-          </div>
-          <div className="mt-2">
-            <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Cessação</p>
-            <p className="text-xs font-black text-[var(--ink-mid)] my-0.5">{temFim ? fmtDate(workerForm.dataFim) : 'sem data'}</p>
-            {temFim ? (
-              cessacaoFeita ? (
-                <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 ${SCALE.text.meta}`}>✓ SS comunicada</span>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => onAbrirSS('cessacao')}
-                  className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100 transition-colors cursor-pointer ${SCALE.text.meta}`}
-                >
-                  <SendHorizonal size={9} /> SS por comunicar
-                </button>
-              )
-            ) : (
-              <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[var(--surface-dim)] border border-[var(--border)] text-[var(--ink-soft)] ${SCALE.text.meta}`}>n/a</span>
-            )}
-          </div>
-        </div>
+        {nos}
       </div>
 
       {apoliceSeguro?.status && (
