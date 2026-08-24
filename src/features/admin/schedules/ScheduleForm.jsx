@@ -4,7 +4,7 @@ import { useSchedule } from '../contexts/ScheduleContext';
 import {
   Timer, Edit2, Trash2, Coffee, Clock, Users, Search, CalendarRange, ArrowRight, CheckCircle2
 } from 'lucide-react';
-import { FT } from '../../../styles/designTokens';
+import { FT, SCALE } from '../../../styles/designTokens';
 import ModalShell from '../../../components/common/ModalShell';
 
 export default function ScheduleForm() {
@@ -82,7 +82,7 @@ export default function ScheduleForm() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-[var(--slate-dim)] uppercase ml-1">Nome do Turno</label>
+              <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)] ml-1`}>Nome do Turno</label>
               <input type="text" value={scheduleForm.name} onChange={e => setScheduleForm({ ...scheduleForm, name: e.target.value })} className="w-full bg-white border border-[var(--border)] rounded-2xl p-4 text-sm font-bold outline-none shadow-sm focus:border-[var(--navy)] focus:ring-4 focus:ring-[#1B3A57]/10 transition-all" placeholder="Ex: Manhã, Tarde..." />
             </div>
 
@@ -108,7 +108,7 @@ export default function ScheduleForm() {
                 {scheduleForm.startTime && scheduleForm.endTime && (
                   <div className="bg-[var(--navy-solid)] rounded-[2rem] p-6 text-white shadow-lg relative overflow-hidden">
                     <div className="absolute top-0 right-0 p-4 opacity-10"><Timer size={64} /></div>
-                    <p className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest mb-1">Resumo do Turno</p>
+                    <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1`}>Resumo do Turno</p>
                     <div className="flex items-center gap-3 text-2xl font-black mb-4">
                       <span>{scheduleForm.startTime}</span>
                       <ArrowRight size={20} className="text-[var(--slate-dim)]" />
@@ -126,29 +126,29 @@ export default function ScheduleForm() {
                 )}
 
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1"><label className="text-[10px] font-black text-[var(--slate-dim)] uppercase ml-1">Entrada</label><input type="time" value={scheduleForm.startTime} onChange={e => setScheduleForm({ ...scheduleForm, startTime: e.target.value })} className="w-full bg-white border border-[var(--border)] rounded-xl p-3 text-sm font-bold shadow-sm" /></div>
-                  <div className="space-y-1"><label className="text-[10px] font-black text-[var(--slate-dim)] uppercase ml-1">Saída</label><input type="time" value={scheduleForm.endTime} onChange={e => setScheduleForm({ ...scheduleForm, endTime: e.target.value })} className="w-full bg-white border border-[var(--border)] rounded-xl p-3 text-sm font-bold shadow-sm" /></div>
+                  <div className="space-y-1"><label className={`${SCALE.text.statLabel} text-[var(--slate-dim)] ml-1`}>Entrada</label><input type="time" value={scheduleForm.startTime} onChange={e => setScheduleForm({ ...scheduleForm, startTime: e.target.value })} className="w-full bg-white border border-[var(--border)] rounded-xl p-3 text-sm font-bold shadow-sm" /></div>
+                  <div className="space-y-1"><label className={`${SCALE.text.statLabel} text-[var(--slate-dim)] ml-1`}>Saída</label><input type="time" value={scheduleForm.endTime} onChange={e => setScheduleForm({ ...scheduleForm, endTime: e.target.value })} className="w-full bg-white border border-[var(--border)] rounded-xl p-3 text-sm font-bold shadow-sm" /></div>
                 </div>
 
                 <div className="flex justify-between items-center pt-2">
-                  <span className="text-[10px] font-black text-[var(--slate-dim)] uppercase ml-1">Pausa de Descanso</span>
+                  <span className={`${SCALE.text.statLabel} text-[var(--slate-dim)] ml-1`}>Pausa de Descanso</span>
                   <button type="button" onClick={() => {
                     const nextHasBreak = !(scheduleForm.hasBreak || !!scheduleForm.breakStart);
                     setScheduleForm({ ...scheduleForm, hasBreak: nextHasBreak, breakStart: nextHasBreak ? scheduleForm.breakStart : '', breakEnd: nextHasBreak ? scheduleForm.breakEnd : '' });
-                  }} className="text-[10px] font-black uppercase text-[var(--ink-soft)] bg-[var(--surface-dim)] px-3 py-1.5 rounded-xl hover:bg-[var(--border)] transition-colors">
+                  }} className={`${SCALE.text.badge} text-[var(--ink-soft)] bg-[var(--surface-dim)] px-3 py-1.5 rounded-xl hover:bg-[var(--border)] transition-colors`}>
                     {(scheduleForm.hasBreak || !!scheduleForm.breakStart) ? 'Remover Pausa' : '+ Adicionar'}
                   </button>
                 </div>
 
                 {(scheduleForm.hasBreak || !!scheduleForm.breakStart) && (
                   <div className="grid grid-cols-2 gap-4 p-4 bg-orange-50/50 rounded-2xl border border-orange-100">
-                    <div className="space-y-1"><label className="text-[9px] font-black text-orange-500 uppercase ml-1">Início</label><input type="time" value={scheduleForm.breakStart} onChange={e => setScheduleForm({ ...scheduleForm, breakStart: e.target.value })} className="w-full bg-white border border-orange-200 rounded-xl p-3 text-sm shadow-sm focus:border-orange-400 focus:ring-orange-50" /></div>
-                    <div className="space-y-1"><label className="text-[9px] font-black text-orange-500 uppercase ml-1">Fim</label><input type="time" value={scheduleForm.breakEnd} onChange={e => setScheduleForm({ ...scheduleForm, breakEnd: e.target.value })} className="w-full bg-white border border-orange-200 rounded-xl p-3 text-sm shadow-sm focus:border-orange-400 focus:ring-orange-50" /></div>
+                    <div className="space-y-1"><label className={`${SCALE.text.statLabel} text-orange-500 ml-1`}>Início</label><input type="time" value={scheduleForm.breakStart} onChange={e => setScheduleForm({ ...scheduleForm, breakStart: e.target.value })} className="w-full bg-white border border-orange-200 rounded-xl p-3 text-sm shadow-sm focus:border-orange-400 focus:ring-orange-50" /></div>
+                    <div className="space-y-1"><label className={`${SCALE.text.statLabel} text-orange-500 ml-1`}>Fim</label><input type="time" value={scheduleForm.breakEnd} onChange={e => setScheduleForm({ ...scheduleForm, breakEnd: e.target.value })} className="w-full bg-white border border-orange-200 rounded-xl p-3 text-sm shadow-sm focus:border-orange-400 focus:ring-orange-50" /></div>
                   </div>
                 )}
 
                 <div className="space-y-3 pt-2">
-                  <label className="text-[10px] font-black text-[var(--slate-dim)] uppercase ml-1">Dias da Semana</label>
+                  <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)] ml-1`}>Dias da Semana</label>
                   <div className="flex flex-wrap gap-2">
                     {[{ v: 1, l: 'Seg' }, { v: 2, l: 'Ter' }, { v: 3, l: 'Qua' }, { v: 4, l: 'Qui' }, { v: 5, l: 'Sex' }, { v: 6, l: 'Sáb' }, { v: 0, l: 'Dom' }].map(day => {
                       const isActive = (scheduleForm.weekdays || [1, 2, 3, 4, 5]).includes(day.v);
@@ -194,7 +194,7 @@ export default function ScheduleForm() {
                                 ...scheduleForm.dailyConfigs, [day.v]: { ...config, hasBreak: nextHasBreak, breakStart: nextHasBreak ? config.breakStart : '', breakEnd: nextHasBreak ? config.breakEnd : '' }
                               }
                             });
-                          }} className="text-[10px] font-bold text-orange-500 hover:text-orange-600 whitespace-nowrap shrink-0">
+                          }} className={`${SCALE.text.meta} text-orange-500 hover:text-orange-600 whitespace-nowrap shrink-0`}>
                             {(config.hasBreak || !!config.breakStart) ? '× Remover Pausa' : '+ Adicionar Pausa'}
                           </button>
                         )}
@@ -206,14 +206,14 @@ export default function ScheduleForm() {
                         // estreita, dando ~78px por campo — um <input type="time">
                         // precisa de ~110px, por isso só se via o ícone do relógio.
                         <div className={`grid grid-cols-2 ${config.hasBreak || !!config.breakStart ? '@md:grid-cols-4' : ''} gap-3 pl-7`}>
-                          <div className="space-y-1"><label className="text-[9px] font-black text-[var(--slate-dim)] uppercase">Entrada</label><input type="time" value={config.startTime} onChange={e => setScheduleForm({ ...scheduleForm, dailyConfigs: { ...scheduleForm.dailyConfigs, [day.v]: { ...config, startTime: e.target.value } } })} className="w-full bg-white border border-[var(--border)] rounded-lg p-2 text-xs shadow-sm" /></div>
+                          <div className="space-y-1"><label className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Entrada</label><input type="time" value={config.startTime} onChange={e => setScheduleForm({ ...scheduleForm, dailyConfigs: { ...scheduleForm.dailyConfigs, [day.v]: { ...config, startTime: e.target.value } } })} className="w-full bg-white border border-[var(--border)] rounded-lg p-2 text-xs shadow-sm" /></div>
                           {(config.hasBreak || !!config.breakStart) && (
                             <>
-                              <div className="space-y-1"><label className="text-[9px] font-black text-orange-500 uppercase">Pausa I.</label><input type="time" value={config.breakStart} onChange={e => setScheduleForm({ ...scheduleForm, dailyConfigs: { ...scheduleForm.dailyConfigs, [day.v]: { ...config, breakStart: e.target.value } } })} className="w-full bg-white border border-orange-100 rounded-lg p-2 text-xs shadow-sm" /></div>
-                              <div className="space-y-1"><label className="text-[9px] font-black text-orange-500 uppercase">Pausa F.</label><input type="time" value={config.breakEnd} onChange={e => setScheduleForm({ ...scheduleForm, dailyConfigs: { ...scheduleForm.dailyConfigs, [day.v]: { ...config, breakEnd: e.target.value } } })} className="w-full bg-white border border-orange-100 rounded-lg p-2 text-xs shadow-sm" /></div>
+                              <div className="space-y-1"><label className={`${SCALE.text.statLabel} text-orange-500`}>Pausa I.</label><input type="time" value={config.breakStart} onChange={e => setScheduleForm({ ...scheduleForm, dailyConfigs: { ...scheduleForm.dailyConfigs, [day.v]: { ...config, breakStart: e.target.value } } })} className="w-full bg-white border border-orange-100 rounded-lg p-2 text-xs shadow-sm" /></div>
+                              <div className="space-y-1"><label className={`${SCALE.text.statLabel} text-orange-500`}>Pausa F.</label><input type="time" value={config.breakEnd} onChange={e => setScheduleForm({ ...scheduleForm, dailyConfigs: { ...scheduleForm.dailyConfigs, [day.v]: { ...config, breakEnd: e.target.value } } })} className="w-full bg-white border border-orange-100 rounded-lg p-2 text-xs shadow-sm" /></div>
                             </>
                           )}
-                          <div className="space-y-1"><label className="text-[9px] font-black text-[var(--slate-dim)] uppercase">Saída</label><input type="time" value={config.endTime} onChange={e => setScheduleForm({ ...scheduleForm, dailyConfigs: { ...scheduleForm.dailyConfigs, [day.v]: { ...config, endTime: e.target.value } } })} className="w-full bg-white border border-[var(--border)] rounded-lg p-2 text-xs shadow-sm" /></div>
+                          <div className="space-y-1"><label className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Saída</label><input type="time" value={config.endTime} onChange={e => setScheduleForm({ ...scheduleForm, dailyConfigs: { ...scheduleForm.dailyConfigs, [day.v]: { ...config, endTime: e.target.value } } })} className="w-full bg-white border border-[var(--border)] rounded-lg p-2 text-xs shadow-sm" /></div>
                         </div>
                       )}
                     </div>
@@ -283,7 +283,7 @@ export default function ScheduleForm() {
                 ) : (
                   workers.filter(w => scheduleForm.assignedWorkers?.includes(w.id)).sort((a, b) => a.name.localeCompare(b.name)).map(w => (
                     <div key={w.id} className="p-5 bg-white rounded-2xl border border-[var(--border-soft)] shadow-md space-y-4 transition-all hover:shadow-lg">
-                      <div className="flex items-center justify-between border-b border-[var(--border-soft)] pb-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--border-soft)] pb-3">
                         <span className="font-black text-base" style={{ color: 'var(--navy)' }}>{w.name}</span>
                         <div className="flex gap-2">
                           {scheduleForm.id && (
@@ -299,7 +299,7 @@ export default function ScheduleForm() {
                               setSaveSuccessWorkerId(w.id);
                               setTimeout(() => setSaveSuccessWorkerId(null), 3000);
                             }}
-                            className={`${saveSuccessWorkerId === w.id ? 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-200' : 'shadow-md'} text-white px-3 py-1.5 rounded-lg font-black text-[10px] uppercase transition-all flex items-center gap-1`}
+                            className={`${saveSuccessWorkerId === w.id ? 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-200' : 'shadow-md'} text-white px-3 py-1.5 rounded-lg ${SCALE.text.badge} transition-all flex items-center gap-1`}
                             style={saveSuccessWorkerId === w.id ? {} : { backgroundColor: FT.navy }}
                           >
                             {saveSuccessWorkerId === w.id ? <><CheckCircle2 size={12} /> Gravado</> : 'Gravar'}
@@ -308,7 +308,7 @@ export default function ScheduleForm() {
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1">
-                          <label className="text-[9px] font-black text-[var(--slate-dim)] uppercase flex items-center gap-1"><CalendarRange size={10} /> Data Início</label>
+                          <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)] flex items-center gap-1`}><CalendarRange size={10} /> Data Início</label>
                           <input
                             type="date"
                             value={assignmentDates[w.id]?.dataInicio ?? w.assignedScheduleDates?.[scheduleForm.id]?.dataInicio ?? ''}
@@ -320,7 +320,7 @@ export default function ScheduleForm() {
                           />
                         </div>
                         <div className="space-y-1">
-                          <label className="text-[9px] font-black text-[var(--slate-dim)] uppercase flex items-center gap-1"><CalendarRange size={10} /> Data Fim</label>
+                          <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)] flex items-center gap-1`}><CalendarRange size={10} /> Data Fim</label>
                           <input
                             type="date"
                             value={assignmentDates[w.id]?.dataFim ?? w.assignedScheduleDates?.[scheduleForm.id]?.dataFim ?? ''}
