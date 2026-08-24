@@ -2,14 +2,14 @@ import React, { useState, useMemo } from 'react';
 import {
   CheckCircle, UserCheck, RotateCcw, Search,
   Calendar, ChevronLeft, ChevronRight, LayoutList, LayoutGrid,
-  ClipboardList, Pencil, MapPin, Trash2
+  ClipboardList, Pencil, MapPin, Trash2, ShieldCheck
 } from 'lucide-react';
 import ModalShell from '../../../components/common/ModalShell';
 import { useApp } from '../../../context/AppContext';
 import { calculateDuration, formatHours } from '../../../utils/formatUtils';
 import { toISODateLocal } from '../../../utils/dateUtils';
 import { impersonarTrabalhador } from '../../../utils/impersonateWorker';
-import { FT, SCALE } from '../../../styles/designTokens';
+import { FT, SCALE, FONT_TITLE } from '../../../styles/designTokens';
 
 const SOURCE_CFG = {
   gps_auto:     { label: 'GPS',        bg: 'bg-emerald-100', text: 'text-emerald-700' },
@@ -210,6 +210,10 @@ export default function WorkerValidationPanel({ onLogin }) {
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+      <header className="mb-6 flex items-center gap-3">
+        <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-[var(--tone-amber-bg)] text-[var(--tone-amber)]"><ShieldCheck size={16} /></div>
+        <h3 className="font-black text-base sm:text-xl text-[var(--ink)] uppercase tracking-tight" style={{ fontFamily: FONT_TITLE }}>Validação</h3>
+      </header>
       <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
         <div className="flex items-center gap-3 flex-wrap">
           <div className="flex items-center gap-1.5 bg-white p-1.5 rounded-xl shadow-sm border border-[var(--border-soft)]">
