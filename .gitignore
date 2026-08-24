@@ -35,4 +35,7 @@ dist-ssr
 credentials.json
 service-account*.json
 .env*.local
-.claude/worktrees/
+
+# Local tool config and generated build artifacts — never meant to be versioned
+.claude/*
+public/version.json
