@@ -1037,6 +1037,24 @@ dado — convergido para `meta`. Verificado nos dois modos, nos dois painéis, a
 ficheiro, ambos os painéis) não invertem no modo escuro, ficam como uma faixa clara dentro do
 cartão âmbar/emerald/rose escuro. Não fazia parte do pedido desta passagem, fica por resolver.
 
+**Spec "Inbox de Correções" (4 tabs Abertas/Aplicadas/Rejeitadas/Todas), 2026-08-24 — fechada por
+descobrir que já estava construída.** A spec descrevia, ponto por ponto (barra de 4 tabs em
+pílula, cartões de grupo cliente+mês com avatar `navy`/`orange` 36px, badges de estado por
+`--tone-*`), exactamente o que já existia neste ficheiro — a própria spec já alertava para essa
+possibilidade ("confirmar se este Inbox é o mesmo componente antes de aplicar as cores"), e
+confirmou-se que sim. Único trabalho real: (1) as 4 tabs de filtro usavam cores Tailwind sem par
+de estado (`text-amber-500` etc.) — convergidas para `var(--tone-amber/emerald/rose)` +
+`var(--slate-dim)`, confirmado 5,03-6,03:1 claro / 4,81-6,85:1 escuro; (2) nome de
+cliente/trabalhador e mês usavam `font-bold`/`font-mono` genéricos do Tailwind em vez de
+`FONT_TITLE`/`FONT_MONO` (mesma fonte visual hoje, mas duas fontes-de-verdade divergentes para o
+mesmo papel — convergido nos dois painéis). Avatar `navy`(`FT.navy`)/`orange`(`FT.orange`)
+confirmado **idêntico byte a byte** nos dois painéis (linhas 83 e 238 antes da conversão de
+fonte), 4,66:1 nos dois modos (estático, autocontido, não inverte) — **fica registado como
+pendência de prioridade** para quando se abrir o varrimento sistemático de pares de estado (ver
+"Referência central" no topo de Armadilhas conhecidas): é a terceira margem "técnica mas frágil"
+encontrada nesta sessão (a de Faltas era 4,56:1, esta é 4,66:1), não uma falha clara, mas sem
+folga real.
+
 **`ItemRow.jsx` — pendência separada, padrão diferente, não convertido.** Ao contrário do
 `CorrectionsInbox.jsx`, aqui a cor não segue o estado da correção — é uma cor-chave **fixa por
 coluna** da grelha de 3 colunas (Atual/Pedido/Final): "Pedido" é sempre `text-amber-600`, "Final" é
