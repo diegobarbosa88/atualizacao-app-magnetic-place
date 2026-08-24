@@ -272,30 +272,30 @@ export function DocumentViewer({ document: docRecord, onBack, onSigned }) {
       className="w-[90vw] h-[90vh] max-w-5xl bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden"
       onClick={(e) => e.stopPropagation()}
     >
-      <header className="flex items-center justify-between px-6 py-4 border-b border-slate-200 flex-shrink-0">
-        <h2 className="text-base sm:text-lg font-black text-slate-800 truncate pr-4">
+      <header className="flex items-center justify-between px-6 py-4 border-b border-[var(--border)] flex-shrink-0">
+        <h2 className="text-base sm:text-lg font-black text-[var(--ink)] truncate pr-4">
           {docRecord.title}
         </h2>
         <button
           onClick={onBack}
           disabled={phase === 'applying'}
-          className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl disabled:opacity-50 flex-shrink-0"
+          className="p-2 text-[var(--slate)] hover:text-[var(--ink-soft)] hover:bg-[var(--surface)] rounded-xl disabled:opacity-50 flex-shrink-0"
           title="Fechar"
         >
           <X className="w-5 h-5" />
         </button>
       </header>
 
-      <div className="flex-1 min-h-0 bg-slate-100 relative">
+      <div className="flex-1 min-h-0 bg-[var(--surface)] relative">
         {error ? (
           <div className="h-full flex items-center justify-center p-6">
-            <div className="flex items-start gap-3 p-4 bg-rose-50 border border-rose-100 rounded-xl text-sm text-rose-700 max-w-md">
+            <div className="flex items-start gap-3 p-4 bg-[var(--tone-rose-bg)] border border-[var(--tone-rose-border)] rounded-xl text-sm text-[var(--tone-rose)] max-w-md">
               <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
               <span>{error}</span>
             </div>
           </div>
         ) : isWorking && !filledDocxBlob ? (
-          <div className="h-full flex items-center justify-center text-slate-400">
+          <div className="h-full flex items-center justify-center text-[var(--slate)]">
             <Loader2 className="w-8 h-8 animate-spin" />
           </div>
         ) : (
@@ -309,21 +309,21 @@ export function DocumentViewer({ document: docRecord, onBack, onSigned }) {
         {phase === 'applying' && (
           <div className="absolute inset-0 bg-white/70 backdrop-blur-[2px] flex items-center justify-center">
             <div className="bg-white rounded-2xl shadow-xl px-6 py-4 flex items-center gap-3">
-              <Loader2 className="w-5 h-5 text-indigo-500 animate-spin" />
-              <span className="text-sm font-bold text-slate-700">A processar assinatura...</span>
+              <Loader2 className="w-5 h-5 text-[var(--navy)] animate-spin" />
+              <span className="text-sm font-bold text-[var(--ink-soft)]">A processar assinatura...</span>
             </div>
           </div>
         )}
       </div>
 
-      <footer className="flex-shrink-0 border-t border-slate-200 px-4 sm:px-6 py-4 bg-white">
+      <footer className="flex-shrink-0 border-t border-[var(--border)] px-4 sm:px-6 py-4 bg-white">
         {pipelineError && (
-          <div className="mb-3 flex items-start gap-2 p-3 bg-rose-50 border border-rose-100 rounded-xl text-xs text-rose-700">
+          <div className="mb-3 flex items-start gap-2 p-3 bg-[var(--tone-rose-bg)] border border-[var(--tone-rose-border)] rounded-xl text-xs text-[var(--tone-rose)]">
             <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
             <span className="flex-1">{pipelineError}</span>
             <button
               onClick={retry}
-              className="px-2 py-1 bg-rose-100 hover:bg-rose-200 rounded-md text-xs font-bold flex items-center gap-1"
+              className="px-2 py-1 bg-[var(--tone-rose-bg)] hover:bg-[var(--tone-rose-border)] rounded-md text-xs font-bold flex items-center gap-1"
             >
               <RefreshCw className="w-3 h-3" /> Tentar
             </button>
@@ -332,7 +332,7 @@ export function DocumentViewer({ document: docRecord, onBack, onSigned }) {
         <button
           onClick={() => setShowSignature(true)}
           disabled={!canSign}
-          className="w-full py-3 sm:py-4 bg-indigo-600 text-white font-black uppercase tracking-wider rounded-2xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm transition-colors"
+          className="w-full py-3 sm:py-4 bg-[var(--orange)] text-white font-black uppercase tracking-wider rounded-2xl hover:bg-[var(--orange-deep)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm transition-colors"
         >
           {phase === 'applying' || phase === 'preparing' || loading ? (
             <Loader2 className="w-5 h-5 animate-spin" />

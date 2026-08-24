@@ -4,6 +4,7 @@ import { useApp } from '../../context/AppContext';
 import { toISODateLocal } from '../../utils/dateUtils';
 import { DISABLE_CLIENT_NOTIFICATIONS } from '../../config';
 import { notifyEvent, TARGET } from '../../utils/notifyEvent';
+import { SCALE } from '../../styles/designTokens';
 
 const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess, initialDate, initialLogId, isInline = false, openInDeleteMode = false }) => {
   const { supabase, saveToDb, minuteInterval, systemSettings, correctionItems, corrections } = useApp();
@@ -355,7 +356,7 @@ const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess, in
       {(isInline || !collapsed) && (
         <div className="px-3 sm:px-6 pb-3 sm:pb-6 border-t border-slate-100 pt-3 sm:pt-4 space-y-2 sm:space-y-4">
           <div className="space-y-0.5 sm:space-y-1">
-            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-1">
+            <label className={`${SCALE.text.statLabel} text-slate-400 ml-1 flex items-center gap-1`}>
               <Calendar size={10} /> Data
             </label>
             <input
@@ -370,11 +371,11 @@ const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess, in
             <div className="bg-amber-50/50 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-amber-100">
               <div className="flex items-center gap-2 mb-2 sm:mb-3">
                 <Edit2 size={12} className="text-amber-600" />
-                <span className="text-[9px] font-black text-amber-600 uppercase tracking-widest">A editar registo de {selectedDate}</span>
+                <span className={`${SCALE.text.statLabel} text-amber-600`}>A editar registo de {selectedDate}</span>
               </div>
               <div className="space-y-2 sm:space-y-3">
                 <div className="space-y-0.5 sm:space-y-1">
-                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Cliente / Unidade</label>
+                  <label className={`${SCALE.text.statLabel} text-slate-400 ml-1`}>Cliente / Unidade</label>
                   <select value={formData.clientId || ''} onChange={e => setFormData({ ...formData, clientId: e.target.value })} className="w-full bg-white border border-slate-200 rounded-lg sm:rounded-xl p-2 sm:p-2.5 text-sm font-bold outline-none shadow-sm">
                     <option value="">Selecione...</option>
                     {filteredClients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -382,37 +383,37 @@ const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess, in
                 </div>
                 <div className="grid grid-cols-2 gap-2 sm:gap-3">
                   <div className="space-y-0.5 sm:space-y-1">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Entrada</label>
+                    <label className={`${SCALE.text.statLabel} text-slate-400 ml-1`}>Entrada</label>
                     <input type="time" value={formData.startTime || ''} onChange={e => setFormData({ ...formData, startTime: e.target.value })} className="w-full bg-white border border-slate-200 rounded-lg sm:rounded-xl p-2 sm:p-2.5 text-sm font-bold outline-none shadow-sm" />
                   </div>
                   <div className="space-y-0.5 sm:space-y-1">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Saída</label>
+                    <label className={`${SCALE.text.statLabel} text-slate-400 ml-1`}>Saída</label>
                     <input type="time" value={formData.endTime || ''} onChange={e => setFormData({ ...formData, endTime: e.target.value })} className="w-full bg-white border border-slate-200 rounded-lg sm:rounded-xl p-2 sm:p-2.5 text-sm font-bold outline-none shadow-sm" />
                   </div>
                 </div>
                 {showBreaks ? (
                   <div className="grid grid-cols-2 gap-2 sm:gap-3">
                     <div className="space-y-0.5 sm:space-y-1">
-                      <label className="text-[9px] font-black text-orange-500 uppercase tracking-widest ml-1">Pausa I.</label>
+                      <label className={`${SCALE.text.statLabel} text-orange-500 ml-1`}>Pausa I.</label>
                       <input type="time" value={formData.breakStart || ''} onChange={e => setFormData({ ...formData, breakStart: e.target.value })} className="w-full bg-orange-50 border border-orange-100 rounded-lg sm:rounded-xl p-2 sm:p-2.5 text-sm font-bold outline-none shadow-sm" />
                     </div>
                     <div className="space-y-0.5 sm:space-y-1">
-                      <label className="text-[9px] font-black text-orange-500 uppercase tracking-widest ml-1">Pausa F.</label>
+                      <label className={`${SCALE.text.statLabel} text-orange-500 ml-1`}>Pausa F.</label>
                       <input type="time" value={formData.breakEnd || ''} onChange={e => setFormData({ ...formData, breakEnd: e.target.value })} className="w-full bg-orange-50 border border-orange-100 rounded-lg sm:rounded-xl p-2 sm:p-2.5 text-sm font-bold outline-none shadow-sm" />
                     </div>
                   </div>
                 ) : (
-                  <button type="button" onClick={() => setShowBreaks(true)} className="w-full text-[10px] font-black uppercase text-orange-500 bg-orange-50 hover:bg-orange-100 border border-orange-100 rounded-lg sm:rounded-xl p-2 sm:p-2.5 transition-colors flex items-center justify-center gap-2 h-[34px] sm:h-[42px]">
+                  <button type="button" onClick={() => setShowBreaks(true)} className={`w-full ${SCALE.text.badge} text-orange-500 bg-orange-50 hover:bg-orange-100 border border-orange-100 rounded-lg sm:rounded-xl p-2 sm:p-2.5 transition-colors flex items-center justify-center gap-2 h-[34px] sm:h-[42px]`}>
                     <Coffee size={13} /> Adicionar Pausa
                   </button>
                 )}
                 {showComments ? (
                   <div className="space-y-0.5 sm:space-y-1">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Descrição</label>
+                    <label className={`${SCALE.text.statLabel} text-slate-400 ml-1`}>Descrição</label>
                     <textarea rows={2} value={formData.description || ''} onChange={e => setFormData({ ...formData, description: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-lg sm:rounded-xl p-2 sm:p-2.5 text-sm font-bold outline-none resize-none shadow-inner" placeholder="Opcional..." />
                   </div>
                 ) : (
-                  <button type="button" onClick={() => setShowComments(true)} className="text-[10px] font-bold text-slate-400 hover:text-indigo-600 transition-colors flex items-center gap-1 bg-slate-50 hover:bg-indigo-50 px-3 py-1.5 rounded-lg border border-slate-200 border-dashed w-max">
+                  <button type="button" onClick={() => setShowComments(true)} className={`${SCALE.text.meta} text-slate-400 hover:text-indigo-600 transition-colors flex items-center gap-1 bg-slate-50 hover:bg-indigo-50 px-3 py-1.5 rounded-lg border border-slate-200 border-dashed w-max`}>
                     <Plus size={12} /> Adicionar Comentários
                   </button>
                 )}
@@ -422,11 +423,11 @@ const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess, in
             <div className="bg-slate-50/50 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-slate-100">
               <div className="flex items-center gap-2 mb-2 sm:mb-3">
                 <Clock size={12} className="text-slate-500" />
-                <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Novo registo para {selectedDate}</span>
+                <span className={`${SCALE.text.statLabel} text-slate-500`}>Novo registo para {selectedDate}</span>
               </div>
               <div className="space-y-2 sm:space-y-3">
                 <div className="space-y-0.5 sm:space-y-1">
-                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Cliente / Unidade</label>
+                  <label className={`${SCALE.text.statLabel} text-slate-400 ml-1`}>Cliente / Unidade</label>
                   <select value={formData.clientId || ''} onChange={e => setFormData({ ...formData, clientId: e.target.value })} className="w-full bg-white border border-slate-200 rounded-lg sm:rounded-xl p-2 sm:p-2.5 text-sm font-bold outline-none shadow-sm">
                     <option value="">Selecione...</option>
                     {filteredClients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -434,37 +435,37 @@ const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess, in
                 </div>
                 <div className="grid grid-cols-2 gap-2 sm:gap-3">
                   <div className="space-y-0.5 sm:space-y-1">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Entrada</label>
+                    <label className={`${SCALE.text.statLabel} text-slate-400 ml-1`}>Entrada</label>
                     <input type="time" value={formData.startTime || ''} onChange={e => setFormData({ ...formData, startTime: e.target.value })} className="w-full bg-white border border-slate-200 rounded-lg sm:rounded-xl p-2 sm:p-2.5 text-sm font-bold outline-none shadow-sm" />
                   </div>
                   <div className="space-y-0.5 sm:space-y-1">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Saída</label>
+                    <label className={`${SCALE.text.statLabel} text-slate-400 ml-1`}>Saída</label>
                     <input type="time" value={formData.endTime || ''} onChange={e => setFormData({ ...formData, endTime: e.target.value })} className="w-full bg-white border border-slate-200 rounded-lg sm:rounded-xl p-2 sm:p-2.5 text-sm font-bold outline-none shadow-sm" />
                   </div>
                 </div>
                 {showBreaks ? (
                   <div className="grid grid-cols-2 gap-2 sm:gap-3">
                     <div className="space-y-0.5 sm:space-y-1">
-                      <label className="text-[9px] font-black text-orange-500 uppercase tracking-widest ml-1">Pausa I.</label>
+                      <label className={`${SCALE.text.statLabel} text-orange-500 ml-1`}>Pausa I.</label>
                       <input type="time" value={formData.breakStart || ''} onChange={e => setFormData({ ...formData, breakStart: e.target.value })} className="w-full bg-orange-50 border border-orange-100 rounded-lg sm:rounded-xl p-2 sm:p-2.5 text-sm font-bold outline-none shadow-sm" />
                     </div>
                     <div className="space-y-0.5 sm:space-y-1">
-                      <label className="text-[9px] font-black text-orange-500 uppercase tracking-widest ml-1">Pausa F.</label>
+                      <label className={`${SCALE.text.statLabel} text-orange-500 ml-1`}>Pausa F.</label>
                       <input type="time" value={formData.breakEnd || ''} onChange={e => setFormData({ ...formData, breakEnd: e.target.value })} className="w-full bg-orange-50 border border-orange-100 rounded-lg sm:rounded-xl p-2 sm:p-2.5 text-sm font-bold outline-none shadow-sm" />
                     </div>
                   </div>
                 ) : (
-                  <button type="button" onClick={() => setShowBreaks(true)} className="w-full text-[10px] font-black uppercase text-orange-500 bg-orange-50 hover:bg-orange-100 border border-orange-100 rounded-lg sm:rounded-xl p-2 sm:p-2.5 transition-colors flex items-center justify-center gap-2 h-[34px] sm:h-[42px]">
+                  <button type="button" onClick={() => setShowBreaks(true)} className={`w-full ${SCALE.text.badge} text-orange-500 bg-orange-50 hover:bg-orange-100 border border-orange-100 rounded-lg sm:rounded-xl p-2 sm:p-2.5 transition-colors flex items-center justify-center gap-2 h-[34px] sm:h-[42px]`}>
                     <Coffee size={13} /> Adicionar Pausa
                   </button>
                 )}
                 {showComments ? (
                   <div className="space-y-0.5 sm:space-y-1">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Descrição</label>
+                    <label className={`${SCALE.text.statLabel} text-slate-400 ml-1`}>Descrição</label>
                     <textarea rows={2} value={formData.description || ''} onChange={e => setFormData({ ...formData, description: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-lg sm:rounded-xl p-2 sm:p-2.5 text-sm font-bold outline-none resize-none shadow-inner" placeholder="Opcional..." />
                   </div>
                 ) : (
-                  <button type="button" onClick={() => setShowComments(true)} className="text-[10px] font-bold text-slate-400 hover:text-indigo-600 transition-colors flex items-center gap-1 bg-slate-50 hover:bg-indigo-50 px-3 py-1.5 rounded-lg border border-slate-200 border-dashed w-max">
+                  <button type="button" onClick={() => setShowComments(true)} className={`${SCALE.text.meta} text-slate-400 hover:text-indigo-600 transition-colors flex items-center gap-1 bg-slate-50 hover:bg-indigo-50 px-3 py-1.5 rounded-lg border border-slate-200 border-dashed w-max`}>
                     <Plus size={12} /> Adicionar Comentários
                   </button>
                 )}
@@ -486,7 +487,7 @@ const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess, in
             <div className="bg-rose-50/50 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-rose-200 space-y-2 sm:space-y-3">
               <div className="flex items-center gap-2">
                 <Trash2 size={13} className="text-rose-600" />
-                <span className="text-[9px] font-black text-rose-600 uppercase tracking-widest">Confirmar pedido de exclusão</span>
+                <span className={`${SCALE.text.statLabel} text-rose-600`}>Confirmar pedido de exclusão</span>
               </div>
               <p className="text-xs text-slate-600">Ao confirmar, será enviado um pedido para eliminar o registo de <strong>{selectedDate}</strong>.</p>
               <div className="flex gap-2">
