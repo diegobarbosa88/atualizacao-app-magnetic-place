@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   CalendarX, Copy, CheckCircle, ChevronDown, ChevronUp, ThumbsUp, RotateCcw, Archive, Trash2,
   ClockAlert, ListChecks, Users, Palmtree, Thermometer, Stethoscope, Home, User, HelpCircle,
+  Clock, Search,
 } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
 import { deleteAbsenceRequest } from '../../../utils/absenceRequestsApi';
@@ -224,6 +225,7 @@ function DoneWorkerCard({ group, ctx }) {
 export default function AbsenceRequestsPanel({ requests, systemSettings, clients }) {
   const { supabase, setAbsenceRequests, currentUser } = useApp();
   const [copiedId, setCopiedId] = useState(null);
+  const [search, setSearch] = useState('');
   const [openIds, setOpenIds] = useState(new Set());
   const toggleOpen = (id) => setOpenIds(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
   const [openWorkers, setOpenWorkers] = useState(new Set());
@@ -341,8 +343,15 @@ export default function AbsenceRequestsPanel({ requests, systemSettings, clients
     return a.name.localeCompare(b.name);
   });
 
-  const pendingGroups = workerGroups.filter(g => g.oldestPendingAt);
-  const doneGroups = workerGroups.filter(g => !g.oldestPendingAt);
+  // Pesquisa por nome de trabalhador — aplicada depois de agrupar, antes de separar
+  // por secção. Os contadores "N pendentes"/"N aprovados" ficam de fora da pesquisa
+  // de propósito: mostram o total real, não o total do que está visível no ecrã.
+  const searchedGroups = search.trim()
+    ? workerGroups.filter(g => g.name.toLowerCase().includes(search.trim().toLowerCase()))
+    : workerGroups;
+
+  const pendingGroups = searchedGroups.filter(g => g.oldestPendingAt);
+  const doneGroups = searchedGroups.filter(g => !g.oldestPendingAt);
   const maisUrgente = pendingGroups[0] || null;
   const restantesPendentes = pendingGroups.slice(1);
 
@@ -353,14 +362,35 @@ export default function AbsenceRequestsPanel({ requests, systemSettings, clients
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        {/* text-orange-700 dava 4,56:1, só 0,06 acima do mínimo AA — trocado
-            para #8a4a00 (5,99:1, folga real), o mesmo laranja já usado nesta
-            página para "solicitado há Nd" e os chips em destaque — um só
-            laranja de urgência no componente, não um terceiro tom novo. */}
-        <span className={`px-2.5 py-1 rounded-full bg-orange-100 ${SCALE.text.badge}`} style={{ color: '#8a4a00' }}>{pendingTotal} pendente{pendingTotal !== 1 ? 's' : ''}</span>
-        <span className={`px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 ${SCALE.text.badge}`}>{approvedTotal} aprovado{approvedTotal !== 1 ? 's' : ''}</span>
+      <header className="flex items-center gap-3">
+        <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-[var(--tone-amber-bg)] text-[var(--tone-amber)]"><Clock size={16} /></div>
+        <h3 className="font-black text-base sm:text-xl text-[var(--ink)] uppercase tracking-tight" style={{ fontFamily: FONT_TITLE }}>Faltas</h3>
+      </header>
+
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="relative flex-1 min-w-0 max-w-xs">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--slate)] pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Pesquisar colaborador..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-8 pr-3 py-2 text-xs border border-[var(--border)] rounded-xl bg-[var(--surface)] focus:outline-none focus:ring-2 focus:ring-indigo-300"
+          />
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {/* text-orange-700 dava 4,56:1, só 0,06 acima do mínimo AA — trocado
+              para #8a4a00 (5,99:1, folga real), o mesmo laranja já usado nesta
+              página para "solicitado há Nd" e os chips em destaque — um só
+              laranja de urgência no componente, não um terceiro tom novo. */}
+          <span className={`px-2.5 py-1 rounded-full bg-orange-100 ${SCALE.text.badge}`} style={{ color: '#8a4a00' }}>{pendingTotal} pendente{pendingTotal !== 1 ? 's' : ''}</span>
+          <span className={`px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 ${SCALE.text.badge}`}>{approvedTotal} aprovado{approvedTotal !== 1 ? 's' : ''}</span>
+        </div>
       </div>
+
+      {search.trim() && searchedGroups.length === 0 && (
+        <p className="text-center text-[var(--slate-dim)] text-sm py-8">Nenhum colaborador encontrado para "{search.trim()}".</p>
+      )}
 
       {maisUrgente && (
         <div>
