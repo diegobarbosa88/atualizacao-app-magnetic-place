@@ -21,6 +21,13 @@ function getClientInitials(name) {
 // ── Client corrections grouped view ──────────────────────────────────────────
 
 function ClientCorrectionsPanel({ filtered, clients, workers, itemsByCorrection, expandedCards, setExpandedCards, supabase, currentUser, setCorrections, setCorrectionItems, logs }) {
+  const [expandedItems, setExpandedItems] = React.useState({});
+  const toggleItem = (id) => setExpandedItems((prev) => ({ ...prev, [id]: !prev[id] }));
+  const labelKind = (item) => {
+    if (!item.before || (!item.before.startTime && !item.before.endTime)) return '✚ Novo';
+    if (!item.proposed || (!item.proposed.startTime && !item.proposed.endTime)) return '✖ Eliminar';
+    return '✎ Ajuste';
+  };
   const fmtTs = (iso) => formatDocDate(iso, true) || '—';
   const hasBreak = (t) => t && (t.breakStart || t.breakEnd);
 
@@ -151,26 +158,42 @@ function ClientCorrectionsPanel({ filtered, clients, workers, itemsByCorrection,
                           const workerObj = workers.find((w) => String(w.id) === String(item.worker_id));
                           const hasBefore = item.before && (item.before.startTime || item.before.endTime);
                           const hasProposed = item.proposed && (item.proposed.startTime || item.proposed.endTime);
+                          const kind = labelKind(item);
+                          const isOpen = !!expandedItems[item.id];
                           return (
-                            <div key={item.id} className="bg-white/70 rounded-lg p-2.5 border border-white/80">
-                              <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                                <span className={`font-black text-xs ${corrIsPending ? 'text-[var(--tone-amber-identity)]' : corrIsApplied ? 'text-[var(--tone-emerald-identity)]' : 'text-[var(--tone-rose-identity)]'}`}>
+                            <div key={item.id} className="bg-white/70 rounded-lg border border-white/80 overflow-hidden">
+                              {/* Linha clicável — log ao clicar */}
+                              <button
+                                onClick={() => toggleItem(item.id)}
+                                className="w-full flex items-center gap-2 p-2.5 text-left hover:bg-white/90 transition-colors"
+                              >
+                                <span className={`${SCALE.text.meta} px-1.5 py-0.5 rounded flex-shrink-0 ${corrIsPending ? 'bg-[var(--tone-amber-bg)] text-[var(--tone-amber-meta)]' : corrIsApplied ? 'bg-[var(--tone-emerald-bg)] text-[var(--tone-emerald-meta)]' : 'bg-[var(--tone-rose-bg)] text-[var(--tone-rose-meta)]'}`}>{kind}</span>
+                                <span className={`font-black text-xs flex-shrink-0 ${corrIsPending ? 'text-[var(--tone-amber-identity)]' : corrIsApplied ? 'text-[var(--tone-emerald-identity)]' : 'text-[var(--tone-rose-identity)]'}`}>
                                   {item.worker_name || workerObj?.name || 'Trabalhador'}
                                 </span>
-                                <span className={`font-mono font-black text-xs ${corrIsPending ? 'text-[var(--tone-amber-meta)]' : corrIsApplied ? 'text-[var(--tone-emerald-meta)]' : 'text-[var(--tone-rose-meta)]'}`}>{item.date}</span>
-                              </div>
-                              <div className="flex items-center gap-2 text-[var(--slate-dim)] text-xs">
-                                <span className={`${SCALE.text.statLabel} w-20 flex-shrink-0 text-[var(--slate-dim)]`}>Original</span>
-                                {hasBefore
-                                  ? <><span className="font-mono">{item.before.startTime} → {item.before.endTime}</span>{hasBreak(item.before) && <span className="text-[var(--slate)]">· pausa {item.before.breakStart || '--:--'}–{item.before.breakEnd || '--:--'}</span>}</>
-                                  : <span className="italic text-[var(--slate-dim)]">Sem registo anterior</span>}
-                              </div>
-                              <div className={`flex items-center gap-2 font-bold text-xs ${corrIsPending ? 'text-[var(--tone-amber-value)]' : corrIsApplied ? 'text-[var(--tone-emerald-value)]' : 'text-[var(--tone-rose-value)]'}`}>
-                                <span className={`${SCALE.text.statLabel} w-20 flex-shrink-0 ${corrIsPending ? 'text-[var(--tone-amber-label)]' : corrIsApplied ? 'text-[var(--tone-emerald-label)]' : 'text-[var(--tone-rose-label)]'}`}>Solicitado</span>
-                                {hasProposed
-                                  ? <><span className="font-mono">{item.proposed.startTime} → {item.proposed.endTime}</span>{hasBreak(item.proposed) && <span className={`font-normal ${corrIsPending ? 'text-[var(--tone-amber-label)]' : corrIsApplied ? 'text-[var(--tone-emerald-label)]' : 'text-[var(--tone-rose-label)]'}`}>· pausa {item.proposed.breakStart || '--:--'}–{item.proposed.breakEnd || '--:--'}</span>}</>
-                                  : <span className={`italic font-bold ${corrIsApplied ? 'text-[var(--tone-emerald-label)]' : 'text-[var(--tone-rose-label)]'}`}>Remover dia</span>}
-                              </div>
+                                <span className={`font-mono text-xs ${corrIsPending ? 'text-[var(--tone-amber-meta)]' : corrIsApplied ? 'text-[var(--tone-emerald-meta)]' : 'text-[var(--tone-rose-meta)]'}`}>{item.date}</span>
+                                {hasProposed && !isOpen && (
+                                  <span className={`font-mono ${SCALE.text.meta} text-[var(--slate-dim)] ml-auto`}>{item.proposed.startTime}–{item.proposed.endTime}</span>
+                                )}
+                                <ChevronDown size={12} className={`ml-auto flex-shrink-0 text-[var(--slate)] transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                              </button>
+                              {/* Log de alterações expandido */}
+                              {isOpen && (
+                                <div className="px-2.5 pb-2.5 border-t border-white/60 pt-2 space-y-1">
+                                  <div className="flex items-center gap-2 text-[var(--slate-dim)] text-xs">
+                                    <span className={`${SCALE.text.statLabel} w-20 flex-shrink-0 text-[var(--slate-dim)]`}>Original</span>
+                                    {hasBefore
+                                      ? <><span className="font-mono">{item.before.startTime} → {item.before.endTime}</span>{hasBreak(item.before) && <span className="text-[var(--slate)] ml-1">· pausa {item.before.breakStart || '--:--'}–{item.before.breakEnd || '--:--'}</span>}</>
+                                      : <span className="italic text-[var(--slate-dim)]">Sem registo anterior</span>}
+                                  </div>
+                                  <div className={`flex items-center gap-2 font-bold text-xs ${corrIsPending ? 'text-[var(--tone-amber-value)]' : corrIsApplied ? 'text-[var(--tone-emerald-value)]' : 'text-[var(--tone-rose-value)]'}`}>
+                                    <span className={`${SCALE.text.statLabel} w-20 flex-shrink-0 ${corrIsPending ? 'text-[var(--tone-amber-label)]' : corrIsApplied ? 'text-[var(--tone-emerald-label)]' : 'text-[var(--tone-rose-label)]'}`}>Solicitado</span>
+                                    {hasProposed
+                                      ? <><span className="font-mono">{item.proposed.startTime} → {item.proposed.endTime}</span>{hasBreak(item.proposed) && <span className={`font-normal ml-1 ${corrIsPending ? 'text-[var(--tone-amber-label)]' : corrIsApplied ? 'text-[var(--tone-emerald-label)]' : 'text-[var(--tone-rose-label)]'}`}>· pausa {item.proposed.breakStart || '--:--'}–{item.proposed.breakEnd || '--:--'}</span>}</>
+                                      : <span className={`italic font-bold ${corrIsApplied ? 'text-[var(--tone-emerald-label)]' : 'text-[var(--tone-rose-label)]'}`}>Remover dia</span>}
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           );
                         })}
