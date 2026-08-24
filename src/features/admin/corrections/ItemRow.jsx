@@ -5,6 +5,7 @@ import { calculateDuration } from '../../../utils/formatUtils';
 import TimeTextInput from '../../../components/common/TimeTextInput';
 import TimesCell from './TimesCell';
 import { ITEM_STATUS, KIND_LABEL, detectKind, itemDelta, fmtDelta, deltaClass } from './correctionsUtils';
+import { SCALE } from '../../../styles/designTokens';
 
 export default function ItemRow({ item, supabase, disabled, setCorrectionItems }) {
   const [editing, setEditing] = useState(false);
@@ -50,22 +51,22 @@ export default function ItemRow({ item, supabase, disabled, setCorrectionItems }
       <div className="flex items-start gap-4 flex-wrap">
         <div className="min-w-[140px]">
           <div className="flex gap-1 flex-wrap mb-2">
-            <span className={`inline-block text-[10px] font-black px-2 py-1 rounded-lg border ${K.cls}`}>{K.label}</span>
-            <span className={`inline-block text-[10px] font-black px-2 py-1 rounded-lg ${deltaClass(itemDelta(item))}`}>Δ {fmtDelta(itemDelta(item))}</span>
+            <span className={`inline-block ${SCALE.text.meta} px-2 py-1 rounded-lg border ${K.cls}`}>{K.label}</span>
+            <span className={`inline-block ${SCALE.text.meta} px-2 py-1 rounded-lg ${deltaClass(itemDelta(item))}`}>Δ {fmtDelta(itemDelta(item))}</span>
           </div>
-          <p className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Colaborador</p>
+          <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Colaborador</p>
           <p className="font-bold text-[var(--ink)]">{item.worker_name || item.worker_id}</p>
           <p className="text-xs text-[var(--slate-dim)] font-mono mt-1">{item.date}</p>
-          <span className={`mt-2 inline-block text-[10px] font-black px-2 py-1 rounded-lg ${status.cls}`}>{status.label}</span>
+          <span className={`mt-2 inline-block ${SCALE.text.meta} px-2 py-1 rounded-lg ${status.cls}`}>{status.label}</span>
         </div>
 
         <div className="flex-1 grid grid-cols-3 gap-4 min-w-[300px]">
           <div>
-            <p className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest mb-1">Atual</p>
+            <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1`}>Atual</p>
             <TimesCell shape={item.before} placeholder="— dia não existia —" />
           </div>
           <div className={kind === 'remove' ? 'p-2 bg-rose-50 rounded-lg' : kind === 'new' ? 'p-2 bg-emerald-50 rounded-lg' : ''}>
-            <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-1">Pedido</p>
+            <p className={`${SCALE.text.statLabel} text-amber-600 mb-1`}>Pedido</p>
             {kind === 'remove' ? (
               <p className="text-xs font-bold text-rose-700">Dia removido</p>
             ) : (
@@ -73,7 +74,7 @@ export default function ItemRow({ item, supabase, disabled, setCorrectionItems }
             )}
           </div>
           <div>
-            <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-1">Final</p>
+            <p className={`${SCALE.text.statLabel} text-emerald-500 mb-1`}>Final</p>
             {editing ? (
               <div className="grid grid-cols-2 gap-1">
                 {['startTime', 'endTime', 'breakStart', 'breakEnd'].map((k) => (
@@ -95,26 +96,26 @@ export default function ItemRow({ item, supabase, disabled, setCorrectionItems }
         <div className="mt-3 flex items-center gap-2 flex-wrap">
           {editing ? (
             <>
-              <button onClick={onSaveEdit} disabled={busy} className="px-3 py-1.5 bg-[var(--orange)] text-[var(--navy-solid)] rounded-lg text-[10px] font-black uppercase tracking-widest">Guardar Edição</button>
-              <button onClick={() => setEditing(false)} className="px-3 py-1.5 text-[var(--slate-dim)] text-[10px] font-black uppercase tracking-widest">Cancelar</button>
+              <button onClick={onSaveEdit} disabled={busy} className={`px-3 py-1.5 bg-[var(--orange)] text-[var(--navy-solid)] rounded-lg ${SCALE.text.badge}`}>Guardar Edição</button>
+              <button onClick={() => setEditing(false)} className={`px-3 py-1.5 text-[var(--slate-dim)] ${SCALE.text.badge}`}>Cancelar</button>
             </>
           ) : item.item_status === 'pending' ? (
             <>
-              <button onClick={onAccept} disabled={busy} className="px-3 py-1.5 bg-emerald-700 text-white rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-1"><CheckCircle size={12} /> {acceptLabel}</button>
+              <button onClick={onAccept} disabled={busy} className={`px-3 py-1.5 bg-emerald-700 text-white rounded-lg ${SCALE.text.badge} flex items-center gap-1`}><CheckCircle size={12} /> {acceptLabel}</button>
               {kind !== 'remove' && (
-                <button onClick={() => setEditing(true)} className="px-3 py-1.5 bg-[var(--orange)] text-[var(--navy-solid)] rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-1"><Edit2 size={12} /> Editar</button>
+                <button onClick={() => setEditing(true)} className={`px-3 py-1.5 bg-[var(--orange)] text-[var(--navy-solid)] rounded-lg ${SCALE.text.badge} flex items-center gap-1`}><Edit2 size={12} /> Editar</button>
               )}
-              <button onClick={onReject} disabled={busy} className="px-3 py-1.5 bg-rose-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-1"><XCircle size={12} /> {rejectLabel}</button>
+              <button onClick={onReject} disabled={busy} className={`px-3 py-1.5 bg-rose-600 text-white rounded-lg ${SCALE.text.badge} flex items-center gap-1`}><XCircle size={12} /> {rejectLabel}</button>
               <input type="text" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Nota interna (opcional)" className="flex-1 min-w-[160px] border border-[var(--border-soft)] rounded-lg px-3 py-1.5 text-xs" />
             </>
           ) : (
             <div className="flex-1 flex items-center gap-3 flex-wrap">
-              <span className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest ${item.item_status === 'accepted' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : item.item_status === 'edited' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}`}>
+              <span className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${SCALE.text.badge} ${item.item_status === 'accepted' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : item.item_status === 'edited' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}`}>
                 {item.item_status === 'accepted' && <><CheckCircle size={14} /> Aceite</>}
                 {item.item_status === 'edited'   && <><Edit2 size={14} /> Editado</>}
                 {item.item_status === 'rejected'  && <><XCircle size={14} /> {kind === 'remove' ? 'Dia mantido' : 'Rejeitado'}</>}
               </span>
-              <button onClick={() => { if (!confirm('Reabrir esta decisão e voltar a pendente?')) return; act('pending', null); }} disabled={busy} className="px-3 py-1.5 text-[var(--slate-dim)] hover:text-[var(--ink)] border border-[var(--border)] rounded-lg text-[10px] font-black uppercase tracking-widest">
+              <button onClick={() => { if (!confirm('Reabrir esta decisão e voltar a pendente?')) return; act('pending', null); }} disabled={busy} className={`px-3 py-1.5 text-[var(--slate-dim)] hover:text-[var(--ink)] border border-[var(--border)] rounded-lg ${SCALE.text.badge}`}>
                 Alterar decisão
               </button>
             </div>

@@ -5,6 +5,7 @@ import { markUnderReview, setItemResolution, applyCorrection, rejectCorrection, 
 import { StepPrecision } from '../../client-report/ClientReportFlow';
 import ItemRow from './ItemRow';
 import { STATUS_LABEL, TYPE_LABEL, detectKind, itemDelta, fmtDelta } from './correctionsUtils';
+import { SCALE } from '../../../styles/designTokens';
 
 export default function CorrectionDetail({ correction, items, onBack }) {
   const { supabase, clients, workers, logs, currentUser, setCorrections, setCorrectionItems } = useApp();
@@ -124,14 +125,14 @@ export default function CorrectionDetail({ correction, items, onBack }) {
 
   const editorButtons = (
     <div className="flex gap-2">
-      <button onClick={onMarkResolved} disabled={busy} className="px-4 py-2.5 bg-[var(--navy-solid)] hover:bg-[var(--navy-solid)] text-white rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-50">Marcar como Resolvido</button>
-      <button onClick={onReject} disabled={busy} className="px-4 py-2.5 bg-rose-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-50">Rejeitar</button>
+      <button onClick={onMarkResolved} disabled={busy} className={`px-4 py-2.5 bg-[var(--navy-solid)] hover:bg-[var(--navy-solid)] text-white rounded-xl ${SCALE.text.badge} disabled:opacity-50`}>Marcar como Resolvido</button>
+      <button onClick={onReject} disabled={busy} className={`px-4 py-2.5 bg-rose-600 text-white rounded-xl ${SCALE.text.badge} disabled:opacity-50`}>Rejeitar</button>
     </div>
   );
 
   return (
     <div className="space-y-6">
-      <button onClick={onBack} className="flex items-center gap-2 text-[var(--slate-dim)] hover:text-[var(--ink)] font-black text-[10px] uppercase tracking-widest">
+      <button onClick={onBack} className={`flex items-center gap-2 text-[var(--slate-dim)] hover:text-[var(--ink)] ${SCALE.text.badge}`}>
         <ChevronLeft size={16} /> Voltar à inbox
       </button>
 
@@ -140,20 +141,20 @@ export default function CorrectionDetail({ correction, items, onBack }) {
           <div>
             <h2 className="text-2xl font-black text-[var(--ink)] uppercase tracking-tight">{clientName}</h2>
             <p className="text-sm text-[var(--slate-dim)] font-medium mt-1">Mês {correction.month} • Tipo {TYPE_LABEL[correction.type]?.label || correction.type}</p>
-            <span className={`mt-2 inline-block text-[10px] font-black px-2 py-1 rounded-lg ${STATUS_LABEL[correction.status]?.cls}`}>{STATUS_LABEL[correction.status]?.label}</span>
+            <span className={`mt-2 inline-block ${SCALE.text.meta} px-2 py-1 rounded-lg ${STATUS_LABEL[correction.status]?.cls}`}>{STATUS_LABEL[correction.status]?.label}</span>
           </div>
           <div className="text-right flex gap-6">
             <div>
-              <p className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Resolução</p>
+              <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Resolução</p>
               <p className="text-3xl font-black text-[var(--ink)]">{resolved}/{total}</p>
-              <div className="flex gap-2 mt-2 justify-end text-[10px] font-black flex-wrap">
+              <div className={`flex gap-2 mt-2 justify-end ${SCALE.text.meta} flex-wrap`}>
                 {kindCounts.edit   > 0 && <span className="px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-700">{kindCounts.edit} ajuste(s)</span>}
                 {kindCounts.new    > 0 && <span className="px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-700">{kindCounts.new} novo(s)</span>}
                 {kindCounts.remove > 0 && <span className="px-2 py-0.5 rounded-lg bg-rose-50 text-rose-700">{kindCounts.remove} remover</span>}
               </div>
             </div>
             <div>
-              <p className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Diferença mês</p>
+              <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Diferença mês</p>
               <p className={`text-3xl font-black ${monthDelta > 0 ? 'text-emerald-600' : monthDelta < 0 ? 'text-rose-600' : 'text-[var(--slate-dim)]'}`}>{fmtDelta(monthDelta)}</p>
             </div>
           </div>
@@ -170,7 +171,7 @@ export default function CorrectionDetail({ correction, items, onBack }) {
             <div className="flex items-center gap-3 mb-3">
               <div className="w-10 h-10 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center"><MessageCircle size={20} /></div>
               <div>
-                <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest">Mensagem do cliente</p>
+                <p className={`${SCALE.text.statLabel} text-amber-600`}>Mensagem do cliente</p>
                 <p className="text-xs text-[var(--slate-dim)]">{clientName} • {correction.submitted_at?.slice(0, 16).replace('T', ' ')}</p>
               </div>
             </div>
@@ -179,7 +180,7 @@ export default function CorrectionDetail({ correction, items, onBack }) {
           <div className="bg-white rounded-[1.5rem] border border-[var(--border-soft)] p-4">
             <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
               <div>
-                <p className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Editor</p>
+                <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Editor</p>
                 <p className="text-sm text-[var(--ink-soft)]">Faça as alterações que considera correctas e aplique ao relatório.</p>
               </div>
               {editorButtons}
@@ -194,7 +195,7 @@ export default function CorrectionDetail({ correction, items, onBack }) {
         <div className="bg-white rounded-[1.5rem] border border-[var(--border-soft)] p-4">
           <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
             <div>
-              <p className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Editor</p>
+              <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Editor</p>
               <p className="text-sm text-[var(--ink-soft)]">As alterações do cliente estão pré-carregadas. Pode modificar antes de aplicar.</p>
             </div>
             {editorButtons}
@@ -223,21 +224,21 @@ export default function CorrectionDetail({ correction, items, onBack }) {
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center"><FileText size={20} /></div>
             <div>
-              <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest">Pedido de Registo</p>
+              <p className={`${SCALE.text.statLabel} text-amber-600`}>Pedido de Registo</p>
               <p className="text-xs text-[var(--slate-dim)]">{clientName} • {correction.submitted_at?.slice(0, 16).replace('T', ' ')}</p>
             </div>
           </div>
           {items.map(it => (
             <div key={it.id} className="bg-white rounded-xl p-4 mb-3 border border-amber-100">
-              <p className="text-[10px] font-black text-[var(--slate-dim)] uppercase mb-2">{it.worker_name} • {it.date}</p>
-              {it.before && <div className="mb-2"><p className="text-[9px] font-black text-rose-500 uppercase mb-1">Original:</p><div className="flex gap-4 text-xs font-bold text-[var(--ink-soft)]"><span>Entrada: {it.before.startTime || '--:--'}</span><span>Saída: {it.before.endTime || '--:--'}</span>{it.before.breakStart && <span>Pausa: {it.before.breakStart} - {it.before.breakEnd}</span>}</div></div>}
-              {it.proposed && <div><p className="text-[9px] font-black text-emerald-600 uppercase mb-1">Proposto:</p><div className="flex gap-4 text-xs font-bold text-[var(--ink)]"><span>Entrada: {it.proposed.startTime || '--:--'}</span><span>Saída: {it.proposed.endTime || '--:--'}</span>{it.proposed.breakStart && <span>Pausa: {it.proposed.breakStart} - {it.proposed.breakEnd}</span>}</div></div>}
+              <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] mb-2`}>{it.worker_name} • {it.date}</p>
+              {it.before && <div className="mb-2"><p className={`${SCALE.text.statLabel} text-rose-500 mb-1`}>Original:</p><div className="flex gap-4 text-xs font-bold text-[var(--ink-soft)]"><span>Entrada: {it.before.startTime || '--:--'}</span><span>Saída: {it.before.endTime || '--:--'}</span>{it.before.breakStart && <span>Pausa: {it.before.breakStart} - {it.before.breakEnd}</span>}</div></div>}
+              {it.proposed && <div><p className={`${SCALE.text.statLabel} text-emerald-600 mb-1`}>Proposto:</p><div className="flex gap-4 text-xs font-bold text-[var(--ink)]"><span>Entrada: {it.proposed.startTime || '--:--'}</span><span>Saída: {it.proposed.endTime || '--:--'}</span>{it.proposed.breakStart && <span>Pausa: {it.proposed.breakStart} - {it.proposed.breakEnd}</span>}</div></div>}
             </div>
           ))}
           {correction.justification && <p className="text-sm text-[var(--ink-soft)] italic border-l-4 border-amber-200 pl-3 mt-3">"{correction.justification}"</p>}
           <div className="flex gap-2 mt-4 pt-4 border-t border-amber-200">
-            <button onClick={onApproveCreationRequest} disabled={busy} className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-50">Aprovar</button>
-            <button onClick={onReject} disabled={busy} className="px-4 py-2.5 bg-rose-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-50">Rejeitar</button>
+            <button onClick={onApproveCreationRequest} disabled={busy} className={`px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl ${SCALE.text.badge} disabled:opacity-50`}>Aprovar</button>
+            <button onClick={onReject} disabled={busy} className={`px-4 py-2.5 bg-rose-600 text-white rounded-xl ${SCALE.text.badge} disabled:opacity-50`}>Rejeitar</button>
           </div>
         </div>
       )}
@@ -248,14 +249,14 @@ export default function CorrectionDetail({ correction, items, onBack }) {
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center"><Plus size={20} /></div>
             <div>
-              <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest">Pedido de Criação</p>
+              <p className={`${SCALE.text.statLabel} text-amber-600`}>Pedido de Criação</p>
               <p className="text-xs text-[var(--slate-dim)]">{clientName} • {correction.submitted_at?.slice(0, 16).replace('T', ' ')}</p>
             </div>
           </div>
           <p className="text-sm text-[var(--ink-mid)] font-medium whitespace-pre-wrap">{correction.justification || '(sem descrição)'}</p>
           <div className="flex gap-2 mt-4 pt-4 border-t border-amber-200">
-            <button onClick={onMarkResolved} disabled={busy} className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-50">Aprovar Criação</button>
-            <button onClick={onReject} disabled={busy} className="px-4 py-2.5 bg-rose-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-50">Rejeitar</button>
+            <button onClick={onMarkResolved} disabled={busy} className={`px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl ${SCALE.text.badge} disabled:opacity-50`}>Aprovar Criação</button>
+            <button onClick={onReject} disabled={busy} className={`px-4 py-2.5 bg-rose-600 text-white rounded-xl ${SCALE.text.badge} disabled:opacity-50`}>Rejeitar</button>
           </div>
         </div>
       )}
@@ -266,20 +267,20 @@ export default function CorrectionDetail({ correction, items, onBack }) {
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 bg-rose-100 text-rose-600 rounded-xl flex items-center justify-center"><Trash2 size={20} /></div>
             <div>
-              <p className="text-[10px] font-black text-rose-600 uppercase tracking-widest">Pedido de Eliminação</p>
+              <p className={`${SCALE.text.statLabel} text-rose-600`}>Pedido de Eliminação</p>
               <p className="text-xs text-[var(--slate-dim)]">{clientName} • {correction.submitted_at?.slice(0, 16).replace('T', ' ')}</p>
             </div>
           </div>
           {items.map(it => (
             <div key={it.id} className="bg-white rounded-xl p-4 mb-3 border border-rose-100">
-              <p className="text-[10px] font-black text-[var(--slate-dim)] uppercase mb-2">{it.worker_name} • {it.date}</p>
-              {it.before && <div className="mb-2"><p className="text-[9px] font-black text-rose-500 uppercase mb-1">A eliminar:</p><div className="flex gap-4 text-xs font-bold text-[var(--ink)]"><span>Entrada: {it.before.startTime || '--:--'}</span><span>Saída: {it.before.endTime || '--:--'}</span>{it.before.breakStart && <span>Pausa: {it.before.breakStart} - {it.before.breakEnd}</span>}</div></div>}
+              <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] mb-2`}>{it.worker_name} • {it.date}</p>
+              {it.before && <div className="mb-2"><p className={`${SCALE.text.statLabel} text-rose-500 mb-1`}>A eliminar:</p><div className="flex gap-4 text-xs font-bold text-[var(--ink)]"><span>Entrada: {it.before.startTime || '--:--'}</span><span>Saída: {it.before.endTime || '--:--'}</span>{it.before.breakStart && <span>Pausa: {it.before.breakStart} - {it.before.breakEnd}</span>}</div></div>}
             </div>
           ))}
           {correction.justification && <p className="text-sm text-[var(--ink-soft)] italic border-l-4 border-rose-200 pl-3 mt-3">"{correction.justification}"</p>}
           <div className="flex gap-2 mt-4 pt-4 border-t border-rose-200">
-            <button onClick={onApproveCreationRequest} disabled={busy} className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-50">Confirmar Eliminação</button>
-            <button onClick={onReject} disabled={busy} className="px-4 py-2.5 bg-[var(--surface-dim)] text-[var(--ink-soft)] rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[var(--border)] transition-colors disabled:opacity-50">Cancelar</button>
+            <button onClick={onApproveCreationRequest} disabled={busy} className={`px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl ${SCALE.text.badge} disabled:opacity-50`}>Confirmar Eliminação</button>
+            <button onClick={onReject} disabled={busy} className={`px-4 py-2.5 bg-[var(--surface-dim)] text-[var(--ink-soft)] rounded-xl ${SCALE.text.badge} hover:bg-[var(--border)] transition-colors disabled:opacity-50`}>Cancelar</button>
           </div>
         </div>
       )}
@@ -290,14 +291,14 @@ export default function CorrectionDetail({ correction, items, onBack }) {
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 bg-rose-100 text-rose-600 rounded-xl flex items-center justify-center"><Trash2 size={20} /></div>
             <div>
-              <p className="text-[10px] font-black text-rose-600 uppercase tracking-widest">Pedido de Eliminação</p>
+              <p className={`${SCALE.text.statLabel} text-rose-600`}>Pedido de Eliminação</p>
               <p className="text-xs text-[var(--slate-dim)]">{clientName} • {correction.submitted_at?.slice(0, 16).replace('T', ' ')}</p>
             </div>
           </div>
           <p className="text-sm text-[var(--ink-mid)] font-medium whitespace-pre-wrap">{correction.justification || '(sem descrição)'}</p>
           <div className="flex gap-2 mt-4 pt-4 border-t border-rose-200">
-            <button onClick={onMarkResolved} disabled={busy} className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-50">Confirmar Eliminação</button>
-            <button onClick={onReject} disabled={busy} className="px-4 py-2.5 bg-[var(--surface-dim)] text-[var(--ink-soft)] rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[var(--border)] transition-colors disabled:opacity-50">Cancelar</button>
+            <button onClick={onMarkResolved} disabled={busy} className={`px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl ${SCALE.text.badge} disabled:opacity-50`}>Confirmar Eliminação</button>
+            <button onClick={onReject} disabled={busy} className={`px-4 py-2.5 bg-[var(--surface-dim)] text-[var(--ink-soft)] rounded-xl ${SCALE.text.badge} hover:bg-[var(--border)] transition-colors disabled:opacity-50`}>Cancelar</button>
           </div>
         </div>
       )}

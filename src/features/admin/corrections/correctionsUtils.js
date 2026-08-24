@@ -1,8 +1,8 @@
 export const STATUS_LABEL = {
-  submitted:    { label: 'Submetido',  cls: 'bg-amber-100 text-amber-700' },
-  under_review: { label: 'Em Revisão', cls: 'bg-indigo-100 text-indigo-700' },
-  applied:      { label: 'Aplicado',   cls: 'bg-emerald-100 text-emerald-700' },
-  rejected:     { label: 'Rejeitado',  cls: 'bg-rose-100 text-rose-700' },
+  submitted:    { label: 'Submetido',  cls: 'bg-[var(--tone-amber-bg)] text-[var(--tone-amber)]' },
+  under_review: { label: 'Em Revisão', cls: 'bg-[var(--tone-indigo-bg)] text-[var(--tone-indigo)]' },
+  applied:      { label: 'Aplicado',   cls: 'bg-[var(--tone-emerald-bg)] text-[var(--tone-emerald)]' },
+  rejected:     { label: 'Rejeitado',  cls: 'bg-[var(--tone-rose-bg)] text-[var(--tone-rose)]' },
 };
 
 export const TYPE_LABEL = {
@@ -13,15 +13,15 @@ export const TYPE_LABEL = {
 
 export const ITEM_STATUS = {
   pending:  { label: 'Pendente',  cls: 'bg-slate-100 text-slate-600' },
-  accepted: { label: 'Aceite',    cls: 'bg-emerald-100 text-emerald-700' },
-  edited:   { label: 'Editado',   cls: 'bg-indigo-100 text-indigo-700' },
-  rejected: { label: 'Rejeitado', cls: 'bg-rose-100 text-rose-700' },
+  accepted: { label: 'Aceite',    cls: 'bg-[var(--tone-emerald-bg)] text-[var(--tone-emerald)]' },
+  edited:   { label: 'Editado',   cls: 'bg-[var(--tone-indigo-bg)] text-[var(--tone-indigo)]' },
+  rejected: { label: 'Rejeitado', cls: 'bg-[var(--tone-rose-bg)] text-[var(--tone-rose)]' },
 };
 
 export const KIND_LABEL = {
-  new:    { label: '✚ Novo dia',    cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  remove: { label: '✖ Remover dia', cls: 'bg-rose-50 text-rose-700 border-rose-200' },
-  edit:   { label: '✎ Ajuste',      cls: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+  new:    { label: '✚ Novo dia',    cls: 'bg-[var(--tone-emerald-bg)] text-[var(--tone-emerald)] border-[var(--tone-emerald-border)]' },
+  remove: { label: '✖ Remover dia', cls: 'bg-[var(--tone-rose-bg)] text-[var(--tone-rose)] border-[var(--tone-rose-border)]' },
+  edit:   { label: '✎ Ajuste',      cls: 'bg-[var(--tone-indigo-bg)] text-[var(--tone-indigo)] border-[var(--tone-indigo-border)]' },
 };
 
 export const isEmptyTimes = (shape) => {
@@ -52,4 +52,4 @@ export const fmtDelta = (n) => {
 };
 
 export const deltaClass = (n) =>
-  n > 0 ? 'bg-emerald-100 text-emerald-700' : n < 0 ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-500';
+  n > 0 ? 'bg-[var(--tone-emerald-bg)] text-[var(--tone-emerald)]' : n < 0 ? 'bg-[var(--tone-rose-bg)] text-[var(--tone-rose)]' : 'bg-slate-100 text-slate-500';
