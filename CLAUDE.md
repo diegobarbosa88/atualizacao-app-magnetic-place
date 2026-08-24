@@ -1055,6 +1055,36 @@ pendência de prioridade** para quando se abrir o varrimento sistemático de par
 encontrada nesta sessão (a de Faltas era 4,56:1, esta é 4,66:1), não uma falha clara, mas sem
 folga real.
 
+**Spec "Redesenho Inbox de Correções (3 níveis)", 2026-08-24 — achado estrutural real, não
+cosmético: os dois painéis não eram simétricos.** A spec pedia para "reestruturar os 3 níveis",
+mas o nível 2 (fundo tingido `--tone-*-bg` cobrindo metadados+cartão) já existia exactamente como
+descrito nos dois painéis — nada a mudar aí, e a pergunta da regra-ponte nem se aplicava: este
+ficheiro usa `bg-[var(--tone-*-bg)]` (custom property com par claro/escuro definido em `index.css`
+`:root`/`.dark`), não a classe Tailwind crua `bg-emerald-50`/`bg-rose-50` que a regra-ponte de
+`App.css:46` intercepta — mecanismo diferente, já correcto, a "referência central" da ponte não
+determina nada aqui. **O achado real: `WorkerCorrectionsPanel` já tinha o nível 3 (item por trás
+de botão colapsável — badge de tipo, nome, data, chevron, expande para Original/Solicitado) —
+`ClientCorrectionsPanel` não tinha nada disto, mostrava tudo sempre aberto, sem badge de tipo.**
+Assimetria não documentada entre dois painéis que mostram o mesmo dado — decisão (Diego): trazer à
+paridade, não assumir intenção deliberada sem evidência escrita. Replicado o padrão já testado do
+`WorkerCorrectionsPanel` (`labelKind`, `expandedItems`/`toggleItem`) no `ClientCorrectionsPanel`,
+não reescrito de raiz. **Badges de tipo são três, não dois** (`✚ Novo`, `✖ Eliminar`, `✎ Ajuste` —
+a spec só previa/procurou "Novo"/"Eliminar"; `Ajuste` é o caso mais comum, qualquer alteração de
+horário que não seja criação nem remoção). **Rejeitadas não tem campo adicional**: o motivo é só
+capturado por `prompt()` no momento da acção e enviado por notificação externa, nunca mostrado de
+volta nesta UI — Original/Solicitado renderiza igual ao caso aplicado, só muda o tom.
+Checkpoint ao vivo confirmado nos dois painéis: expandir/colapsar funciona igual, com exemplos
+reais de `Novo` ("Sem registo anterior" → "07:00 → 17:00") e `Eliminar` ("08:00 → 15:00" →
+"Remover dia") no `ClientCorrectionsPanel`. **Achado de medição, não de código:** o badge de tipo
+usa `bg-[var(--tone-amber-bg)]`, que em modo escuro é `rgba(187,77,0,0.22)` — translúcido. Medir
+com canvas `fillStyle`+`getImageData` numa cor `rgba()` dá o valor composto sobre PRETO (o padrão
+do canvas), não sobre o fundo real por trás — deu 2,36:1, parecendo falha. Compor manualmente a
+pilha de fundos (percorrer ancestrais, alpha-blend de trás para a frente) deu o valor real: 4,86:1
+escuro / 4,52:1 claro, ambos a passar AA — falso alarme do método, não um bug. **Quarta vez nesta
+sessão que o instrumento de medição engana antes do código** (a meio de HMR, o selector
+`closest('[style*="background"]')`, agora `rgba()` não composta) — reforça a regra já registada:
+desconfiar do instrumento antes de assumir que um número surpreendente é real.
+
 **`ItemRow.jsx` — pendência separada, padrão diferente, não convertido.** Ao contrário do
 `CorrectionsInbox.jsx`, aqui a cor não segue o estado da correção — é uma cor-chave **fixa por
 coluna** da grelha de 3 colunas (Atual/Pedido/Final): "Pedido" é sempre `text-amber-600`, "Final" é
