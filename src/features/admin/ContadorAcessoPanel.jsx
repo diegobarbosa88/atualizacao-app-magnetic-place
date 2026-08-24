@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link2, RefreshCw, Copy, CheckCircle2, Loader2, AlertTriangle, Lock } from 'lucide-react';
 import AdminPasswordModal from './AdminPasswordModal';
-import { FT } from '../../styles/designTokens';
+import { FT, SCALE } from '../../styles/designTokens';
 
 async function chamarContadorAcesso(action, adminPassword) {
   const res = await fetch('/api/contador-acesso', {
@@ -87,7 +87,7 @@ export default function ContadorAcessoPanel() {
         <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600"><Link2 size={20} /></div>
         <div>
           <h3 className="font-black text-lg text-[var(--ink)]">Acesso do Contabilista</h3>
-          <p className="text-[10px] text-[var(--slate-dim)] font-bold uppercase tracking-widest mt-0.5">Link do Resumo Mensal partilhado (/partilha/resumo)</p>
+          <p className={`text-[var(--slate-dim)] mt-0.5 ${SCALE.text.statLabel}`}>Link do Resumo Mensal partilhado (/partilha/resumo)</p>
         </div>
       </div>
 
@@ -111,7 +111,7 @@ export default function ContadorAcessoPanel() {
       ) : (
         <div className="space-y-3">
           <div className="space-y-1">
-            <label className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Link ativo (muda o mês na URL conforme necessário)</label>
+            <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Link ativo (muda o mês na URL conforme necessário)</label>
             <div className="flex gap-2">
               <input readOnly value={link || ''} className="flex-1 bg-[var(--surface)] border border-[var(--border)] rounded-xl p-3 text-xs font-mono text-[var(--ink-soft)] outline-none" />
               <button onClick={copiar} className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 ${copiado ? 'bg-emerald-50 text-emerald-700' : 'text-white hover:opacity-90'}`} style={copiado ? {} : { backgroundColor: FT.navy }}>
@@ -127,7 +127,7 @@ export default function ContadorAcessoPanel() {
             {regenerando ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
             Regenerar Link
           </button>
-          <p className="text-[10px] text-[var(--slate-dim)] font-medium">
+          <p className={`text-[var(--slate-dim)] ${SCALE.text.body}`}>
             Regenerar invalida imediatamente o link atual. Terás de reenviar o novo link ao contabilista.
           </p>
         </div>

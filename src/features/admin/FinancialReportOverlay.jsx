@@ -5,6 +5,7 @@ import ModalShell from '../../components/common/ModalShell';
 import { useApp } from '../../context/AppContext';
 import { formatCurrency } from '../../utils/formatUtils';
 import { callGemini } from '../../utils/aiUtils';
+import { SCALE } from '../../styles/designTokens';
 
 const FinancialReportOverlay = ({ logs, workers, clients, expenses, finFilter, setFinFilter, setShowFinReport }) => {
   const { systemSettings } = useApp();
@@ -114,10 +115,10 @@ const FinancialReportOverlay = ({ logs, workers, clients, expenses, finFilter, s
                 </div>
                 <div className="p-3 sm:p-6 rounded-2xl sm:rounded-[1.5rem] bg-[var(--navy-solid)] text-white border border-[var(--navy-deep)]">
                   <div className="flex items-center gap-1.5 sm:gap-2 text-amber-400 mb-2 font-black uppercase text-[8px] sm:text-[10px] tracking-widest"><Sparkles size={12} sm:size={16} /> Insights do Consultor AI</div>
-                  <button onClick={generateInsight} disabled={isAnalyzing} className="w-full bg-[var(--orange)] hover:bg-[var(--orange-hover)] px-2 py-1.5 rounded-lg text-[10px] font-bold transition-all text-[var(--navy-solid)] whitespace-nowrap">
+                  <button onClick={generateInsight} disabled={isAnalyzing} className={`w-full bg-[var(--orange)] hover:bg-[var(--orange-hover)] px-2 py-1.5 rounded-lg transition-all text-[var(--navy-solid)] whitespace-nowrap ${SCALE.text.meta}`}>
                     {isAnalyzing ? "..." : "Gerar"}
                   </button>
-                  {insight && <p className="text-[8px] text-[var(--slate-dim)] mt-1 line-clamp-2">{insight.substring(0, 60)}...</p>}
+                  {insight && <p className={`${SCALE.text.meta} text-[var(--slate-dim)] mt-1 line-clamp-2`}>{insight.substring(0, 60)}...</p>}
                 </div>
               </div>
             </>
@@ -133,7 +134,7 @@ const FinancialReportOverlay = ({ logs, workers, clients, expenses, finFilter, s
                 ) : (
                   <div className="rounded-2xl border border-[var(--border-soft)] overflow-x-auto">
                     <table className="w-full text-sm min-w-[400px]">
-                      <thead className="bg-[var(--surface)] text-[var(--slate-dim)] text-[10px] uppercase tracking-widest">
+                      <thead className={`bg-[var(--surface)] text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>
                         <tr>
                           <th className="text-left px-4 py-3 font-black">Trabalhador</th>
                           <th className="text-right px-4 py-3 font-black">Horas</th>
@@ -170,7 +171,7 @@ const FinancialReportOverlay = ({ logs, workers, clients, expenses, finFilter, s
                 ) : (
                   <div className="rounded-2xl border border-[var(--border-soft)] overflow-x-auto">
                     <table className="w-full text-sm min-w-[300px]">
-                      <thead className="bg-[var(--surface)] text-[var(--slate-dim)] text-[10px] uppercase tracking-widest">
+                      <thead className={`bg-[var(--surface)] text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>
                         <tr>
                           <th className="text-left px-4 py-3 font-black">Data</th>
                           <th className="text-left px-4 py-3 font-black">Descrição</th>
@@ -199,7 +200,7 @@ const FinancialReportOverlay = ({ logs, workers, clients, expenses, finFilter, s
 
               {/* Totais */}
               <div className="rounded-[1.5rem] border border-[var(--border)] overflow-hidden">
-                <div className="bg-[var(--surface)] px-4 sm:px-5 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Resumo de Custos</div>
+                <div className={`bg-[var(--surface)] px-4 sm:px-5 py-3 text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Resumo de Custos</div>
                 <div className="divide-y divide-[var(--border-soft)]">
                   <div className="flex justify-between px-4 sm:px-5 py-3 text-sm text-[var(--ink-soft)]"><span>Custo Staff</span><span className="font-bold font-mono">{formatCurrency(stats.teamCosts)}</span></div>
                   <div className="flex justify-between px-4 sm:px-5 py-3 text-sm text-[var(--ink-soft)]"><span>Outras Despesas</span><span className="font-bold font-mono">{formatCurrency(stats.totalExpenses)}</span></div>

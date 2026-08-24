@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Plane, MapPin, AlertTriangle, ChevronRight, Calendar } from 'lucide-react';
-import { FT } from '../../styles/designTokens';
+import { FT, SCALE } from '../../styles/designTokens';
 
 const GAP_PADRAO = 5;
 const DIAS_PT = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
@@ -142,7 +142,7 @@ function WorkerRow({ worker, isOpen, onToggle, onUsarData, onEditarManualmente }
               >
                 {worker.gapReal === 1 ? '1 dia de folga' : `${worker.gapReal} dias de folga`}
               </div>
-              <div className="text-[10px]" style={{ color: '#8891A0' }}>
+              <div className={SCALE.text.meta} style={{ color: '#8891A0' }}>
                 (padrão: {worker.gapPadrao} dias)
               </div>
             </div>
@@ -241,7 +241,7 @@ export default function HistoricoDeslocacao({ supabase, workers, mesStr, setMapa
   if (!historico || workerIds.length === 0) {
     return (
       <div className="mb-4 px-3.5 py-3 rounded-xl border border-dashed border-[var(--border)] bg-[var(--surface)]">
-        <p className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-wider mb-0.5">
+        <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] mb-0.5`}>
           Histórico de deslocação
         </p>
         <p className="text-xs text-[var(--slate-dim)] leading-relaxed">

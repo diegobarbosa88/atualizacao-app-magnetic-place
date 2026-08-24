@@ -6,7 +6,7 @@ import {
   Briefcase, LayoutGrid, List, Edit2, Trash2, MapPin, Euro, ShieldOff, Send, AlertTriangle, Shield, Search, MoreVertical, Check, X, Building2, Save, Clock
 } from 'lucide-react';
 import Card, { CardGrid } from '../../components/common/Card';
-import { FT, FONT_TITLE, FONT_MONO } from '../../styles/designTokens';
+import { FT, FONT_TITLE, FONT_MONO, SCALE } from '../../styles/designTokens';
 import ClientForm from './client/ClientForm';
 import ClientEnviosPanel from './client/ClientEnviosPanel';
 import CorrectionsInbox from './corrections/CorrectionsInbox';
@@ -188,13 +188,13 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
           <div className="flex items-center justify-end gap-2.5 px-[2rem] pt-[1.1rem] pb-[1.3rem]">
             <button
               onClick={() => setIsAddingInTab(false)}
-              className="px-5 py-3 rounded-2xl border-[1.5px] border-[var(--border)] bg-white text-[11px] font-black uppercase tracking-wide text-[var(--slate-dim)] hover:bg-[var(--surface)] transition-all"
+              className={`px-5 py-3 rounded-2xl ${SCALE.border.control} border-[var(--border)] bg-white text-[var(--slate-dim)] hover:bg-[var(--surface)] transition-all ${SCALE.text.badge}`}
             >
               Cancelar
             </button>
             <button
               onClick={handleSaveClient}
-              className="flex items-center gap-2 px-6 py-3 rounded-2xl text-[11.5px] font-black uppercase tracking-wide shadow-lg transition-all"
+              className={`flex items-center gap-2 px-6 py-3 rounded-2xl shadow-lg transition-all ${SCALE.text.badge}`}
               style={{ background: `linear-gradient(135deg, ${FT.orange}, ${FT.orangeDeep})`, color: '#12293e' }}
             >
               <Save size={15} /> Gravar Cliente
@@ -216,14 +216,14 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
             </colgroup>
             <thead>
               <tr className="border-b border-[var(--border-soft)] bg-[var(--surface)]">
-                <th onClick={() => setClientsSort(prev => ({ key: 'name', direction: prev.key === 'name' && prev.direction === 'asc' ? 'desc' : 'asc' }))} className="text-left px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest cursor-pointer hover:text-[var(--ink-mid)] transition-colors">
+                <th onClick={() => setClientsSort(prev => ({ key: 'name', direction: prev.key === 'name' && prev.direction === 'asc' ? 'desc' : 'asc' }))} className={`text-left px-4 py-3 text-[var(--slate-dim)] cursor-pointer hover:text-[var(--ink-mid)] transition-colors ${SCALE.text.statLabel}`}>
                   Cliente {clientsSort.key === 'name' ? (clientsSort.direction === 'asc' ? '↑' : '↓') : ''}
                 </th>
-                <th className="hidden sm:table-cell text-left px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Morada</th>
-                <th onClick={() => setClientsSort(prev => ({ key: 'value', direction: prev.key === 'value' && prev.direction === 'asc' ? 'desc' : 'asc' }))} className="text-right px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest cursor-pointer hover:text-[var(--ink-mid)] transition-colors">
+                <th className={`hidden sm:table-cell text-left px-4 py-3 text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Morada</th>
+                <th onClick={() => setClientsSort(prev => ({ key: 'value', direction: prev.key === 'value' && prev.direction === 'asc' ? 'desc' : 'asc' }))} className={`text-right px-4 py-3 text-[var(--slate-dim)] cursor-pointer hover:text-[var(--ink-mid)] transition-colors ${SCALE.text.statLabel}`}>
                   Valor {clientsSort.key === 'value' ? (clientsSort.direction === 'asc' ? '↑' : '↓') : ''}
                 </th>
-                <th className="text-right px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Ações</th>
+                <th className={`text-right px-4 py-3 text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -265,10 +265,10 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
                             <div className="mx-3 my-1 border-t border-[var(--border-soft)]" />
                             {confirmDeleteClientId === c.id ? (
                               <div className="mx-2 mb-1.5 p-2.5 bg-rose-50 rounded-xl border border-rose-100">
-                                <p className="text-[10px] font-black text-rose-500 uppercase tracking-wider mb-2">Confirmar apagar?</p>
+                                <p className={`${SCALE.text.statLabel} text-rose-500 mb-2`}>Confirmar apagar?</p>
                                 <div className="flex gap-1.5">
-                                  <button onClick={() => { handleDeleteClient(c.id); setConfirmDeleteClientId(null); setOpenMenuId(null); }} className="flex-1 py-1.5 bg-rose-600 text-white text-[10px] font-black rounded-lg hover:bg-rose-700 transition-colors">Sim</button>
-                                  <button onClick={() => setConfirmDeleteClientId(null)} className="flex-1 py-1.5 bg-white border border-[var(--border)] text-[var(--ink-soft)] text-[10px] font-black rounded-lg hover:bg-[var(--surface)] transition-colors">Não</button>
+                                  <button onClick={() => { handleDeleteClient(c.id); setConfirmDeleteClientId(null); setOpenMenuId(null); }} className={`flex-1 py-1.5 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors ${SCALE.text.meta}`}>Sim</button>
+                                  <button onClick={() => setConfirmDeleteClientId(null)} className={`flex-1 py-1.5 bg-white border border-[var(--border)] text-[var(--ink-soft)] rounded-lg hover:bg-[var(--surface)] transition-colors ${SCALE.text.meta}`}>Não</button>
                                 </div>
                               </div>
                             ) : (
@@ -301,12 +301,12 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
                     <Briefcase size={17} />
                   </div>
                   <div className="flex items-center gap-1">
-                    <button onClick={() => loadClientValorHoraHistory(c.id, c.name)} className="w-[26px] h-[26px] rounded-lg border border-[#E5E1D6] bg-white text-[var(--slate)] hover:text-[var(--ink-soft)] flex items-center justify-center transition-all text-[11px]" title="Histórico de valor">📊</button>
+                    <button onClick={() => loadClientValorHoraHistory(c.id, c.name)} className={`w-[26px] h-[26px] rounded-lg border border-[#E5E1D6] bg-white text-[var(--slate)] hover:text-[var(--ink-soft)] flex items-center justify-center transition-all ${SCALE.text.body}`} title="Histórico de valor">📊</button>
                     <button onClick={() => openEditClient(c)} className="w-[26px] h-[26px] rounded-lg border border-[#E5E1D6] bg-white text-[var(--slate)] hover:text-[var(--navy)] flex items-center justify-center transition-all" title="Editar"><Edit2 size={12} /></button>
                     {confirmDeleteClientId === c.id ? (
                       <>
-                        <button onClick={() => { handleDeleteClient(c.id); setConfirmDeleteClientId(null); }} className="px-2 h-[26px] bg-rose-600 text-white text-[10px] font-black rounded-lg">Sim</button>
-                        <button onClick={() => setConfirmDeleteClientId(null)} className="px-2 h-[26px] bg-[var(--surface-dim)] text-[var(--ink-soft)] text-[10px] font-black rounded-lg">Não</button>
+                        <button onClick={() => { handleDeleteClient(c.id); setConfirmDeleteClientId(null); }} className={`px-2 h-[26px] bg-rose-600 text-white rounded-lg ${SCALE.text.meta}`}>Sim</button>
+                        <button onClick={() => setConfirmDeleteClientId(null)} className={`px-2 h-[26px] bg-[var(--surface-dim)] text-[var(--ink-soft)] rounded-lg ${SCALE.text.meta}`}>Não</button>
                       </>
                     ) : (
                       <button onClick={() => setConfirmDeleteClientId(c.id)} className="w-[26px] h-[26px] rounded-lg border border-[#E5E1D6] bg-white text-[var(--slate)] hover:text-rose-500 hover:border-rose-200 flex items-center justify-center transition-all" title="Apagar"><Trash2 size={12} /></button>
@@ -315,11 +315,11 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
                 </div>
 
                 <p className="text-[1.05rem] font-bold leading-[1.15] text-[var(--ink-mid)] truncate" style={{ fontFamily: FONT_TITLE }} title={c.name}>{c.name}</p>
-                <p className="text-[10px] font-semibold text-[var(--slate-dim)]" style={{ fontFamily: FONT_MONO }}>
+                <p className={`${SCALE.text.meta} text-[var(--slate-dim)]`} style={{ fontFamily: FONT_MONO }}>
                   {c.nif ? `NIF ${c.nif}` : 'Sem NIF'}
                 </p>
 
-                <div className="flex items-center gap-1.5 mt-[0.55rem] text-[11px] font-semibold text-[var(--ink-soft)]">
+                <div className={`flex items-center gap-1.5 mt-[0.55rem] text-[var(--ink-soft)] ${SCALE.text.body}`}>
                   <MapPin size={12} className="shrink-0" style={{ color: FT.slate }} />
                   <span className="truncate" title={c.morada || undefined}>{c.morada || 'Sem morada registada'}</span>
                 </div>
@@ -329,7 +329,7 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
                     em linha, a seguir à morada. */}
                 {c.triggers_limited_mode && (
                   <div className="flex items-center gap-1 mt-1.5">
-                    <span className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[8.5px] font-bold" style={{ background: '#FBF0DE', color: '#B8791F' }}>
+                    <span className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 ${SCALE.text.meta}`} style={{ background: '#FBF0DE', color: '#B8791F' }}>
                       <ShieldOff size={9} /> Modo limitado
                     </span>
                   </div>
@@ -338,9 +338,9 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
                 <div className="flex items-center justify-between mt-[0.85rem] pt-[0.7rem] border-t border-[#F1EFE8]">
                   <span className="text-[1.15rem] font-bold leading-none text-[var(--navy)]" style={{ fontFamily: FONT_TITLE }}>
                     {c.valorHora ? Number(c.valorHora).toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
-                    <span className="text-[10px] font-semibold text-[var(--slate-dim)] ml-0.5">€/h</span>
+                    <span className={`${SCALE.text.meta} text-[var(--slate-dim)] ml-0.5`}>€/h</span>
                   </span>
-                  <span className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[9.5px] font-bold text-[var(--slate-dim)]" style={{ fontFamily: FONT_MONO, background: '#F4F2EC' }}>
+                  <span className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[var(--slate-dim)] ${SCALE.text.meta}`} style={{ fontFamily: FONT_MONO, background: '#F4F2EC' }}>
                     <Clock size={10} /> {nHorarios} horário{nHorarios !== 1 ? 's' : ''}
                   </span>
                 </div>

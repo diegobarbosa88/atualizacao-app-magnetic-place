@@ -6,7 +6,7 @@ import DocxPreviewModal from '../../components/common/DocxPreviewModal';
 import { getValidadeStatus } from '../../constants/rhCategories';
 import SectionHeaderShell from '../../components/common/SectionHeaderShell';
 import Card from "../../components/common/Card";
-import { FT } from '../../styles/designTokens';
+import { FT, SCALE } from '../../styles/designTokens';
 
 import DocumentsFilters from './documents/DocumentsFilters';
 import DocumentsTable from './documents/DocumentsTable';
@@ -116,7 +116,7 @@ export default function DocumentsAdmin() {
               onShowUpload={() => a.setShowUploadModal(true)}
             />
 
-            <p className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest mb-4">
+            <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] mb-4`}>
               {a.filteredDocs.length} documento{a.filteredDocs.length !== 1 ? 's' : ''}
             </p>
 

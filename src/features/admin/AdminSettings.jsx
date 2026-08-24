@@ -17,7 +17,7 @@ import {
 import ModalShell from '../../components/common/ModalShell';
 import { calculateDuration } from '../../utils/formatUtils';
 import { roundTimeToIntervalTimeUp, roundTimeToIntervalTimeDown } from '../../utils/timeUtils';
-import { FT } from '../../styles/designTokens';
+import { FT, SCALE } from '../../styles/designTokens';
 
 export default function AdminSettings() {
   const {
@@ -182,7 +182,7 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
       )}
       <div className="mb-2">{preview}</div>
       <p className="text-xs font-black text-[var(--ink-mid)]">{title}</p>
-      <p className="text-[9px] text-[var(--ink-soft)] font-bold uppercase tracking-wider mt-0.5">{subtitle}</p>
+      <p className={`${SCALE.text.statLabel} text-[var(--ink-soft)] mt-0.5`}>{subtitle}</p>
     </button>
   );
 }
@@ -268,7 +268,7 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-black text-[var(--ink)]">{w.name}</p>
-                        <p className="text-[10px] text-[var(--slate-dim)] font-mono">{username}</p>
+                        <p className={`${SCALE.text.meta} text-[var(--slate-dim)] font-mono`}>{username}</p>
                       </div>
                       <div className="flex gap-1">
                         <button onClick={() => handleEditAdmin(w)} className="text-xs font-bold hover:bg-[var(--surface-dim)] px-3 py-1.5 rounded-xl transition-all" style={{ color: 'var(--slate-dim)' }}>Editar</button>
@@ -381,7 +381,7 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
               <p className="text-xs text-blue-600 leading-relaxed">
                 As credenciais PSI são geridas como variáveis de ambiente no <strong>Vercel Dashboard</strong> (Settings → Environment Variables) — nunca ficam expostas no browser:
               </p>
-              <div className="bg-white border border-blue-200 rounded-lg p-2.5 font-mono text-[10px] text-[var(--ink-soft)] space-y-0.5">
+              <div className={`bg-white border border-blue-200 rounded-lg p-2.5 font-mono text-[var(--ink-soft)] space-y-0.5 ${SCALE.text.meta}`}>
                 <div><span className="text-blue-500">SS_NISS_EMPRESA</span> = NISS da empresa (11 dígitos)</div>
                 <div><span className="text-blue-500">SS_PSI_TOKEN</span> = token gerado em SSD → Gestão de autenticação → Tokens de acesso</div>
                 <div><span className="text-blue-500">SS_AMBIENTE</span> = <span className="text-orange-500">teste</span> <span className="text-[var(--slate-dim)]">(mudar para "producao" após testes)</span></div>
@@ -400,19 +400,19 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
               {ssPsiGuideOpen && (
                 <div className="px-4 py-4 space-y-3 text-xs text-[var(--ink-soft)] bg-white border-t border-[var(--border-soft)]">
                   <div className="flex gap-2.5">
-                    <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-600 font-black text-[10px] flex items-center justify-center shrink-0">1</span>
+                    <span className={`w-5 h-5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 ${SCALE.text.badge}`}>1</span>
                     <div><strong>Aderir em produção:</strong> Aceder à Segurança Social Direta (seg-social.pt) → Perfil → <em>Aderir à Plataforma de Serviços de Interoperabilidade</em> → Aceitar termos. A password a usar é a mesma password de login do Portal da Segurança Social Direta — não existe uma password PSI separada.</div>
                   </div>
                   <div className="flex gap-2.5">
-                    <span className="w-5 h-5 rounded-full bg-orange-100 text-orange-600 font-black text-[10px] flex items-center justify-center shrink-0">2</span>
+                    <span className={`w-5 h-5 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center shrink-0 ${SCALE.text.badge}`}>2</span>
                     <div><strong>Pedir acesso ao ambiente de teste:</strong> Enviar email a <strong>suporte-psi@seg-social.pt</strong> com: NISS da empresa, nome do solicitante e telefone. O acesso é concedido em 24–48h.</div>
                   </div>
                   <div className="flex gap-2.5">
-                    <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-600 font-black text-[10px] flex items-center justify-center shrink-0">3</span>
-                    <div><strong>Configurar variáveis de ambiente:</strong> No Vercel Dashboard → Settings → Environment Variables, adicionar <code className="bg-[var(--surface-dim)] px-1 rounded text-[10px]">SS_NISS_EMPRESA</code>, <code className="bg-[var(--surface-dim)] px-1 rounded text-[10px]">SS_PSI_TOKEN</code> e <code className="bg-[var(--surface-dim)] px-1 rounded text-[10px]">SS_AMBIENTE=teste</code>. O token é gerado em SSD → Gestão de autenticação → Tokens de acesso → Criar token de acesso (o valor só é mostrado uma vez — se perdido, revogar e criar novo).</div>
+                    <span className={`w-5 h-5 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 ${SCALE.text.badge}`}>3</span>
+                    <div><strong>Configurar variáveis de ambiente:</strong> No Vercel Dashboard → Settings → Environment Variables, adicionar <code className={`bg-[var(--surface-dim)] px-1 rounded ${SCALE.text.meta}`}>SS_NISS_EMPRESA</code>, <code className={`bg-[var(--surface-dim)] px-1 rounded ${SCALE.text.meta}`}>SS_PSI_TOKEN</code> e <code className={`bg-[var(--surface-dim)] px-1 rounded ${SCALE.text.meta}`}>SS_AMBIENTE=teste</code>. O token é gerado em SSD → Gestão de autenticação → Tokens de acesso → Criar token de acesso (o valor só é mostrado uma vez — se perdido, revogar e criar novo).</div>
                   </div>
                   <div className="flex gap-2.5">
-                    <span className="w-5 h-5 rounded-full bg-[var(--surface-dim)] text-[var(--ink-soft)] font-black text-[10px] flex items-center justify-center shrink-0">4</span>
+                    <span className={`w-5 h-5 rounded-full bg-[var(--surface-dim)] text-[var(--ink-soft)] flex items-center justify-center shrink-0 ${SCALE.text.badge}`}>4</span>
                     <div><strong>Testar:</strong> Clicar "Testar Ligação" acima para confirmar que as credenciais estão corretas antes de fazer comunicações reais.</div>
                   </div>
                   <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
@@ -474,15 +474,15 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
           </div>
           <div className="max-w-lg space-y-4">
             <p className="text-xs text-[var(--slate-dim)] font-bold uppercase tracking-widest">Chave API Gemini</p>
-            <p className="text-[10px] text-[var(--slate-dim)]">Obtenha a sua chave em <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" className="text-indigo-500 underline">aistudio.google.com</a></p>
+            <p className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>Obtenha a sua chave em <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" className="text-indigo-500 underline">aistudio.google.com</a></p>
             <div className="flex gap-2">
               <input type="password" placeholder="AIza..." value={geminiKeyInput} onChange={e => setGeminiKeyInput(e.target.value)} className="flex-1 bg-[var(--surface)] border border-[var(--border)] rounded-xl p-3 text-sm outline-none font-mono" />
               <button onClick={() => { const key = geminiKeyInput.trim(); updateSetting('geminiApiKey', key); alert(key ? 'Chave API guardada! A IA está agora activa.' : 'Chave API removida.'); }} className="text-white px-6 py-2 rounded-xl font-bold text-xs uppercase transition-all whitespace-nowrap" style={{ backgroundColor: FT.navy }}>Guardar</button>
             </div>
             {systemSettings.geminiApiKey ? (
-              <p className="text-[10px] text-emerald-600 font-bold flex items-center gap-1"><span>•</span> IA activa</p>
+              <p className={`text-emerald-600 flex items-center gap-1 ${SCALE.text.meta}`}><span>•</span> IA activa</p>
             ) : (
-              <p className="text-[10px] text-[var(--slate-dim)] font-bold flex items-center gap-1"><span>•</span> IA inactiva — configure a chave</p>
+              <p className={`text-[var(--slate-dim)] flex items-center gap-1 ${SCALE.text.meta}`}><span>•</span> IA inactiva — configure a chave</p>
             )}
           </div>
         </div>
@@ -541,7 +541,7 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
             <div className="p-4 bg-[var(--surface)] rounded-2xl border border-[var(--border-soft)]">
               <div className="mb-3">
                 <p className="text-sm font-bold text-[var(--ink-mid)]">Layout de Navegação</p>
-                <p className="text-[10px] text-[var(--slate-dim)] font-bold uppercase tracking-wider">Escolha entre menu lateral ou barra superior</p>
+                <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Escolha entre menu lateral ou barra superior</p>
               </div>
               <NavModePicker
                 value={systemSettings.navMode || 'sidebar'}
@@ -551,7 +551,7 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
             <div className="flex items-center justify-between p-4 bg-[var(--surface)] rounded-2xl border border-[var(--border-soft)]">
               <div>
                 <p className="text-sm font-bold text-[var(--ink-mid)]">Largura do App (Desktop)</p>
-                <p className="text-[10px] text-[var(--slate-dim)] font-bold uppercase tracking-wider">{systemSettings.appWidth}px</p>
+                <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>{systemSettings.appWidth}px</p>
               </div>
               <input
                 type="range"
@@ -571,7 +571,7 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
             <div className="flex items-center justify-between p-4 bg-[var(--surface)] rounded-2xl border border-[var(--border-soft)]">
               <div>
                 <p className="text-sm font-bold text-[var(--ink-mid)]">Modo Escuro (Interface)</p>
-                <p className="text-[10px] text-[var(--slate-dim)] font-bold uppercase tracking-wider">Ajuste de luminosidade</p>
+                <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Ajuste de luminosidade</p>
               </div>
               <button
                 onClick={() => updateSetting('darkMode', !systemSettings.darkMode)}
@@ -584,7 +584,7 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
             <div className="flex items-center justify-between p-4 bg-[var(--surface)] rounded-2xl border border-[var(--border-soft)]">
               <div>
                 <p className="text-sm font-bold text-[var(--ink-mid)]">Intervalo de Arredondamento</p>
-                <p className="text-[10px] text-[var(--slate-dim)] font-bold uppercase tracking-wider">Arredonda horários a cada {systemSettings.minuteInterval || 30} min</p>
+                <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Arredonda horários a cada {systemSettings.minuteInterval || 30} min</p>
               </div>
               <select
                 value={systemSettings.minuteInterval || 30}
@@ -601,7 +601,7 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
             <div className="flex items-center justify-between p-4 bg-amber-50 rounded-2xl border border-amber-200">
               <div>
                 <p className="text-sm font-bold text-amber-700">Corrigir Hours Anteriores</p>
-                <p className="text-[10px] text-amber-500 font-bold uppercase tracking-wider">Recalcular horas com arredondamento</p>
+                <p className={`${SCALE.text.statLabel} text-amber-500`}>Recalcular horas com arredondamento</p>
               </div>
               <button
                 onClick={() => setShowRecalcModal(true)}
@@ -624,7 +624,7 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
             <div className="flex items-center justify-between p-4 bg-[var(--surface)] rounded-2xl border border-[var(--border-soft)]">
               <div>
                 <p className="text-sm font-bold text-[var(--ink-mid)]">Mostrar email do cliente no aviso</p>
-                <p className="text-[10px] text-[var(--slate-dim)] font-bold uppercase tracking-wider mt-0.5">
+                <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] mt-0.5`}>
                   Quando activo, aparece um botão para copiar mensagem pronta ao cliente
                 </p>
               </div>
@@ -693,9 +693,9 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
           <h3 className="text-xl font-black uppercase tracking-tighter mb-2">Magnetic Place Pro</h3>
           <p className="text-sm font-medium opacity-80 leading-relaxed mb-6">Utilize o painel de configurações para moldar a experiência do dashboard conforme as necessidades da sua empresa.</p>
           <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"><CheckCircle size={14} /> Relatórios Financeiros</div>
-            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"><CheckCircle size={14} /> Gestão de Equipa Analítica</div>
-            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"><CheckCircle size={14} /> Automação com IA</div>
+            <div className={`flex items-center gap-2 ${SCALE.text.statLabel}`}><CheckCircle size={14} /> Relatórios Financeiros</div>
+            <div className={`flex items-center gap-2 ${SCALE.text.statLabel}`}><CheckCircle size={14} /> Gestão de Equipa Analítica</div>
+            <div className={`flex items-center gap-2 ${SCALE.text.statLabel}`}><CheckCircle size={14} /> Automação com IA</div>
           </div>
         </div>
         </>)}

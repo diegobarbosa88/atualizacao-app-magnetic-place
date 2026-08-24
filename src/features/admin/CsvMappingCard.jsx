@@ -1,3 +1,4 @@
+import { SCALE } from '../../styles/designTokens';
 import React from 'react';
 import { ArrowLeftRight, Loader2 } from 'lucide-react';
 
@@ -25,7 +26,7 @@ export default function CsvMappingCard({ csvMapping, colMap, setColMap, previewi
   return (
     <div className="bg-white rounded-[2.5rem] shadow-sm border border-amber-100 p-6 sm:p-8 space-y-5">
       <div>
-        <h3 className="text-[10px] font-black uppercase tracking-widest text-amber-600">Mapear Colunas do CSV</h3>
+        <h3 className={`${SCALE.text.statLabel} text-amber-600`}>Mapear Colunas do CSV</h3>
         <p className="text-xs text-[var(--slate-dim)] mt-0.5">As colunas deste ficheiro não foram reconhecidas automaticamente. Indica qual coluna corresponde a cada campo.</p>
       </div>
 
@@ -54,52 +55,52 @@ export default function CsvMappingCard({ csvMapping, colMap, setColMap, previewi
           <div className="flex gap-2 flex-wrap">
             {[{ k: 'valor', l: 'Valor único' }, { k: 'debcred', l: 'Déb + Créd' }].map(({ k, l }) => (
               <button key={k} onClick={() => setColMap(p => ({ ...p, modo: k }))}
-                className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${colMap.modo === k ? 'bg-indigo-100 text-indigo-700 ring-2 ring-indigo-300' : 'bg-[var(--surface-dim)] text-[var(--ink-soft)] hover:bg-[var(--border)]'}`}>
+                className={`px-3 py-1.5 rounded-full transition-all ${SCALE.text.badge} ${colMap.modo === k ? 'bg-indigo-100 text-indigo-700 ring-2 ring-indigo-300' : 'bg-[var(--surface-dim)] text-[var(--ink-soft)] hover:bg-[var(--border)]'}`}>
                 {l}
               </button>
             ))}
           </div>
 
           <div>
-            <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-1">Data <span className="text-rose-400">*</span></label>
+            <label className={`block ${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1`}>Data <span className="text-rose-400">*</span></label>
             {mkSelect('dataCol')}
           </div>
           {colMap.modo === 'valor' ? (
             <div>
-              <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-1">Valor <span className="text-rose-400">*</span></label>
+              <label className={`block ${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1`}>Valor <span className="text-rose-400">*</span></label>
               {mkSelect('valorCol')}
             </div>
           ) : (
             <>
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-1">Débito (saída)</label>
+                <label className={`block ${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1`}>Débito (saída)</label>
                 {mkSelect('debitoCol')}
               </div>
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-1">Crédito (entrada)</label>
+                <label className={`block ${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1`}>Crédito (entrada)</label>
                 {mkSelect('creditoCol')}
               </div>
             </>
           )}
           <div>
-            <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-1">Descrição</label>
+            <label className={`block ${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1`}>Descrição</label>
             {mkSelect('descricaoCol')}
           </div>
           {colMap.modo === 'valor' && (
             <div>
-              <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-1">Tipo (C/D, Entrada/Saída)</label>
+              <label className={`block ${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1`}>Tipo (C/D, Entrada/Saída)</label>
               {mkSelect('tipoCol')}
             </div>
           )}
 
           <div className="flex gap-2 pt-1">
             <button onClick={confirmarMapeamento} disabled={!canConfirm || previewing}
-              className="flex items-center gap-2 px-4 py-2 bg-[var(--orange)] text-[var(--navy-solid)] rounded-xl hover:bg-[var(--orange-hover)] transition-all text-[10px] font-black uppercase tracking-widest disabled:opacity-40">
+              className={`flex items-center gap-2 px-4 py-2 bg-[var(--orange)] text-[var(--navy-solid)] rounded-xl hover:bg-[var(--orange-hover)] transition-all disabled:opacity-40 ${SCALE.text.badge}`}>
               {previewing ? <Loader2 size={12} className="animate-spin" /> : <ArrowLeftRight size={12} />}
               Aplicar
             </button>
             <button onClick={onCancel}
-              className="px-4 py-2 text-[var(--slate-dim)] hover:text-[var(--ink-soft)] rounded-xl text-[10px] font-black uppercase tracking-widest">
+              className={`px-4 py-2 text-[var(--slate-dim)] hover:text-[var(--ink-soft)] rounded-xl ${SCALE.text.badge}`}>
               Cancelar
             </button>
           </div>

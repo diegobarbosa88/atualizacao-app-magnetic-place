@@ -4,7 +4,7 @@ import { useApp } from '../../context/AppContext';
 import ModalShell from '../../components/common/ModalShell';
 import SectionHeaderShell from '../../components/common/SectionHeaderShell';
 import Card from "../../components/common/Card";
-import { FT } from '../../styles/designTokens';
+import { FT, SCALE } from '../../styles/designTokens';
 
 const SEVERIDADE_CFG = {
   alta:  { label: 'Alta',  order: 0, bg: 'bg-rose-50',   text: 'text-rose-600',   dot: 'bg-rose-500' },
@@ -117,7 +117,7 @@ export default function AlertasAdmin() {
         title="Gestão de Alertas"
         subtitle="Compliance, segurança e administração"
         rightSlot={pendentesCount > 0 && (
-          <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-red-500 text-white shrink-0">
+          <span className={`${SCALE.text.meta} px-2.5 py-1 rounded-full bg-red-500 text-white shrink-0`}>
             {pendentesCount} pendente{pendentesCount > 1 ? 's' : ''}
           </span>
         )}
@@ -128,7 +128,7 @@ export default function AlertasAdmin() {
           <button
             key={s}
             onClick={() => setStatusFilter(s)}
-            className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
+            className={`px-3 py-1.5 rounded-xl transition-all ${SCALE.text.badge} ${
               statusFilter === s ? 'text-white' : 'bg-[var(--surface-dim)] text-[var(--ink-soft)] hover:bg-[var(--border)]'
             }`}
             style={statusFilter === s ? { backgroundColor: FT.navy } : {}}
@@ -158,13 +158,13 @@ export default function AlertasAdmin() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-1">
-                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest ${sevCfg.bg} ${sevCfg.text}`}>
+                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg ${SCALE.text.badge} ${sevCfg.bg} ${sevCfg.text}`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${sevCfg.dot}`} /> {sevCfg.label}
                       </span>
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest bg-[var(--surface-dim)] text-[var(--ink-soft)]">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-lg bg-[var(--surface-dim)] text-[var(--ink-soft)] ${SCALE.text.badge}`}>
                         {alerta.tipo}
                       </span>
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest ${statCfg.bg} ${statCfg.text}`}>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-lg ${SCALE.text.badge} ${statCfg.bg} ${statCfg.text}`}>
                         {statCfg.label}
                       </span>
                     </div>
@@ -174,7 +174,7 @@ export default function AlertasAdmin() {
                     )}
                     {alerta.acao_sugerida && (
                       <div className="mt-3 p-3 rounded-2xl bg-[var(--surface)] border border-[var(--border-soft)]">
-                        <p className="text-[9px] font-black uppercase text-[var(--slate-dim)] tracking-widest mb-1">Ação Sugerida</p>
+                        <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1`}>Ação Sugerida</p>
                         <p className="text-xs text-[var(--ink-soft)] leading-relaxed">{alerta.acao_sugerida}</p>
                       </div>
                     )}
@@ -184,21 +184,21 @@ export default function AlertasAdmin() {
                         <button
                           onClick={() => updateStatus(alerta, 'visto')}
                           disabled={isBusy}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all disabled:opacity-50"
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all disabled:opacity-50 ${SCALE.text.badge}`}
                         >
                           <Eye size={12} /> Marcar como visto
                         </button>
                       )}
                       {alerta.acao_sugerida && (
                         acoesAprovadas.has(alerta.id) ? (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-400">
+                          <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 text-indigo-400 ${SCALE.text.badge}`}>
                             <BadgeCheck size={12} /> Ação aprovada
                           </span>
                         ) : (
                           <button
                             onClick={() => aprovarAcao(alerta)}
                             disabled={isBusy}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-all disabled:opacity-50"
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-all disabled:opacity-50 ${SCALE.text.badge}`}
                           >
                             {isBusy ? <Loader2 size={12} className="animate-spin" /> : <ThumbsUp size={12} />} Aprovar ação sugerida
                           </button>
@@ -208,7 +208,7 @@ export default function AlertasAdmin() {
                         <button
                           onClick={() => updateStatus(alerta, 'resolvido')}
                           disabled={isBusy}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-all disabled:opacity-50"
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-all disabled:opacity-50 ${SCALE.text.badge}`}
                         >
                           <CheckCircle2 size={12} /> Marcar como resolvido
                         </button>
@@ -217,7 +217,7 @@ export default function AlertasAdmin() {
                         <button
                           onClick={() => setConfirmIgnorar(alerta)}
                           disabled={isBusy}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider bg-[var(--surface-dim)] text-[var(--ink-soft)] hover:bg-[var(--border)] transition-all disabled:opacity-50"
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--surface-dim)] text-[var(--ink-soft)] hover:bg-[var(--border)] transition-all disabled:opacity-50 ${SCALE.text.badge}`}
                         >
                           <XCircle size={12} /> Ignorar
                         </button>

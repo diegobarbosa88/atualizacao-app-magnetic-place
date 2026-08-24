@@ -1,3 +1,4 @@
+import { SCALE } from '../../styles/designTokens';
 import React, { useState, useEffect, useRef } from 'react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -87,13 +88,13 @@ function PagarFaturaModal({ fatura, onClose, onPago }) {
       footer={
         <div className="flex gap-2 p-6">
           <button onClick={onClose}
-            className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-[var(--border)] text-[var(--ink-soft)] hover:bg-[var(--surface)] transition-colors">
+            className={`flex-1 px-4 py-2.5 rounded-2xl border border-[var(--border)] text-[var(--ink-soft)] hover:bg-[var(--surface)] transition-colors ${SCALE.text.badge}`}>
             Cancelar
           </button>
           <button
             disabled={iniciando || !iban.trim()}
             onClick={handlePagar}
-            className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest bg-violet-600 text-white hover:bg-violet-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+            className={`flex-1 px-4 py-2.5 rounded-2xl bg-violet-600 text-white hover:bg-violet-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 ${SCALE.text.badge}`}
           >
             {iniciando ? <Loader2 size={13} className="animate-spin" /> : <CreditCard size={13} />}
             {iniciando ? 'A redirecionar...' : 'Pagar via Tink'}
@@ -104,9 +105,9 @@ function PagarFaturaModal({ fatura, onClose, onPago }) {
       <div className="p-6 space-y-4">
         {/* Resumo da fatura */}
         <div className="bg-amber-50 rounded-2xl px-4 py-3 space-y-0.5">
-          <p className="text-[10px] font-black uppercase tracking-widest text-amber-600">Fatura a pagar</p>
+          <p className={`${SCALE.text.statLabel} text-amber-600`}>Fatura a pagar</p>
           <p className="text-sm font-bold text-[var(--ink)]">{fornecedorNome || '—'}</p>
-          <p className="text-[11px] text-[var(--slate-dim)]">
+          <p className={`text-[var(--slate-dim)] ${SCALE.text.body}`}>
             {referencia && <>Nº {referencia} · </>}
             Valor: <strong className="text-[var(--ink-mid)]">{(parseFloat(valor) || 0).toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</strong>
           </p>
@@ -114,7 +115,7 @@ function PagarFaturaModal({ fatura, onClose, onPago }) {
 
         {/* IBAN */}
         <div className="space-y-1">
-          <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">IBAN do Fornecedor *</p>
+          <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>IBAN do Fornecedor *</p>
           <div className="flex gap-2">
             <input
               type="text"
@@ -137,7 +138,7 @@ function PagarFaturaModal({ fatura, onClose, onPago }) {
 
         {/* Data */}
         <div className="space-y-1">
-          <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Data de pagamento *</p>
+          <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Data de pagamento *</p>
           <input
             type="date"
             value={dataPagamento}
@@ -169,10 +170,10 @@ function FaturaFornecedorCard({ fornecedor, faturas, justificacoes, onJustificar
         <div className="flex items-center gap-3">
           <div className={`w-2 h-2 rounded-full flex-shrink-0 ${allOk ? 'bg-emerald-500' : 'bg-amber-400'}`} />
           <span className="text-sm font-bold text-[var(--ink)]">{fornecedor}</span>
-          <span className="text-[10px] text-[var(--slate-dim)]">{faturas.length} fatura(s)</span>
+          <span className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>{faturas.length} fatura(s)</span>
         </div>
         <div className="flex items-center gap-3">
-          <span className={`text-[10px] font-black uppercase tracking-widest ${allOk ? 'text-emerald-600' : 'text-amber-600'}`}>
+          <span className={`${SCALE.text.statLabel} ${allOk ? 'text-emerald-600' : 'text-amber-600'}`}>
             {allOk ? 'Tudo Ok' : `${pendingCount} pendente(s)`}
           </span>
           {open ? <ChevronUp size={14} className="text-[var(--slate)]" /> : <ChevronDown size={14} className="text-[var(--slate)]" />}
@@ -194,22 +195,22 @@ function FaturaFornecedorCard({ fornecedor, faturas, justificacoes, onJustificar
               <div key={f.id} className="px-4 py-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2 flex-wrap min-w-0">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">
+                    <span className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>
                       {f.dados?.numero_fatura || '—'}
                     </span>
-                    <span className="text-[10px] text-[var(--slate-dim)]">{fmtData(f.dados?.data_fatura)}</span>
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${badgeClass}`}>
+                    <span className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>{fmtData(f.dados?.data_fatura)}</span>
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full ${SCALE.text.badge} ${badgeClass}`}>
                       {isPago || isJustified ? <CheckCircle size={9} /> : <AlertCircle size={9} />}
                       {displayStatus}
                     </span>
                     {isJustified && (
                       <>
-                        <span className="text-[9px] text-[var(--slate-dim)] italic max-w-[180px] truncate" title={justEntry.justification}>
+                        <span className={`${SCALE.text.meta} text-[var(--slate-dim)] italic max-w-[180px] truncate`} title={justEntry.justification}>
                           "{justEntry.justification}"
                         </span>
                         <button
                           onClick={() => onRemoverJustificacao(f.id)}
-                          className="flex items-center gap-0.5 px-2 py-0.5 rounded-xl text-[9px] font-black uppercase tracking-widest bg-[var(--surface-dim)] text-[var(--ink-soft)] hover:bg-rose-100 hover:text-rose-600 transition-colors"
+                          className={`flex items-center gap-0.5 px-2 py-0.5 rounded-xl bg-[var(--surface-dim)] text-[var(--ink-soft)] hover:bg-rose-100 hover:text-rose-600 transition-colors ${SCALE.text.badge}`}
                           title="Desfazer justificação"
                         >
                           <Undo2 size={9} /> Desfazer
@@ -223,13 +224,13 @@ function FaturaFornecedorCard({ fornecedor, faturas, justificacoes, onJustificar
                       <>
                         <button
                           onClick={() => onPagarTink(f)}
-                          className="flex items-center gap-1 px-2 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest bg-violet-600 text-white hover:bg-violet-700 transition-colors"
+                          className={`flex items-center gap-1 px-2 py-1 rounded-xl bg-violet-600 text-white hover:bg-violet-700 transition-colors ${SCALE.text.badge}`}
                         >
                           <CreditCard size={9} /> Pagar
                         </button>
                         <button
                           onClick={() => onJustificar({ fatura_id: f.id, fornecedor, numero: f.dados?.numero_fatura, valor: f.dados?.valor_total })}
-                          className="flex items-center gap-1 px-2 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest bg-[var(--surface-dim)] text-[var(--ink-soft)] hover:bg-[var(--border)] transition-colors"
+                          className={`flex items-center gap-1 px-2 py-1 rounded-xl bg-[var(--surface-dim)] text-[var(--ink-soft)] hover:bg-[var(--border)] transition-colors ${SCALE.text.badge}`}
                         >
                           <MessageSquare size={9} /> Justificar
                         </button>
@@ -393,7 +394,7 @@ export default function FaturasTab() {
     return (
       <div className="flex flex-col items-center justify-center py-12 gap-3">
         <Loader2 size={24} className="animate-spin text-indigo-400" />
-        <p className="text-[11px] text-[var(--slate-dim)]">A carregar faturas…</p>
+        <p className={`text-[var(--slate-dim)] ${SCALE.text.body}`}>A carregar faturas…</p>
       </div>
     );
   }
@@ -410,7 +411,7 @@ export default function FaturasTab() {
           ].map(c => (
             <div key={c.label} className={`${c.bg} rounded-2xl px-4 py-3 text-center min-w-0`}>
               <p className={`text-2xl font-black ${c.color}`}>{c.value}</p>
-              <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] mt-0.5">{c.label}</p>
+              <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] mt-0.5`}>{c.label}</p>
             </div>
           ))}
         </div>
@@ -419,18 +420,18 @@ export default function FaturasTab() {
         <div className="relative self-start sm:flex-shrink-0" ref={exportRef}>
           <button
             onClick={() => setShowExportMenu(v => !v)}
-            className="flex items-center gap-1.5 px-3 py-2 bg-[var(--surface-dim)] hover:bg-indigo-100 text-[var(--ink-soft)] hover:text-indigo-700 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all"
+            className={`flex items-center gap-1.5 px-3 py-2 bg-[var(--surface-dim)] hover:bg-indigo-100 text-[var(--ink-soft)] hover:text-indigo-700 rounded-2xl transition-all ${SCALE.text.statLabel}`}
           >
             <Download size={13} /> Exportar
           </button>
           {showExportMenu && (
             <div className="absolute right-0 top-full mt-1 bg-white rounded-2xl shadow-xl border border-[var(--border-soft)] py-1 z-20 min-w-[130px] max-w-[calc(100vw-2rem)]">
               <button onClick={handleExportCsv}
-                className="w-full flex items-center gap-2 px-4 py-2.5 text-[11px] font-bold text-[var(--ink-mid)] hover:bg-[var(--surface)] transition-colors">
+                className={`w-full flex items-center gap-2 px-4 py-2.5 text-[var(--ink-mid)] hover:bg-[var(--surface)] transition-colors ${SCALE.text.body}`}>
                 <FileText size={13} className="text-emerald-600" /> CSV
               </button>
               <button onClick={handleExportPdf}
-                className="w-full flex items-center gap-2 px-4 py-2.5 text-[11px] font-bold text-[var(--ink-mid)] hover:bg-[var(--surface)] transition-colors">
+                className={`w-full flex items-center gap-2 px-4 py-2.5 text-[var(--ink-mid)] hover:bg-[var(--surface)] transition-colors ${SCALE.text.body}`}>
                 <FileText size={13} className="text-rose-500" /> PDF
               </button>
             </div>
@@ -460,7 +461,7 @@ export default function FaturasTab() {
       {/* Total pendente */}
       {totalPendente > 0.01 && (
         <div className="mt-2 bg-amber-50 border border-amber-100 rounded-2xl px-4 py-3 flex items-center justify-between">
-          <p className="text-[9px] font-black uppercase tracking-widest text-amber-500">Total em Aberto</p>
+          <p className={`${SCALE.text.statLabel} text-amber-500`}>Total em Aberto</p>
           <p className="text-xl font-black text-amber-700">{fmtEur(totalPendente)}</p>
         </div>
       )}
@@ -490,14 +491,14 @@ export default function FaturasTab() {
             <div className="flex gap-2 p-6">
               <button
                 onClick={() => { setJustModal(null); setJustText(''); }}
-                className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-[var(--border)] text-[var(--ink-soft)] hover:bg-[var(--surface)] transition-colors"
+                className={`flex-1 px-4 py-2.5 rounded-2xl border border-[var(--border)] text-[var(--ink-soft)] hover:bg-[var(--surface)] transition-colors ${SCALE.text.badge}`}
               >
                 Cancelar
               </button>
               <button
                 disabled={!justText.trim() || justSaving}
                 onClick={handleSaveJustificacao}
-                className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest bg-violet-600 text-white hover:bg-violet-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+                className={`flex-1 px-4 py-2.5 rounded-2xl bg-violet-600 text-white hover:bg-violet-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 ${SCALE.text.badge}`}
               >
                 {justSaving ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle size={13} />} Marcar Ok
               </button>
@@ -506,14 +507,14 @@ export default function FaturasTab() {
         >
           <div className="p-6 space-y-4">
             <div className="bg-amber-50 rounded-2xl px-4 py-3">
-              <p className="text-[10px] font-black uppercase tracking-widest text-amber-600 mb-1">Fatura pendente</p>
+              <p className={`${SCALE.text.statLabel} text-amber-600 mb-1`}>Fatura pendente</p>
               <p className="text-sm font-bold text-[var(--ink)]">{justModal.fornecedor}</p>
-              <p className="text-[11px] text-[var(--slate-dim)] mt-0.5">
+              <p className={`text-[var(--slate-dim)] mt-0.5 ${SCALE.text.body}`}>
                 Nº {justModal.numero || '—'} · Valor: <strong className="text-red-600">{fmtEur(justModal.valor)}</strong>
               </p>
             </div>
             <div>
-              <label className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] block mb-1">
+              <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)] block mb-1`}>
                 Justificação
               </label>
               <textarea

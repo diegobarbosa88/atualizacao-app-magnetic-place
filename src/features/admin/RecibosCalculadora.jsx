@@ -7,7 +7,7 @@ import { AlertTriangle, CheckCircle, ChevronDown, ChevronLeft, ChevronRight, Dow
 import { useApp } from '../../context/AppContext';
 import SectionHeaderShell from '../../components/common/SectionHeaderShell';
 import SubTabBar from '../../components/common/SubTabBar';
-import { FT } from '../../styles/designTokens';
+import { FT, SCALE } from '../../styles/designTokens';
 import { getRateAtDate } from './cost-reports/useCostReportsData.js';
 import {
   IRS_TABELAS,
@@ -95,11 +95,11 @@ function LabelInput({ label, children, hint, badge }) {
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center gap-1 ml-1">
-        <label className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-wider">{label}</label>
-        {badge && <span className="text-[8px] font-black uppercase tracking-wide text-[var(--ink-soft)] bg-[var(--surface-dim)] px-1.5 py-0.5 rounded">{badge}</span>}
+        <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>{label}</label>
+        {badge && <span className={`${SCALE.text.statLabel} text-[var(--ink-soft)] bg-[var(--surface-dim)] px-1.5 py-0.5 rounded`}>{badge}</span>}
       </div>
       {children}
-      {hint && <span className="text-[10px] text-[var(--slate-dim)] ml-1">{hint}</span>}
+      {hint && <span className={`${SCALE.text.meta} text-[var(--slate-dim)] ml-1`}>{hint}</span>}
     </div>
   );
 }
@@ -162,8 +162,8 @@ function Card({ children, className = '' }) {
 function SectionHeader({ n: num, label }) {
   return (
     <div className="flex items-center gap-2.5 mb-4">
-      <span className="w-5 h-5 rounded-full text-white text-[10px] font-black flex items-center justify-center shrink-0" style={{ background: FT.navy }}>{num}</span>
-      <h3 className="text-[11px] font-black uppercase tracking-widest" style={{ color: 'var(--navy)' }}>{label}</h3>
+      <span className={`w-5 h-5 rounded-full text-white flex items-center justify-center shrink-0 ${SCALE.text.badge}`} style={{ background: FT.navy }}>{num}</span>
+      <h3 className={SCALE.text.statLabel} style={{ color: 'var(--navy)' }}>{label}</h3>
     </div>
   );
 }
@@ -207,7 +207,7 @@ function MobileMapaCard({ row, vdl, updateRow, removeRow }) {
             { label: 'Localidade', field: 'localidade', type: 'text' },
           ].map(({ label, field }) => (
             <div key={field}>
-              <div className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-wider mb-1">{label}</div>
+              <div className={`${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1`}>{label}</div>
               <input
                 type="text" value={row[field]}
                 onChange={e => updateRow(row.id, field, e.target.value)}
@@ -218,7 +218,7 @@ function MobileMapaCard({ row, vdl, updateRow, removeRow }) {
           ))}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <div className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-wider mb-1">Território</div>
+              <div className={`${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1`}>Território</div>
               <select value={row.territorio} onChange={e => updateRow(row.id, 'territorio', e.target.value)}
                 className="w-full border-b border-[var(--border)] py-1 text-sm font-bold outline-none focus:border-[var(--navy)] bg-transparent">
                 <option value="Internacional">Internacional</option>
@@ -226,7 +226,7 @@ function MobileMapaCard({ row, vdl, updateRow, removeRow }) {
               </select>
             </div>
             <div>
-              <div className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-wider mb-1">Tipo</div>
+              <div className={`${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1`}>Tipo</div>
               <select value={row.tipo} onChange={e => updateRow(row.id, 'tipo', e.target.value)}
                 className="w-full border-b border-[var(--border)] py-1 text-sm font-bold outline-none focus:border-[var(--navy)] bg-transparent">
                 <option value="Partida">Partida</option>
@@ -237,12 +237,12 @@ function MobileMapaCard({ row, vdl, updateRow, removeRow }) {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <div className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-wider mb-1">Hora</div>
+              <div className={`${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1`}>Hora</div>
               <input type="time" value={row.hora} onChange={e => updateRow(row.id, 'hora', e.target.value)}
                 className="w-full border-b border-[var(--border)] py-1 text-sm font-bold outline-none focus:border-[var(--navy)] bg-transparent" />
             </div>
             <div>
-              <div className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-wider mb-1">% Ajuda</div>
+              <div className={`${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1`}>% Ajuda</div>
               <input type="number" value={row.pct} min="0" max="100" step="5"
                 onChange={e => updateRow(row.id, 'pct', parseFloat(e.target.value) || 0)}
                 className="w-full border-b border-[var(--border)] py-1 text-sm font-bold outline-none focus:border-[var(--navy)] bg-transparent" />
@@ -2374,7 +2374,7 @@ ${hdrRow}${bodyRows}${totRow}
                 <div className="flex items-center gap-2 flex-wrap">
                   <button
                     onClick={gerarRecibosBatchPDF}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider border border-[var(--border)] bg-white hover:bg-[var(--surface)] transition-colors"
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border border-[var(--border)] bg-white hover:bg-[var(--surface)] transition-colors ${SCALE.text.badge}`}
                     style={{ color: 'var(--navy)' }}
                     title="PDF dos recibos de vencimento — todos os trabalhadores"
                   >
@@ -2382,7 +2382,7 @@ ${hdrRow}${bodyRows}${totRow}
                   </button>
                   <button
                     onClick={exportRecibosBatchXLS}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider border border-[var(--border)] bg-white hover:bg-[var(--surface)] transition-colors"
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border border-[var(--border)] bg-white hover:bg-[var(--surface)] transition-colors ${SCALE.text.badge}`}
                     style={{ color: 'var(--navy)' }}
                     title="Excel dos recibos de vencimento — todos os trabalhadores"
                   >
@@ -2390,7 +2390,7 @@ ${hdrRow}${bodyRows}${totRow}
                   </button>
                   <button
                     onClick={gerarMapasAjudasPDF}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider border border-[var(--border)] bg-white hover:bg-[var(--surface)] transition-colors"
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border border-[var(--border)] bg-white hover:bg-[var(--surface)] transition-colors ${SCALE.text.badge}`}
                     style={{ color: 'var(--navy)' }}
                     title="PDF dos mapas de ajudas de custo — todos os trabalhadores"
                   >
@@ -2419,9 +2419,9 @@ ${hdrRow}${bodyRows}${totRow}
         {/* Header: label + badge de estado + mês */}
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
-            <span className="text-[9px] font-black text-[var(--slate-dim)] uppercase tracking-wider">Trabalhador</span>
+            <span className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Trabalhador</span>
             {selectedWorkerId && (
-              <span className="text-[8px] font-black uppercase tracking-wide px-2 py-0.5 rounded"
+              <span className={`${SCALE.text.statLabel} px-2 py-0.5 rounded`}
                 style={isValidado
                   ? { background: '#d1fae5', color: '#065f46' }
                   : { background: '#dce6f0', color: 'var(--navy)' }}>
@@ -2430,7 +2430,7 @@ ${hdrRow}${bodyRows}${totRow}
             )}
           </div>
           {selectedWorkerId && (
-            <span className="text-[10px] font-bold text-[var(--slate-dim)]">
+            <span className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>
               {MESES_PT[parseInt(inputs.mes, 10)] || ''} {inputs.ano}
             </span>
           )}
@@ -2453,7 +2453,7 @@ ${hdrRow}${bodyRows}${totRow}
               <button
                 onClick={saveWorkerProfile}
                 disabled={saveStatus === 'saving'}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-black uppercase transition-all border
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl ${SCALE.text.badge} transition-all border
                   ${saveStatus === 'saved'  ? 'border-emerald-200 text-emerald-600' :
                     saveStatus === 'error'  ? 'border-rose-200 text-rose-600' :
                                              'border-[var(--border)] text-[var(--slate-dim)] hover:border-[var(--border)] hover:text-[var(--ink-soft)]'}`}
@@ -2464,7 +2464,7 @@ ${hdrRow}${bodyRows}${totRow}
               </button>
               <button
                 onClick={toggleValidado}
-                className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-[11px] font-black uppercase text-white transition-colors"
+                className={`flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-white transition-colors ${SCALE.text.badge}`}
                 style={{ background: isValidado ? FT.slate : FT.navy }}
                 onMouseEnter={e => { e.currentTarget.style.background = isValidado ? '#6b7f91' : '#142d45'; }}
                 onMouseLeave={e => { e.currentTarget.style.background = isValidado ? FT.slate : FT.navy; }}
@@ -2497,7 +2497,7 @@ ${hdrRow}${bodyRows}${totRow}
           {/* Barra de estado validado */}
           <div className="flex items-center justify-between px-5 py-4 rounded-2xl" style={{ background: FT.navy }}>
             <div className="flex items-center gap-3">
-              <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-black" style={{ background: FT.orange, color: '#fff' }}>
+              <span className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full ${SCALE.text.body}`} style={{ background: FT.orange, color: '#fff' }}>
                 <CheckCircle size={12} /> Validado
               </span>
               <div>
@@ -2520,7 +2520,7 @@ ${hdrRow}${bodyRows}${totRow}
           <div className="grid sm:grid-cols-2 gap-5 items-start">
             {/* ── Recibo ── */}
             <div className="bg-white rounded-2xl border border-[var(--border)] p-5" style={{ borderTop: `4px solid ${FT.navy}` }}>
-              <p className="text-[10px] font-black uppercase tracking-wider mb-3" style={{ color: 'var(--slate-dim)' }}>Recibo de Vencimento</p>
+              <p className={`${SCALE.text.statLabel} mb-3`} style={{ color: 'var(--slate-dim)' }}>Recibo de Vencimento</p>
               {r ? (
                 <>
                   <div className="space-y-2 text-sm mb-4">
@@ -2562,7 +2562,7 @@ ${hdrRow}${bodyRows}${totRow}
                     </div>
                   </div>
                   <div className="rounded-xl px-4 py-3 mb-4" style={{ background: 'var(--surface-dim)' }}>
-                    <p className="text-[9px] font-black uppercase tracking-wider mb-0.5" style={{ color: 'var(--slate-dim)' }}>Líquido a receber</p>
+                    <p className={`${SCALE.text.statLabel} mb-0.5`} style={{ color: 'var(--slate-dim)' }}>Líquido a receber</p>
                     <p className="text-xl font-black" style={{ color: 'var(--navy)' }}>{eur(liquidoDisplay)}</p>
                   </div>
                 </>
@@ -2583,7 +2583,7 @@ ${hdrRow}${bodyRows}${totRow}
 
             {/* ── Mapa de Ajudas ── */}
             <div className="bg-white rounded-2xl border border-[var(--border)] p-5" style={{ borderTop: `4px solid ${FT.orange}` }}>
-              <p className="text-[10px] font-black uppercase tracking-wider mb-3" style={{ color: 'var(--slate-dim)' }}>Mapa de Ajudas de Custo</p>
+              <p className={`${SCALE.text.statLabel} mb-3`} style={{ color: 'var(--slate-dim)' }}>Mapa de Ajudas de Custo</p>
               {mapaRows.length > 0 ? (
                 <>
                   <div className="space-y-2 text-sm mb-4">
@@ -2623,7 +2623,7 @@ ${hdrRow}${bodyRows}${totRow}
                     )}
                   </div>
                   <div className="rounded-xl px-4 py-3 mb-4" style={{ background: '#FDF1E0' }}>
-                    <p className="text-[9px] font-black uppercase tracking-wider mb-0.5" style={{ color: FT.orange }}>Total A082 (recibo)</p>
+                    <p className={`${SCALE.text.statLabel} mb-0.5`} style={{ color: FT.orange }}>Total A082 (recibo)</p>
                     <p className="text-xl font-black" style={{ color: FT.orange }}>{eur(mapaLiqLive ?? mapaTotal)}</p>
                   </div>
                 </>
@@ -2682,7 +2682,7 @@ ${hdrRow}${bodyRows}${totRow}
                   ? 'bg-rose-50 border-rose-300 text-rose-800'
                   : 'bg-amber-50 border-amber-300 text-amber-800'
               }`}>
-                <p className="font-black uppercase tracking-wide text-[11px]">
+                <p className={SCALE.text.statLabel}>
                   {mesParcialDados.tipo === 'inicio' && 'Mês parcial — início de contrato'}
                   {mesParcialDados.tipo === 'fim'    && 'Mês parcial — cessação de contrato'}
                   {mesParcialDados.tipo === 'ambos'  && 'Mês parcial — admissão e cessação'}
@@ -2694,7 +2694,7 @@ ${hdrRow}${bodyRows}${totRow}
                 )}
                 <p>Venc. base neste mês: <strong>{mesParcialDados.vencProporcional.toFixed(2)}€</strong></p>
                 {feriasAnoAdmissao && (
-                  <p className="text-[11px] opacity-80">
+                  <p className={`opacity-80 ${SCALE.text.body}`}>
                     Direito a férias no ano de admissão: <strong>{feriasAnoAdmissao.diasFerias} dias</strong> ({feriasAnoAdmissao.mesesCompletos} meses completos × 2){feriasAnoAdmissao.limitado ? ' — limitado a 20' : ''}
                   </p>
                 )}
@@ -2737,7 +2737,7 @@ ${hdrRow}${bodyRows}${totRow}
                       </SelectInput>
                     </div>
                     {camposAuto.subsidiosMetodo && (
-                      <span className="text-[10px] font-bold text-[var(--navy)] bg-[var(--surface-dim)] px-2 py-0.5 rounded-full shrink-0">auto</span>
+                      <span className={`${SCALE.text.meta} text-[var(--navy)] bg-[var(--surface-dim)] px-2 py-0.5 rounded-full shrink-0`}>auto</span>
                     )}
                   </div>
                 )}
@@ -2807,7 +2807,7 @@ ${hdrRow}${bodyRows}${totRow}
                     />
                     {brutoAlvoEditado && (
                       <button type="button" onClick={resetBrutoAlvoAuto}
-                        className="absolute right-0 top-1/2 -translate-y-1/2 text-[9px] font-bold text-amber-500 hover:text-[var(--slate-dim)] leading-none cursor-pointer"
+                        className={`absolute right-0 top-1/2 -translate-y-1/2 text-amber-500 hover:text-[var(--slate-dim)] leading-none cursor-pointer ${SCALE.text.meta}`}
                         title="Repor valor automático dos registos de horas"
                       >repor ×</button>
                     )}
@@ -2863,8 +2863,8 @@ ${hdrRow}${bodyRows}${totRow}
               <div className="flex justify-between items-start border-b-2 border-[var(--ink)] pb-3 mb-4 gap-3">
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-black text-[var(--ink)]">{inputs.nome || '—'}</p>
-                  <p className="text-[10px] text-[var(--slate-dim)] font-bold">NIF: {inputs.nif || '—'} · Profissão: {inputs.categoria || '—'}</p>
-                  <p className="text-[10px] text-[var(--slate-dim)] font-bold">Vencimento: {eur(n(inputs.vencimentoBase))} · Hora: {eur(r.salarioHora)}</p>
+                  <p className={`text-[var(--slate-dim)] ${SCALE.text.meta}`}>NIF: {inputs.nif || '—'} · Profissão: {inputs.categoria || '—'}</p>
+                  <p className={`text-[var(--slate-dim)] ${SCALE.text.meta}`}>Vencimento: {eur(n(inputs.vencimentoBase))} · Hora: {eur(r.salarioHora)}</p>
                 </div>
                 <div className="flex flex-col items-end gap-2 shrink-0">
                   <p className="font-black text-lg text-[var(--ink)]">{MESES_PT[parseInt(inputs.mes, 10)] || ''} {inputs.ano}</p>
@@ -2876,11 +2876,11 @@ ${hdrRow}${bodyRows}${totRow}
                 <table className="w-full text-xs border-collapse">
                   <thead>
                     <tr className="border-b border-[var(--border)]">
-                      <th className="text-left py-1.5 px-1 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-wider">Descrição</th>
-                      <th className="text-right py-1.5 px-1 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-wider">Qtd</th>
-                      <th className="text-right py-1.5 px-1 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-wider">V.Unit.</th>
-                      <th className="text-right py-1.5 px-1 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-wider">Abonos</th>
-                      <th className="text-right py-1.5 px-1 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-wider">Descontos</th>
+                      <th className={`text-left py-1.5 px-1 text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Descrição</th>
+                      <th className={`text-right py-1.5 px-1 text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Qtd</th>
+                      <th className={`text-right py-1.5 px-1 text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>V.Unit.</th>
+                      <th className={`text-right py-1.5 px-1 text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Abonos</th>
+                      <th className={`text-right py-1.5 px-1 text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Descontos</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[var(--border-soft)]">
@@ -2898,7 +2898,7 @@ ${hdrRow}${bodyRows}${totRow}
                     {r.subsNatal > 0 && <ReciboLinha desc={`A021 - ${inputs.subsidiosMetodo === 'valor' ? 'Subs. Natal (Valor)' : 'Subs. Natal (100% c/duodécimos)'}`} abono={r.subsNatal} />}
                     {ajudasDisplayRecibo > 0 && (
                       <tr className="bg-orange-50">
-                        <td className="py-1.5 px-1 border-l-2 border-orange-400 font-bold text-[var(--ink-mid)]">A082 - Ajudas de Custo Internacional <span className="text-[9px] text-orange-600 font-black ml-1">NÃO TRIBUTADO</span></td>
+                        <td className="py-1.5 px-1 border-l-2 border-orange-400 font-bold text-[var(--ink-mid)]">A082 - Ajudas de Custo Internacional <span className={`text-orange-600 ml-1 ${SCALE.text.badge}`}>NÃO TRIBUTADO</span></td>
                         <td className="py-1.5 px-1 text-right" />
                         <td className="py-1.5 px-1 text-right" />
                         <td className="py-1.5 px-1 text-right font-bold">{eur(ajudasDisplayRecibo)}</td>
@@ -2920,7 +2920,7 @@ ${hdrRow}${bodyRows}${totRow}
               </div>
 
               {/* Notas de taxas */}
-              <div className="mt-3 bg-[var(--surface)] rounded-xl p-3 text-[10px] text-[var(--slate-dim)] font-bold space-y-0.5">
+              <div className={`mt-3 bg-[var(--surface)] rounded-xl p-3 text-[var(--slate-dim)] space-y-0.5 ${SCALE.text.meta}`}>
                 <p>IRS — Taxa efetiva (Vencimento e restantes abonos): {eur(r.incidenciaRegular)} · {(r.irsVencResult?.taxaEfetiva ?? r.taxaRegular * 100).toFixed(2)}%</p>
                 {r.subsFerias > 0 && <p>IRS — Taxa efetiva (Subsídio de Férias): {(r.irsFeriasResult?.taxaEfetiva ?? r.taxaSubsidios * 100).toFixed(2)}%</p>}
                 {r.subsNatal  > 0 && <p>IRS — Taxa efetiva (Subsídio de Natal): {(r.irsNatalResult?.taxaEfetiva ?? r.taxaSubsidios * 100).toFixed(2)}%</p>}
@@ -2936,20 +2936,20 @@ ${hdrRow}${bodyRows}${totRow}
               <div className="mt-3 pt-3 border-t-2 border-[var(--ink)] space-y-2">
                 <div className="grid grid-cols-2 gap-2">
                   <div className="bg-[var(--surface)] rounded-xl px-3 py-2">
-                    <p className="text-[9px] font-black text-[var(--slate-dim)] uppercase tracking-wider">Total Abonos</p>
+                    <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Total Abonos</p>
                     <p className="text-base font-black text-[var(--ink)]">{eur(totalAbonosDisplay)}</p>
                     {n(inputs.brutoAlvo) > 0 && (
-                      <p className="text-[9px] text-[var(--slate-dim)] mt-0.5">
+                      <p className={`text-[var(--slate-dim)] mt-0.5 ${SCALE.text.meta}`}>
                         {descontoD001 > 0 ? '= Bruto Alvo + D001' : '= Bruto Alvo'}
                       </p>
                     )}
                   </div>
                   <div className="bg-emerald-50 rounded-xl px-3 py-2 border border-emerald-200">
-                    <p className="text-[9px] font-black text-emerald-600 uppercase tracking-wider">Líquido a receber</p>
+                    <p className={`${SCALE.text.statLabel} text-emerald-600`}>Líquido a receber</p>
                     <p className="text-base font-black text-emerald-700">{eur(liquidoDisplay)}</p>
                   </div>
                 </div>
-                <div className="bg-[var(--surface)] rounded-xl px-3 py-1.5 text-[10px] text-[var(--slate-dim)] flex justify-between">
+                <div className={`bg-[var(--surface)] rounded-xl px-3 py-1.5 text-[var(--slate-dim)] flex justify-between ${SCALE.text.meta}`}>
                   <span><span className="font-black">IRS:</span> {eur(r.irsTotal)} · <span className="font-black">SS:</span> {eur(r.ssTrabalhador)}</span>
                   <span><span className="font-black">Custo empresa (c/ TSU 23,75%):</span> {eur(custoEmpDisplay)}</span>
                 </div>
@@ -2970,7 +2970,7 @@ ${hdrRow}${bodyRows}${totRow}
       {/* ── MAPA DE AJUDAS DE CUSTO ── */}
       <div className="bg-white rounded-2xl border border-[var(--border)] p-5" style={{ borderTop: `4px solid ${FT.orange}` }}>
         <div className="flex items-center justify-between mb-5">
-          <p className="text-[10px] font-black uppercase tracking-wider" style={{ color: FT.orange }}>Mapa de Ajudas de Custo</p>
+          <p className={SCALE.text.statLabel} style={{ color: FT.orange }}>Mapa de Ajudas de Custo</p>
           <div className="flex items-center gap-1">
             <button
               onClick={() => { setMapaRows([]); setAutoFillInfo(null); }}
@@ -2981,13 +2981,13 @@ ${hdrRow}${bodyRows}${totRow}
             </button>
             <button
               onClick={() => addRow()}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-black text-[var(--ink-soft)] hover:bg-[var(--surface-dim)] transition-all"
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[var(--ink-soft)] hover:bg-[var(--surface-dim)] transition-all ${SCALE.text.body}`}
             >
               <Plus size={12} /> Linha
             </button>
             <button
               onClick={gerarMapasAjudasPDF}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-black hover:bg-[var(--surface-dim)] transition-all"
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg hover:bg-[var(--surface-dim)] transition-all ${SCALE.text.body}`}
               style={{ color: 'var(--slate-dim)' }}
               title="PDF com todos os trabalhadores"
             >
@@ -2996,7 +2996,7 @@ ${hdrRow}${bodyRows}${totRow}
             {mapaRows.length > 0 && (
               <button
                 onClick={gerarPDF}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-black text-[var(--navy-solid)] transition-all"
+                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[var(--navy-solid)] transition-all ${SCALE.text.body}`}
                 style={{ background: FT.orange }}
                 onMouseEnter={e => { e.currentTarget.style.background = '#c97700'; }}
                 onMouseLeave={e => { e.currentTarget.style.background = FT.orange; }}
@@ -3057,7 +3057,7 @@ ${hdrRow}${bodyRows}${totRow}
           <button
             onClick={autoFill}
             disabled={!r || r.ajudaCustoNecessaria <= 0 || n(inputs.vdl) <= 0}
-            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-[11px] font-black text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed ${SCALE.text.body}`}
             style={{ background: FT.navy }}
             onMouseEnter={e => { if (!e.currentTarget.disabled) e.currentTarget.style.background = '#142d45'; }}
             onMouseLeave={e => { e.currentTarget.style.background = FT.navy; }}
@@ -3087,7 +3087,7 @@ ${hdrRow}${bodyRows}${totRow}
               <thead>
                 <tr className="bg-[var(--surface-dim)] border-b border-[#E3E7EC]">
                   {['Dia', 'Serviço', 'Cliente', 'Localidade', 'Território', 'Tipo', 'Hora', '%', 'Valor', ''].map(h => (
-                    <th key={h} className="px-2 py-2 text-left text-[10px] font-black uppercase tracking-wider text-[var(--slate)] first:rounded-tl-xl last:rounded-tr-xl">{h}</th>
+                    <th key={h} className={`px-2 py-2 text-left text-[var(--slate)] first:rounded-tl-xl last:rounded-tr-xl ${SCALE.text.statLabel}`}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -3171,19 +3171,19 @@ ${hdrRow}${bodyRows}${totRow}
         {mapaRows.length > 0 && (
           <div className="mt-3 pt-3 border-t border-[var(--border-soft)] flex items-baseline gap-4 flex-wrap text-sm">
             <span>
-              <span className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-wide mr-1.5">Total</span>
+              <span className={`${SCALE.text.statLabel} text-[var(--slate-dim)] mr-1.5`}>Total</span>
               <span className="font-black text-[var(--ink)]">{eur(mapaTotal)}</span>
             </span>
             {r && (
               <>
                 <span className="text-[var(--slate-dim)] select-none">·</span>
                 <span>
-                  <span className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-wide mr-1.5">Necessário</span>
+                  <span className={`${SCALE.text.statLabel} text-[var(--slate-dim)] mr-1.5`}>Necessário</span>
                   <span className="font-black text-[var(--ink)]">{eur(r.ajudaCustoNecessaria)}</span>
                 </span>
                 <span className="text-[var(--slate-dim)] select-none">·</span>
                 <span>
-                  <span className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-wide mr-1.5">Dif.</span>
+                  <span className={`${SCALE.text.statLabel} text-[var(--slate-dim)] mr-1.5`}>Dif.</span>
                   <span className={`font-black ${Math.abs(mapaDiff) < 0.5 ? 'text-emerald-600' : 'text-rose-600'}`}>
                     {mapaDiff >= 0 ? '+' : ''}{eur(mapaDiff)}
                   </span>
@@ -3208,7 +3208,7 @@ ${hdrRow}${bodyRows}${totRow}
       </div>))}
 
       {/* Rodapé de compliance */}
-      <p className="text-center text-[10px] text-[var(--ink-soft)] font-bold leading-none py-0.5">
+      <p className={`text-center text-[var(--ink-soft)] leading-none py-0.5 ${SCALE.text.meta}`}>
         <AlertTriangle size={10} className="inline mr-1 text-amber-400" />
         Estimativa não oficial · IRS 2026 (Desp. 233-A/2026) · TSU em vigor · Confirme sempre no TOConline · Ajudas de custo isentas só com deslocações documentadas
       </p>
@@ -3299,7 +3299,7 @@ function CopiarLinkBtn({ mesStr }) {
           <><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> Partilhar</>
         )}
       </button>
-      {erro && <span className="text-[10px] font-bold text-rose-500">{erro}</span>}
+      {erro && <span className={`text-rose-500 ${SCALE.text.meta}`}>{erro}</span>}
       <AdminPasswordModal
         open={modalOpen}
         title="Confirmar acesso ao link do contabilista"
@@ -3678,7 +3678,7 @@ function ResumoMensalTable({ rows, mesLabel, mesStr, onBack, onNavMes }) {
         <div className="flex-shrink-0 p-3 bg-red-50 border border-red-300 rounded-xl text-xs text-red-800">
           <strong>⚠️ Erro na base de dados:</strong> {dbError}
           <br />Execute este SQL no Supabase → SQL Editor:
-          <pre className="mt-1 bg-red-100 rounded p-2 text-[10px] overflow-x-auto whitespace-pre-wrap select-all">
+          <pre className={`mt-1 bg-red-100 rounded p-2 overflow-x-auto whitespace-pre-wrap select-all ${SCALE.text.meta}`}>
 {`DROP TABLE IF EXISTS resumo_observacoes;
 CREATE TABLE resumo_observacoes (
   worker_id    TEXT        NOT NULL,
@@ -3700,7 +3700,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
         {onBack && (
           <button
             onClick={onBack}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[11px] font-black text-[var(--ink-soft)] hover:text-[var(--ink-mid)] hover:bg-[var(--surface-dim)] transition-all shrink-0"
+            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[var(--ink-soft)] hover:text-[var(--ink-mid)] hover:bg-[var(--surface-dim)] transition-all shrink-0 ${SCALE.text.body}`}
           >
             <ChevronLeft size={13} /> Calculadora
           </button>
@@ -3719,13 +3719,13 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
           </div>
         )}
         {rows.length > 0 && (
-          <span className="text-[10px] font-black text-[var(--ink-soft)] bg-[var(--surface-dim)] px-2 py-0.5 rounded-lg">
+          <span className={`${SCALE.text.meta} text-[var(--ink-soft)] bg-[var(--surface-dim)] px-2 py-0.5 rounded-lg`}>
             {filteredRows.length} {filteredRows.length !== rows.length ? `de ${rows.length} ` : ''}trabalhadores
           </span>
         )}
-        {saveStatus === 'saving' && <span className="text-[10px] text-[var(--slate-dim)] animate-pulse">A guardar…</span>}
-        {saveStatus === 'ok'     && <span className="text-[10px] text-emerald-600 font-black">✓ Guardado</span>}
-        {saveStatus === 'error'  && <span className="text-[10px] text-red-600 font-black">✗ Erro ao guardar</span>}
+        {saveStatus === 'saving' && <span className={`text-[var(--slate-dim)] animate-pulse ${SCALE.text.meta}`}>A guardar…</span>}
+        {saveStatus === 'ok'     && <span className={`text-emerald-600 ${SCALE.text.meta}`}>✓ Guardado</span>}
+        {saveStatus === 'error'  && <span className={`text-red-600 ${SCALE.text.meta}`}>✗ Erro ao guardar</span>}
 
         <div className="ml-auto flex items-center gap-2">
           {/* Seletor de trabalhadores */}
@@ -3740,7 +3740,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
               </svg>
               Trabalhadores
               {selectedWorkers.size > 0 && (
-                <span className="bg-[var(--border)] text-[var(--ink-mid)] px-1.5 py-0.5 rounded-lg text-[9px] font-black">
+                <span className={`bg-[var(--border)] text-[var(--ink-mid)] px-1.5 py-0.5 rounded-lg ${SCALE.text.badge}`}>
                   {selectedWorkers.size}/{rows.length}
                 </span>
               )}
@@ -3753,14 +3753,14 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                   <div className="flex gap-2">
                     <button
                       onClick={() => setSelectedWorkers(new Set())}
-                      className="text-[10px] font-black text-[var(--navy)] hover:opacity-70 uppercase tracking-wide"
+                      className={`${SCALE.text.badge} text-[var(--navy)] hover:opacity-70`}
                     >
                       Todos
                     </button>
                     <span className="text-[var(--slate-dim)]">·</span>
                     <button
                       onClick={() => setSelectedWorkers(new Set(rows.map(r => r.nome)))}
-                      className="text-[10px] font-black text-[var(--slate-dim)] hover:text-[var(--ink-soft)] uppercase tracking-wide"
+                      className={`${SCALE.text.badge} text-[var(--slate-dim)] hover:text-[var(--ink-soft)]`}
                     >
                       Nenhum
                     </button>
@@ -3785,13 +3785,13 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                         }}
                         className="w-3.5 h-3.5 accent-[var(--navy)] shrink-0"
                       />
-                      <span className="text-[11px] font-bold text-[var(--ink-mid)] truncate">{r.nome}</span>
+                      <span className={`${SCALE.text.body} text-[var(--ink-mid)] truncate`}>{r.nome}</span>
                     </label>
                   ))}
                 </div>
                 <button
                   onClick={() => setShowWorkerPicker(false)}
-                  className="mt-3 w-full py-1.5 text-[10px] font-black uppercase text-[var(--slate-dim)] hover:text-[var(--ink-soft)] tracking-wide"
+                  className={`mt-3 w-full py-1.5 text-[var(--slate-dim)] hover:text-[var(--ink-soft)] ${SCALE.text.badge}`}
                 >
                   Fechar
                 </button>
@@ -3811,7 +3811,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                 <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
               </svg>
               Colunas
-              <span className="bg-[var(--surface-dim)] text-[var(--ink-mid)] px-1.5 py-0.5 rounded-lg text-[9px] font-black">
+              <span className={`bg-[var(--surface-dim)] text-[var(--ink-mid)] px-1.5 py-0.5 rounded-lg ${SCALE.text.badge}`}>
                 {visibleCols.size}/{RESUMO_COLS.length}
               </span>
             </button>
@@ -3823,14 +3823,14 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                   <div className="flex gap-2">
                     <button
                       onClick={() => setVisibleCols(new Set(RESUMO_COLS.map((_, i) => i)))}
-                      className="text-[10px] font-black text-[var(--navy)] hover:opacity-70 uppercase tracking-wide"
+                      className={`${SCALE.text.badge} text-[var(--navy)] hover:opacity-70`}
                     >
                       Todas
                     </button>
                     <span className="text-[var(--slate-dim)]">·</span>
                     <button
                       onClick={() => setVisibleCols(new Set([0]))}
-                      className="text-[10px] font-black text-[var(--slate-dim)] hover:text-[var(--ink-soft)] uppercase tracking-wide"
+                      className={`${SCALE.text.badge} text-[var(--slate-dim)] hover:text-[var(--ink-soft)]`}
                     >
                       Mínimo
                     </button>
@@ -3849,7 +3849,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                         disabled={ci === 0}
                         className="w-3.5 h-3.5 accent-[var(--navy)] shrink-0"
                       />
-                      <span className={`text-[11px] font-bold truncate ${col.highlight ? 'text-emerald-700' : 'text-[var(--ink-soft)]'}`}>
+                      <span className={`${SCALE.text.body} truncate ${col.highlight ? 'text-emerald-700' : 'text-[var(--ink-soft)]'}`}>
                         {col.label}
                       </span>
                     </label>
@@ -3857,7 +3857,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                 </div>
                 <button
                   onClick={() => setShowColPicker(false)}
-                  className="mt-3 w-full py-1.5 text-[10px] font-black uppercase text-[var(--slate-dim)] hover:text-[var(--ink-soft)] tracking-wide"
+                  className={`mt-3 w-full py-1.5 text-[var(--slate-dim)] hover:text-[var(--ink-soft)] ${SCALE.text.badge}`}
                 >
                   Fechar
                 </button>
@@ -3904,7 +3904,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                   return (
                     <th
                       key={ci}
-                      className="text-[8px] font-black uppercase tracking-widest py-1"
+                      className={`${SCALE.text.statLabel} py-1`}
                       style={{
                         background: def.bg, color: def.text,
                         textAlign: isFirstInGroup ? 'left' : 'center',
@@ -3928,7 +3928,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                   return (
                     <th
                       key={ci}
-                      className={`px-1.5 py-2 text-[9px] font-black uppercase tracking-wide text-center leading-tight ${col.highlight ? hlHead(col.highlight) : ''}`}
+                      className={`px-1.5 py-2 text-center leading-tight ${SCALE.text.statLabel} ${col.highlight ? hlHead(col.highlight) : ''}`}
                       style={{
                         background: col.highlight ? undefined : def.bg,
                         color: col.highlight ? undefined : def.text,
@@ -3977,7 +3977,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                       >
                         {isCopied && (
                           <span
-                            className="absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full px-1.5 py-0.5 rounded-lg bg-emerald-600 text-white text-[9px] font-black uppercase tracking-wide shadow-md pointer-events-none whitespace-nowrap"
+                            className={`absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full px-1.5 py-0.5 rounded-lg bg-emerald-600 text-white shadow-md pointer-events-none whitespace-nowrap ${SCALE.text.badge}`}
                             style={{ zIndex: 20 }}
                           >
                             Copiado!
@@ -4025,7 +4025,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                             <span className={`block px-2 ${tdAlign(col)}`}>
                               {row[col.key]}
                               {Math.abs(diff) >= 0.005 && (
-                                <span className={`block text-[9px] font-bold leading-tight ${diff <= 0 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                <span className={`block ${SCALE.text.meta} leading-tight ${diff <= 0 ? 'text-emerald-600' : 'text-amber-600'}`}>
                                   {diff > 0 ? '+' : ''}{diff.toFixed(2)}
                                 </span>
                               )}
@@ -4048,7 +4048,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                   return (
                     <td
                       key={ci}
-                      className={`px-2 py-2.5 text-[11px] font-black whitespace-nowrap text-center ${col.highlight ? hlFoot(col.highlight) : 'bg-[var(--surface-dim)]'}`}
+                      className={`px-2 py-2.5 ${SCALE.text.body} whitespace-nowrap text-center ${col.highlight ? hlFoot(col.highlight) : 'bg-[var(--surface-dim)]'}`}
                       style={{
                         ...(col.highlight ? {} : { color: 'var(--navy)' }),
                         ...(ai === 0 ? { position: 'sticky', left: 0, zIndex: 5, background: '#eef2ff', color: '#4338ca' } : {}),

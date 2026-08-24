@@ -1,3 +1,4 @@
+import { SCALE } from '../../styles/designTokens';
 import React, { useMemo, useState } from 'react';
 import {
   CheckCircle, Search, UserCheck, RotateCcw, ShieldCheck,
@@ -120,11 +121,11 @@ const ValidationPortal = ({
           <button
             key={tab.id}
             onClick={() => setPortalSubTab(tab.id)}
-            className={`flex items-center justify-center gap-1 py-2 rounded-xl text-[10px] font-black uppercase transition-all relative ${portalSubTab === tab.id ? 'bg-white text-indigo-600 shadow-sm' : 'text-[var(--slate-dim)] hover:text-[var(--ink-soft)]'}`}
+            className={`flex items-center justify-center gap-1 py-2 rounded-xl transition-all relative ${SCALE.text.badge} ${portalSubTab === tab.id ? 'bg-white text-indigo-600 shadow-sm' : 'text-[var(--slate-dim)] hover:text-[var(--ink-soft)]'}`}
           >
             <tab.icon size={12} />
             <span className="text-[9px] sm:text-[10px]">{tab.label}</span>
-            {tab.count > 0 && <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] w-4 h-4 flex items-center justify-center rounded-full">{tab.count}</span>}
+            {tab.count > 0 && <span className={`absolute -top-1 -right-1 bg-red-500 text-white w-4 h-4 flex items-center justify-center rounded-full ${SCALE.text.badge}`}>{tab.count}</span>}
           </button>
         ))}
         </div>
@@ -141,12 +142,12 @@ const ValidationPortal = ({
         <div className="bg-white rounded-2xl border border-[var(--border-soft)] shadow-sm overflow-x-auto animate-in fade-in slide-in-from-bottom-2 duration-300">
           <table className="w-full text-sm min-w-[600px]">
             <thead><tr className="border-b border-[var(--border-soft)] bg-[var(--surface)]">
-              <th className="text-left px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Cliente</th>
-              <th className="text-left px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest hidden sm:table-cell">Email</th>
-              <th className="text-right px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Horas</th>
-              <th className="text-center px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Estado</th>
-              <th className="text-center px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Link</th>
-              <th className="text-right px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Ações</th>
+              <th className={`text-left px-4 py-3 text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Cliente</th>
+              <th className={`text-left px-4 py-3 text-[var(--slate-dim)] hidden sm:table-cell ${SCALE.text.statLabel}`}>Email</th>
+              <th className={`text-right px-4 py-3 text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Horas</th>
+              <th className={`text-center px-4 py-3 text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Estado</th>
+              <th className={`text-center px-4 py-3 text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Link</th>
+              <th className={`text-right px-4 py-3 text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Ações</th>
             </tr></thead>
             <tbody>
               {([...clients].map(c => {
@@ -213,7 +214,7 @@ const ValidationPortal = ({
               <div key={c.id} className="bg-white p-5 rounded-2xl border border-[var(--border-soft)] shadow-sm hover:shadow-md hover:border-indigo-200 hover:-translate-y-0.5 transition-all duration-200">
                 {/* Header */}
                 <div className="flex justify-between items-start mb-3">
-                  <div className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase border flex items-center gap-1 ${c.status === 'validado' ? 'text-emerald-600 border-emerald-200 bg-emerald-50' : c.status === 'enviado' ? 'text-blue-600 border-blue-200 bg-blue-50' : 'text-[var(--slate-dim)] border-[var(--border)] bg-[var(--surface)]'}`}>
+                  <div className={`px-2.5 py-1 rounded-full ${SCALE.text.badge} border flex items-center gap-1 ${c.status === 'validado' ? 'text-emerald-600 border-emerald-200 bg-emerald-50' : c.status === 'enviado' ? 'text-blue-600 border-blue-200 bg-blue-50' : 'text-[var(--slate-dim)] border-[var(--border)] bg-[var(--surface)]'}`}>
                     {c.status === 'validado' && <CheckCircle size={10} />}
                     {c.status === 'enviado' && <Mail size={10} />}
                     {c.status === 'validado' ? 'Validado' : c.status === 'enviado' ? 'Enviado' : 'Pendente'}
@@ -222,21 +223,21 @@ const ValidationPortal = ({
                 </div>
                 {/* Name */}
                 <h4 className="font-black text-[var(--ink)] text-sm truncate mb-0.5">{c.name}</h4>
-                <p className="text-[10px] text-[var(--slate-dim)] font-bold truncate mb-3">{c.email || 'Sem email'}</p>
+                <p className={`${SCALE.text.meta} text-[var(--slate-dim)] truncate mb-3`}>{c.email || 'Sem email'}</p>
                 {/* Link */}
                 <div className="flex items-center gap-1.5 mb-3 bg-[var(--surface)] rounded-xl p-2 border border-[var(--border-soft)]">
-                  <span className="text-[9px] font-mono text-[var(--slate-dim)] truncate flex-1">{linkUnico ? linkUnico.replace(/.*\?/, '?') : 'Sem share_token'}</span>
+                  <span className={`${SCALE.text.meta} font-mono text-[var(--slate-dim)] truncate flex-1`}>{linkUnico ? linkUnico.replace(/.*\?/, '?') : 'Sem share_token'}</span>
                   <button disabled={!linkUnico} onClick={() => linkUnico && navigator.clipboard.writeText(linkUnico)} className="text-[var(--slate)] hover:text-indigo-600 transition-colors shrink-0 disabled:opacity-30"><Copy size={12} /></button>
                 </div>
                 {/* Actions */}
                 <div className="flex gap-2">
                   {c.status === 'validado' ? (
                     <>
-                      <button onClick={async () => { if (!window.confirm('Anular validação?')) return; const appr = clientApprovals?.find(a => (String(a.client_id || a.clientId || '') === String(c.id)) && a.month === portalMonthStr); if (!appr) return; try { await handleDelete('client_approvals', appr.id); if (c.email && c.share_token && shouldSendNotification('validacao_anulada', 'email', notificationPreferences)) { sendValidationEmail({ to: c.email, name: c.name, title: `Validação Anulada · ${portalMonthStr}`, message: `A validação do relatório de ${portalMonthStr} foi anulada pelo administrador. Aceda ao portal para submeter um novo reporte ou validar novamente.`, link: `https://painelcliente.magneticplace.pt/?token=${encodeURIComponent(c.share_token)}&month=${encodeURIComponent(portalMonthStr)}` }).catch(() => { }); } } catch (err) { alert('Erro ao anular: ' + (err?.message || err)); } }} className="flex-1 flex items-center justify-center gap-1.5 py-2 text-rose-500 hover:bg-rose-50 rounded-xl text-[10px] font-black uppercase transition-all border border-rose-100"><RotateCcw size={12} /> Anular</button>
-                      <button onClick={() => setPrintingReport({ client: c, logs, workers, clients, month: portalMonthStr, clientApprovals })} className="flex-1 flex items-center justify-center gap-1.5 py-2 text-emerald-600 hover:bg-emerald-50 rounded-xl text-[10px] font-black uppercase transition-all border border-emerald-100"><Download size={12} /> Relatório</button>
+                      <button onClick={async () => { if (!window.confirm('Anular validação?')) return; const appr = clientApprovals?.find(a => (String(a.client_id || a.clientId || '') === String(c.id)) && a.month === portalMonthStr); if (!appr) return; try { await handleDelete('client_approvals', appr.id); if (c.email && c.share_token && shouldSendNotification('validacao_anulada', 'email', notificationPreferences)) { sendValidationEmail({ to: c.email, name: c.name, title: `Validação Anulada · ${portalMonthStr}`, message: `A validação do relatório de ${portalMonthStr} foi anulada pelo administrador. Aceda ao portal para submeter um novo reporte ou validar novamente.`, link: `https://painelcliente.magneticplace.pt/?token=${encodeURIComponent(c.share_token)}&month=${encodeURIComponent(portalMonthStr)}` }).catch(() => { }); } } catch (err) { alert('Erro ao anular: ' + (err?.message || err)); } }} className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-all border border-rose-100 ${SCALE.text.badge}`}><RotateCcw size={12} /> Anular</button>
+                      <button onClick={() => setPrintingReport({ client: c, logs, workers, clients, month: portalMonthStr, clientApprovals })} className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all border border-emerald-100 ${SCALE.text.badge}`}><Download size={12} /> Relatório</button>
                     </>
                   ) : (
-                    <button onClick={() => { setClienteSelecionado(c); setModalEmailAberto(true); }} className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[10px] font-black uppercase transition-all border ${c.status === 'enviado' ? 'text-amber-600 hover:bg-amber-50 border-amber-100' : 'text-blue-600 hover:bg-blue-50 border-blue-100'}`}><Mail size={12} /> {c.status === 'enviado' ? 'Reenviar' : 'Enviar Email'}</button>
+                    <button onClick={() => { setClienteSelecionado(c); setModalEmailAberto(true); }} className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl transition-all border ${SCALE.text.badge} ${c.status === 'enviado' ? 'text-amber-600 hover:bg-amber-50 border-amber-100' : 'text-blue-600 hover:bg-blue-50 border-blue-100'}`}><Mail size={12} /> {c.status === 'enviado' ? 'Reenviar' : 'Enviar Email'}</button>
                   )}
                 </div>
               </div>
@@ -250,10 +251,10 @@ const ValidationPortal = ({
         <div className="bg-white rounded-2xl border border-[var(--border-soft)] shadow-sm overflow-x-auto animate-in fade-in slide-in-from-bottom-2 duration-300">
           <table className="w-full text-sm min-w-[400px]">
             <thead><tr className="border-b border-[var(--border-soft)] bg-[var(--surface)]">
-              <th className="text-left px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Colaborador</th>
-              <th className="text-right px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Horas</th>
-              <th className="text-center px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Estado</th>
-              <th className="text-right px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Ações</th>
+              <th className={`text-left px-4 py-3 text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Colaborador</th>
+              <th className={`text-right px-4 py-3 text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Horas</th>
+              <th className={`text-center px-4 py-3 text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Estado</th>
+              <th className={`text-right px-4 py-3 text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Ações</th>
             </tr></thead>
             <tbody>
               {sortedWorkers.map(w => (
@@ -285,7 +286,7 @@ const ValidationPortal = ({
             <div key={w.id} className="bg-white p-5 rounded-2xl border border-[var(--border-soft)] shadow-sm hover:shadow-md hover:border-indigo-200 hover:-translate-y-0.5 transition-all duration-200">
               {/* Header */}
               <div className="flex justify-between items-start mb-3">
-                <div className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase border flex items-center gap-1 ${w.isApproved ? 'text-emerald-600 border-emerald-200 bg-emerald-50' : 'text-amber-500 border-amber-200 bg-amber-50'}`}>
+                <div className={`px-2.5 py-1 rounded-full ${SCALE.text.badge} border flex items-center gap-1 ${w.isApproved ? 'text-emerald-600 border-emerald-200 bg-emerald-50' : 'text-amber-500 border-amber-200 bg-amber-50'}`}>
                   {w.isApproved && <CheckCircle size={10} />}
                   {w.isApproved ? 'Aprovado' : 'Pendente'}
                 </div>
@@ -297,7 +298,7 @@ const ValidationPortal = ({
               <div className="flex gap-2">
                 <button
                   onClick={() => verPortal(w)}
-                  className="flex-1 flex items-center justify-center gap-1.5 py-2 text-indigo-600 hover:bg-indigo-50 rounded-xl text-[10px] font-black uppercase transition-all border border-indigo-100"
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all border border-indigo-100 ${SCALE.text.badge}`}
                   title="Ver Portal"
                 >
                   <Search size={12} /> Ver Portal
@@ -305,7 +306,7 @@ const ValidationPortal = ({
                 {!w.isApproved ? (
                   <button
                     onClick={async () => { const id = "appr_" + w.id + "_" + portalMonthStr; try { await saveToDb('approvals', id, { id, workerId: w.id, month: portalMonthStr, timestamp: new Date().toISOString() }); } catch (err) { alert('Erro ao aprovar: ' + (err?.message || err)); } }}
-                    className="flex-1 flex items-center justify-center gap-1.5 py-2 text-emerald-600 hover:bg-emerald-50 rounded-xl text-[10px] font-black uppercase transition-all border border-emerald-100"
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all border border-emerald-100 ${SCALE.text.badge}`}
                   >
                     <UserCheck size={12} /> Aprovar
                   </button>
@@ -329,7 +330,7 @@ const ValidationPortal = ({
                         });
                       } catch (err) { alert('Erro ao anular: ' + (err?.message || err)); }
                     }}
-                    className="flex-1 flex items-center justify-center gap-1.5 py-2 text-rose-500 hover:bg-rose-50 rounded-xl text-[10px] font-black uppercase transition-all border border-rose-100"
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-all border border-rose-100 ${SCALE.text.badge}`}
                   >
                     <RotateCcw size={12} /> Anular
                   </button>

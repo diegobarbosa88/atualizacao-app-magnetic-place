@@ -5,7 +5,7 @@ import { Timer, LayoutGrid, List, Edit2, Trash2, Coffee, Clock, Users, Save } fr
 import ScheduleForm from './schedules/ScheduleForm';
 import ModalShell from '../../components/common/ModalShell';
 import SectionHeaderShell from '../../components/common/SectionHeaderShell';
-import { FT } from '../../styles/designTokens';
+import { FT, SCALE } from '../../styles/designTokens';
 
 const ScheduleManagerContent = () => {
   const {
@@ -36,7 +36,7 @@ const ScheduleManagerContent = () => {
               <button onClick={() => setSchedulesView('grid')} className={`p-1.5 rounded-lg transition-all ${schedulesView === 'grid' ? 'bg-white text-[var(--navy)] shadow-sm' : 'text-[var(--slate)] hover:text-[var(--ink-soft)]'}`} title="Vista em Grade"><LayoutGrid size={16} /></button>
               <button onClick={() => setSchedulesView('list')} className={`p-1.5 rounded-lg transition-all ${schedulesView === 'list' ? 'bg-white text-[var(--navy)] shadow-sm' : 'text-[var(--slate)] hover:text-[var(--ink-soft)]'}`} title="Vista em Lista"><List size={16} /></button>
             </div>
-            <button onClick={() => { setScheduleForm({ id: null, name: '', startTime: '', endTime: '', breakStart: '', breakEnd: '', hasBreak: false, assignedWorkers: [], weekdays: [1, 2, 3, 4, 5], isAdvanced: false, dailyConfigs: {} }); setIsAddingInTab(true); }} className="px-3.5 py-2 rounded-lg font-black text-[10px] uppercase tracking-wide shadow-sm transition-all" style={{ backgroundColor: FT.orange, color: '#12293e' }}>Novo Horário</button>
+            <button onClick={() => { setScheduleForm({ id: null, name: '', startTime: '', endTime: '', breakStart: '', breakEnd: '', hasBreak: false, assignedWorkers: [], weekdays: [1, 2, 3, 4, 5], isAdvanced: false, dailyConfigs: {} }); setIsAddingInTab(true); }} className={`px-3.5 py-2 rounded-lg shadow-sm transition-all ${SCALE.text.badge}`} style={{ backgroundColor: FT.orange, color: '#12293e' }}>Novo Horário</button>
           </div>
         }
       />
@@ -77,11 +77,11 @@ const ScheduleManagerContent = () => {
         <div className="bg-white rounded-2xl border border-[var(--border-soft)] shadow-sm overflow-x-auto">
           <table className="w-full text-sm">
             <thead><tr className="border-b border-[var(--border-soft)] bg-[var(--surface)]">
-              <th className="text-left px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Nome</th>
-              <th className="text-left px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Horário</th>
-              <th className="text-left px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Dias</th>
-              <th className="text-left px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Pausa</th>
-              <th className="text-right px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">Ações</th>
+              <th className={`text-left px-4 py-3 text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Nome</th>
+              <th className={`text-left px-4 py-3 text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Horário</th>
+              <th className={`text-left px-4 py-3 text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Dias</th>
+              <th className={`text-left px-4 py-3 text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Pausa</th>
+              <th className={`text-right px-4 py-3 text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Ações</th>
             </tr></thead>
             <tbody>
               {sortedSchedules.map(s => (
@@ -95,7 +95,7 @@ const ScheduleManagerContent = () => {
                     <div className="flex flex-nowrap gap-1 overflow-x-auto">
                       {[{ v: 1, l: '2ª' }, { v: 2, l: '3ª' }, { v: 3, l: '4ª' }, { v: 4, l: '5ª' }, { v: 5, l: '6ª' }, { v: 6, l: 'Sáb' }, { v: 0, l: 'Dom' }].map(d => {
                         const isActive = s.isAdvanced ? (s.dailyConfigs?.[d.v]?.isActive) : (s.weekdays || [1, 2, 3, 4, 5]).includes(d.v);
-                        return isActive ? <span key={d.v} className="px-2 py-1 rounded text-[10px] font-black uppercase whitespace-nowrap" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: 'var(--slate-dim)' }}>{d.l}</span> : null;
+                        return isActive ? <span key={d.v} className={`px-2 py-1 rounded whitespace-nowrap ${SCALE.text.badge}`} style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: 'var(--slate-dim)' }}>{d.l}</span> : null;
                       })}
                     </div>
                   </td>
@@ -121,7 +121,7 @@ const ScheduleManagerContent = () => {
             <div key={s.id} className="bg-white p-5 rounded-2xl border border-[var(--border-soft)] shadow-sm hover:shadow-md hover:border-[var(--border)] hover:-translate-y-0.5 transition-all duration-200">
               {/* Header */}
               <div className="flex justify-between items-start mb-3">
-                <div className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase border flex items-center gap-1" style={{ color: 'var(--slate-dim)', borderColor: 'rgba(134,154,175,0.4)', backgroundColor: 'rgba(134,154,175,0.1)' }}>
+                <div className={`px-2.5 py-1 rounded-full border flex items-center gap-1 ${SCALE.text.badge}`} style={{ color: 'var(--slate-dim)', borderColor: 'rgba(134,154,175,0.4)', backgroundColor: 'rgba(134,154,175,0.1)' }}>
                   <Timer size={10} /> Turno
                 </div>
                 <div className="flex items-center gap-1">
@@ -135,13 +135,13 @@ const ScheduleManagerContent = () => {
               </div>
               {/* Name */}
               <h4 className="font-black text-[var(--ink)] text-sm truncate mb-0.5">{s.name}</h4>
-              <p className="text-[10px] text-[var(--slate-dim)] font-bold truncate mb-3">{s.isAdvanced ? 'Múltiplos (por dia)' : `${s.startTime || '--:--'} — ${s.endTime || '--:--'}`}</p>
+              <p className={`text-[var(--slate-dim)] truncate mb-3 ${SCALE.text.meta}`}>{s.isAdvanced ? 'Múltiplos (por dia)' : `${s.startTime || '--:--'} — ${s.endTime || '--:--'}`}</p>
               {/* Info */}
-              <div className="text-[10px] text-[var(--slate-dim)] font-bold space-y-1 border-t border-[var(--border-soft)] pt-2">
+              <div className={`text-[var(--slate-dim)] space-y-1 border-t border-[var(--border-soft)] pt-2 ${SCALE.text.meta}`}>
                 <div className="flex flex-wrap gap-1">
                   {[{ v: 1, l: '2ª' }, { v: 2, l: '3ª' }, { v: 3, l: '4ª' }, { v: 4, l: '5ª' }, { v: 5, l: '6ª' }, { v: 6, l: 'Sáb' }, { v: 0, l: 'Dom' }].map(d => {
                     const isActive = s.isAdvanced ? (s.dailyConfigs?.[d.v]?.isActive) : (s.weekdays || [1, 2, 3, 4, 5]).includes(d.v);
-                    return isActive ? <span key={d.v} className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: 'var(--slate-dim)' }}>{d.l}</span> : null;
+                    return isActive ? <span key={d.v} className={`px-1.5 py-0.5 rounded ${SCALE.text.badge}`} style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: 'var(--slate-dim)' }}>{d.l}</span> : null;
                   })}
                 </div>
                 <div className="flex items-center gap-1.5"><Coffee size={10} /> {s.isAdvanced ? 'Variável' : `${s.breakStart || '--:--'}-${s.breakEnd || '--:--'}`}</div>

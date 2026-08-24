@@ -8,7 +8,7 @@ import { executarCalculoFase1, normalizarWorkerId } from '../../lib/ajudas/perce
 import { calcularEstimativaMensal } from '../../lib/ajudas/estimativaMensal';
 import { verificarFechoMes, fecharReconciliacaoMes, SALDO_ACUMULADO_INICIAL } from '../../lib/ajudas/reconciliacao';
 import { buscarFaturasVendasPeriodo } from '../../lib/ajudas/faturasToConline.js';
-import { FT } from '../../styles/designTokens';
+import { FT, SCALE } from '../../styles/designTokens';
 import { mesSeguinte } from '../../lib/ajudas/valoresPorFatura.js';
 import { fetchTudoPaginado } from '../../lib/ajudas/paginacao.js';
 import { calcularFaturacaoCliente } from '../../lib/faturacao/tarifaHistorica.js';
@@ -346,11 +346,11 @@ function ElegibilidadeClientesTab() {
             <table className="w-full text-xs">
               <thead>
                 <tr className="bg-[var(--surface)] border-b border-[var(--border-soft)]">
-                  <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Cliente</th>
-                  <th className="px-4 py-3 text-right text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Horas no Cliente</th>
-                  <th className="px-4 py-3 text-right text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">% Horas do Trabalhador</th>
-                  <th className="px-4 py-3 text-right text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Ajuda Atribuída (€)</th>
-                  <th className="px-4 py-3 text-center text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Decisão</th>
+                  <th className={`px-4 py-3 text-left text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Cliente</th>
+                  <th className={`px-4 py-3 text-right text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Horas no Cliente</th>
+                  <th className={`px-4 py-3 text-right text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>% Horas do Trabalhador</th>
+                  <th className={`px-4 py-3 text-right text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Ajuda Atribuída (€)</th>
+                  <th className={`px-4 py-3 text-center text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Decisão</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--border-soft)]">
@@ -376,7 +376,7 @@ function ElegibilidadeClientesTab() {
         <div className="bg-white rounded-2xl border border-[var(--border)] shadow-sm overflow-hidden">
           <div className="px-5 py-4 border-b border-[var(--border-soft)] bg-amber-50/50">
             <h3 className="text-xs font-black text-[var(--ink)]">Sem evidência de ajudas de custo</h3>
-            <p className="text-[11px] text-amber-700 mt-1">
+            <p className={`text-amber-700 mt-1 ${SCALE.text.body}`}>
               Estes clientes têm horas registadas no período (vão gerar fatura) mas nenhum trabalhador com ajuda
               de custo detetada nos recibos está ligado a eles via registos de horas — por isso nunca aparecem
               como candidatos acima. Sem trabalhadores com ajuda de custo detetada — provavelmente não elegível,
@@ -388,8 +388,8 @@ function ElegibilidadeClientesTab() {
             <table className="w-full text-xs">
               <thead>
                 <tr className="bg-[var(--surface)] border-b border-[var(--border-soft)]">
-                  <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Cliente</th>
-                  <th className="px-4 py-3 text-center text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Decisão</th>
+                  <th className={`px-4 py-3 text-left text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Cliente</th>
+                  <th className={`px-4 py-3 text-center text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Decisão</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--border-soft)]">
@@ -454,7 +454,7 @@ function CardPercentagem({ titulo, registo, destaque, workersMap, interativo, re
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h3 className="text-xs font-black uppercase tracking-widest text-[var(--slate-dim)]">{titulo}</h3>
         {destaque && (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest bg-emerald-100 text-emerald-700">
+          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-700 ${SCALE.text.badge}`}>
             <CheckCircle2 size={11} /> Ativa
           </span>
         )}
@@ -488,12 +488,12 @@ function CardPercentagem({ titulo, registo, destaque, workersMap, interativo, re
       </div>
       {(registo.meses_excluidos || []).length > 0 && (
         <div className="pt-2 border-t border-[var(--border-soft)]">
-          <p className="text-[10px] font-black uppercase tracking-widest text-amber-600 mb-1">Avisos de completude (não removem nada do total)</p>
+          <p className={`${SCALE.text.statLabel} text-amber-600 mb-1`}>Avisos de completude (não removem nada do total)</p>
           <div className="space-y-2">
             {registo.meses_excluidos.map((m, i) => {
               const ids = m.workerIds || extrairWorkerIdsDoMotivo(m.motivo);
               return (
-                <div key={i} className="text-[11px] text-[var(--slate-dim)]">
+                <div key={i} className={`text-[var(--slate-dim)] ${SCALE.text.body}`}>
                   <span className="font-mono font-bold">{m.mes}</span> — {ids.length} trabalhador(es) com horas sem recibo processado:
                   <ul className="mt-1 space-y-0.5 pl-3">
                     {ids.map(id => {
@@ -807,10 +807,10 @@ function HistoricoTab({ onIrParaElegibilidade }) {
             <table className="w-full text-xs">
               <thead>
                 <tr className="bg-[var(--surface)] border-b border-[var(--border-soft)]">
-                  <th className="px-4 py-2 text-left text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Período</th>
-                  <th className="px-4 py-2 text-right text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">%</th>
-                  <th className="px-4 py-2 text-left text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Calculado em</th>
-                  <th className="px-4 py-2 text-left text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Por</th>
+                  <th className={`px-4 py-2 text-left text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Período</th>
+                  <th className={`px-4 py-2 text-right text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>%</th>
+                  <th className={`px-4 py-2 text-left text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Calculado em</th>
+                  <th className={`px-4 py-2 text-left text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Por</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--border-soft)]">
@@ -855,14 +855,14 @@ function LinhaResolucaoSemCliente({ fatura, clients, desabilitado, onConfirmar, 
         <button
           onClick={() => escolha && onConfirmar(escolha)}
           disabled={!escolha || desabilitado}
-          className="px-3 py-1.5 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all disabled:opacity-50 hover:opacity-90"
+          className={`px-3 py-1.5 text-white rounded-xl transition-all disabled:opacity-50 hover:opacity-90 ${SCALE.text.badge}`}
           style={{ backgroundColor: FT.navy }}>
           Confirmar correspondência
         </button>
         <button
           onClick={onSemCorrespondencia}
           disabled={desabilitado}
-          className="px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-[var(--ink-soft)] hover:bg-[var(--surface-dim)] rounded-xl transition-all disabled:opacity-50">
+          className={`px-3 py-1.5 text-[var(--ink-soft)] hover:bg-[var(--surface-dim)] rounded-xl transition-all disabled:opacity-50 ${SCALE.text.badge}`}>
           Não corresponde a nenhum cliente
         </button>
       </div>
@@ -1127,7 +1127,7 @@ function EstimativaMensalTab({ onIrParaElegibilidade }) {
             <h3 className="text-xs font-black text-amber-800">
               Faturas sem cliente correspondente ({semClienteCorrespondente.length})
             </h3>
-            <p className="text-[11px] text-amber-700 mt-1">
+            <p className={`text-amber-700 mt-1 ${SCALE.text.body}`}>
               Nome do cliente no TOConline não bate com nenhum registo em `clients`. Associa a um cliente real para
               entrar na simulação, ou confirma que não corresponde a nenhum.
             </p>
@@ -1159,13 +1159,13 @@ function EstimativaMensalTab({ onIrParaElegibilidade }) {
             <table className="w-full text-xs">
               <thead>
                 <tr className="bg-[var(--surface)] border-b border-[var(--border-soft)]">
-                  <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Cliente</th>
-                  <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Fatura</th>
-                  <th className="px-4 py-3 text-right text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Valor Estimado Bruto</th>
-                  <th className="px-4 py-3 text-right text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Resíduo Aplicado</th>
-                  <th className="px-4 py-3 text-right text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Valor Final</th>
-                  <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Estado</th>
-                  <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Ação</th>
+                  <th className={`px-4 py-3 text-left text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Cliente</th>
+                  <th className={`px-4 py-3 text-left text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Fatura</th>
+                  <th className={`px-4 py-3 text-right text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Valor Estimado Bruto</th>
+                  <th className={`px-4 py-3 text-right text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Resíduo Aplicado</th>
+                  <th className={`px-4 py-3 text-right text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Valor Final</th>
+                  <th className={`px-4 py-3 text-left text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Estado</th>
+                  <th className={`px-4 py-3 text-left text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Ação</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--border-soft)]">
@@ -1182,15 +1182,15 @@ function EstimativaMensalTab({ onIrParaElegibilidade }) {
                     <td className="px-4 py-3 text-right font-bold" style={{ color: l.status === 'bloqueado' ? '#B45309' : FT.navy }}>{fmtEur(l.valorFinal)}</td>
                     <td className="px-4 py-3">
                       {l.status === 'calculado' ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest bg-emerald-100 text-emerald-700">Calculado</span>
+                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-100 text-emerald-700 ${SCALE.text.badge}`}>Calculado</span>
                       ) : (
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest bg-amber-100 text-amber-700">
+                          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-100 text-amber-700 ${SCALE.text.badge}`}>
                             <AlertTriangle size={11} /> Bloqueado
                           </span>
                           <span className="text-[var(--slate-dim)]">{l.motivoBloqueio}</span>
                           {l.motivoBloqueio === 'cliente sem decisao de elegibilidade' && (
-                            <button onClick={onIrParaElegibilidade} className="text-[10px] font-black uppercase tracking-widest hover:opacity-80" style={{ color: FT.orange }}>
+                            <button onClick={onIrParaElegibilidade} className={`hover:opacity-80 ${SCALE.text.badge}`} style={{ color: FT.orange }}>
                               Ir para Elegibilidade →
                             </button>
                           )}
@@ -1201,7 +1201,7 @@ function EstimativaMensalTab({ onIrParaElegibilidade }) {
                       {!l.faturaId && l.status === 'calculado' && (
                         <button
                           onClick={() => setDadosFaturar({ clienteId: l.clientId, ajudasValor: l.valorFinal })}
- className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all hover:opacity-90"
+ className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg transition-all hover:opacity-90 ${SCALE.text.badge}`}
                           style={{ backgroundColor: FT.orange, color: FT.navy }}>
                           Criar Fatura
                         </button>
@@ -1212,7 +1212,7 @@ function EstimativaMensalTab({ onIrParaElegibilidade }) {
               </tbody>
               <tfoot>
                 <tr className="border-t border-[var(--border)] bg-[var(--surface)]">
-                  <td colSpan={4} className="px-4 py-3 text-right text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Total (linhas calculadas)</td>
+                  <td colSpan={4} className={`px-4 py-3 text-right text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Total (linhas calculadas)</td>
                   <td className="px-4 py-3 text-right font-black" style={{ color: 'var(--navy)' }}>{fmtEur(totalFinal)}</td>
                   <td colSpan={2}></td>
                 </tr>
@@ -1310,7 +1310,7 @@ function ReconciliacaoTab() {
   return (
     <div className="space-y-4">
       <div className={`rounded-2xl border p-5 ${saldoAtual < 0 ? 'bg-rose-50 border-rose-200' : 'bg-emerald-50 border-emerald-200'}`}>
-        <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Saldo acumulado atual</p>
+        <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Saldo acumulado atual</p>
         <p className={`text-3xl font-black mt-1 ${saldoAtual < 0 ? 'text-rose-700' : 'text-emerald-700'}`}>{fmtEur(saldoAtual)}</p>
         <p className="text-xs mt-1 font-semibold" style={{ color: saldoAtual < 0 ? '#9F1239' : '#047857' }}>
           {saldoAtual < 0
@@ -1318,7 +1318,7 @@ function ReconciliacaoTab() {
             : 'A favor — real confirmado nos recibos ainda por reconhecer nas próximas faturas.'}
         </p>
         {historico.length === 0 && (
-          <p className="text-[10px] text-[var(--slate-dim)] mt-2">Nenhum mês fechado ainda — valor de semente (saldo deixado pela Fase 1 no fim do saneamento, 2025-12 a 2026-07).</p>
+          <p className={`text-[var(--slate-dim)] mt-2 ${SCALE.text.body}`}>Nenhum mês fechado ainda — valor de semente (saldo deixado pela Fase 1 no fim do saneamento, 2025-12 a 2026-07).</p>
         )}
       </div>
 
@@ -1355,7 +1355,7 @@ function ReconciliacaoTab() {
 
         {preview && preview.fechavel && (
           <div className="bg-[var(--surface)] rounded-2xl border border-[var(--border)] p-4 space-y-2.5">
-            <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Confirmação de fecho — {mes}</p>
+            <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Confirmação de fecho — {mes}</p>
             <div className="flex justify-between text-xs text-[var(--ink-soft)]">
               <span>Total real (recibos, mês seguinte)</span>
               <span className="font-bold text-[var(--ink)]">{fmtEur(preview.totalReal)}</span>
@@ -1378,11 +1378,11 @@ function ReconciliacaoTab() {
             </div>
             <div className="flex gap-2 pt-1">
               <button onClick={() => setPreview(null)} disabled={fechando}
-                className="flex-1 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] hover:bg-white rounded-lg transition-all disabled:opacity-50">
+                className={`flex-1 px-3 py-2 text-[var(--slate-dim)] hover:bg-white rounded-lg transition-all disabled:opacity-50 ${SCALE.text.badge}`}>
                 Cancelar
               </button>
               <button onClick={handleConfirmarFecho} disabled={fechando}
- className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all disabled:opacity-60 hover:opacity-90"
+ className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg transition-all disabled:opacity-60 hover:opacity-90 ${SCALE.text.badge}`}
                 style={{ backgroundColor: FT.orange, color: FT.navy }}>
                 {fechando ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
                 Confirmar Fecho
@@ -1402,12 +1402,12 @@ function ReconciliacaoTab() {
             <table className="w-full text-xs">
               <thead>
                 <tr className="bg-[var(--surface)] border-b border-[var(--border-soft)]">
-                  <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Mês</th>
-                  <th className="px-4 py-3 text-right text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Total Real</th>
-                  <th className="px-4 py-3 text-right text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Total Estimado</th>
-                  <th className="px-4 py-3 text-right text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Resíduo</th>
-                  <th className="px-4 py-3 text-right text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Saldo Acumulado</th>
-                  <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Estado</th>
+                  <th className={`px-4 py-3 text-left text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Mês</th>
+                  <th className={`px-4 py-3 text-right text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Total Real</th>
+                  <th className={`px-4 py-3 text-right text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Total Estimado</th>
+                  <th className={`px-4 py-3 text-right text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Resíduo</th>
+                  <th className={`px-4 py-3 text-right text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Saldo Acumulado</th>
+                  <th className={`px-4 py-3 text-left text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Estado</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--border-soft)]">
@@ -1419,7 +1419,7 @@ function ReconciliacaoTab() {
                     <td className="px-4 py-3 text-right font-bold" style={{ color: r.residuo < 0 ? '#B91C1C' : '#047857' }}>{fmtEur(r.residuo)}</td>
                     <td className="px-4 py-3 text-right font-black" style={{ color: r.saldo_acumulado < 0 ? '#B91C1C' : '#047857' }}>{fmtEur(r.saldo_acumulado)}</td>
                     <td className="px-4 py-3">
-                      <span className="inline-flex items-center px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest bg-[var(--surface-dim)] text-[var(--ink-soft)]">{r.status}</span>
+                      <span className={`inline-flex items-center px-2 py-1 rounded-lg bg-[var(--surface-dim)] text-[var(--ink-soft)] ${SCALE.text.badge}`}>{r.status}</span>
                     </td>
                   </tr>
                 ))}
@@ -1508,7 +1508,7 @@ function FaturasComObservacoesTab() {
             sistema (Fase 2b), simulações ainda não confirmadas (Fase 2a) e linhas retroativas do saneamento
             histórico (Fase 1), lado a lado.
           </p>
-          <p className="text-[11px] text-amber-600 mt-1.5">
+          <p className={`text-amber-600 mt-1.5 ${SCALE.text.body}`}>
             ⚠ O "Mês" tem significados diferentes consoante a secção: em "Emitidas" e "Simuladas" é o mês de
             referência do trabalho (a fatura real está no mês seguinte); em "Retroativo" é o mês da própria
             fatura (sem desvio). Duas linhas com o mesmo "Mês" em secções diferentes podem não corresponder ao
@@ -1517,21 +1517,21 @@ function FaturasComObservacoesTab() {
         </div>
         <div className="flex gap-2 flex-wrap">
           <button onClick={() => setSecao('faturadas')}
-            className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+            className={`px-3 py-1.5 rounded-xl transition-all ${SCALE.text.badge} ${
               secao === 'faturadas' ? 'text-white' : 'bg-[var(--surface-dim)] text-[var(--ink-soft)] hover:bg-[var(--border)]'
             }`}
             style={secao === 'faturadas' ? { backgroundColor: FT.navy } : undefined}>
             Faturas Emitidas ({faturadas.length})
           </button>
           <button onClick={() => setSecao('simuladas')}
-            className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+            className={`px-3 py-1.5 rounded-xl transition-all ${SCALE.text.badge} ${
               secao === 'simuladas' ? 'text-white' : 'bg-[var(--surface-dim)] text-[var(--ink-soft)] hover:bg-[var(--border)]'
             }`}
             style={secao === 'simuladas' ? { backgroundColor: FT.navy } : undefined}>
             Simuladas — Ainda Não Emitidas ({simuladas.length})
           </button>
           <button onClick={() => setSecao('historicas')}
-            className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+            className={`px-3 py-1.5 rounded-xl transition-all ${SCALE.text.badge} ${
               secao === 'historicas' ? 'text-white' : 'bg-[var(--surface-dim)] text-[var(--ink-soft)] hover:bg-[var(--border)]'
             }`}
             style={secao === 'historicas' ? { backgroundColor: FT.navy } : undefined}>
@@ -1558,17 +1558,17 @@ function FaturasComObservacoesTab() {
             <table className="w-full text-xs">
               <thead>
                 <tr className="bg-[var(--surface)] border-b border-[var(--border-soft)]">
-                  <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Cliente</th>
-                  <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Mês</th>
-                  <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Fatura</th>
-                  <th className="px-4 py-3 text-right text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Valor Total da Fatura</th>
-                  <th className="px-4 py-3 text-right text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Valor na Observação</th>
-                  <th className="px-4 py-3 text-right text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">% Histórica Usada</th>
-                  <th className="px-4 py-3 text-right text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Resíduo Aplicado</th>
+                  <th className={`px-4 py-3 text-left text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Cliente</th>
+                  <th className={`px-4 py-3 text-left text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Mês</th>
+                  <th className={`px-4 py-3 text-left text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Fatura</th>
+                  <th className={`px-4 py-3 text-right text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Valor Total da Fatura</th>
+                  <th className={`px-4 py-3 text-right text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Valor na Observação</th>
+                  <th className={`px-4 py-3 text-right text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>% Histórica Usada</th>
+                  <th className={`px-4 py-3 text-right text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Resíduo Aplicado</th>
                   {secao === 'simuladas' && (
-                    <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Estado</th>
+                    <th className={`px-4 py-3 text-left text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Estado</th>
                   )}
-                  <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Criado em</th>
+                  <th className={`px-4 py-3 text-left text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Criado em</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--border-soft)]">
@@ -1590,11 +1590,11 @@ function FaturasComObservacoesTab() {
                     {secao === 'simuladas' && (
                       <td className="px-4 py-3">
                         {l.status === 'bloqueado' ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest bg-amber-100 text-amber-700">Bloqueado</span>
+                          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-100 text-amber-700 ${SCALE.text.badge}`}>Bloqueado</span>
                         ) : l.status === 'confirmado' ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest bg-orange-100 text-orange-700">Confirmado, a aguardar TOConline</span>
+                          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-orange-100 text-orange-700 ${SCALE.text.badge}`}>Confirmado, a aguardar TOConline</span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest bg-[var(--surface-dim)] text-[var(--ink-soft)]">Calculado</span>
+                          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-[var(--surface-dim)] text-[var(--ink-soft)] ${SCALE.text.badge}`}>Calculado</span>
                         )}
                       </td>
                     )}
@@ -1612,7 +1612,7 @@ function FaturasComObservacoesTab() {
                 <div key={mes}>
                   <div className="px-4 py-2.5 bg-[var(--surface)] flex items-center gap-3 flex-wrap">
                     <span className="font-mono font-black text-[var(--ink-mid)] text-xs">{mes}</span>
-                    <span className="text-[10px] text-[var(--slate-dim)] font-semibold">
+                    <span className={`text-[var(--slate-dim)] ${SCALE.text.meta}`}>
                       {linhasDoMes.length} fatura{linhasDoMes.length !== 1 ? 's' : ''}
                       {nDeclaradas > 0 && ` · ${nDeclaradas} com valor explícito na observação`}
                     </span>
@@ -1621,13 +1621,13 @@ function FaturasComObservacoesTab() {
                     <table className="w-full text-xs">
                       <thead>
                         <tr className="border-b border-[var(--border-soft)]">
-                          <th className="px-4 py-2 text-left text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Cliente</th>
-                          <th className="px-4 py-2 text-left text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Fatura</th>
-                          <th className="px-4 py-2 text-right text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Valor Total da Fatura</th>
-                          <th className="px-4 py-2 text-right text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Valor na Observação</th>
-                          <th className="px-4 py-2 text-left text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Origem do valor</th>
-                          <th className="px-4 py-2 text-right text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">% Histórica Usada</th>
-                          <th className="px-4 py-2 text-left text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Criado em</th>
+                          <th className={`px-4 py-2 text-left text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Cliente</th>
+                          <th className={`px-4 py-2 text-left text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Fatura</th>
+                          <th className={`px-4 py-2 text-right text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Valor Total da Fatura</th>
+                          <th className={`px-4 py-2 text-right text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Valor na Observação</th>
+                          <th className={`px-4 py-2 text-left text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Origem do valor</th>
+                          <th className={`px-4 py-2 text-right text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>% Histórica Usada</th>
+                          <th className={`px-4 py-2 text-left text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Criado em</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-[var(--border-soft)]">
@@ -1641,11 +1641,11 @@ function FaturasComObservacoesTab() {
                               <td className="px-4 py-2.5 text-right font-bold text-[var(--ink)]">{fmtEur(l.valor_final)}</td>
                               <td className="px-4 py-2.5">
                                 {declarado ? (
-                                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest bg-emerald-100 text-emerald-700">
+                                  <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-100 text-emerald-700 ${SCALE.text.badge}`}>
                                     Declarado na fatura
                                   </span>
                                 ) : (
-                                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest bg-[var(--surface-dim)] text-[var(--ink-soft)]">
+                                  <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-[var(--surface-dim)] text-[var(--ink-soft)] ${SCALE.text.badge}`}>
                                     Rateio
                                   </span>
                                 )}

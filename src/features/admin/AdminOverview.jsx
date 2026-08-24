@@ -10,7 +10,7 @@ import { formatHours, formatCurrency, calculateDuration } from '../../utils/form
 import { useReconciliationBadges } from './adminOverview/useReconciliationBadges';
 import KpiCard from './adminOverview/KpiCard';
 import FinancialSummaryPanel from './adminOverview/FinancialSummaryPanel';
-import { FT } from '../../styles/designTokens';
+import { FT, SCALE } from '../../styles/designTokens';
 import SectionHeaderShell from '../../components/common/SectionHeaderShell';
 
 export default function AdminOverview({ currentMonth, setCurrentMonth }) {
@@ -268,13 +268,13 @@ export default function AdminOverview({ currentMonth, setCurrentMonth }) {
                   <div className="flex justify-between items-center mb-1">
                     <span className="text-sm font-bold text-[var(--ink-mid)] truncate">{w.name}</span>
                     <div className="flex items-center gap-3 shrink-0">
-                      <span className="text-[10px] font-black text-[var(--slate-dim)]">{formatHours(w.registered)} / {formatHours(w.prevRegistered)}</span>
+                      <span className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>{formatHours(w.registered)} / {formatHours(w.prevRegistered)}</span>
                       {w.diffPct !== null ? (
-                        <span className={`text-[10px] font-black px-2 py-1 rounded-full ${w.isOver ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                        <span className={`${SCALE.text.meta} px-2 py-1 rounded-full ${w.isOver ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
                           {w.isOver ? '▲' : '▼'} {Math.abs(w.diffPct)}%
                         </span>
                       ) : (
-                        <span className="text-[10px] font-black text-[var(--slate-dim)] px-2 py-1">—</span>
+                        <span className={`${SCALE.text.meta} text-[var(--slate-dim)] px-2 py-1`}>—</span>
                       )}
                     </div>
                   </div>
@@ -307,7 +307,7 @@ export default function AdminOverview({ currentMonth, setCurrentMonth }) {
                       <span className="text-xs font-bold text-[var(--ink-mid)]">{c.name}</span>
                       <div className="flex items-center gap-2 shrink-0">
                         {c.pct !== null && c.pct !== 0 && (
-                          <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${c.pct >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                          <span className={`${SCALE.text.meta} px-2 py-0.5 rounded-full ${c.pct >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
                             {c.pct >= 0 ? '▲' : '▼'} {Math.abs(c.pct)}%
                           </span>
                         )}
@@ -338,7 +338,7 @@ export default function AdminOverview({ currentMonth, setCurrentMonth }) {
                     <div className="bg-[var(--surface-dim)] p-2 rounded-xl text-[var(--ink-soft)] mt-0.5"><Activity size={12} /></div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-bold text-[var(--ink-mid)] truncate">{workers.find(w => w.id === log.workerId)?.name || 'Colaborador'}</p>
-                      <p className="text-[10px] text-[var(--slate-dim)] uppercase tracking-widest">{clients.find(c => c.id === log.clientId)?.name} • {formatLogDate(log.date)}</p>
+                      <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>{clients.find(c => c.id === log.clientId)?.name} • {formatLogDate(log.date)}</p>
                     </div>
                     <div className="text-xs font-black px-2 py-1 rounded-lg shrink-0" style={{ color: 'var(--navy)', backgroundColor: 'rgba(27,58,87,0.08)' }}>
                       {formatHours(Number(log.hours) || 0)}

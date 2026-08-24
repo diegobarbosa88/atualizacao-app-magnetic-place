@@ -7,7 +7,7 @@ import WorkerForm from './team/WorkerForm';
 import WorkerList from './team/WorkerList';
 import ModalShell from '../../components/common/ModalShell';
 import SectionHeaderShell from '../../components/common/SectionHeaderShell';
-import { FT } from '../../styles/designTokens';
+import { FT, SCALE } from '../../styles/designTokens';
 import ChangeRequestsPanel from './team/ChangeRequestsPanel';
 import AbsenceRequestsPanel from './team/AbsenceRequestsPanel';
 import WorkerValorHoraHistoryModal from './team/WorkerValorHoraHistoryModal';
@@ -281,7 +281,7 @@ const TeamManagerContent = ({ onLogin }) => {
               O link expira em 7 dias e só pode ser usado uma vez.
             </p>
             <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wide text-[var(--slate-dim)] mb-1">
+              <label className={`block ${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1`}>
                 Email do colaborador (opcional)
               </label>
               <input
@@ -291,15 +291,15 @@ const TeamManagerContent = ({ onLogin }) => {
                 value={inviteEmail}
                 onChange={e => setInviteEmail(e.target.value)}
               />
-              <p className="text-[10px] text-[var(--slate-dim)] mt-1.5">Se preenchido, pode enviar o link por email.</p>
+              <p className={`text-[var(--slate-dim)] mt-1.5 ${SCALE.text.body}`}>Se preenchido, pode enviar o link por email.</p>
             </div>
             <div className="bg-[var(--surface)] rounded-xl p-3 border border-[var(--border)] space-y-3">
-              <p className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-widest">
+              <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>
                 Condições propostas (entram no compromisso de início de atividade)
               </p>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wide text-[var(--slate-dim)] mb-1">
+                  <label className={`block ${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1`}>
                     Vencimento base (€)
                   </label>
                   <input
@@ -313,7 +313,7 @@ const TeamManagerContent = ({ onLogin }) => {
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wide text-[var(--slate-dim)] mb-1">
+                  <label className={`block ${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1`}>
                     Data de início prevista
                   </label>
                   <input
@@ -325,7 +325,7 @@ const TeamManagerContent = ({ onLogin }) => {
                 </div>
               </div>
               <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wide text-[var(--slate-dim)] mb-1">
+                <label className={`block ${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1`}>
                   Local de trabalho
                 </label>
                 <input
@@ -336,7 +336,7 @@ const TeamManagerContent = ({ onLogin }) => {
                   onChange={e => setInviteLocalTrabalho(e.target.value)}
                 />
               </div>
-              <p className="text-[10px] text-[var(--slate-dim)]">
+              <p className={`text-[var(--slate-dim)] ${SCALE.text.body}`}>
                 Opcional — se deixares em branco, o compromisso mostra "[a definir]" nesses pontos.
               </p>
             </div>
@@ -355,7 +355,7 @@ const TeamManagerContent = ({ onLogin }) => {
             </button>
           </>) : (<>
             <div className="bg-teal-50 rounded-xl p-4 border border-teal-100 space-y-3">
-              <p className="text-[10px] font-black text-teal-700 uppercase tracking-widest">Link gerado com sucesso</p>
+              <p className={`${SCALE.text.statLabel} text-teal-700`}>Link gerado com sucesso</p>
               <div className="bg-white rounded-lg border border-teal-200 px-3 py-2.5">
                 <p className="text-xs font-mono text-teal-800 break-all select-all leading-relaxed">{generatedLink}</p>
               </div>
@@ -378,7 +378,7 @@ const TeamManagerContent = ({ onLogin }) => {
                   </button>
                 )}
               </div>
-              <p className="text-[10px] text-teal-600 font-bold">
+              <p className={`text-teal-600 ${SCALE.text.meta}`}>
                 Expira em 7 dias · uso único
               </p>
             </div>

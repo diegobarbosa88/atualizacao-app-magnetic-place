@@ -8,6 +8,7 @@ import {
   ChevronLeft, ChevronRight, CheckCircle, AlertTriangle,
 } from 'lucide-react';
 import ModalShell from '../../components/common/ModalShell';
+import { SCALE } from '../../styles/designTokens';
 
 const MESES_PT = [
   'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
@@ -247,20 +248,20 @@ export default function ContabilidadeTab({ workers, supabase, systemSettings }) 
               <button
                 onClick={handleGeminiAudit}
                 disabled={isLoadingGemini}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider bg-violet-50 text-violet-700 border border-violet-200 hover:bg-violet-100 transition-colors disabled:opacity-50"
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl bg-violet-50 text-violet-700 border border-violet-200 hover:bg-violet-100 transition-colors disabled:opacity-50 ${SCALE.text.badge}`}
               >
                 {isLoadingGemini ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
                 Análise IA
               </button>
               <button
                 onClick={() => setShowShareModal(true)}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-colors"
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-colors ${SCALE.text.badge}`}
               >
                 <Share2 size={14} /> Partilhar
               </button>
               <button
                 onClick={handleExportCSV}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider bg-emerald-600 text-white hover:bg-emerald-700 transition-colors shadow-sm"
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 transition-colors shadow-sm ${SCALE.text.badge}`}
               >
                 <Download size={14} /> Exportar CSV
               </button>
@@ -281,13 +282,13 @@ export default function ContabilidadeTab({ workers, supabase, systemSettings }) 
             <table className="w-full text-sm border-collapse">
               <thead className="sticky top-0 z-10 bg-[var(--surface)] border-b-2 border-[var(--border)]">
                 <tr>
-                  <th className="text-left px-4 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-wider whitespace-nowrap">Colaborador</th>
-                  <th className="text-right px-3 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-wider whitespace-nowrap">Salário Base (€)</th>
-                  <th className="text-center px-3 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-wider whitespace-nowrap">Dias</th>
-                  <th className="text-right px-3 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-wider whitespace-nowrap">Sub. Alimentação (€)</th>
-                  <th className="text-right px-3 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-wider whitespace-nowrap">Ajudas / Outros (€)</th>
-                  <th className="text-right px-3 py-3 text-[10px] font-black text-emerald-700 uppercase tracking-wider whitespace-nowrap bg-emerald-50">Ordenado Bruto (€)</th>
-                  <th className="text-left px-3 py-3 text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-wider">Observações</th>
+                  <th className={`text-left px-4 py-3 text-[var(--slate-dim)] whitespace-nowrap ${SCALE.text.statLabel}`}>Colaborador</th>
+                  <th className={`text-right px-3 py-3 text-[var(--slate-dim)] whitespace-nowrap ${SCALE.text.statLabel}`}>Salário Base (€)</th>
+                  <th className={`text-center px-3 py-3 text-[var(--slate-dim)] whitespace-nowrap ${SCALE.text.statLabel}`}>Dias</th>
+                  <th className={`text-right px-3 py-3 text-[var(--slate-dim)] whitespace-nowrap ${SCALE.text.statLabel}`}>Sub. Alimentação (€)</th>
+                  <th className={`text-right px-3 py-3 text-[var(--slate-dim)] whitespace-nowrap ${SCALE.text.statLabel}`}>Ajudas / Outros (€)</th>
+                  <th className={`text-right px-3 py-3 text-emerald-700 whitespace-nowrap bg-emerald-50 ${SCALE.text.statLabel}`}>Ordenado Bruto (€)</th>
+                  <th className={`text-left px-3 py-3 text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Observações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--border-soft)]">
@@ -304,7 +305,7 @@ export default function ContabilidadeTab({ workers, supabase, systemSettings }) 
                     {/* Nome */}
                     <td className="px-4 py-2.5">
                       <div className="font-bold text-[var(--ink)] leading-tight">{r.worker.name}</div>
-                      {r.worker.nif && <div className="text-[10px] text-[var(--slate-dim)] font-mono">{r.worker.nif}</div>}
+                      {r.worker.nif && <div className={`${SCALE.text.meta} text-[var(--slate-dim)] font-mono`}>{r.worker.nif}</div>}
                     </td>
 
                     {/* Salário Base (= Bruto − Sub. Alimentação − Ajudas) */}
@@ -333,7 +334,7 @@ export default function ContabilidadeTab({ workers, supabase, systemSettings }) 
                     <td className="px-3 py-2.5 text-right text-[var(--ink-soft)] whitespace-nowrap tabular-nums">
                       {fmtEur(r.mealTotal)}
                       {!Number(r.worker.subsidio_alimentacao_dia) && (
-                        <span className="ml-1 text-amber-500 text-[9px]" title="Subsídio/dia não definido no perfil">!</span>
+                        <span className={`ml-1 text-amber-500 ${SCALE.text.meta}`} title="Subsídio/dia não definido no perfil">!</span>
                       )}
                     </td>
 
@@ -364,7 +365,7 @@ export default function ContabilidadeTab({ workers, supabase, systemSettings }) 
               {rows.length > 0 && (
                 <tfoot className="bg-[var(--navy-solid)] text-white">
                   <tr>
-                    <td className="px-4 py-3 font-black text-[11px] uppercase tracking-wider">TOTAIS</td>
+                    <td className={`px-4 py-3 ${SCALE.text.statLabel}`}>TOTAIS</td>
                     <td className="px-3 py-3 text-right font-black tabular-nums">{fmtEur(totals.salarioBase)}</td>
                     <td></td>
                     <td className="px-3 py-3 text-right font-bold tabular-nums">{fmtEur(totals.mealTotal)}</td>
@@ -388,7 +389,7 @@ export default function ContabilidadeTab({ workers, supabase, systemSettings }) 
                 ? <AlertTriangle size={16} className="text-red-500" />
                 : <Sparkles size={16} className="text-violet-600" />
               }
-              <span className="text-[11px] font-black uppercase tracking-wider text-violet-700">
+              <span className={`${SCALE.text.statLabel} text-violet-700`}>
                 {geminiError ? 'Erro IA' : 'Análise Fiscal — Gemini AI'}
               </span>
             </div>
@@ -436,14 +437,14 @@ export default function ContabilidadeTab({ workers, supabase, systemSettings }) 
             </p>
 
             <div className="mb-4">
-              <label className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-wider mb-1 block">Link do Portal</label>
+              <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1 block`}>Link do Portal</label>
               <div className="flex gap-2">
                 <div className="flex-1 bg-[var(--surface)] border border-[var(--border)] rounded-xl px-3 py-2.5 text-sm text-[var(--ink-soft)] font-mono truncate">
                   {import.meta.env.VITE_ACCOUNTANT_PORTAL_URL || window.location.origin}
                 </div>
                 <button
                   onClick={handleCopyLink}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-colors ${
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-xl transition-colors ${SCALE.text.badge} ${
                     copyOk ? 'bg-emerald-100 text-emerald-700' : 'bg-[var(--surface-dim)] text-[var(--ink-soft)] hover:bg-[var(--border)]'
                   }`}
                 >
@@ -454,7 +455,7 @@ export default function ContabilidadeTab({ workers, supabase, systemSettings }) 
             </div>
 
             <div>
-              <label className="text-[10px] font-black text-[var(--slate-dim)] uppercase tracking-wider mb-1 block">E-mail da Contabilista</label>
+              <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1 block`}>E-mail da Contabilista</label>
               <input
                 type="email"
                 value={shareEmail}

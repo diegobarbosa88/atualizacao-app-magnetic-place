@@ -7,7 +7,7 @@ import TOConlineRelatorios from './toconline/TOConlineRelatorios';
 import TOConlineBankAccounts from './toconline/TOConlineBankAccounts';
 import CriarDocumentoModal from './toconline/CriarDocumentoModal';
 import FaturarClienteModal from './toconline/FaturarClienteModal';
-import { FT } from '../../styles/designTokens';
+import { FT, SCALE } from '../../styles/designTokens';
 import { authFetch } from '../../utils/authFetch';
 import SectionHeaderShell from '../../components/common/SectionHeaderShell';
 
@@ -83,7 +83,7 @@ export default function TOConlineAdmin() {
                   <TrendingUp size={14} className="text-[var(--slate)] shrink-0" />
                 )}
                 <div>
-                  <p className="text-[8.5px] font-black uppercase tracking-widest text-[var(--ink-soft)]">Saldo Contas</p>
+                  <p className={`${SCALE.text.statLabel} text-[var(--ink-soft)]`}>Saldo Contas</p>
                   <p className="text-xs font-black text-[var(--navy)]">
                     {saldoContas != null
                       ? new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(saldoContas.total)
@@ -91,7 +91,7 @@ export default function TOConlineAdmin() {
                   </p>
                 </div>
                 {saldoContas && (
-                  <span className="text-[9px] text-[var(--slate-dim)] font-semibold self-end pb-0.5">
+                  <span className={`${SCALE.text.meta} text-[var(--slate-dim)] self-end pb-0.5`}>
                     {saldoContas.n} conta{saldoContas.n !== 1 ? 's' : ''}
                   </span>
                 )}
@@ -100,12 +100,12 @@ export default function TOConlineAdmin() {
             {!verificando && ligado && (
               <div className="flex gap-2">
                 <button onClick={() => setMostrarFaturar(true)}
-                  className="flex items-center gap-1.5 px-3 py-2 text-[10px] font-black uppercase tracking-wide rounded-lg transition-all shadow-sm hover:opacity-90"
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-all shadow-sm hover:opacity-90 ${SCALE.text.badge}`}
                   style={{ backgroundColor: FT.orange, color: '#12293e' }}>
                   <Zap size={12} /> Faturar
                 </button>
                 <button onClick={() => setMostrarCriar(true)}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-[var(--surface-dim)] text-[var(--navy)] text-[10px] font-black uppercase tracking-wide rounded-lg transition-all hover:bg-[var(--border)]">
+                  className={`flex items-center gap-1.5 px-3 py-2 bg-[var(--surface-dim)] text-[var(--navy)] rounded-lg transition-all hover:bg-[var(--border)] ${SCALE.text.badge}`}>
                   <Plus size={12} /> Criar
                 </button>
               </div>

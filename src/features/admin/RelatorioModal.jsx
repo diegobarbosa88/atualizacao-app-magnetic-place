@@ -3,6 +3,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Download } from 'lucide-react';
 import ModalShell from '../../components/common/ModalShell';
+import { SCALE } from '../../styles/designTokens';
 
 const COLS_MATCHED = [
   { key: 'data',            label: 'Data Movimento' },
@@ -328,10 +329,10 @@ export default function RelatorioModal({ displayData, filename, dataRun, onClose
   const ColChecks = ({ cols, state, setter, label }) => (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between mb-1">
-        <span className="text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)]">{label}</span>
+        <span className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>{label}</span>
         <div className="flex gap-2">
-          <button onClick={() => toggleAll(setter, cols, true)}  className="text-[9px] text-indigo-500 hover:underline">Todos</button>
-          <button onClick={() => toggleAll(setter, cols, false)} className="text-[9px] text-[var(--slate-dim)] hover:underline">Nenhum</button>
+          <button onClick={() => toggleAll(setter, cols, true)}  className={`text-indigo-500 hover:underline ${SCALE.text.meta}`}>Todos</button>
+          <button onClick={() => toggleAll(setter, cols, false)} className={`text-[var(--slate-dim)] hover:underline ${SCALE.text.meta}`}>Nenhum</button>
         </div>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
@@ -339,7 +340,7 @@ export default function RelatorioModal({ displayData, filename, dataRun, onClose
           <label key={c.key} className="flex items-center gap-1.5 cursor-pointer select-none">
             <input type="checkbox" checked={!!state[c.key]} onChange={() => setter(p => ({ ...p, [c.key]: !p[c.key] }))}
               className="accent-indigo-600 w-3.5 h-3.5" />
-            <span className="text-[11px] text-[var(--ink-soft)]">{c.label}</span>
+            <span className={`${SCALE.text.body} text-[var(--ink-soft)]`}>{c.label}</span>
           </label>
         ))}
       </div>
@@ -357,7 +358,7 @@ export default function RelatorioModal({ displayData, filename, dataRun, onClose
       footer={
         <div className="p-6 sm:p-8">
           <button onClick={formato === 'csv' ? handleDownloadCsv : handleDownloadPdf}
-            className="w-full flex items-center justify-center gap-2 py-3 bg-[var(--orange)] hover:bg-[var(--orange-hover)] text-[var(--navy-solid)] rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all">
+            className={`w-full flex items-center justify-center gap-2 py-3 bg-[var(--orange)] hover:bg-[var(--orange-hover)] text-[var(--navy-solid)] rounded-2xl transition-all ${SCALE.text.badge}`}>
             <Download size={14} /> Download {formato.toUpperCase()}
           </button>
         </div>
@@ -365,11 +366,11 @@ export default function RelatorioModal({ displayData, filename, dataRun, onClose
     >
       <div className="p-6 sm:p-8 space-y-6">
         <div>
-          <p className="text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-2">Formato</p>
+          <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] mb-2`}>Formato</p>
           <div className="flex gap-2">
             {[{ k: 'csv', l: 'CSV (Excel)' }, { k: 'pdf', l: 'PDF' }].map(({ k, l }) => (
               <button key={k} onClick={() => setFormato(k)}
-                className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${formato === k ? 'bg-indigo-600 text-white' : 'bg-[var(--surface-dim)] text-[var(--ink-soft)] hover:bg-[var(--border)]'}`}>
+                className={`px-4 py-2 rounded-full transition-all ${SCALE.text.badge} ${formato === k ? 'bg-indigo-600 text-white' : 'bg-[var(--surface-dim)] text-[var(--ink-soft)] hover:bg-[var(--border)]'}`}>
                 {l}
               </button>
             ))}
@@ -377,7 +378,7 @@ export default function RelatorioModal({ displayData, filename, dataRun, onClose
         </div>
 
         <div>
-          <p className="text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-2">Secções a incluir</p>
+          <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] mb-2`}>Secções a incluir</p>
           <div className="flex flex-wrap gap-2">
             {[
               { k: 'matched',       l: `Reconciliados (${data.matched?.length ?? 0})`,       color: 'emerald' },
@@ -385,7 +386,7 @@ export default function RelatorioModal({ displayData, filename, dataRun, onClose
               { k: 'orphan_system', l: `Órfãos Sistema (${data.orphan_system?.length ?? 0})`, color: 'rose'   },
             ].map(({ k, l, color }) => (
               <button key={k} onClick={() => setSecoes(p => ({ ...p, [k]: !p[k] }))}
-                className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border-2 ${
+                className={`px-3 py-1.5 rounded-full transition-all border-2 ${SCALE.text.badge} ${
                   secoes[k]
                     ? color === 'emerald' ? 'bg-emerald-100 text-emerald-700 border-emerald-300'
                     : color === 'amber'   ? 'bg-amber-100 text-amber-700 border-amber-300'
@@ -399,7 +400,7 @@ export default function RelatorioModal({ displayData, filename, dataRun, onClose
         </div>
 
         <div>
-          <p className="text-[9px] font-black uppercase tracking-widest text-[var(--slate-dim)] mb-2">Opções</p>
+          <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] mb-2`}>Opções</p>
           <label className="flex items-center gap-2 cursor-pointer select-none">
             <input type="checkbox" checked={incluirTotalEntidade} onChange={() => setIncluirTotalEntidade(p => !p)}
               className="accent-indigo-600 w-4 h-4" />

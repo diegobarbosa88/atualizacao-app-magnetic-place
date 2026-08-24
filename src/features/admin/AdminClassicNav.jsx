@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import CompanyLogo from '../../components/common/CompanyLogo';
 import { ADMIN_SECTIONS, resolveBadge } from './adminNavConfig';
+import { SCALE } from '../../styles/designTokens';
 
 export default function AdminClassicNav({
   activeTab,
@@ -59,7 +60,7 @@ export default function AdminClassicNav({
             >
               <Bell size={17} />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] px-1.5 py-0.5 rounded-full">
+                <span className={`absolute -top-1 -right-1 bg-red-500 text-white px-1.5 py-0.5 rounded-full ${SCALE.text.badge}`}>
                   {unreadCount}
                 </span>
               )}
@@ -98,14 +99,14 @@ export default function AdminClassicNav({
                   key={t.id}
                   onClick={() => { setActiveTab(t.id); setAuditWorkerId(null); }}
                   aria-current={isActive ? 'page' : undefined}
-                  className={`flex-shrink-0 whitespace-nowrap px-3 sm:px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all relative ${
+                  className={`flex-shrink-0 whitespace-nowrap px-3 sm:px-4 py-2 rounded-xl transition-all relative ${SCALE.text.badge} ${
                     isActive ? 'bg-white text-indigo-600 shadow-md scale-105' : 'text-[var(--slate-dim)] hover:text-[var(--ink-soft)]'
                   }`}
                 >
                   {t.id === 'settings' ? <Settings size={14} /> : badge > 0 ? (
                     <span className="flex items-center gap-1">
                       {t.label}
-                      <span className="bg-red-500 text-white text-[8px] px-1.5 py-0.5 rounded-full">{badge}</span>
+                      <span className={`bg-red-500 text-white px-1.5 py-0.5 rounded-full ${SCALE.text.badge}`}>{badge}</span>
                     </span>
                   ) : t.label}
                 </button>
@@ -122,7 +123,7 @@ export default function AdminClassicNav({
           >
             <Bell size={18} />
             {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] px-1.5 py-0.5 rounded-full">
+              <span className={`absolute -top-1 -right-1 bg-red-500 text-white px-1.5 py-0.5 rounded-full ${SCALE.text.badge}`}>
                 {unreadCount}
               </span>
             )}
@@ -164,7 +165,7 @@ export default function AdminClassicNav({
                   key={st.id}
                   onClick={() => navigate(st.path)}
                   aria-current={isActive ? 'page' : undefined}
-                  className={`flex-shrink-0 whitespace-nowrap px-4 py-2 text-[10px] font-bold uppercase tracking-wider transition-all border-b-2 ${
+                  className={`flex-shrink-0 whitespace-nowrap px-4 py-2 transition-all border-b-2 ${SCALE.text.badge} ${
                     isActive
                       ? 'text-indigo-600 border-indigo-500'
                       : 'text-[var(--slate-dim)] border-transparent hover:text-[var(--ink-soft)] hover:border-[var(--border)]'
@@ -173,7 +174,7 @@ export default function AdminClassicNav({
                   {badge > 0 ? (
                     <span className="flex items-center gap-1.5">
                       {st.label}
-                      <span className="bg-red-500 text-white text-[8px] px-1.5 py-0.5 rounded-full leading-none">{badge}</span>
+                      <span className={`bg-red-500 text-white px-1.5 py-0.5 rounded-full leading-none ${SCALE.text.badge}`}>{badge}</span>
                     </span>
                   ) : st.label}
                 </button>

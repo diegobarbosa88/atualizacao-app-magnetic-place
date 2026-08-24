@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { LogOut, X, ChevronRight, ChevronDown, ChevronLeft, Users } from 'lucide-react';
 import CompanyLogo from '../../components/common/CompanyLogo';
 import { ADMIN_SECTIONS, resolveBadge } from './adminNavConfig';
-import { FT } from '../../styles/designTokens';
+import { FT, SCALE } from '../../styles/designTokens';
 
 // Paleta de marca — navy/orange/slate vêm de designTokens.js; os restantes
 // são variantes rgba só usadas aqui (fundos/realces com transparência), sem
@@ -92,7 +92,7 @@ function SubFlyout({ subtabs, top, flyoutLeft, counts, onNavigate, onMouseEnter,
             )}
             <span className="flex-1 truncate">{st.label}</span>
             {badge > 0 && (
-              <span className="text-[9px] font-black bg-red-500 text-white px-1.5 py-0.5 rounded-full shrink-0">
+              <span className={`bg-red-500 text-white px-1.5 py-0.5 rounded-full shrink-0 ${SCALE.text.badge}`}>
                 {badge}
               </span>
             )}
@@ -291,7 +291,7 @@ function NavList({ activeTab, setActiveTab, setAuditWorkerId, counts, onItemClic
                         </span>
                       )}
                       {!collapsed && badge > 0 && (
-                        <span className="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-red-500 text-white shrink-0">
+                        <span className={`${SCALE.text.badge} px-1.5 py-0.5 rounded-full bg-red-500 text-white shrink-0`}>
                           {badge}
                         </span>
                       )}
@@ -348,7 +348,7 @@ function NavList({ activeTab, setActiveTab, setAuditWorkerId, counts, onItemClic
                                 )}
                                 <span className="flex-1 truncate">{st.label}</span>
                                 {stBadge > 0 && (
-                                  <span className="text-[9px] font-black bg-red-500 text-white px-1.5 py-0.5 rounded-full shrink-0">
+                                  <span className={`bg-red-500 text-white px-1.5 py-0.5 rounded-full shrink-0 ${SCALE.text.badge}`}>
                                     {stBadge}
                                   </span>
                                 )}
@@ -432,7 +432,7 @@ function MobileNavList({ activeTab, setActiveTab, setAuditWorkerId, counts, onIt
           .filter(Boolean);
         return (
           <div key={group.id} className={groupIdx > 0 ? 'mt-4' : ''}>
-            <p className="px-3 mb-1 text-[9.5px] font-medium tracking-wide uppercase" style={{ color: B.sectionLabel }}>
+            <p className={`px-3 mb-1 ${SCALE.text.statLabel}`} style={{ color: B.sectionLabel }}>
               {group.label}
             </p>
             <div className="space-y-0.5">
@@ -460,7 +460,7 @@ function MobileNavList({ activeTab, setActiveTab, setAuditWorkerId, counts, onIt
                       </span>
                       {badge > 0 && (
                         <span
-                          className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${isActive ? 'text-white' : 'bg-red-500 text-white'}`}
+                          className={`${SCALE.text.badge} px-1.5 py-0.5 rounded-full ${isActive ? 'text-white' : 'bg-red-500 text-white'}`}
                           style={isActive ? { backgroundColor: B.orange } : {}}
                         >
                           {badge}
@@ -507,7 +507,7 @@ function MobileNavList({ activeTab, setActiveTab, setAuditWorkerId, counts, onIt
                                   {StIcon && <StIcon size={13} className="shrink-0" style={{ color: subActive ? B.orange : B.inactiveIcon }} />}
                                   <span className="flex-1 text-left truncate">{st.label}</span>
                                   {stBadge > 0 && (
-                                    <span className="text-[9px] font-black bg-red-500 text-white px-1.5 py-0.5 rounded-full shrink-0">
+                                    <span className={`bg-red-500 text-white px-1.5 py-0.5 rounded-full shrink-0 ${SCALE.text.badge}`}>
                                       {stBadge}
                                     </span>
                                   )}
@@ -743,7 +743,7 @@ export default function AdminSidebar({
               <CompanyLogo className="w-full h-full object-cover" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: B.sectionLabel }}>Admin</p>
+              <p className={SCALE.text.statLabel} style={{ color: B.sectionLabel }}>Admin</p>
               <p className="text-xs font-black truncate" style={{ color: 'white' }}>Menu Principal</p>
             </div>
           </div>

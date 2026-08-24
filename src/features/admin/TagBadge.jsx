@@ -1,5 +1,6 @@
 import React from 'react';
 import { Tag } from 'lucide-react';
+import { SCALE } from '../../styles/designTokens';
 
 const COR_MAP = {
   violet:  { bg: 'bg-violet-100',  text: 'text-violet-700',  ring: 'ring-violet-400',  dot: 'bg-violet-500'  },
@@ -17,7 +18,7 @@ const COR_MAP = {
 export default function TagBadge({ nome, cor }) {
   const c = COR_MAP[cor] || COR_MAP.gray;
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${c.bg} ${c.text}`}>
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full ${SCALE.text.badge} ${c.bg} ${c.text}`}>
       <Tag size={9} /> {nome}
     </span>
   );

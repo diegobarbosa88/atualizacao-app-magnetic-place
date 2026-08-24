@@ -4,7 +4,7 @@ import { useApp } from '../../context/AppContext';
 import * as pdfjsLib from 'pdfjs-dist';
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { DEFAULT_GMAIL_CONFIG, configParaQuery } from './faturas/faturasUtils';
-import { FT } from '../../styles/designTokens';
+import { FT, SCALE } from '../../styles/designTokens';
 import GmailConfigPanel from './faturas/GmailConfigPanel';
 import TOConlinePanel from './faturas/TOConlinePanel';
 import FaturaConfigPanel from './faturas/FaturaConfigPanel';
@@ -91,8 +91,8 @@ function ModalDetalhe({ fatura, onClose }) {
           {/* Estado da fatura — vinha ao lado do X no cabeçalho feito à mão */}
           <div className="mb-4">
             {fatura.status === 'PAGO'
-              ? <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-50 text-emerald-700 text-[10px] font-black uppercase tracking-widest"><CheckCircle size={11} /> Pago</span>
-              : <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-50 text-amber-600 text-[10px] font-black uppercase tracking-widest">Pendente</span>
+              ? <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-50 text-emerald-700 ${SCALE.text.badge}`}><CheckCircle size={11} /> Pago</span>
+              : <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-50 text-amber-600 ${SCALE.text.badge}`}>Pendente</span>
             }
           </div>
           {todasChaves.length === 0 ? (
@@ -101,7 +101,7 @@ function ModalDetalhe({ fatura, onClose }) {
             <div className="space-y-3">
               {todasChaves.map(k => (
                 <div key={k} className="flex gap-3">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] w-32 shrink-0 pt-0.5">
+                  <span className={`${SCALE.text.statLabel} text-[var(--slate-dim)] w-32 shrink-0 pt-0.5`}>
                     {FIELD_LABELS[k] || k.replace(/_/g, ' ')}
                   </span>
                   <span className="text-sm text-[var(--ink-mid)] font-semibold flex-1 break-words">
@@ -424,7 +424,7 @@ export default function FaturasAdmin() {
   const algunsSelec = faturasFiltradas.some(f => selecionados.has(f.id)) && !todosSelec;
 
   const ThSort = ({ campo, label }) => (
-    <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] cursor-pointer select-none hover:text-[var(--ink-soft)] transition-colors" onClick={() => toggleOrdem(campo)}>
+    <th className={`px-4 py-3 text-[var(--slate-dim)] cursor-pointer select-none hover:text-[var(--ink-soft)] transition-colors ${SCALE.text.statLabel}`} onClick={() => toggleOrdem(campo)}>
       <span className="flex items-center gap-1">{label}<IconeOrdem campo={campo} /></span>
     </th>
   );
@@ -483,7 +483,7 @@ export default function FaturasAdmin() {
             </div>
             <div>
               <p className="text-sm font-black text-[var(--ink-mid)]">Comprovativos novobanco</p>
-              <p className="text-[10px] text-[var(--slate-dim)] font-semibold">Débitos confirmados de alertas@novobanco.pt / comprovativos@novobanco.pt / info@novobanco.pt</p>
+              <p className={`text-[var(--slate-dim)] ${SCALE.text.body}`}>Débitos confirmados de alertas@novobanco.pt / comprovativos@novobanco.pt / info@novobanco.pt</p>
             </div>
           </div>
           <button
@@ -505,7 +505,7 @@ export default function FaturasAdmin() {
             {importResultComp.erros?.length > 0 && (
               <div className="mt-2 space-y-2">
                 {importResultComp.erros.map((e, i) => (
-                  <div key={i} className="bg-white/60 rounded-xl p-2 text-[10px] font-mono break-all whitespace-pre-wrap">
+                  <div key={i} className={`bg-white/60 rounded-xl p-2 font-mono break-all whitespace-pre-wrap ${SCALE.text.meta}`}>
                     <div className="font-black text-[var(--ink-soft)] mb-1">{e.aviso || e.error}</div>
                     {e.subject && <div><span className="text-[var(--slate-dim)]">subject:</span> {e.subject}</div>}
                     {e.fonte && <div><span className="text-[var(--slate-dim)]">fonte:</span> {e.fonte}</div>}
@@ -554,21 +554,21 @@ export default function FaturasAdmin() {
             {/* Linha 1: Ano, Mês, Fornecedor */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Ano</label>
+                <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Ano</label>
                 <select value={filtroAno} onChange={e => setFiltroAno(e.target.value)} className={selectClass}>
                   <option value="">Todos</option>
                   {anosDisponiveis.map(a => <option key={a} value={a}>{a}</option>)}
                 </select>
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Mês</label>
+                <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Mês</label>
                 <select value={filtroMes} onChange={e => setFiltroMes(e.target.value)} className={selectClass}>
                   <option value="">Todos</option>
                   {MESES.map(m => <option key={m.val} value={m.val}>{m.label}</option>)}
                 </select>
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Fornecedor</label>
+                <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Fornecedor</label>
                 <select value={filtroFornecedor} onChange={e => setFiltroFornecedor(e.target.value)} className={selectClass}>
                   <option value="">Todos</option>
                   {fornecedoresDisponiveis.map(f => <option key={f} value={f}>{f}</option>)}
@@ -578,22 +578,22 @@ export default function FaturasAdmin() {
             {/* Linha 2: Datas e valores */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Data de</label>
+                <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Data de</label>
                 <input type="date" value={filtroDataDe} onChange={e => setFiltroDataDe(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-indigo-300" />
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Data até</label>
+                <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Data até</label>
                 <input type="date" value={filtroDataAte} onChange={e => setFiltroDataAte(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-indigo-300" />
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Valor mín (€)</label>
+                <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Valor mín (€)</label>
                 <input type="number" min="0" step="0.01" value={filtroValorMin} onChange={e => setFiltroValorMin(e.target.value)} placeholder="0.00"
                   className="w-full px-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-indigo-300" />
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Valor máx (€)</label>
+                <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Valor máx (€)</label>
                 <input type="number" min="0" step="0.01" value={filtroValorMax} onChange={e => setFiltroValorMax(e.target.value)} placeholder="9999.00"
                   className="w-full px-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-indigo-300" />
               </div>
@@ -646,7 +646,7 @@ export default function FaturasAdmin() {
       ) : (
         <div className="bg-white rounded-[2rem] border border-[var(--border-soft)] shadow-sm overflow-hidden">
           <div className="px-5 py-3 border-b border-[var(--border-soft)]">
-            <p className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Duplo clique numa célula para editar · <span className="text-indigo-400">Enter</span> para guardar · <span className="text-[var(--slate-dim)]">Esc</span> para cancelar · <span className="text-[var(--slate-dim)]"><Eye size={9} className="inline" /> Ver detalhes</span></p>
+            <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Duplo clique numa célula para editar · <span className="text-indigo-400">Enter</span> para guardar · <span className="text-[var(--slate-dim)]">Esc</span> para cancelar · <span className="text-[var(--slate-dim)]"><Eye size={9} className="inline" /> Ver detalhes</span></p>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
@@ -661,9 +661,9 @@ export default function FaturasAdmin() {
                   <ThSort campo="fornecedor" label="Fornecedor" />
                   <ThSort campo="data_fatura" label="Data" />
                   <ThSort campo="valor_total" label="Total" />
-                  <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">IVA</th>
-                  <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Estado</th>
-                  <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)]">Ações</th>
+                  <th className={`px-4 py-3 text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>IVA</th>
+                  <th className={`px-4 py-3 text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Estado</th>
+                  <th className={`px-4 py-3 text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -684,7 +684,7 @@ export default function FaturasAdmin() {
                       </td>
                       <td className="px-4 py-3 max-w-[160px]" onClick={e => e.stopPropagation()}>
                         <p className="text-xs font-semibold text-[var(--ink-mid)] truncate" title={f.filename}>{f.filename}</p>
-                        <p className="text-[10px] text-[var(--slate-dim)]">{formatDate(f.importado_em)}</p>
+                        <p className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>{formatDate(f.importado_em)}</p>
                       </td>
                       <CelEditTd fatura={f} campo="numero_fatura" valor={d.numero_fatura} className="text-xs font-mono text-[var(--ink-soft)]" {...celEditProps} />
                       <CelEditTd fatura={f} campo="fornecedor" valor={d.fornecedor} className="text-xs text-[var(--ink-soft)] max-w-[160px] truncate" {...celEditProps} />
@@ -693,8 +693,8 @@ export default function FaturasAdmin() {
                       <CelEditTd fatura={f} campo="iva" valor={d.iva != null ? Number(d.iva).toFixed(2) : null} tipo="number" className="text-xs text-[var(--slate-dim)] whitespace-nowrap" {...celEditProps} />
                       <td className="px-4 py-3 whitespace-nowrap" onClick={e => e.stopPropagation()}>
                         {f.status === 'PAGO'
-                          ? <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-50 text-emerald-700 text-[10px] font-black uppercase tracking-widest"><CheckCircle size={11} /> Pago</span>
-                          : <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-50 text-amber-600 text-[10px] font-black uppercase tracking-widest">Pendente</span>
+                          ? <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-50 text-emerald-700 ${SCALE.text.badge}`}><CheckCircle size={11} /> Pago</span>
+                          : <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-50 text-amber-600 ${SCALE.text.badge}`}>Pendente</span>
                         }
                       </td>
                       <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
@@ -786,7 +786,7 @@ export default function FaturasAdmin() {
               className="w-full border border-[var(--border)] rounded-xl px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-300"
               autoFocus
             />
-            <p className="text-[10px] text-[var(--slate-dim)] mt-1">Aplicado a todas as faturas deste fornecedor (NIF: {ibanModal.nif})</p>
+            <p className={`text-[var(--slate-dim)] mt-1 ${SCALE.text.body}`}>Aplicado a todas as faturas deste fornecedor (NIF: {ibanModal.nif})</p>
           </div>
         </ModalShell>
       )}

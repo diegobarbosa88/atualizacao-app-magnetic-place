@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Lock, Loader2 } from 'lucide-react';
 import ModalShell from '../../components/common/ModalShell';
-import { FT } from '../../styles/designTokens';
+import { FT, SCALE } from '../../styles/designTokens';
 
 // Modal genérico para pedir a password de admin antes de uma ação sensível
 // que precisa de validação server-side (nunca envia a password para mais
@@ -31,7 +31,7 @@ export default function AdminPasswordModal({ open, title, onConfirm, onClose, lo
         onSubmit={handleSubmit}
         className="p-6"
       >
-        <label className="text-[10px] font-black uppercase tracking-widest text-[var(--slate-dim)] block mb-1.5">Password de Administrador</label>
+        <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)] block mb-1.5`}>Password de Administrador</label>
         <input
           type="password"
           autoFocus
