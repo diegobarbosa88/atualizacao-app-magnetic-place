@@ -8,7 +8,7 @@ import SignDrawModal from '../worker/SignDrawModal';
 import ModalShell from './ModalShell';
 import { useDocumentPreview } from './workerDocuments/useDocumentPreview';
 import { useSignDocument } from './workerDocuments/useSignDocument';
-import { FT, FONT_TITLE, FONT_MONO } from '../../styles/designTokens';
+import { FT, FONT_TITLE, FONT_MONO, SCALE } from '../../styles/designTokens';
 
 const CATEGORY_RULES = [
   { key: 'formacao', label: 'Formação Interna', icon: GraduationCap, test: t => /forma[cç][aã]o|certificado/i.test(t) },
@@ -84,9 +84,9 @@ function DocRow({ doc, openDoc }) {
       <div className="flex-1 min-w-0">
         <p className="text-xs font-black text-slate-800 truncate">{doc.tipo || doc.title}</p>
         <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-          <span className="text-[10px] text-slate-400">Emitido: {formatDocDate(doc.dataEmissao || doc.created_at)}</span>
+          <span className={`${SCALE.text.meta} text-slate-400`}>Emitido: {formatDocDate(doc.dataEmissao || doc.created_at)}</span>
           {signed && (doc.dataAssinatura || doc.signed_at) && (
-            <span className="text-[10px] font-bold" style={{ color: FT.ok }}>
+            <span className={SCALE.text.meta} style={{ color: FT.ok }}>
               · Assinado {new Date(doc.dataAssinatura || doc.signed_at).toLocaleDateString('pt-PT')}
             </span>
           )}
@@ -97,7 +97,7 @@ function DocRow({ doc, openDoc }) {
       {pending ? (
         <button
           onClick={() => openDoc(doc)}
-          className="shrink-0 flex items-center gap-1.5 px-3 py-2 text-white rounded-xl text-[10px] font-black uppercase tracking-wide transition-all active:scale-95"
+          className={`shrink-0 flex items-center gap-1.5 px-3 py-2 text-white rounded-xl transition-all active:scale-95 ${SCALE.text.badge}`}
           style={{ fontFamily: FONT_MONO, background: FT.orange }}
         >
           <Pencil size={12} /> Assinar
@@ -311,14 +311,14 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb, pendingOnly = false
         <div className="flex gap-1 p-1 rounded-2xl" style={{ background: '#F4F2EC' }}>
           <button
             onClick={() => setActiveTab('pendentes')}
-            className="flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
+            className={`flex-1 py-2 rounded-xl transition-all ${SCALE.text.badge}`}
             style={{ fontFamily: FONT_MONO, background: activeTab === 'pendentes' ? '#fff' : 'transparent', color: activeTab === 'pendentes' ? FT.navy : FT.slateDim, boxShadow: activeTab === 'pendentes' ? '0 1px 2px rgba(18,39,65,.08)' : 'none' }}
           >
             Pendentes{pendentes.length > 0 && ` (${pendentes.length})`}
           </button>
           <button
             onClick={() => setActiveTab('historico')}
-            className="flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1"
+            className={`flex-1 py-2 rounded-xl transition-all flex items-center justify-center gap-1 ${SCALE.text.badge}`}
             style={{ fontFamily: FONT_MONO, background: activeTab === 'historico' ? '#fff' : 'transparent', color: activeTab === 'historico' ? FT.navy : FT.slateDim, boxShadow: activeTab === 'historico' ? '0 1px 2px rgba(18,39,65,.08)' : 'none' }}
           >
             Histórico{historico.length > 0 && ` (${historico.length})`}
@@ -339,7 +339,7 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb, pendingOnly = false
       {!pendingOnly && activeTab === 'historico' && showFilters && (
         <div className="bg-white rounded-2xl px-4 py-3 flex flex-wrap gap-3 items-center" style={{ border: `1px solid ${FT.border}` }}>
           <div className="flex items-center gap-2">
-            <label className="text-[9px] font-black uppercase" style={{ fontFamily: FONT_MONO, color: 'var(--slate-dim)' }}>Tipo</label>
+            <label className={SCALE.text.statLabel} style={{ fontFamily: FONT_MONO, color: 'var(--slate-dim)' }}>Tipo</label>
             <select value={filterType} onChange={e => setFilterType(e.target.value)}
               className="px-2 py-1 rounded-lg text-xs font-bold outline-none" style={{ background: '#F4F2EC', border: `1px solid ${FT.border}` }}>
               <option value="all">Todos</option>
@@ -347,7 +347,7 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb, pendingOnly = false
             </select>
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-[9px] font-black uppercase" style={{ fontFamily: FONT_MONO, color: 'var(--slate-dim)' }}>Ordenar</label>
+            <label className={SCALE.text.statLabel} style={{ fontFamily: FONT_MONO, color: 'var(--slate-dim)' }}>Ordenar</label>
             <select value={sortBy} onChange={e => setSortBy(e.target.value)}
               className="px-2 py-1 rounded-lg text-xs font-bold outline-none" style={{ background: '#F4F2EC', border: `1px solid ${FT.border}` }}>
               <option value="date_desc">Mais Recentes</option>
@@ -356,7 +356,7 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb, pendingOnly = false
               <option value="name_desc">Nome (Z-A)</option>
             </select>
           </div>
-          <span className="text-[9px] ml-auto" style={{ color: 'var(--slate-dim)' }}>{docList.length} doc(s)</span>
+          <span className={`${SCALE.text.meta} ml-auto`} style={{ color: 'var(--slate-dim)' }}>{docList.length} doc(s)</span>
         </div>
       )}
 
@@ -381,7 +381,7 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb, pendingOnly = false
                     <GroupIcon size={13} />
                   </div>
                   <span className="flex-1 text-left font-bold uppercase text-sm tracking-tight" style={{ fontFamily: FONT_TITLE, color: FT.navyDeep }}>{group.label}</span>
-                  <span className="text-[9px] font-black rounded-full px-2 py-0.5 text-white shrink-0" style={{ fontFamily: FONT_MONO, background: FT.navy }}>{group.docs.length}</span>
+                  <span className={`${SCALE.text.badge} rounded-full px-2 py-0.5 text-white shrink-0`} style={{ fontFamily: FONT_MONO, background: FT.navy }}>{group.docs.length}</span>
                   {isOpen ? <ChevronUp size={14} style={{ color: FT.navy }} /> : <ChevronDown size={14} style={{ color: FT.slate }} />}
                 </button>
                 {isOpen && (

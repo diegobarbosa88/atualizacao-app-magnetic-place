@@ -5,6 +5,7 @@ import ValidationStamp from './ValidationStampWithQR';
 import './ClientTimesheetReport.css';
 import { toISODateLocal, isSameMonth, getLastBusinessDayOfMonth, formatDocDate, monthToYYYYMM, getISOWeek } from '../../utils/dateUtils';
 import { formatHours, calculateDuration, calculateExpectedMonthlyHours, calculateExpectedDailyHours, getScheduleForDay, formatCurrency, toTimeInputValue } from '../../utils/formatUtils';
+import { SCALE } from '../../styles/designTokens';
 
 const ClientTimesheetReport = ({ data, onBack, isEmbedded = false, hideActions = false }) => {
   const { client, logs, workers, clients, month, workerId, clientApprovals, dates } = data;
@@ -449,33 +450,33 @@ for (let p = 0; p < correctedTotalPages; p++) {
           <div id="topo-da-pagina" className="no-print flex flex-col gap-6 mb-8 pb-6 border-b">
             <div className="flex justify-between items-center">
               {isEmbedded ? null : (
-                <button onClick={onBack} className="px-6 py-2 bg-slate-100 text-slate-600 font-bold text-xs uppercase rounded-xl hover:bg-slate-200 transition-colors">Voltar</button>
+                <button onClick={onBack} className="px-6 py-2 bg-[var(--surface)] text-[var(--slate-dim)] font-bold text-xs uppercase rounded-xl hover:bg-[var(--border-soft)] transition-colors">Voltar</button>
               )}
               <div className="flex gap-3">
                 <button id="magnetic-zip-btn" onClick={handleGenerateZip} disabled={isZipping} className="px-5 py-2.5 bg-emerald-600 text-white font-black text-xs uppercase rounded-xl shadow-lg flex items-center gap-2 hover:bg-emerald-700 transition-all disabled:opacity-50">
                   {isZipping ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />} ZIP
                 </button>
-                <button onClick={handlePrint} className="px-5 py-2.5 bg-slate-900 text-white font-black text-xs uppercase rounded-xl shadow-lg flex items-center gap-2 hover:bg-slate-800 transition-all"><Printer size={16} /> PDF/Imprimir</button>
+                <button onClick={handlePrint} className="px-5 py-2.5 bg-[var(--navy-solid)] text-white font-black text-xs uppercase rounded-xl shadow-lg flex items-center gap-2 hover:bg-[var(--navy-deep)] transition-all"><Printer size={16} /> PDF/Imprimir</button>
               </div>
             </div>
 
             {!isEmbedded && (
-              <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200">
+              <div className="bg-[var(--surface)] p-6 rounded-3xl border border-[var(--border)]">
                 <div className="flex justify-between items-center mb-4">
                   <div className="flex items-center gap-2">
-                    <Settings2 size={16} className="text-indigo-600" />
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-500">Selecionar Colunas Visíveis</h4>
+                    <Settings2 size={16} className="text-[var(--navy)]" />
+                    <h4 className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Selecionar Colunas Visíveis</h4>
                   </div>
-                  <div className="text-[10px] font-bold text-indigo-500 bg-indigo-50 px-3 py-1 rounded-lg">Gerando {reportUnits.length} documentos individuais</div>
+                  <div className={`${SCALE.text.meta} text-[var(--navy)] bg-[var(--navy-soft)] px-3 py-1 rounded-lg`}>Gerando {reportUnits.length} documentos individuais</div>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {columns.map(col => (
                     <button
                       key={col.id}
                       onClick={() => setVisibleColumns(prev => ({ ...prev, [col.id]: !prev[col.id] }))}
-                      className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase transition-all border ${visibleColumns[col.id]
-                        ? 'bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-200'
-                        : 'bg-white border-slate-200 text-slate-400 hover:border-indigo-300'
+                      className={`px-4 py-2 rounded-xl transition-all border ${SCALE.text.badge} ${visibleColumns[col.id]
+                        ? 'bg-[var(--orange)] border-[var(--orange)] text-[var(--navy-solid)] shadow-md'
+                        : 'bg-white border-[var(--border)] text-[var(--slate)] hover:border-[var(--orange-hover)]'
                         }`}
                     >
                       {col.label}
@@ -491,17 +492,17 @@ for (let p = 0; p < correctedTotalPages; p++) {
           <div className="no-print flex items-center justify-end gap-2 px-2 pb-2">
             <button
               onClick={() => setManualZoom(Math.max(0.2, (manualZoom ?? autoScale) - 0.1))}
-              className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-500 transition-all"
+              className="p-1.5 bg-[var(--surface)] hover:bg-[var(--border-soft)] rounded-lg text-[var(--slate-dim)] transition-all"
               title="Diminuir zoom"
             ><ZoomOut size={14} /></button>
             <button
               onClick={() => setManualZoom(null)}
-              className="text-[10px] font-black text-slate-400 hover:text-indigo-600 uppercase w-10 text-center"
+              className={`text-[var(--slate)] hover:text-[var(--navy)] w-10 text-center ${SCALE.text.badge}`}
               title="100%"
             >{Math.round(scale * 100)}%</button>
             <button
               onClick={() => setManualZoom(Math.min(1, (manualZoom ?? autoScale) + 0.1))}
-              className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-500 transition-all"
+              className="p-1.5 bg-[var(--surface)] hover:bg-[var(--border-soft)] rounded-lg text-[var(--slate-dim)] transition-all"
               title="Aumentar zoom"
             ><ZoomIn size={14} /></button>
           </div>

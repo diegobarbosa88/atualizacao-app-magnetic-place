@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
-import { FT } from '../../styles/designTokens';
+import { FT, SCALE } from '../../styles/designTokens';
 
 /**
  * Camadas de sobreposição da app.
@@ -113,7 +113,7 @@ export default function ModalShell({
               {subtitle && (
                 <p
                   style={{ fontFamily: 'var(--mono)' }}
-                  className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400 truncate mb-0.5"
+                  className={`${SCALE.text.statLabel} text-slate-400 truncate mb-0.5`}
                 >
                   {subtitle}
                 </p>

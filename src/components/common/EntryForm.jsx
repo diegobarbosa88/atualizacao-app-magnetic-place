@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { Calendar, Coffee, Save, X, Plus, Loader2, Sparkles } from 'lucide-react';
 import { callGemini } from '../../utils/aiUtils';
 import { useApp } from '../../context/AppContext';
-import { FT, FONT_MONO } from '../../styles/designTokens';
+import { FT, FONT_MONO, SCALE } from '../../styles/designTokens';
 
 const EntryForm = ({ data = {}, clients, assignedClients, onChange, onSave, onCancel, showDate = false, isEditing = false, title = "Registar Horário", isInline = false, systemSettings: propSystemSettings }) => {
   const { systemSettings: contextSystemSettings } = useApp();
@@ -58,7 +58,7 @@ const EntryForm = ({ data = {}, clients, assignedClients, onChange, onSave, onCa
       <div className="space-y-2 sm:space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-2 sm:gap-4">
           <div className={`${showDate ? 'md:col-span-3' : 'md:col-span-4'} space-y-0.5 sm:space-y-1`}>
-            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Cliente / Unidade</label>
+            <label className={`${SCALE.text.statLabel} text-slate-400 ml-1`}>Cliente / Unidade</label>
             <select className="w-full bg-slate-50 border border-slate-200 rounded-lg sm:rounded-xl p-2 sm:p-3 text-sm focus:ring-2 focus:ring-[#EB8D00]/40 focus:border-[var(--orange)] outline-none appearance-none shadow-sm text-slate-900" value={data.clientId || ''} onChange={(e) => onChange({ ...data, clientId: e.target.value })}>
               <option value="">Selecione o Cliente...</option>
               {filteredClients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -66,25 +66,25 @@ const EntryForm = ({ data = {}, clients, assignedClients, onChange, onSave, onCa
           </div>
           {showDate && (
             <div className="space-y-0.5 sm:space-y-1">
-              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Data</label>
+              <label className={`${SCALE.text.statLabel} text-slate-400 ml-1`}>Data</label>
               <input type="date" className="w-full bg-white border border-slate-200 rounded-lg sm:rounded-xl p-2 sm:p-3 text-sm focus:ring-2 focus:ring-[#EB8D00]/40 focus:border-[var(--orange)] outline-none shadow-sm text-slate-900" value={data.date || ''} onChange={(e) => onChange({ ...data, date: e.target.value })} />
             </div>
           )}
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
-          <div className="space-y-0.5 sm:space-y-1"><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Entrada</label><input type="time" className="w-full bg-white border border-slate-200 rounded-lg sm:rounded-xl p-2 sm:p-3 text-sm text-slate-900" value={data.startTime || ''} onChange={(e) => onChange({ ...data, startTime: e.target.value })} /></div>
+          <div className="space-y-0.5 sm:space-y-1"><label className={`${SCALE.text.statLabel} text-slate-400 ml-1`}>Entrada</label><input type="time" className="w-full bg-white border border-slate-200 rounded-lg sm:rounded-xl p-2 sm:p-3 text-sm text-slate-900" value={data.startTime || ''} onChange={(e) => onChange({ ...data, startTime: e.target.value })} /></div>
 
-          <div className="space-y-0.5 sm:space-y-1"><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Saída</label><input type="time" className="w-full bg-white border border-slate-200 rounded-lg sm:rounded-xl p-2 sm:p-3 text-sm text-slate-900" value={data.endTime || ''} onChange={(e) => onChange({ ...data, endTime: e.target.value })} /></div>
+          <div className="space-y-0.5 sm:space-y-1"><label className={`${SCALE.text.statLabel} text-slate-400 ml-1`}>Saída</label><input type="time" className="w-full bg-white border border-slate-200 rounded-lg sm:rounded-xl p-2 sm:p-3 text-sm text-slate-900" value={data.endTime || ''} onChange={(e) => onChange({ ...data, endTime: e.target.value })} /></div>
 
           {showBreaks ? (
             <>
-              <div className="space-y-0.5 sm:space-y-1"><label className="text-[9px] font-black text-orange-500 uppercase tracking-widest ml-1">Pausa I.</label><input type="time" className="w-full bg-orange-50 border border-orange-100 rounded-lg sm:rounded-xl p-2 sm:p-3 text-sm text-slate-900" value={data.breakStart || ''} onChange={(e) => onChange({ ...data, breakStart: e.target.value })} /></div>
-              <div className="space-y-0.5 sm:space-y-1"><label className="text-[9px] font-black text-orange-500 uppercase tracking-widest ml-1">Pausa F.</label><input type="time" className="w-full bg-orange-50 border border-orange-100 rounded-lg sm:rounded-xl p-2 sm:p-3 text-sm text-slate-900" value={data.breakEnd || ''} onChange={(e) => onChange({ ...data, breakEnd: e.target.value })} /></div>
+              <div className="space-y-0.5 sm:space-y-1"><label className={`${SCALE.text.statLabel} text-orange-500 ml-1`}>Pausa I.</label><input type="time" className="w-full bg-orange-50 border border-orange-100 rounded-lg sm:rounded-xl p-2 sm:p-3 text-sm text-slate-900" value={data.breakStart || ''} onChange={(e) => onChange({ ...data, breakStart: e.target.value })} /></div>
+              <div className="space-y-0.5 sm:space-y-1"><label className={`${SCALE.text.statLabel} text-orange-500 ml-1`}>Pausa F.</label><input type="time" className="w-full bg-orange-50 border border-orange-100 rounded-lg sm:rounded-xl p-2 sm:p-3 text-sm text-slate-900" value={data.breakEnd || ''} onChange={(e) => onChange({ ...data, breakEnd: e.target.value })} /></div>
             </>
           ) : (
             <div className="col-span-2 md:col-span-2 flex items-end">
-              <button type="button" onClick={(e) => { e.preventDefault(); setShowBreaks(true); }} className="w-full text-[10px] font-black uppercase text-orange-500 bg-orange-50 hover:bg-orange-100 border border-orange-100 rounded-lg sm:rounded-xl p-2 sm:p-3 transition-colors flex items-center justify-center gap-2 h-[34px] sm:h-[46px]">
+              <button type="button" onClick={(e) => { e.preventDefault(); setShowBreaks(true); }} className={`w-full text-orange-500 bg-orange-50 hover:bg-orange-100 border border-orange-100 rounded-lg sm:rounded-xl p-2 sm:p-3 transition-colors flex items-center justify-center gap-2 h-[34px] sm:h-[46px] ${SCALE.text.badge}`}>
                 <Coffee size={13} /> Adicionar Pausa
               </button>
             </div>
@@ -94,8 +94,8 @@ const EntryForm = ({ data = {}, clients, assignedClients, onChange, onSave, onCa
         {showComments ? (
           <div className="space-y-0.5 sm:space-y-1 animate-in fade-in slide-in-from-top-2">
             <div className="flex justify-between items-center mb-1">
-              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Comentários</label>
-              <button onClick={handleAiPolish} disabled={isImproving || !data.description} className="text-[9px] flex items-center gap-1 font-bold disabled:opacity-50" style={{ color: FT.navy }}>
+              <label className={`${SCALE.text.statLabel} text-slate-400 ml-1`}>Comentários</label>
+              <button onClick={handleAiPolish} disabled={isImproving || !data.description} className={`${SCALE.text.meta} flex items-center gap-1 disabled:opacity-50`} style={{ color: FT.navy }}>
                 {isImproving ? <Loader2 className="animate-spin" size={10} /> : <Sparkles size={10} />} Sugestão IA ✨
               </button>
             </div>
@@ -103,7 +103,7 @@ const EntryForm = ({ data = {}, clients, assignedClients, onChange, onSave, onCa
           </div>
         ) : (
           <div>
-            <button onClick={(e) => { e.preventDefault(); setShowComments(true); }} className="text-[10px] font-bold text-slate-400 hover:text-[var(--navy)] transition-colors flex items-center gap-1 bg-slate-50 hover:bg-[#1B3A57]/5 px-3 py-1.5 rounded-lg border border-slate-200 border-dashed w-max">
+            <button onClick={(e) => { e.preventDefault(); setShowComments(true); }} className={`${SCALE.text.meta} text-slate-400 hover:text-[var(--navy)] transition-colors flex items-center gap-1 bg-slate-50 hover:bg-[#1B3A57]/5 px-3 py-1.5 rounded-lg border border-slate-200 border-dashed w-max`}>
               <Plus size={12} /> Adicionar Comentários
             </button>
           </div>

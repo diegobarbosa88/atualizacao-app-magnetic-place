@@ -6,6 +6,7 @@ import CompanyValidationStamp from './CompanyValidationStamp';
 import CompanyClassicStamp from './CompanyClassicStamp';
 import CompanyCorporateStamp from './CompanyCorporateStamp';
 import AdminSignDrawModal from './AdminSignDrawModal';
+import { SCALE } from '../../styles/designTokens';
 
 export default function CompanySignatureSettings({ companySignature, saveCompanySignature }) {
   const { stampStyle, setStampStyle } = useApp();
@@ -45,126 +46,126 @@ export default function CompanySignatureSettings({ companySignature, saveCompany
   };
 
   return (
-    <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
+    <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-[var(--border-soft)]">
       <div className="flex items-center gap-3 mb-6">
-        <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600"><FileSignature size={20} /></div>
-        <h3 className="font-black text-lg text-slate-800">Assinatura da Empresa</h3>
+        <div className="bg-[var(--navy-soft)] p-2 rounded-xl text-[var(--navy)]"><FileSignature size={20} /></div>
+        <h3 className="font-black text-lg text-[var(--ink)]">Assinatura da Empresa</h3>
       </div>
-      <p className="text-xs text-slate-500 mb-6">
+      <p className="text-xs text-[var(--slate-dim)] mb-6">
         Carimbo aplicado pelo responsável da Magnetic Place quando aprova um documento assinado pelo trabalhador.
       </p>
 
       <div className="space-y-4">
         <div>
-          <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mb-1">Nome do Responsável</p>
+          <p className="text-xs text-[var(--slate-dim)] font-bold uppercase tracking-widest mb-1">Nome do Responsável</p>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Ex: João Silva"
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-bold"
+            className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl p-3 text-sm outline-none font-bold focus:border-[var(--navy)] focus:ring-4 focus:ring-[#1B3A57]/10 transition-all"
           />
         </div>
         <div>
-          <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mb-1">Cargo</p>
+          <p className="text-xs text-[var(--slate-dim)] font-bold uppercase tracking-widest mb-1">Cargo</p>
           <input
             type="text"
             value={role}
             onChange={(e) => setRole(e.target.value)}
             placeholder="Ex: Diretor, Gestor de RH"
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-bold"
+            className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl p-3 text-sm outline-none font-bold focus:border-[var(--navy)] focus:ring-4 focus:ring-[#1B3A57]/10 transition-all"
           />
         </div>
         <div>
-          <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mb-1">Email do Responsável</p>
+          <p className="text-xs text-[var(--slate-dim)] font-bold uppercase tracking-widest mb-1">Email do Responsável</p>
           <input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="admin@magneticplace.pt"
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-bold"
+            className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl p-3 text-sm outline-none font-bold focus:border-[var(--navy)] focus:ring-4 focus:ring-[#1B3A57]/10 transition-all"
           />
-          <p className="text-[10px] text-slate-400 mt-1">Recebe notificações de validação (correções, assinaturas mensais).</p>
+          <p className={`${SCALE.text.meta} text-[var(--slate-dim)] mt-1`}>Recebe notificações de validação (correções, assinaturas mensais).</p>
         </div>
         <div>
-          <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mb-1">Imagem da Assinatura</p>
+          <p className="text-xs text-[var(--slate-dim)] font-bold uppercase tracking-widest mb-1">Imagem da Assinatura</p>
           <div className="flex flex-col sm:flex-row items-start gap-4">
             <div className="flex-1">
               <button
                 onClick={() => setShowSignaturePad(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-xl transition-colors w-fit"
+                className="flex items-center gap-2 px-4 py-2 bg-[var(--navy-soft)] hover:bg-[var(--orange-shadow)] text-[var(--navy)] font-bold rounded-xl transition-colors w-fit"
               >
                 <PenTool size={16} />
                 {sigDataUrl ? 'Redesenhar assinatura' : 'Desenhar assinatura'}
               </button>
-              <p className="text-[11px] text-slate-400 mt-2">Desenhe a sua assinatura digital diretamente no ecrã.</p>
+              <p className={`${SCALE.text.body} text-[var(--slate-dim)] mt-2`}>Desenhe a sua assinatura digital diretamente no ecrã.</p>
             </div>
-            <div className="w-40 h-20 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0 bg-white">
+            <div className="w-40 h-20 bg-[var(--surface)] border border-[var(--border)] rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0">
               {sigDataUrl ? (
                 <img src={sigDataUrl} alt="Assinatura" className="max-w-full max-h-full object-contain" />
               ) : (
-                <span className="text-[10px] text-slate-400 font-bold uppercase text-center">Sem assinatura</span>
+                <span className={`${SCALE.text.statLabel} text-[var(--slate-dim)] text-center`}>Sem assinatura</span>
               )}
             </div>
           </div>
         </div>
 
         {error && (
-          <div className="text-xs text-rose-700 bg-rose-50 border border-rose-100 rounded-lg p-2 font-bold">{error}</div>
+          <div className="text-xs text-[var(--tone-rose)] bg-[var(--tone-rose-bg)] border border-[var(--tone-rose-border)] rounded-lg p-2 font-bold">{error}</div>
         )}
         {message && (
-          <div className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg p-2 font-bold">{message}</div>
+          <div className="text-xs text-[var(--tone-emerald)] bg-[var(--tone-emerald-bg)] border border-[var(--tone-emerald-border)] rounded-lg p-2 font-bold">{message}</div>
         )}
 
         <button
           onClick={handleSave}
           disabled={saving}
-          className="flex items-center gap-2 px-6 py-2 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 disabled:opacity-50"
+          className="flex items-center gap-2 px-6 py-2 bg-[var(--orange)] text-[var(--navy-solid)] font-bold rounded-xl hover:bg-[var(--orange-hover)] disabled:opacity-50"
         >
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
           Guardar
         </button>
 
-        <div className="pt-6 mt-2 border-t border-slate-100 space-y-4">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+        <div className="pt-6 mt-2 border-t border-[var(--border-soft)] space-y-4">
+          <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>
             Estilo do carimbo aplicado aos documentos
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <button
               type="button"
               onClick={() => setStampStyle('mirror')}
-              className={`p-4 rounded-2xl border-2 text-left transition-all ${stampStyle === 'mirror' ? 'border-blue-600 bg-blue-50' : 'border-slate-200 bg-white hover:border-blue-300'}`}
+              className={`p-4 rounded-2xl border-2 text-left transition-all ${stampStyle === 'mirror' ? 'border-[var(--orange)] bg-[var(--navy-soft)]' : 'border-[var(--border)] bg-white hover:border-[var(--orange-hover)]'}`}
             >
-              <div className="text-[10px] font-black uppercase tracking-widest text-slate-800">Espelho · Estilo Trabalhador</div>
-              <div className="text-[10px] text-slate-500 mt-1">Mesmo layout do trabalhador, paleta azul, com assinatura e cargo</div>
+              <div className={`${SCALE.text.statLabel} text-[var(--ink)]`}>Espelho · Estilo Trabalhador</div>
+              <div className={`${SCALE.text.meta} text-[var(--slate-dim)] mt-1`}>Mesmo layout do trabalhador, paleta azul, com assinatura e cargo</div>
             </button>
             <button
               type="button"
               onClick={() => setStampStyle('classic')}
-              className={`p-4 rounded-2xl border-2 text-left transition-all ${stampStyle === 'classic' ? 'border-indigo-600 bg-indigo-50' : 'border-slate-200 bg-white hover:border-indigo-300'}`}
+              className={`p-4 rounded-2xl border-2 text-left transition-all ${stampStyle === 'classic' ? 'border-[var(--orange)] bg-[var(--navy-soft)]' : 'border-[var(--border)] bg-white hover:border-[var(--orange-hover)]'}`}
             >
-              <div className="text-[10px] font-black uppercase tracking-widest text-slate-800">Logo + Assinatura</div>
-              <div className="text-[10px] text-slate-500 mt-1">Logo da empresa + assinatura desenhada azul</div>
+              <div className={`${SCALE.text.statLabel} text-[var(--ink)]`}>Logo + Assinatura</div>
+              <div className={`${SCALE.text.meta} text-[var(--slate-dim)] mt-1`}>Logo da empresa + assinatura desenhada azul</div>
             </button>
             <button
               type="button"
               onClick={() => setStampStyle('corporate')}
-              className={`p-4 rounded-2xl border-2 text-left transition-all ${stampStyle === 'corporate' ? 'border-indigo-600 bg-indigo-50' : 'border-slate-200 bg-white hover:border-indigo-300'}`}
+              className={`p-4 rounded-2xl border-2 text-left transition-all ${stampStyle === 'corporate' ? 'border-[var(--orange)] bg-[var(--navy-soft)]' : 'border-[var(--border)] bg-white hover:border-[var(--orange-hover)]'}`}
             >
-              <div className="text-[10px] font-black uppercase tracking-widest text-slate-800">Corporate · Multinacional</div>
-              <div className="text-[10px] text-slate-500 mt-1">Marinho + dourado, selo CERTIFIED ORIGINAL, logo proeminente</div>
+              <div className={`${SCALE.text.statLabel} text-[var(--ink)]`}>Corporate · Multinacional</div>
+              <div className={`${SCALE.text.meta} text-[var(--slate-dim)] mt-1`}>Marinho + dourado, selo CERTIFIED ORIGINAL, logo proeminente</div>
             </button>
             <button
               type="button"
               onClick={() => setStampStyle('tech')}
-              className={`p-4 rounded-2xl border-2 text-left transition-all ${stampStyle === 'tech' ? 'border-indigo-600 bg-indigo-50' : 'border-slate-200 bg-white hover:border-indigo-300'}`}
+              className={`p-4 rounded-2xl border-2 text-left transition-all ${stampStyle === 'tech' ? 'border-[var(--orange)] bg-[var(--navy-soft)]' : 'border-[var(--border)] bg-white hover:border-[var(--orange-hover)]'}`}
             >
-              <div className="text-[10px] font-black uppercase tracking-widest text-slate-800">Tech Data-Grid</div>
-              <div className="text-[10px] text-slate-500 mt-1">Auditoria técnica + token (sem assinatura desenhada)</div>
+              <div className={`${SCALE.text.statLabel} text-[var(--ink)]`}>Tech Data-Grid</div>
+              <div className={`${SCALE.text.meta} text-[var(--slate-dim)] mt-1`}>Auditoria técnica + token (sem assinatura desenhada)</div>
             </button>
           </div>
 
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest pt-2">
+          <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] pt-2`}>
             Pré-visualização
           </p>
           {stampStyle === 'mirror' ? (

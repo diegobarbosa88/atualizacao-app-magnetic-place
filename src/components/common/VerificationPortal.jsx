@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { CheckCircle, ShieldCheck, XCircle, Globe, FileText, User, Clock, Download } from 'lucide-react';
+import { SCALE } from '../../styles/designTokens';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -26,7 +27,7 @@ const Header = () => (
           <span className="text-xl font-bold text-gray-900 block leading-tight">
             Magnetic Place <span className="text-blue-600 font-light">Digital</span>
           </span>
-          <span className="text-[10px] text-gray-400 uppercase tracking-widest font-semibold">Autenticidade Garantida</span>
+          <span className={`${SCALE.text.statLabel} text-gray-400`}>Autenticidade Garantida</span>
         </div>
       </div>
       <div className="hidden sm:block">
@@ -49,18 +50,18 @@ const Footer = () => (
         Este portal é o ponto único de verificação para documentos emitidos pela Magnetic Place. A validação é efetuada em tempo real contra as bases de dados centrais.
       </p>
       <div className="mt-6 pt-6 border-t border-gray-50 flex flex-wrap justify-center gap-x-8 gap-y-4">
-        <span className="text-[10px] font-bold text-gray-300 uppercase tracking-widest">Magnetic Place • Validação Digital</span>
+        <span className={`${SCALE.text.statLabel} text-gray-300`}>Magnetic Place • Validação Digital</span>
       </div>
     </div>
   </footer>
 );
 
 const DetailRow = ({ icon: Icon, label, value, mono }) => (
-  <div className="flex items-start gap-3 bg-slate-50 rounded-xl p-4">
-    <Icon size={18} className="text-indigo-600 mt-0.5 flex-shrink-0" />
+  <div className="flex items-start gap-3 bg-gray-50 rounded-xl p-4">
+    <Icon size={18} className="text-blue-600 mt-0.5 flex-shrink-0" />
     <div className="flex-1 min-w-0">
-      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{label}</p>
-      <p className={`text-sm font-bold text-slate-800 mt-0.5 break-all ${mono ? 'font-mono text-xs' : ''}`}>{value}</p>
+      <p className={`${SCALE.text.statLabel} text-gray-400`}>{label}</p>
+      <p className={`text-sm font-bold text-gray-800 mt-0.5 break-all ${mono ? 'font-mono text-xs' : ''}`}>{value}</p>
     </div>
   </div>
 );
@@ -130,7 +131,7 @@ const VerificationPortal = ({ signatureId }) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col bg-slate-50">
+      <div className="min-h-screen flex flex-col bg-gray-50">
         <Header />
         <main className="flex-grow flex flex-col items-center justify-center py-24">
           <div className="relative w-20 h-20 mb-6">
@@ -147,7 +148,7 @@ const VerificationPortal = ({ signatureId }) => {
 
   if (error) {
     return (
-      <div className="min-h-screen flex flex-col bg-slate-50">
+      <div className="min-h-screen flex flex-col bg-gray-50">
         <Header />
         <main className="flex-grow flex items-center justify-center p-6">
           <div className="bg-white rounded-3xl shadow-xl border border-rose-100 overflow-hidden max-w-md w-full">
@@ -159,8 +160,8 @@ const VerificationPortal = ({ signatureId }) => {
               <p className="text-rose-100 text-sm mt-1">Assinatura inválida ou não encontrada</p>
             </div>
             <div className="p-6 text-center">
-              <p className="text-sm text-slate-500">{error}</p>
-              <p className="text-[10px] text-slate-400 mt-3 font-mono">ID: {signatureId}</p>
+              <p className="text-sm text-gray-500">{error}</p>
+              <p className={`${SCALE.text.meta} text-gray-400 mt-3 font-mono`}>ID: {signatureId}</p>
               <button
                 onClick={() => window.location.reload()}
                 className="mt-5 text-xs font-bold text-blue-600 hover:text-blue-700 uppercase tracking-widest"
@@ -183,7 +184,7 @@ const VerificationPortal = ({ signatureId }) => {
   const docType = source === 'client' ? 'Aprovação de Cliente' : 'Documento de Trabalhador';
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50">
+    <div className="min-h-screen flex flex-col bg-gray-50">
       <Header />
 
       <main className="flex-grow container mx-auto px-4 py-12 max-w-2xl space-y-6">
@@ -211,26 +212,26 @@ const VerificationPortal = ({ signatureId }) => {
           <div className="p-8">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xs font-bold text-gray-400 uppercase tracking-[0.2em]">Detalhes da Emissão</h2>
-              <span className="px-2 py-1 bg-blue-50 text-blue-700 text-[10px] font-bold rounded uppercase">Original</span>
+              <span className={`px-2 py-1 bg-blue-50 text-blue-700 rounded ${SCALE.text.badge}`}>Original</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-12">
               <div>
-                <p className="text-[11px] text-gray-400 font-bold uppercase mb-1">Tipo de Documento</p>
+                <p className={`${SCALE.text.statLabel} text-gray-400 mb-1`}>Tipo de Documento</p>
                 <p className="text-gray-800 font-semibold">{docType}</p>
               </div>
               <div>
-                <p className="text-[11px] text-gray-400 font-bold uppercase mb-1">ID de Verificação</p>
+                <p className={`${SCALE.text.statLabel} text-gray-400 mb-1`}>ID de Verificação</p>
                 <p className="font-mono text-gray-800 font-semibold text-xs break-all">{id}</p>
               </div>
               {titular && (
                 <div>
-                  <p className="text-[11px] text-gray-400 font-bold uppercase mb-1">Titular</p>
+                  <p className={`${SCALE.text.statLabel} text-gray-400 mb-1`}>Titular</p>
                   <p className="text-gray-800 font-semibold uppercase">{titular}</p>
                 </div>
               )}
               <div>
-                <p className="text-[11px] text-gray-400 font-bold uppercase mb-1">Data de Emissão</p>
+                <p className={`${SCALE.text.statLabel} text-gray-400 mb-1`}>Data de Emissão</p>
                 <p className="text-gray-800 font-semibold">{formatDateTime(datetime)}</p>
               </div>
             </div>
@@ -255,7 +256,7 @@ const VerificationPortal = ({ signatureId }) => {
           {/* Assinatura visual */}
           {signature && (
             <div className="mt-6 pt-5 border-t border-gray-50">
-              <p className="text-[9px] font-bold text-gray-400 uppercase mb-2">Assinatura Manuscrita</p>
+              <p className={`${SCALE.text.statLabel} text-gray-400 mb-2`}>Assinatura Manuscrita</p>
               <div className="bg-gray-50 rounded-lg p-4 flex items-center justify-center border border-gray-100">
                 <img src={signature} alt="Assinatura" className="max-h-28 object-contain" />
               </div>
@@ -265,8 +266,8 @@ const VerificationPortal = ({ signatureId }) => {
           {/* Hash de referência */}
           <div className="mt-4">
             <div className="bg-gray-50 rounded-lg p-3">
-              <p className="text-[9px] font-bold text-gray-400 uppercase mb-2">Referência de Integridade (ID)</p>
-              <p className="text-[10px] font-mono text-gray-500 break-all leading-relaxed">
+              <p className={`${SCALE.text.statLabel} text-gray-400 mb-2`}>Referência de Integridade (ID)</p>
+              <p className={`${SCALE.text.meta} font-mono text-gray-500 break-all leading-relaxed`}>
                 {id}...[VERIFIED]
               </p>
             </div>

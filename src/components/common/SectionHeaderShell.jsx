@@ -17,7 +17,7 @@ export function StatChip({ label, value, dotColor, active, onClick }) {
   return (
     <Tag
       onClick={onClick}
-      className={`relative flex items-center gap-1.5 text-[11.5px] font-semibold whitespace-nowrap transition-colors ${
+      className={`relative flex items-center gap-1.5 ${SCALE.text.body} whitespace-nowrap transition-colors ${
         active ? 'text-[var(--orange)]' : 'text-slate-500 hover:text-slate-700'
       }`}
     >
@@ -65,14 +65,14 @@ export default function SectionHeaderShell({
                   key={id}
                   onClick={() => onTabChange(id)}
                   style={{ fontFamily: 'var(--mono)' }}
-                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-[7px] text-[9.5px] font-bold uppercase tracking-[0.04em] whitespace-nowrap transition-all ${
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-[7px] ${SCALE.text.badge} whitespace-nowrap transition-all ${
                     isActive ? 'bg-white text-[var(--navy)] shadow-sm' : 'text-slate-400 hover:text-slate-600'
                   }`}
                 >
                   {Icon && <Icon size={11} />} {label}
                   {!!badge && (
                     <span
-                      className="text-white text-[8.5px] font-extrabold px-1.5 py-px rounded-full leading-none"
+                      className={`text-white ${SCALE.text.statLabel} px-1.5 py-px rounded-full leading-none`}
                       style={{ backgroundColor: badgeColor === 'amber' ? FT.badgeWarn : FT.badgeBad }}
                     >
                       {badge}

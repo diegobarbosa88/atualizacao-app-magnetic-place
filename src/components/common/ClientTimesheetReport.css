@@ -1,7 +1,15 @@
-/* --- FUNDO DA TELA E ESTILO DA PÁGINA A4 --- */
-body {
-  background-color: #f1f5f9;
-}
+/* --- ESTILO DA PÁGINA A4 --- */
+/* Havia aqui um `body { background-color: #f1f5f9 }` sem escopo: como este
+   CSS é importado como stylesheet normal (não `?inline`), a regra aplicava-se
+   ao <body> real da app inteira, não só a este componente, e persistia depois
+   do componente desmontar (a <style> injetada pelo bundler fica no <head>).
+   Removida sem substituto porque nunca teve efeito visível: o wrapper deste
+   componente (`scaleWrapperRef`, ver ClientTimesheetReport.jsx) já tem
+   `bg-white` próprio e cobre 100% do ecrã em todos os modos — standalone e
+   embutido — logo o cinzento do body nunca chegava a aparecer por baixo dele.
+   Confirmado ao vivo: getComputedStyle(document.body).backgroundColor ficava
+   poluído com #f1f5f9 mesmo depois de sair do relatório e recarregar a
+   página. */
 
 .a4-paper {
   width: 794px;

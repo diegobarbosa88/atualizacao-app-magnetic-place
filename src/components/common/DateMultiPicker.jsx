@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { toISODateLocal } from '../../utils/dateUtils';
+import { SCALE } from '../../styles/designTokens';
 
 const DAY_LABELS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 
@@ -59,16 +60,16 @@ export default function DateMultiPicker({ selected = [], onChange }) {
   const clearAll = () => onChange([]);
 
   return (
-    <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
+    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 space-y-3">
       {/* Header navegação */}
       <div className="flex items-center justify-between">
-        <button onClick={prevMonth} className="p-1.5 rounded-xl hover:bg-slate-200 text-slate-500 transition-colors">
+        <button onClick={prevMonth} className="p-1.5 rounded-xl hover:bg-[var(--border-soft)] text-[var(--slate-dim)] transition-colors">
           <ChevronLeft size={16} />
         </button>
-        <span className="text-sm font-black text-slate-700 uppercase tracking-wider">
+        <span className="text-sm font-black text-[var(--ink-soft)] uppercase tracking-wider">
           {MONTH_NAMES[viewMonth]} {viewYear}
         </span>
-        <button onClick={nextMonth} className="p-1.5 rounded-xl hover:bg-slate-200 text-slate-500 transition-colors">
+        <button onClick={nextMonth} className="p-1.5 rounded-xl hover:bg-[var(--border-soft)] text-[var(--slate-dim)] transition-colors">
           <ChevronRight size={16} />
         </button>
       </div>
@@ -76,7 +77,7 @@ export default function DateMultiPicker({ selected = [], onChange }) {
       {/* Labels dos dias da semana */}
       <div className="grid grid-cols-7 gap-1">
         {DAY_LABELS.map(l => (
-          <div key={l} className="text-center text-[9px] font-black text-slate-400 uppercase py-1">{l}</div>
+          <div key={l} className={`text-center ${SCALE.text.statLabel} text-[var(--slate-dim)] py-1`}>{l}</div>
         ))}
       </div>
 
@@ -92,8 +93,8 @@ export default function DateMultiPicker({ selected = [], onChange }) {
               onClick={() => toggleDay(day)}
               className={`aspect-square rounded-xl text-xs font-black transition-all active:scale-90 ${
                 isSelected
-                  ? 'bg-indigo-600 text-white shadow-md'
-                  : 'bg-white text-slate-700 hover:bg-indigo-50 border border-slate-100'
+                  ? 'bg-[var(--orange)] text-[var(--navy-solid)] shadow-md'
+                  : 'bg-white text-[var(--ink-soft)] hover:bg-[var(--navy-soft)] border border-[var(--border-soft)]'
               }`}
             >
               {day}
@@ -105,16 +106,16 @@ export default function DateMultiPicker({ selected = [], onChange }) {
       {/* Ações rápidas */}
       <div className="flex items-center justify-between pt-1">
         <div className="flex gap-2">
-          <button onClick={selectAll} className="text-[10px] font-black text-indigo-600 hover:text-indigo-800 uppercase tracking-widest transition-colors">
+          <button onClick={selectAll} className={`${SCALE.text.badge} text-[var(--navy)] hover:text-[var(--navy-deep)] transition-colors`}>
             Selec. mês
           </button>
           {selected.length > 0 && (
-            <button onClick={clearAll} className="text-[10px] font-black text-red-500 hover:text-red-700 uppercase tracking-widest transition-colors flex items-center gap-1">
+            <button onClick={clearAll} className={`${SCALE.text.badge} text-[var(--tone-rose)] hover:opacity-70 transition-colors flex items-center gap-1`}>
               <X size={10} /> Limpar
             </button>
           )}
         </div>
-        <span className="text-[10px] font-bold text-slate-400">
+        <span className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>
           {selected.length} {selected.length === 1 ? 'dia' : 'dias'}
         </span>
       </div>
