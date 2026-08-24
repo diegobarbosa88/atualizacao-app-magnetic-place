@@ -493,9 +493,13 @@ const CorrectionsInbox = ({ initialCorrectionId, onCorrectionNavigated, forcedSo
       {/* Status filter tabs */}
       <div className="flex overflow-x-auto gap-1 mb-6 bg-[var(--surface-dim)] p-1 rounded-2xl w-full">
         {[
-          ['open',     AlertCircle, 'text-amber-500',  totalOpenCount],
-          ['applied',  CheckCircle, 'text-emerald-500', counts.applied],
-          ['rejected', XCircle,     'text-rose-500',    counts.rejected],
+          // var(--tone-*), não valores estáticos: a pílula ativa é bg-white, que inverte em
+          // dark mode via a regra-ponte de App.css (.dark .bg-white, com !important) — logo
+          // o texto tem de inverter também. Reutiliza os tokens de tom já usados nos cartões
+          // de correção abaixo, para não criar um segundo vocabulário de cor.
+          ['open',     AlertCircle, 'text-[var(--tone-amber)]',  totalOpenCount],
+          ['applied',  CheckCircle, 'text-[var(--tone-emerald)]', counts.applied],
+          ['rejected', XCircle,     'text-[var(--tone-rose)]',    counts.rejected],
           ['all',      LayoutList,  'text-[var(--slate-dim)]',   null],
         ].map(([k, Icon, iconColor, count]) => (
           <button key={k} onClick={() => setFilter(k)} className={`flex-shrink-0 relative flex items-center justify-center gap-1 py-2 rounded-xl transition-all ${filter === k ? 'bg-white shadow-sm' : 'hover:text-[var(--ink-soft)]'}`}>
