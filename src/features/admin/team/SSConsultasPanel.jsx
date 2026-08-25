@@ -89,10 +89,10 @@ function ComprovativosSection() {
             <tbody>
               {estado.dados.map((row, i) => (
                 <tr key={i} className="odd:bg-white even:bg-gray-50">
-                  <td className="px-3 py-1.5 border border-gray-200 font-mono">{row['numero-documento'] ?? row.numeroDocumento ?? '—'}</td>
-                  <td className="px-3 py-1.5 border border-gray-200">{row['data-pagamento'] ?? row.dataPagamento ?? '—'}</td>
-                  <td className="px-3 py-1.5 border border-gray-200">{row['natureza-pagamento'] ?? row.naturezaPagamento ?? '—'}</td>
-                  <td className="px-3 py-1.5 border border-gray-200 text-right">{row.valor != null ? Number(row.valor).toFixed(2) : '—'}</td>
+                  <td className="px-3 py-1.5 border border-gray-200 font-mono">{row.numeroDocumentoPagamento ?? '—'}</td>
+                  <td className="px-3 py-1.5 border border-gray-200">{row.dataPagamento ?? '—'}</td>
+                  <td className="px-3 py-1.5 border border-gray-200">{row.mensagemNaturezaPagamento ?? '—'}</td>
+                  <td className="px-3 py-1.5 border border-gray-200 text-right">{row.valorPago != null ? Number(row.valorPago).toFixed(2) : '—'}</td>
                 </tr>
               ))}
             </tbody>
@@ -101,6 +101,21 @@ function ComprovativosSection() {
       )}
     </div>
   );
+}
+
+// Reduz o objeto aninhado `referenciaDocumentoPagamento` (multibanco / tesouraria /
+// transferência bancária / débito direto) a uma única linha legível — prioriza o
+// meio de pagamento mais informativo disponível.
+function formatReferencia(ref) {
+  if (!ref) return '—';
+  const mb = ref.pagamentoMultibanco;
+  if (mb?.referenciaMultibanco) return `MB ${mb.entidadeMultibanco ?? ''} ${mb.referenciaMultibanco}`.trim();
+  const tb = ref.pagamentoTransferenciaBancaria;
+  if (tb?.Iban) return `IBAN ${tb.Iban}`;
+  if (ref.pagamentoTesouraria === 'S') return 'Tesouraria';
+  const dd = ref.pagamentoDebitoDireto;
+  if (dd?.numeroAutorizacao) return `Débito Direto (ADC ${dd.numeroAutorizacao})`;
+  return '—';
 }
 
 // ── Documentos de Pagamento ──────────────────────────────────────────────────
@@ -151,10 +166,10 @@ function DocumentosPagamentoSection() {
                 <tr key={i} className="odd:bg-white even:bg-gray-50">
                   <td className="px-3 py-1.5 border border-gray-200">{row.tipo ?? '—'}</td>
                   <td className="px-3 py-1.5 border border-gray-200">{row.subtipo ?? '—'}</td>
-                  <td className="px-3 py-1.5 border border-gray-200 font-mono">{row['numero-documento'] ?? row.numeroDocumento ?? '—'}</td>
-                  <td className="px-3 py-1.5 border border-gray-200">{row['data-validade'] ?? row.dataValidade ?? '—'}</td>
+                  <td className="px-3 py-1.5 border border-gray-200 font-mono">{row.numeroDocumentoPagamento ?? '—'}</td>
+                  <td className="px-3 py-1.5 border border-gray-200">{row.dataValidade ?? '—'}</td>
                   <td className="px-3 py-1.5 border border-gray-200 text-right">{row.valor != null ? Number(row.valor).toFixed(2) : '—'}</td>
-                  <td className="px-3 py-1.5 border border-gray-200 font-mono">{row.referencia ?? '—'}</td>
+                  <td className="px-3 py-1.5 border border-gray-200 font-mono">{formatReferencia(row.referenciaDocumentoPagamento)}</td>
                 </tr>
               ))}
             </tbody>

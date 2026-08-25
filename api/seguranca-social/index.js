@@ -91,8 +91,11 @@ export default async function handler(req, res) {
   if (req.method === 'GET' && action === 'comprovativos') {
     if (!credenciaisConfiguradas()) return res.status(400).json({ erro: 'Token PSI não configurado.' });
     const ano = req.query?.ano || new Date().getFullYear();
-    const nissEmpresa = process.env.SS_NISS_EMPRESA;
-    const url = `${CI_BASE()}/comprovativos-pagamento/${ano}?niss=${nissEmpresa}`;
+    // Sem parâmetro de identificação da própria empresa — a identidade vem do
+    // token Bearer. `niss-representado` só serve para consultar em nome de
+    // terceiro (não usado aqui). Confirmado no OpenAPI oficial da PSI
+    // (obterComprovativosPagamento: GET /ci/comprovativos-pagamento/{ano-pagamento}).
+    const url = `${CI_BASE()}/comprovativos-pagamento/${ano}`;
     try {
       const r = await callSSRestGetUrl(url);
       if (r.semRegistos) return res.status(200).json({ semRegistos: true, dados: [] });
@@ -104,8 +107,10 @@ export default async function handler(req, res) {
 
   if (req.method === 'GET' && action === 'documentos-pagamento') {
     if (!credenciaisConfiguradas()) return res.status(400).json({ erro: 'Token PSI não configurado.' });
-    const nissEmpresa = process.env.SS_NISS_EMPRESA;
-    const url = `${CI_BASE()}/documento-pagamento/consulta?niss=${nissEmpresa}`;
+    // Idem: sem parâmetro de identificação da própria empresa (OpenAPI oficial
+    // da PSI: GET /ci/documento-pagamento/consulta, só aceita
+    // ?niss-representado= opcional, para representação de terceiro).
+    const url = `${CI_BASE()}/documento-pagamento/consulta`;
     try {
       const r = await callSSRestGetUrl(url);
       if (r.semRegistos) return res.status(200).json({ semRegistos: true, dados: [] });
