@@ -198,6 +198,37 @@ export default async function handler(req, res) {
     } catch (e) { return res.status(502).json({ erro: e.message }); }
   }
 
+  // Proxy do PDF da declaração de Situação Contributiva. A SS devolve um
+  // `caminho` já qualificado (https://app.seg-social.pt/ptss/fraw/download/...)
+  // mas exige o mesmo Bearer da API — um <a href> direto do browser não tem
+  // como enviar esse header, e o download falha em silêncio ("erro ao
+  // carregar o documento PDF"). O browser autentica-se à nossa app (token de
+  // sessão), a nossa app autentica-se à SS (token PSI) e devolve o binário.
+  if (req.method === 'GET' && action === 'situacao-contributiva-pdf') {
+    if (!credenciaisConfiguradas()) return res.status(400).json({ erro: 'Token PSI não configurado.' });
+    const caminho = req.query?.caminho;
+    if (!caminho) return res.status(400).json({ erro: 'Parâmetro "caminho" obrigatório.' });
+    let urlValida;
+    try { urlValida = new URL(caminho); } catch { return res.status(400).json({ erro: 'URL de documento inválido.' }); }
+    // Só reencaminha para hosts da própria Segurança Social — nunca um proxy aberto.
+    if (!/(^|\.)seg-social\.pt$/i.test(urlValida.hostname)) {
+      return res.status(400).json({ erro: 'URL de documento fora do domínio da Segurança Social.' });
+    }
+    try {
+      const r = await fetch(urlValida.toString(), {
+        headers: { 'Authorization': `Bearer ${process.env.SS_PSI_TOKEN}` },
+      });
+      if (r.status === 401 || r.status === 403) {
+        return res.status(502).json({ erro: `Segurança Social recusou o pedido do documento (HTTP ${r.status}).` });
+      }
+      if (!r.ok) return res.status(502).json({ erro: `Erro ao obter documento (HTTP ${r.status}).` });
+      const buffer = Buffer.from(await r.arrayBuffer());
+      res.setHeader('Content-Type', r.headers.get('content-type') || 'application/pdf');
+      res.setHeader('Content-Disposition', 'inline; filename="situacao-contributiva.pdf"');
+      return res.status(200).send(buffer);
+    } catch (e) { return res.status(502).json({ erro: e.message }); }
+  }
+
   // Situação Contributiva (POST síncrono, sem efeitos colaterais)
   if (action === 'situacao-contributiva') {
     if (!credenciaisConfiguradas()) return res.status(400).json({ erro: 'Token PSI não configurado.' });

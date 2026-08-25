@@ -281,6 +281,32 @@ function RemuneracoesSection() {
 function SituacaoContributivaSection() {
   const [nissSolicitado, setNissSolicitado] = useState('');
   const [estado, setEstado] = useState(null); // null | { loading } | { caminho, regularizada, ambiente } | { erro }
+  const [aAbrirPdf, setAAbrirPdf] = useState(false);
+
+  // O `caminho` devolvido pela SS exige o mesmo Bearer da API — um <a href>
+  // direto do browser não consegue autenticar-se lá (daí o PDF "vazio" antes
+  // desta correção). Descarrega-se o binário através da própria app (que já
+  // sabe autenticar-se aos dois lados) e abre-se como blob local.
+  async function abrirDeclaracao() {
+    if (!estado?.caminho) return;
+    setAAbrirPdf(true);
+    try {
+      const r = await authFetch(`/api/seguranca-social?action=situacao-contributiva-pdf&caminho=${encodeURIComponent(estado.caminho)}`);
+      if (!r.ok) {
+        const json = await r.json().catch(() => ({}));
+        alert(json.erro || `Erro ao obter o documento (HTTP ${r.status}).`);
+        return;
+      }
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (e) {
+      alert(`Erro de ligação: ${e.message}`);
+    } finally {
+      setAAbrirPdf(false);
+    }
+  }
 
   async function consultar() {
     setEstado({ loading: true });
@@ -337,9 +363,14 @@ function SituacaoContributivaSection() {
             {estado.regularizada ? 'Regularizada' : 'Não regularizada'}
           </span>
           {estado.caminho && (
-            <a href={estado.caminho} target="_blank" rel="noreferrer" className="text-sm underline" style={{ color: 'var(--navy)' }}>
-              Ver declaração (PDF)
-            </a>
+            <button
+              onClick={abrirDeclaracao}
+              disabled={aAbrirPdf}
+              className="text-sm underline disabled:opacity-50"
+              style={{ color: 'var(--navy)' }}
+            >
+              {aAbrirPdf ? 'A abrir…' : 'Ver declaração (PDF)'}
+            </button>
           )}
         </div>
       )}
