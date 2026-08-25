@@ -7,10 +7,23 @@ import {
   buildObterComunicacoesSoap,
   parseObterComunicacoesResponse,
   callSS,
+  callSSSoapUrl,
   callSSRestGetUrl,
   callSSRestPostUrl,
   CI_BASE,
   REMUN_URL,
+  SITUACAO_CONTRIBUTIVA_URL,
+  EEAOC_BASE,
+  CONTRATOS_URL,
+  TRABALHADORES_SS_URL,
+  buildPesquisaContratosSoap,
+  parsePesquisaContratosResponse,
+  buildGetDadosContratosSoap,
+  parseGetDadosContratosResponse,
+  buildPesquisaTrabalhadoresSoap,
+  parsePesquisaTrabalhadoresResponse,
+  buildGetDadosTrabalhadoresSoap,
+  parseGetDadosTrabalhadoresResponse,
 } from './_soapUtils.js';
 import { requireAuth } from '../_authUtils.js';
 
@@ -120,6 +133,21 @@ export default async function handler(req, res) {
     } catch (e) { return res.status(502).json({ erro: e.message }); }
   }
 
+  if (req.method === 'GET' && action === 'avisos') {
+    if (!credenciaisConfiguradas()) return res.status(400).json({ erro: 'Token PSI não configurado.' });
+    // GET /ptss/rest/eeaoc/avisos/{niss-ee} — niss da entidade empregadora no
+    // path, não em query. Sigla EEAOC nunca é definida no PDF original.
+    const nissEmpresa = process.env.SS_NISS_EMPRESA;
+    const url = `${EEAOC_BASE()}/avisos/${nissEmpresa}`;
+    try {
+      const r = await callSSRestGetUrl(url);
+      if (r.semRegistos) return res.status(200).json({ semAvisos: true, avisos: [], ambiente: getAmbiente() });
+      if (!r.ok) return res.status(422).json({ erro: r.erro });
+      const avisos = Array.isArray(r.json) ? r.json : (r.json?.resultado || []);
+      return res.status(200).json({ avisos, semAvisos: avisos.length === 0, ambiente: getAmbiente() });
+    } catch (e) { return res.status(502).json({ erro: e.message }); }
+  }
+
   if (req.method === 'GET' && action === 'comunicacoes-pendentes') {
     if (!credenciaisConfiguradas()) return res.status(400).json({ erro: 'Token PSI não configurado.' });
     const nissParam = req.query?.niss;
@@ -167,6 +195,108 @@ export default async function handler(req, res) {
       if (!r.ok) return res.status(422).json({ erro: r.erro });
       const dados = Array.isArray(r.json) ? r.json : (r.json?.remuneracoes || r.json?.resultado || []);
       return res.status(200).json({ semRegistos: dados.length === 0, dados, ambiente: getAmbiente() });
+    } catch (e) { return res.status(502).json({ erro: e.message }); }
+  }
+
+  // Situação Contributiva (POST síncrono, sem efeitos colaterais)
+  if (action === 'situacao-contributiva') {
+    if (!credenciaisConfiguradas()) return res.status(400).json({ erro: 'Token PSI não configurado.' });
+    const nissEmpresa = process.env.SS_NISS_EMPRESA;
+    const { nissSolicitante, nissSolicitado } = req.body || {};
+    const bodyPSI = {
+      'nissSolicitante': Number(nissSolicitante || nissEmpresa),
+      'nissSolicitado':  Number(nissSolicitado  || nissEmpresa),
+    };
+    try {
+      const r = await callSSRestPostUrl(SITUACAO_CONTRIBUTIVA_URL(), bodyPSI);
+      if (!r.ok) return res.status(422).json({ erro: r.erro });
+      return res.status(200).json({
+        caminho: r.json?.caminho ?? null,
+        situacaoContributivaRegularizada: r.json?.situacaoContributivaRegularizada ?? null,
+        ambiente: getAmbiente(),
+      });
+    } catch (e) { return res.status(502).json({ erro: e.message }); }
+  }
+
+  // Contratos — passo 1: pesquisar (devolve chave para consultar depois)
+  if (action === 'pesquisar-contratos') {
+    if (!credenciaisConfiguradas()) return res.status(400).json({ erro: 'Token PSI não configurado.' });
+    const { dataInicio, dataFim, nissTrabalhadores = [] } = req.body || {};
+    if (!dataInicio || !dataFim) return res.status(400).json({ erro: 'Campos "dataInicio" e "dataFim" obrigatórios.' });
+    const soapBody = buildPesquisaContratosSoap({ dataInicio, dataFim, nissTrabalhadores });
+    try {
+      const { xmlResposta } = await callSSSoapUrl(
+        CONTRATOS_URL(),
+        soapBody,
+        // Inferido por analogia com cessarVinculo/ObterComunicacoes — não consta explicitamente no PDF.
+        'http://interfaces.webservice.contrato.segsocial.pt#pesquisaContratos',
+      );
+      const resultado = parsePesquisaContratosResponse(xmlResposta);
+      if (!resultado.sucesso) return res.status(422).json({ erro: resultado.mensagemErro });
+      return res.status(200).json({ chave: resultado.chave, ambiente: getAmbiente() });
+    } catch (e) { return res.status(502).json({ erro: e.message }); }
+  }
+
+  // Contratos — passo 2: consultar por chave (polling)
+  if (action === 'consultar-contratos') {
+    if (!credenciaisConfiguradas()) return res.status(400).json({ erro: 'Token PSI não configurado.' });
+    const { chave } = req.body || {};
+    if (!chave) return res.status(400).json({ erro: 'Campo "chave" obrigatório.' });
+    const soapBody = buildGetDadosContratosSoap({ chave });
+    try {
+      const { xmlResposta } = await callSSSoapUrl(
+        CONTRATOS_URL(),
+        soapBody,
+        // Inferido por analogia — não consta explicitamente no PDF.
+        'http://interfaces.webservice.contrato.segsocial.pt#getDadosContratos',
+      );
+      const resultado = parseGetDadosContratosResponse(xmlResposta);
+      if (resultado.estado === 'erro' || resultado.estado === 'expirado') {
+        return res.status(422).json({ estado: resultado.estado, erro: resultado.erro });
+      }
+      return res.status(200).json({ estado: resultado.estado, contratos: resultado.contratos || [], ambiente: getAmbiente() });
+    } catch (e) { return res.status(502).json({ erro: e.message }); }
+  }
+
+  // Trabalhadores (qualificações vinculadas) — passo 1: pesquisar
+  if (action === 'pesquisar-trabalhadores-ss') {
+    if (!credenciaisConfiguradas()) return res.status(400).json({ erro: 'Token PSI não configurado.' });
+    const { dataInicio, dataFim, niss } = req.body || {};
+    if (!dataInicio || !dataFim) return res.status(400).json({ erro: 'Campos "dataInicio" e "dataFim" obrigatórios.' });
+    // Validação barata do lado da app: janela máxima de 90 dias (a PSI rejeitaria de qualquer forma).
+    const dias = (new Date(dataFim) - new Date(dataInicio)) / 86400000;
+    if (dias < 0) return res.status(400).json({ erro: 'A data fim não pode ser anterior à data início.' });
+    if (dias > 90) return res.status(400).json({ erro: 'O intervalo entre data início e data fim não pode exceder 90 dias.' });
+    const soapBody = buildPesquisaTrabalhadoresSoap({ dataInicio, dataFim, niss });
+    try {
+      const { xmlResposta } = await callSSSoapUrl(
+        TRABALHADORES_SS_URL(),
+        soapBody,
+        // SOAPAction não consta do documento. WSDL exige WS-Addressing
+        // (wsaw:UsingAddressing required="true") — enviamos SOAPAction vazio
+        // sem cabeçalhos wsa:*; ver aviso completo em _soapUtils.js. Confirmar
+        // contra o ambiente de Qualidade antes de confiar neste serviço.
+        '',
+      );
+      const resultado = parsePesquisaTrabalhadoresResponse(xmlResposta);
+      if (!resultado.sucesso) return res.status(422).json({ erro: resultado.mensagemErro });
+      return res.status(200).json({ chave: resultado.chave, ambiente: getAmbiente() });
+    } catch (e) { return res.status(502).json({ erro: e.message }); }
+  }
+
+  // Trabalhadores (qualificações vinculadas) — passo 2: consultar por chave (polling)
+  if (action === 'consultar-trabalhadores-ss') {
+    if (!credenciaisConfiguradas()) return res.status(400).json({ erro: 'Token PSI não configurado.' });
+    const { chave } = req.body || {};
+    if (!chave) return res.status(400).json({ erro: 'Campo "chave" obrigatório.' });
+    const soapBody = buildGetDadosTrabalhadoresSoap({ chave });
+    try {
+      const { xmlResposta } = await callSSSoapUrl(TRABALHADORES_SS_URL(), soapBody, '');
+      const resultado = parseGetDadosTrabalhadoresResponse(xmlResposta);
+      if (resultado.estado === 'erro' || resultado.estado === 'expirado') {
+        return res.status(422).json({ estado: resultado.estado, erro: resultado.erro });
+      }
+      return res.status(200).json({ estado: resultado.estado, trabalhadores: resultado.trabalhadores || [], ambiente: getAmbiente() });
     } catch (e) { return res.status(502).json({ erro: e.message }); }
   }
 

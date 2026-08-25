@@ -34,6 +34,37 @@ const REMUN_URL = () => isProd()
   ? 'https://app.seg-social.pt/ptss/rest/qlf/tco/remuneracoes/permanentes/trabalhadores'
   : 'https://extwww.seg-social.pt/ptss/rest/qlf/tco/remuneracoes/permanentes/trabalhadores';
 
+// Situação Contributiva — REST/JSON POST síncrono, path próprio (não é filho de CI_BASE)
+const SITUACAO_CONTRIBUTIVA_URL = () => isProd()
+  ? 'https://app.seg-social.pt/ptss/rest/ascd/declaracao/situacao-contributiva'
+  : 'https://extwww.seg-social.pt/ptss/rest/ascd/declaracao/situacao-contributiva';
+
+// Avisos (EEAOC) — REST/JSON GET síncrono. A sigla nunca é definida no PDF
+// original — não inventar o significado, tratar só como "Avisos" na UI.
+// Path irmão de CI (/ptss/rest/eeaoc/...), não descende de CI_BASE().
+const EEAOC_BASE = () => isProd()
+  ? 'https://app.seg-social.pt/ptss/rest/eeaoc'
+  : 'https://extwww.seg-social.pt/ptss/rest/eeaoc';
+
+// Contratos — SOAP, dois passos (pesquisaContratos + getDadosContratos), mesmo
+// endpoint para as duas operações. O PDF só confirma este endereço
+// explicitamente para pesquisaContratos; para getDadosContratos indica um
+// endereço preapp.seg-social.pt que não bate com o padrão do resto do
+// projeto — é quase de certeza resíduo do ambiente interno do fornecedor.
+// Usa-se o mesmo endereço para as duas operações; confirmar contra o
+// ambiente de Qualidade real antes de dar como certo.
+const CONTRATOS_URL = () => isProd()
+  ? 'https://app.seg-social.pt/ws/contrato/v1/contratos'
+  : 'https://extservices.seg-social.pt/ws/contrato/v1/contratos';
+
+// Trabalhadores (qualificações vinculadas) — SOAP, dois passos
+// (getQualificacoesTrabalhadoresVinculadosEE + getDados). Namespace e host
+// diferentes de todos os outros serviços SOAP do projeto — ver comentário
+// junto de buildPesquisaTrabalhadoresSoap sobre a incerteza de WS-Addressing.
+const TRABALHADORES_SS_URL = () => isProd()
+  ? 'https://app.seg-social.pt/ws/idq/WsIdqQualificacoesTrabalhadoresVinculadosEE_Request'
+  : 'https://extservices.seg-social.pt/ws/idq/WsIdqQualificacoesTrabalhadoresVinculadosEE_Request';
+
 // ── Consulta CI — GET genérico ───────────────────────────────────────────────
 
 /**
@@ -94,7 +125,7 @@ export async function callSSRestPostUrl(url, body) {
   return { httpStatus: res.status, ok: false, erro, json };
 }
 
-export { CI_BASE, REMUN_URL };
+export { CI_BASE, REMUN_URL, SITUACAO_CONTRIBUTIVA_URL, EEAOC_BASE, CONTRATOS_URL, TRABALHADORES_SS_URL };
 
 // ── Mapeamentos ──────────────────────────────────────────────────────────────
 
@@ -145,6 +176,14 @@ function escapeXml(str) {
 function fmtDate(val) {
   if (!val) return '';
   return String(val).split('T')[0];
+}
+
+// Formata para YYYY-MM-DDTHH:MM:SSZ (datetime ISO, exigido pelo serviço de
+// Trabalhadores/qualificações — usa meia-noite ou fim-do-dia consoante o papel).
+function fmtDateTime(val, endOfDay = false) {
+  if (!val) return '';
+  const datePart = String(val).split('T')[0];
+  return endOfDay ? `${datePart}T23:59:59Z` : `${datePart}T00:00:00Z`;
 }
 
 function getBearerToken() {
@@ -396,6 +435,306 @@ export function parseObterComunicacoesResponse(xmlStr) {
   }
 
   return { sucesso: true, comunicacoes };
+}
+
+// ── Consultar Contratos — SOAP, dois passos (pesquisaContratos + getDadosContratos) ──
+//
+// Passo 1: submete o pedido (período + trabalhadores opcional), devolve uma
+// <chave> para consultar depois. Passo 2: consulta o resultado por chave —
+// pode ainda estar "a processar" (repetir), ter expirado (repetir passo 1),
+// ou vir pronto. Mesmo endpoint para as duas operações (ver CONTRATOS_URL).
+// Namespace: xmlns:vo="http://vo.webservice.contrato.segsocial.pt" (igual ao
+// de cessarVinculo/obterComunicacoes).
+
+/**
+ * Constrói o envelope SOAP de pesquisaContratos.
+ * data-inicio/data-fim obrigatórios (data-fim >= data-inicio); nissTrabalhadores
+ * opcional — sem ele, a PSI devolve contratos de todos os trabalhadores da
+ * empresa no período (inferido do exemplo do PDF, não afirmado em texto).
+ */
+export function buildPesquisaContratosSoap({ dataInicio, dataFim, nissTrabalhadores = [] }) {
+  const trabalhadoresXml = nissTrabalhadores.length
+    ? `\n      <trabalhadores>\n${nissTrabalhadores.map(n => `        <niss-trabalhador>${escapeXml(n)}</niss-trabalhador>`).join('\n')}\n      </trabalhadores>`
+    : '';
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope
+  xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+  xmlns:vo="http://vo.webservice.contrato.segsocial.pt">
+  <soapenv:Header/>
+  <soapenv:Body>
+    <vo:pesquisaContratos>
+      <data-inicio>${fmtDate(dataInicio)}</data-inicio>
+      <data-fim>${fmtDate(dataFim)}</data-fim>${trabalhadoresXml}
+    </vo:pesquisaContratos>
+  </soapenv:Body>
+</soapenv:Envelope>`;
+}
+
+// Extrai a <chave> da resposta de pesquisaContratos.
+export function parsePesquisaContratosResponse(xmlStr) {
+  if (!xmlStr) return { sucesso: false, mensagemErro: 'Resposta vazia da Segurança Social.' };
+
+  const chaveMatch = xmlStr.match(/<(?:[^:>]+:)?chave[^>]*>([^<]+)<\/(?:[^:>]+:)?chave>/i);
+  if (chaveMatch) return { sucesso: true, chave: chaveMatch[1].trim() };
+
+  const mensagemMatch = xmlStr.match(/<(?:[^:>]+:)?mensagens-erro[^>]*>([^<]*)<\/(?:[^:>]+:)?mensagens-erro>/i)
+    || xmlStr.match(/<faultstring[^>]*>([^<]+)<\/faultstring>/i);
+  return { sucesso: false, mensagemErro: mensagemMatch ? mensagemMatch[1].trim() : 'Pedido de pesquisa de contratos falhou (sem detalhe da Segurança Social).' };
+}
+
+/** Constrói o envelope SOAP de getDadosContratos (passo 2, por chave). */
+export function buildGetDadosContratosSoap({ chave }) {
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope
+  xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+  xmlns:vo="http://vo.webservice.contrato.segsocial.pt">
+  <soapenv:Header/>
+  <soapenv:Body>
+    <vo:getDadosContratos>
+      <chave>${escapeXml(chave)}</chave>
+    </vo:getDadosContratos>
+  </soapenv:Body>
+</soapenv:Envelope>`;
+}
+
+// codigo-resultado: 1=sucesso, 2=falta parâmetros, 3=falha validação, 4=sem
+// resultados, 0=erro — mas 0 cobre três situações distintas (chave
+// desconhecida / ainda a processar / pedido expirado) sem código próprio
+// para cada uma; distinguem-se só pelo texto de mensagens-erro (conforme o
+// PDF). >=500 contratos vêm como ficheiro binário MTOM/XOP (ZIP) em vez de
+// <contratos> inline — não implementado (caso raro, ~28 trabalhadores na
+// empresa), devolve-se erro amigável em vez de tentar fazer parsing.
+export function parseGetDadosContratosResponse(xmlStr) {
+  if (!xmlStr) return { estado: 'erro', erro: 'Resposta vazia da Segurança Social.' };
+
+  const codigoMatch = xmlStr.match(/<(?:[^:>]+:)?codigo-resultado[^>]*>([^<]+)<\/(?:[^:>]+:)?codigo-resultado>/i);
+  const mensagemMatch = xmlStr.match(/<(?:[^:>]+:)?mensagens-erro[^>]*>([^<]*)<\/(?:[^:>]+:)?mensagens-erro>/i);
+  const codigo = codigoMatch ? codigoMatch[1].trim() : null;
+  const mensagem = mensagemMatch ? mensagemMatch[1].trim() : '';
+
+  if (codigo === '4') return { estado: 'sem_resultados', contratos: [] };
+  if (codigo === '2' || codigo === '3') return { estado: 'erro', erro: mensagem || `Código de resultado: ${codigo}` };
+
+  if (codigo === '0') {
+    if (/n.o foi processado|tenta mais tarde/i.test(mensagem)) return { estado: 'processando' };
+    if (/expir/i.test(mensagem)) return { estado: 'expirado', erro: mensagem || 'Pedido expirado — repita a pesquisa.' };
+    return { estado: 'erro', erro: mensagem || 'Chave não encontrada ou erro desconhecido.' };
+  }
+
+  if (codigo !== '1') return { estado: 'erro', erro: mensagem || `Código de resultado desconhecido: ${codigo ?? 'nenhum'}` };
+
+  // codigo === '1' → sucesso, mas pode vir como ficheiro (≥500 contratos)
+  if (/<(?:[^:>]+:)?ficheiro-dados[^>]*>/i.test(xmlStr)) {
+    return { estado: 'erro', erro: 'Resultado demasiado grande para mostrar aqui (≥500 contratos) — contacte o suporte técnico.' };
+  }
+
+  const campo = (bloco, nome) => {
+    const m = bloco.match(new RegExp(`<(?:[^:>]+:)?${nome}[^>]*>([^<]*)<\\/(?:[^:>]+:)?${nome}>`, 'i'));
+    return m ? m[1].trim() : null;
+  };
+
+  const contratos = [];
+  const blocoRegex = /<(?:[^:>]+:)?contrato>([\s\S]*?)<\/(?:[^:>]+:)?contrato>/gi;
+  let match;
+  while ((match = blocoRegex.exec(xmlStr))) {
+    const bloco = match[1];
+    contratos.push({
+      nissTrabalhador: campo(bloco, 'niss-trabalhador'),
+      nomeTrabalhador: campo(bloco, 'nome-trabalhador'), // vem mascarado pela PSI
+      modalidadeContrato: campo(bloco, 'modalidade-contrato'),
+      prestacaoTrabalho: campo(bloco, 'prestacao-trabalho'),
+      inicioContrato: campo(bloco, 'inicio-contrato'),
+      fimContrato: campo(bloco, 'fim-contrato'),
+      inicioInformacaoContrato: campo(bloco, 'inicio-informacao-contrato'),
+      fimInformacaoContrato: campo(bloco, 'fim-informacao-contrato'),
+      profissao: campo(bloco, 'profissao'),
+      remuneracaoBase: campo(bloco, 'remuneracao-base'),
+      diuturnidades: campo(bloco, 'diuturnidades'),
+      percentagemTrabalho: campo(bloco, 'percentagem-trabalho'),
+      horasTrabalho: campo(bloco, 'horas-trabalho'),
+      diasTrabalho: campo(bloco, 'dias-trabalho'),
+      motivoContrato: campo(bloco, 'motivo-contrato'),
+      nissTrabalhadorSubstituir: campo(bloco, 'niss-trabalhador-substituir'),
+      nomeTrabalhadorSubstituir: campo(bloco, 'nome-trabalhador-substituir'),
+    });
+  }
+
+  return { estado: 'sucesso', contratos };
+}
+
+// ── Consultar Trabalhadores — SOAP, dois passos (getQualificacoesTrabalhadoresVinculadosEE + getDados) ──
+//
+// ⚠ MENOR CONFIANÇA que o resto deste ficheiro — testar em Qualidade antes de
+// confiar cegamente. Namespace DIFERENTE de todos os outros serviços SOAP do
+// projeto: "http://vo.webservice.wsidq.segsocial.pt" (os outros usam
+// .../vo.webservice.contrato.segsocial.pt). O WSDL exige
+// wsaw:UsingAddressing required="true" (WS-Addressing) — enviamos o envelope
+// SOAP normal com SOAPAction vazio, mas isto pode não bastar: pode ser
+// preciso adicionar cabeçalhos wsa:Action/wsa:To/wsa:MessageID que NÃO estão
+// implementados aqui. Confirmar/ajustar contra o ambiente de Qualidade real
+// antes de dar este serviço como fiável.
+
+/**
+ * Constrói o envelope SOAP de getQualificacoesTrabalhadoresVinculadosEE.
+ * dataInicioPesquisa/dataFimPesquisa obrigatórias, janela máxima de 90 dias
+ * (validado do lado da app antes de chamar, ver index.js — barato de
+ * verificar e evita deixar a PSI rejeitar). niss opcional — sem ele, devolve
+ * todos os trabalhadores da empresa (inferido, não afirmado no PDF).
+ */
+export function buildPesquisaTrabalhadoresSoap({ dataInicio, dataFim, niss }) {
+  const nissXml = niss
+    ? `<nissPS>${escapeXml(niss)}</nissPS>`
+    : `<nissPS xsi:nil="true"/>`;
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope
+  xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:vo="http://vo.webservice.wsidq.segsocial.pt">
+  <soapenv:Header/>
+  <soapenv:Body>
+    <vo:getQualificacoesTrabalhadoresVinculadosEE>
+      <TrabalhadorVinculoEEPesquisaSimplesPTVO_1>
+        <dataFimPesquisa>${fmtDateTime(dataFim, true)}</dataFimPesquisa>
+        <dataInicioPesquisa>${fmtDateTime(dataInicio, false)}</dataInicioPesquisa>
+        ${nissXml}
+      </TrabalhadorVinculoEEPesquisaSimplesPTVO_1>
+    </vo:getQualificacoesTrabalhadoresVinculadosEE>
+  </soapenv:Body>
+</soapenv:Envelope>`;
+}
+
+// Extrai a <chave> da resposta de getQualificacoesTrabalhadoresVinculadosEE.
+export function parsePesquisaTrabalhadoresResponse(xmlStr) {
+  if (!xmlStr) return { sucesso: false, mensagemErro: 'Resposta vazia da Segurança Social.' };
+
+  const chaveMatch = xmlStr.match(/<(?:[^:>]+:)?chave[^>]*>([^<]+)<\/(?:[^:>]+:)?chave>/i);
+  if (chaveMatch) return { sucesso: true, chave: chaveMatch[1].trim() };
+
+  const mensagemMatch = xmlStr.match(/<(?:[^:>]+:)?mensagemEstado[^>]*>([^<]*)<\/(?:[^:>]+:)?mensagemEstado>/i)
+    || xmlStr.match(/<faultstring[^>]*>([^<]+)<\/faultstring>/i);
+  return { sucesso: false, mensagemErro: mensagemMatch ? mensagemMatch[1].trim() : 'Pedido de pesquisa de trabalhadores falhou (sem detalhe da Segurança Social).' };
+}
+
+/** Constrói o envelope SOAP de getDados (passo 2, por chave). */
+export function buildGetDadosTrabalhadoresSoap({ chave }) {
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope
+  xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+  xmlns:vo="http://vo.webservice.wsidq.segsocial.pt">
+  <soapenv:Header/>
+  <soapenv:Body>
+    <vo:getDados>
+      <chave>${escapeXml(chave)}</chave>
+    </vo:getDados>
+  </soapenv:Body>
+</soapenv:Envelope>`;
+}
+
+// codigoEstado: 0=sucesso OU "ainda não processado" OU "sem dados" (distinguir
+// só pelo texto de mensagemEstado, sem código próprio para cada — conforme o
+// PDF); 1=sucesso via ficheiro MTOM/XOP (não implementado, mesma decisão do
+// serviço de Contratos); 2=erro de negócio (mensagem em mensagemEstado).
+export function parseGetDadosTrabalhadoresResponse(xmlStr) {
+  if (!xmlStr) return { estado: 'erro', erro: 'Resposta vazia da Segurança Social.' };
+
+  const codigoMatch = xmlStr.match(/<(?:[^:>]+:)?codigoEstado[^>]*>([^<]+)<\/(?:[^:>]+:)?codigoEstado>/i);
+  const mensagemMatch = xmlStr.match(/<(?:[^:>]+:)?mensagemEstado[^>]*>([^<]*)<\/(?:[^:>]+:)?mensagemEstado>/i);
+  const codigo = codigoMatch ? codigoMatch[1].trim() : null;
+  const mensagem = mensagemMatch ? mensagemMatch[1].trim() : '';
+
+  if (codigo === '1') {
+    return { estado: 'erro', erro: 'Resultado demasiado grande para mostrar aqui (via ficheiro) — contacte o suporte técnico.' };
+  }
+  if (codigo === '2') {
+    return { estado: 'erro', erro: mensagem || 'Erro de negócio devolvido pela Segurança Social.' };
+  }
+  if (codigo !== '0') {
+    return { estado: 'erro', erro: mensagem || `Código de estado desconhecido: ${codigo ?? 'nenhum'}` };
+  }
+
+  // codigo === '0' — distinguir só pelo texto de mensagemEstado (sem código próprio, ver PDF)
+  if (/ainda n.o foi processado/i.test(mensagem)) return { estado: 'processando' };
+  if (/sem dados de retorno/i.test(mensagem)) return { estado: 'sem_resultados', trabalhadores: [] };
+  if (/expirou/i.test(mensagem)) return { estado: 'expirado', erro: mensagem };
+  if (mensagem) return { estado: 'erro', erro: mensagem };
+
+  // mensagem vazia → sucesso, dados no array trabalhadoresQualificacoes
+  const campo = (bloco, nome) => {
+    const m = bloco.match(new RegExp(`<(?:[^:>]+:)?${nome}[^>]*>([^<]*)<\\/(?:[^:>]+:)?${nome}>`, 'i'));
+    return m ? m[1].trim() : null;
+  };
+
+  const trabalhadores = [];
+  const blocoRegex = /<(?:[^:>]+:)?trabalhadoresQualificacoes>([\s\S]*?)<\/(?:[^:>]+:)?trabalhadoresQualificacoes>/gi;
+  let match;
+  while ((match = blocoRegex.exec(xmlStr))) {
+    const bloco = match[1];
+
+    const periodosTaxa = [];
+    const periodoRegex = /<(?:[^:>]+:)?periodosTaxa>([\s\S]*?)<\/(?:[^:>]+:)?periodosTaxa>/gi;
+    let pm;
+    while ((pm = periodoRegex.exec(bloco))) {
+      const pBloco = pm[1];
+      periodosTaxa.push({
+        dataInicio: campo(pBloco, 'dataInicio'),
+        dataFim: campo(pBloco, 'dataFim'),
+        taxaTotal: campo(pBloco, 'taxaTotal'),
+      });
+    }
+
+    const estabelecimentos = [];
+    const estabRegex = /<(?:[^:>]+:)?estabelecimentosTrabalhador>([\s\S]*?)<\/(?:[^:>]+:)?estabelecimentosTrabalhador>/gi;
+    let em;
+    while ((em = estabRegex.exec(bloco))) {
+      const eBloco = em[1];
+      estabelecimentos.push({
+        codigoEstabelecimento: campo(eBloco, 'codigoEstabelecimento'),
+        moradaEstabelecimento: campo(eBloco, 'moradaEstabelecimento'), // vem mascarada
+        designacaoDistrito: campo(eBloco, 'designacaoDistrito'),
+        designacaoPais: campo(eBloco, 'designacaoPais'),
+        dataInicio: campo(eBloco, 'dataInicio'),
+        dataFim: campo(eBloco, 'dataFim'),
+      });
+    }
+
+    trabalhadores.push({
+      nissEE: campo(bloco, 'nissEE'),
+      nissPS: campo(bloco, 'nissPS'),
+      nomePS: campo(bloco, 'nomePS'), // vem mascarado
+      dataNascimentoTrabalhador: campo(bloco, 'dataNascimentoTrabalhador'),
+      tipoQlf: campo(bloco, 'tipoQlf'),
+      dataEntradaRegistoEE: campo(bloco, 'dataEntradaRegistoEE'),
+      dataInicioQlf: campo(bloco, 'dataInicioQlf'),
+      dataFimQlf: campo(bloco, 'dataFimQlf'),
+      periodosTaxa,
+      estabelecimentos,
+    });
+  }
+
+  return { estado: 'sucesso', trabalhadores };
+}
+
+// Envia um envelope SOAP para uma URL completa (usado pelos serviços com
+// endpoint fixo partilhado entre duas operações — Contratos, Trabalhadores —
+// onde a URL não é `${SOAP_BASE()}/${operacao}` como no callSS abaixo).
+export async function callSSSoapUrl(url, soapBody, soapAction) {
+  const token = getBearerToken();
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type':  'text/xml; charset=utf-8',
+      'Authorization': `Bearer ${token}`,
+      'SOAPAction':    soapAction ? `"${soapAction}"` : '""',
+    },
+    body: soapBody,
+  });
+
+  const texto = await res.text();
+
+  if (res.status === 401) throw new Error('Token PSI inválido ou expirado (HTTP 401). Verifique se o token SS_PSI_TOKEN ainda é válido na SSD → Gestão de autenticação → Tokens de acesso.');
+  if (res.status === 403) throw new Error('Acesso negado pela Segurança Social (HTTP 403). Verifique se aderiu à PSI e se o serviço está autorizado.');
+
+  return { httpStatus: res.status, xmlResposta: texto };
 }
 
 // Envia um envelope SOAP para a PSI.

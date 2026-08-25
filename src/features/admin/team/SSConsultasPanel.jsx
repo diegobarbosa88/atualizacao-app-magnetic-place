@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Search, FileText, CreditCard, TrendingUp, AlertCircle, CheckCircle, Info } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Search, FileText, TrendingUp, AlertCircle, CheckCircle, Info, ShieldCheck, Bell, FileSignature, Users } from 'lucide-react';
 import { authFetch } from '../../../utils/authFetch';
 import SubTabBar from '../../../components/common/SubTabBar';
 import { FT } from '../../../styles/designTokens';
@@ -276,15 +276,383 @@ function RemuneracoesSection() {
   );
 }
 
+// ── Situação Contributiva ────────────────────────────────────────────────────
+
+function SituacaoContributivaSection() {
+  const [nissSolicitado, setNissSolicitado] = useState('');
+  const [estado, setEstado] = useState(null); // null | { loading } | { caminho, regularizada, ambiente } | { erro }
+
+  async function consultar() {
+    setEstado({ loading: true });
+    try {
+      const r = await authFetch('/api/seguranca-social', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'situacao-contributiva',
+          ...(nissSolicitado ? { nissSolicitado } : {}),
+        }),
+      });
+      const json = await r.json();
+      if (!r.ok) { setEstado({ erro: json.erro || `HTTP ${r.status}` }); return; }
+      setEstado({ caminho: json.caminho, regularizada: json.situacaoContributivaRegularizada, ambiente: json.ambiente });
+    } catch (e) { setEstado({ erro: e.message }); }
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-end gap-3">
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">NISS a consultar (opcional — por omissão, o da própria empresa)</label>
+          <input
+            type="text"
+            placeholder="ex: 12345678901"
+            value={nissSolicitado}
+            onChange={e => setNissSolicitado(e.target.value)}
+            className="border border-gray-300 rounded px-2 py-1.5 text-sm w-52 focus:outline-none focus:ring-1 focus:ring-[var(--navy)]"
+          />
+        </div>
+        <button
+          onClick={consultar}
+          disabled={estado?.loading}
+          className="flex items-center gap-1.5 px-3 py-1.5 border rounded text-sm disabled:opacity-50 hover:bg-[var(--surface)] transition-colors"
+          style={{ borderColor: FT.slate, color: 'var(--ink-soft)' }}
+        >
+          <Search size={13} />
+          {estado?.loading ? 'A consultar…' : 'Consultar'}
+        </button>
+        {estado?.ambiente && <AmbienteBadge ambiente={estado.ambiente} />}
+      </div>
+
+      {estado?.erro && <ErroMsg erro={estado.erro} />}
+
+      {estado && !estado.loading && !estado.erro && (
+        <div className="flex items-center gap-3 pt-1">
+          <span
+            className="inline-flex items-center px-3 py-1 rounded text-sm font-semibold"
+            style={estado.regularizada
+              ? { background: 'var(--ok-bg)', color: 'var(--ok)' }
+              : { background: 'var(--bad-bg)', color: 'var(--bad)' }}
+          >
+            {estado.regularizada ? 'Regularizada' : 'Não regularizada'}
+          </span>
+          {estado.caminho && (
+            <a href={estado.caminho} target="_blank" rel="noreferrer" className="text-sm underline" style={{ color: 'var(--navy)' }}>
+              Ver declaração (PDF)
+            </a>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Avisos (EEAOC) ───────────────────────────────────────────────────────────
+// A sigla EEAOC nunca é definida no PDF original da PSI — não inventar o
+// significado, tratar só como "Avisos" na UI.
+
+function AvisosSection() {
+  const [estado, setEstado] = useState(null);
+
+  async function consultar() {
+    setEstado({ loading: true });
+    try {
+      const r = await authFetch('/api/seguranca-social?action=avisos');
+      const json = await r.json();
+      if (!r.ok) { setEstado({ erro: json.erro || `HTTP ${r.status}` }); return; }
+      setEstado({ avisos: json.avisos || [], ambiente: json.ambiente, semAvisos: json.semAvisos });
+    } catch (e) { setEstado({ erro: e.message }); }
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-3">
+        <button
+          onClick={consultar}
+          disabled={estado?.loading}
+          className="flex items-center gap-1.5 px-3 py-1.5 border rounded text-sm disabled:opacity-50 hover:bg-[var(--surface)] transition-colors"
+          style={{ borderColor: FT.slate, color: 'var(--ink-soft)' }}
+        >
+          <Search size={13} />
+          {estado?.loading ? 'A consultar…' : 'Consultar Avisos'}
+        </button>
+        {estado?.ambiente && <AmbienteBadge ambiente={estado.ambiente} />}
+      </div>
+
+      {estado?.erro && <ErroMsg erro={estado.erro} />}
+      {estado?.semAvisos && (
+        <div className="flex items-center gap-2 text-sm text-gray-500 py-3 px-1">
+          <Info size={14} />
+          Sem avisos ativos.
+        </div>
+      )}
+
+      {estado?.avisos?.length > 0 && (
+        <div className="space-y-2">
+          {estado.avisos.map((av, i) => (
+            <div key={i} className="border border-gray-200 rounded p-3">
+              <div className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>{av.resumoAviso ?? '—'}</div>
+              {av.descricaoAviso && <div className="text-sm text-gray-600 mt-1">{av.descricaoAviso}</div>}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Contratos (SOAP, dois passos, polling) ──────────────────────────────────
+
+function ContratosSection() {
+  const [form, setForm] = useState({ dataInicio: '', dataFim: '', niss: '' });
+  const [estado, setEstado] = useState(null); // null | { loading, msg? } | { dados: [...], ambiente } | { erro }
+  const pollRef = useRef(null);
+
+  useEffect(() => () => clearTimeout(pollRef.current), []);
+
+  async function pollConsultar(chave, tentativa = 1) {
+    try {
+      const r = await authFetch('/api/seguranca-social', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'consultar-contratos', chave }),
+      });
+      const json = await r.json();
+      // O backend só devolve HTTP não-200 para "erro"/"expirado" — "processando" vem sempre com 200.
+      if (!r.ok) { setEstado({ erro: json.erro || `HTTP ${r.status}` }); return; }
+      if (json.estado === 'processando') {
+        if (tentativa >= 8) { setEstado({ erro: 'Ainda em processamento, tente consultar novamente.' }); return; }
+        pollRef.current = setTimeout(() => pollConsultar(chave, tentativa + 1), 2000);
+        setEstado({ loading: true, msg: 'A processar…' });
+        return;
+      }
+      setEstado({ dados: json.contratos || [], semRegistos: json.estado === 'sem_resultados' });
+    } catch (e) { setEstado({ erro: e.message }); }
+  }
+
+  async function consultar() {
+    if (!form.dataInicio || !form.dataFim) { setEstado({ erro: 'Datas de início e fim são obrigatórias.' }); return; }
+    setEstado({ loading: true, msg: 'A pesquisar…' });
+    try {
+      const r = await authFetch('/api/seguranca-social', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'pesquisar-contratos',
+          dataInicio: form.dataInicio,
+          dataFim: form.dataFim,
+          nissTrabalhadores: form.niss ? [form.niss.trim()] : [],
+        }),
+      });
+      const json = await r.json();
+      if (!r.ok) { setEstado({ erro: json.erro || `HTTP ${r.status}` }); return; }
+      pollConsultar(json.chave);
+    } catch (e) { setEstado({ erro: e.message }); }
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">Data início</label>
+          <input type="date" value={form.dataInicio} onChange={e => setForm(f => ({ ...f, dataInicio: e.target.value }))}
+            className="border border-gray-300 rounded px-2 py-1.5 text-sm w-full focus:outline-none focus:ring-1 focus:ring-[var(--navy)]" />
+        </div>
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">Data fim</label>
+          <input type="date" value={form.dataFim} onChange={e => setForm(f => ({ ...f, dataFim: e.target.value }))}
+            className="border border-gray-300 rounded px-2 py-1.5 text-sm w-full focus:outline-none focus:ring-1 focus:ring-[var(--navy)]" />
+        </div>
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">NISS trabalhador (opcional)</label>
+          <input type="text" placeholder="ex: 12345678901" value={form.niss} onChange={e => setForm(f => ({ ...f, niss: e.target.value }))}
+            className="border border-gray-300 rounded px-2 py-1.5 text-sm w-full focus:outline-none focus:ring-1 focus:ring-[var(--navy)]" />
+        </div>
+        <div className="flex items-end gap-2">
+          <button
+            onClick={consultar}
+            disabled={estado?.loading}
+            className="flex items-center gap-1.5 px-3 py-1.5 border rounded text-sm disabled:opacity-50 hover:bg-[var(--surface)] transition-colors"
+            style={{ borderColor: FT.slate, color: 'var(--ink-soft)' }}
+          >
+            <Search size={13} />
+            {estado?.loading ? (estado.msg || 'A consultar…') : 'Consultar'}
+          </button>
+        </div>
+      </div>
+
+      {estado?.erro && <ErroMsg erro={estado.erro} />}
+      {estado?.semRegistos && <SemRegistos />}
+
+      {estado?.dados?.length > 0 && (
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-xs border-collapse">
+            <thead>
+              <tr className="bg-gray-50 text-gray-600">
+                {['NISS', 'Nome', 'Modalidade', 'Início', 'Fim', 'Remuneração Base (€)', 'Motivo'].map(h => (
+                  <th key={h} className="px-3 py-2 text-left border border-gray-200">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {estado.dados.map((c, i) => (
+                <tr key={i} className="odd:bg-white even:bg-gray-50">
+                  <td className="px-3 py-1.5 border border-gray-200 font-mono">{c.nissTrabalhador ?? '—'}</td>
+                  <td className="px-3 py-1.5 border border-gray-200">{c.nomeTrabalhador ?? '—'}</td>
+                  <td className="px-3 py-1.5 border border-gray-200">{c.modalidadeContrato ?? '—'}</td>
+                  <td className="px-3 py-1.5 border border-gray-200">{c.inicioContrato ?? '—'}</td>
+                  <td className="px-3 py-1.5 border border-gray-200">{c.fimContrato ?? '—'}</td>
+                  <td className="px-3 py-1.5 border border-gray-200 text-right">{c.remuneracaoBase ?? '—'}</td>
+                  <td className="px-3 py-1.5 border border-gray-200">{c.motivoContrato ?? '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Trabalhadores (SOAP, dois passos, polling — menor confiança, ver _soapUtils.js) ──
+
+function TrabalhadoresSection() {
+  const [form, setForm] = useState({ dataInicio: '', dataFim: '', niss: '' });
+  const [estado, setEstado] = useState(null);
+  const pollRef = useRef(null);
+
+  useEffect(() => () => clearTimeout(pollRef.current), []);
+
+  const dias = form.dataInicio && form.dataFim
+    ? (new Date(form.dataFim) - new Date(form.dataInicio)) / 86400000
+    : null;
+  const intervaloInvalido = dias != null && (dias < 0 || dias > 90);
+
+  async function pollConsultar(chave, tentativa = 1) {
+    try {
+      const r = await authFetch('/api/seguranca-social', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'consultar-trabalhadores-ss', chave }),
+      });
+      const json = await r.json();
+      // O backend só devolve HTTP não-200 para "erro"/"expirado" — "processando" vem sempre com 200.
+      if (!r.ok) { setEstado({ erro: json.erro || `HTTP ${r.status}` }); return; }
+      if (json.estado === 'processando') {
+        if (tentativa >= 8) { setEstado({ erro: 'Ainda em processamento, tente consultar novamente.' }); return; }
+        pollRef.current = setTimeout(() => pollConsultar(chave, tentativa + 1), 2000);
+        setEstado({ loading: true, msg: 'A processar…' });
+        return;
+      }
+      setEstado({ dados: json.trabalhadores || [], semRegistos: json.estado === 'sem_resultados' });
+    } catch (e) { setEstado({ erro: e.message }); }
+  }
+
+  async function consultar() {
+    if (!form.dataInicio || !form.dataFim) { setEstado({ erro: 'Datas de início e fim são obrigatórias.' }); return; }
+    if (intervaloInvalido) { setEstado({ erro: 'O intervalo entre data início e data fim não pode exceder 90 dias.' }); return; }
+    setEstado({ loading: true, msg: 'A pesquisar…' });
+    try {
+      const r = await authFetch('/api/seguranca-social', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'pesquisar-trabalhadores-ss',
+          dataInicio: form.dataInicio,
+          dataFim: form.dataFim,
+          niss: form.niss ? form.niss.trim() : undefined,
+        }),
+      });
+      const json = await r.json();
+      if (!r.ok) { setEstado({ erro: json.erro || `HTTP ${r.status}` }); return; }
+      pollConsultar(json.chave);
+    } catch (e) { setEstado({ erro: e.message }); }
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">Data início</label>
+          <input type="date" value={form.dataInicio} onChange={e => setForm(f => ({ ...f, dataInicio: e.target.value }))}
+            className="border border-gray-300 rounded px-2 py-1.5 text-sm w-full focus:outline-none focus:ring-1 focus:ring-[var(--navy)]" />
+        </div>
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">Data fim (máx. 90 dias)</label>
+          <input type="date" value={form.dataFim} onChange={e => setForm(f => ({ ...f, dataFim: e.target.value }))}
+            className="border border-gray-300 rounded px-2 py-1.5 text-sm w-full focus:outline-none focus:ring-1 focus:ring-[var(--navy)]" />
+        </div>
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">NISS trabalhador (opcional)</label>
+          <input type="text" placeholder="ex: 12345678901" value={form.niss} onChange={e => setForm(f => ({ ...f, niss: e.target.value }))}
+            className="border border-gray-300 rounded px-2 py-1.5 text-sm w-full focus:outline-none focus:ring-1 focus:ring-[var(--navy)]" />
+        </div>
+        <div className="flex items-end gap-2">
+          <button
+            onClick={consultar}
+            disabled={estado?.loading || intervaloInvalido}
+            className="flex items-center gap-1.5 px-3 py-1.5 border rounded text-sm disabled:opacity-50 hover:bg-[var(--surface)] transition-colors"
+            style={{ borderColor: FT.slate, color: 'var(--ink-soft)' }}
+          >
+            <Search size={13} />
+            {estado?.loading ? (estado.msg || 'A consultar…') : 'Consultar'}
+          </button>
+        </div>
+      </div>
+
+      {intervaloInvalido && dias > 90 && (
+        <div className="text-xs" style={{ color: 'var(--bad)' }}>O intervalo entre as duas datas não pode exceder 90 dias.</div>
+      )}
+
+      {estado?.erro && <ErroMsg erro={estado.erro} />}
+      {estado?.semRegistos && <SemRegistos />}
+
+      {estado?.dados?.length > 0 && (
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-xs border-collapse">
+            <thead>
+              <tr className="bg-gray-50 text-gray-600">
+                {['NISS', 'Nome', 'Tipo', 'Início Vínculo', 'Fim Vínculo', 'Estabelecimento(s)'].map(h => (
+                  <th key={h} className="px-3 py-2 text-left border border-gray-200">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {estado.dados.map((t, i) => (
+                <tr key={i} className="odd:bg-white even:bg-gray-50">
+                  <td className="px-3 py-1.5 border border-gray-200 font-mono">{t.nissPS ?? '—'}</td>
+                  <td className="px-3 py-1.5 border border-gray-200">{t.nomePS ?? '—'}</td>
+                  <td className="px-3 py-1.5 border border-gray-200">{t.tipoQlf ?? '—'}</td>
+                  <td className="px-3 py-1.5 border border-gray-200">{t.dataInicioQlf ?? '—'}</td>
+                  <td className="px-3 py-1.5 border border-gray-200">{t.dataFimQlf ?? '—'}</td>
+                  <td className="px-3 py-1.5 border border-gray-200">
+                    {t.estabelecimentos?.length
+                      ? t.estabelecimentos.map(e => e.designacaoDistrito || e.codigoEstabelecimento).filter(Boolean).join(', ')
+                      : '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Painel principal ─────────────────────────────────────────────────────────
 
 export default function SSConsultasPanel() {
   const [aba, setAba] = useState('comprovativos');
 
   const abas = [
-    { id: 'comprovativos',       label: 'Comprovativos de Pagamento', icon: CheckCircle },
-    { id: 'documentos-pagamento', label: 'Documentos de Pagamento',   icon: FileText    },
-    { id: 'remuneracoes',         label: 'Remunerações Permanentes',  icon: TrendingUp  },
+    { id: 'comprovativos',        label: 'Comprovativos de Pagamento',   icon: CheckCircle    },
+    { id: 'documentos-pagamento', label: 'Documentos de Pagamento',      icon: FileText       },
+    { id: 'remuneracoes',         label: 'Remunerações Permanentes',     icon: TrendingUp     },
+    { id: 'situacao-contributiva', label: 'Situação Contributiva',       icon: ShieldCheck    },
+    { id: 'avisos',                label: 'Avisos',                     icon: Bell           },
+    { id: 'contratos',             label: 'Contratos',                  icon: FileSignature  },
+    { id: 'trabalhadores',         label: 'Trabalhadores',              icon: Users          },
   ];
 
   return (
@@ -292,9 +660,13 @@ export default function SSConsultasPanel() {
       <SubTabBar tabs={abas} activeTab={aba} onTabChange={setAba} />
 
       <div className="pt-1">
-        {aba === 'comprovativos'        && <ComprovativosSection />}
-        {aba === 'documentos-pagamento' && <DocumentosPagamentoSection />}
-        {aba === 'remuneracoes'         && <RemuneracoesSection />}
+        {aba === 'comprovativos'         && <ComprovativosSection />}
+        {aba === 'documentos-pagamento'  && <DocumentosPagamentoSection />}
+        {aba === 'remuneracoes'          && <RemuneracoesSection />}
+        {aba === 'situacao-contributiva' && <SituacaoContributivaSection />}
+        {aba === 'avisos'                && <AvisosSection />}
+        {aba === 'contratos'             && <ContratosSection />}
+        {aba === 'trabalhadores'         && <TrabalhadoresSection />}
       </div>
     </div>
   );
