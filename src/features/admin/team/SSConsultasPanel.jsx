@@ -111,7 +111,9 @@ function formatReferencia(ref) {
   const mb = ref.pagamentoMultibanco;
   if (mb?.referenciaMultibanco) return `MB ${mb.entidadeMultibanco ?? ''} ${mb.referenciaMultibanco}`.trim();
   const tb = ref.pagamentoTransferenciaBancaria;
-  if (tb?.Iban) return `IBAN ${tb.Iban}`;
+  // Minúsculas — confirmado no Swagger oficial da PSI (ObterDocumentoPagamentoVO
+  // → pagamentoTransferenciaBancaria.iban/.swift), não "Iban"/"Swift".
+  if (tb?.iban) return `IBAN ${tb.iban}`;
   if (ref.pagamentoTesouraria === 'S') return 'Tesouraria';
   const dd = ref.pagamentoDebitoDireto;
   if (dd?.numeroAutorizacao) return `Débito Direto (ADC ${dd.numeroAutorizacao})`;
