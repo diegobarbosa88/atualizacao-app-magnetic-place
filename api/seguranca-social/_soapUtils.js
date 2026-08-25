@@ -11,7 +11,7 @@
 //   Qualidade SOAP:  extservices.seg-social.pt
 //   Produção (ambos): app.seg-social.pt
 
-import { MODALIDADES_COM_MOTIVO_OBRIGATORIO } from '../../src/data/motivosContratoSS.js';
+import { MODALIDADES_COM_MOTIVO_OBRIGATORIO, MOTIVOS_EXIGEM_SUBSTITUIDO } from '../../src/data/motivosContratoSS.js';
 
 const isProd = () => process.env.SS_AMBIENTE === 'producao';
 
@@ -142,6 +142,31 @@ export async function callSSRestPostUrl(url, body) {
 
   const erro = json?.message || json?.erro || json?.descricao || `HTTP ${res.status}`;
   return { httpStatus: res.status, ok: false, erro, json };
+}
+
+/**
+ * Faz PUT (sem body) para uma URL completa da PSI CI — usado só pelo
+ * cancelamento de documento de pagamento, onde o identificador vai no path
+ * da URL, não no corpo do pedido (confirmado no OpenAPI oficial).
+ */
+export async function callSSRestPutUrl(url) {
+  const token = getBearerToken();
+  const res = await fetch(url, {
+    method: 'PUT',
+    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
+  });
+
+  if (res.status === 401) throw new Error('Token PSI inválido ou expirado (HTTP 401).');
+  if (res.status === 403) throw new Error('Acesso negado pela Segurança Social (HTTP 403).');
+
+  const text = await res.text();
+  let json = null;
+  try { json = JSON.parse(text); } catch { /* deixar null */ }
+
+  // Sem interpretação de sucesso/erro aqui — o mesmo codigoResultado "17"
+  // significa coisas diferentes consoante o HTTP status (ver caller em
+  // index.js), por isso devolve-se o par bruto e quem chama decide.
+  return { httpStatus: res.status, ok: res.ok, json };
 }
 
 export { CI_BASE, REMUN_URL, SITUACAO_CONTRIBUTIVA_URL, EEAOC_BASE, CONTRATOS_URL, TRABALHADORES_SS_URL };
@@ -362,6 +387,119 @@ export function buildCessacaoSoap(dados) {
       <motivo-fim-vinculo>${escapeXml(motivoCessacao)}</motivo-fim-vinculo>
       <comunicacao-desemprego>${desemprego}</comunicacao-desemprego>${fundamentacaoXml}
     </vo:cessarVinculo>
+  </soapenv:Body>
+</soapenv:Envelope>`;
+}
+
+// ── Alterar Contrato — SOAP ──────────────────────────────────────────────────
+//
+// Campos (WSDL alterarContratoTrabalho, Agosto 2026), 13 no total, ordem livre:
+//   niss-trabalhador            — obrigatório, 11 dígitos
+//   modalidade-contrato         — obrigatório, mesmos 26 códigos da Admissão + "I"
+//   prestacao-trabalho          — opcional no XSD (default "P"), mas enviado
+//                                  sempre explicitamente para não depender do
+//                                  default do servidor
+//   inicio-contrato              — obrigatório
+//   fim-contrato                 — obrigatório só para termo certo, SEM "I"
+//                                  (ver ALTERAR_TERMO_CERTO — diferente do
+//                                  conjunto MODALIDADES_TERMO_CERTO da Admissão)
+//   profissao                    — obrigatório, código CPP 5 dígitos
+//   remuneracao-base             — obrigatório, >0
+//   diuturnidades                — opcional, se preenchido >0
+//   percentagem/horas/dias-trabalho — obrigatórios para tempo parcial
+//   motivo-contrato               — obrigatório para termo certo e incerto
+//   niss-trabalhador-substituir   — obrigatório para motivos STAJ/STAT/STLR/STTC
+//
+// Namespace: xmlns:vo="http://vo.webservice.contrato.segsocial.pt" (igual ao
+// resto dos serviços SOAP de contrato). Operação: <vo:alterarContratoTrabalho>.
+// SOAPAction: http://interfaces.webservice.contrato.segsocial.pt#alterarContratoTrabalho.
+//
+// Não há limiar exato documentado para "contratos de muito curta duração" —
+// não replicar essa regra aqui, deixar a própria PSI rejeitar (código 3).
+
+const ALTERAR_TERMO_CERTO = new Set(['E', 'EA', 'EB', 'O', 'F', 'FA', 'FB', 'N']);
+
+export function buildAlterarContratoSoap(dados) {
+  const {
+    nissTrabalhador,
+    modalidadeContrato,
+    prestacaoTrabalho,
+    dataInicioContrato,
+    dataFimContrato,
+    profissaoCnp,
+    remuneracaoBase,
+    diuturnidades,
+    percentagemTrabalho,
+    horasTrabalho,
+    diasTrabalho,
+    motivoContrato,
+    nissTrabalhadorSubstituir,
+  } = dados;
+
+  if (!nissTrabalhador) throw new Error('NISS do trabalhador obrigatório.');
+  if (!modalidadeContrato) throw new Error('Modalidade de contrato obrigatória.');
+  if (!dataInicioContrato) throw new Error('Data de início do contrato obrigatória.');
+
+  const cnp = String(profissaoCnp || '').replace(/\D/g, '').substring(0, 5);
+  if (cnp.length !== 5) throw new Error('Código de profissão (CPP) obrigatório — 5 dígitos.');
+
+  const remun = parseFloat(remuneracaoBase);
+  if (!remun || remun <= 0) throw new Error('Remuneração base obrigatória e deve ser superior a 0.');
+
+  const prestacao = prestacaoTrabalho || 'P';
+
+  let camposXml = `
+      <niss-trabalhador>${escapeXml(nissTrabalhador)}</niss-trabalhador>
+      <modalidade-contrato>${escapeXml(modalidadeContrato)}</modalidade-contrato>
+      <prestacao-trabalho>${escapeXml(prestacao)}</prestacao-trabalho>
+      <inicio-contrato>${fmtDate(dataInicioContrato)}</inicio-contrato>`;
+
+  if (ALTERAR_TERMO_CERTO.has(modalidadeContrato)) {
+    if (!dataFimContrato) throw new Error(`Modalidade "${modalidadeContrato}" é a termo certo e exige uma data de fim de contrato — nenhuma foi fornecida.`);
+    camposXml += `\n      <fim-contrato>${fmtDate(dataFimContrato)}</fim-contrato>`;
+  }
+  // termo incerto/sem termo: fim-contrato fica de fora mesmo que dataFimContrato
+  // venha preenchida — enviá-lo dá "DATA FIM CONTRATO COM FORMATO INVÁLIDO".
+
+  camposXml += `\n      <profissao>${cnp}</profissao>
+      <remuneracao-base>${remun}</remuneracao-base>`;
+
+  if (diuturnidades) {
+    const d = parseFloat(diuturnidades);
+    if (d > 0) camposXml += `\n      <diuturnidades>${d}</diuturnidades>`;
+  }
+
+  if (MODALIDADES_PARCIAL.has(modalidadeContrato)) {
+    if (percentagemTrabalho === undefined || percentagemTrabalho === null || percentagemTrabalho === ''
+      || horasTrabalho === undefined || horasTrabalho === null || horasTrabalho === ''
+      || diasTrabalho === undefined || diasTrabalho === null || diasTrabalho === '') {
+      throw new Error(`Modalidade "${modalidadeContrato}" é a tempo parcial e exige percentagem-trabalho, horas-trabalho e dias-trabalho.`);
+    }
+    camposXml += `\n      <percentagem-trabalho>${parseFloat(percentagemTrabalho)}</percentagem-trabalho>
+      <horas-trabalho>${parseFloat(horasTrabalho)}</horas-trabalho>
+      <dias-trabalho>${parseFloat(diasTrabalho)}</dias-trabalho>`;
+  }
+
+  if (MODALIDADES_COM_MOTIVO_OBRIGATORIO.has(modalidadeContrato)) {
+    if (!motivoContrato) throw new Error(`Modalidade "${modalidadeContrato}" exige um motivo de contrato — nenhum foi indicado.`);
+    camposXml += `\n      <motivo-contrato>${escapeXml(motivoContrato)}</motivo-contrato>`;
+  } else if (motivoContrato) {
+    camposXml += `\n      <motivo-contrato>${escapeXml(motivoContrato)}</motivo-contrato>`;
+  }
+
+  if (MOTIVOS_EXIGEM_SUBSTITUIDO.has(motivoContrato)) {
+    if (!nissTrabalhadorSubstituir) throw new Error(`Motivo "${motivoContrato}" exige o NISS do trabalhador substituído.`);
+    camposXml += `\n      <niss-trabalhador-substituir>${escapeXml(nissTrabalhadorSubstituir)}</niss-trabalhador-substituir>`;
+  }
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope
+  xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+  xmlns:vo="http://vo.webservice.contrato.segsocial.pt">
+  <soapenv:Header/>
+  <soapenv:Body>
+    <vo:alterarContratoTrabalho>${camposXml}
+    </vo:alterarContratoTrabalho>
   </soapenv:Body>
 </soapenv:Envelope>`;
 }

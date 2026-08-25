@@ -3,6 +3,7 @@ import {
   buildAdmissaoRest,
   callSSRest,
   buildCessacaoSoap,
+  buildAlterarContratoSoap,
   parseSoapResponse,
   buildObterComunicacoesSoap,
   parseObterComunicacoesResponse,
@@ -10,6 +11,7 @@ import {
   callSSSoapUrl,
   callSSRestGetUrl,
   callSSRestPostUrl,
+  callSSRestPutUrl,
   CI_BASE,
   REMUN_URL,
   SITUACAO_CONTRIBUTIVA_URL,
@@ -330,6 +332,257 @@ export default async function handler(req, res) {
       }
       return res.status(200).json({ estado: resultado.estado, trabalhadores: resultado.trabalhadores || [], ambiente: getAmbiente() });
     } catch (e) { return res.status(502).json({ erro: e.message }); }
+  }
+
+  // Alterar Contrato — SOAP, escrita real (mesmo padrão de auditoria de
+  // admissao/cessacao: gravar sempre em ss_comunicacoes, sucesso ou erro).
+  if (action === 'alterar-contrato') {
+    if (!credenciaisConfiguradas()) {
+      return res.status(500).json({ erro: 'Token PSI não configurado. Defina SS_NISS_EMPRESA e SS_PSI_TOKEN nas variáveis de ambiente do Vercel.' });
+    }
+    const { workerId: wId, dadosExtra: extra = {}, confirmadoPor: confPor } = req.body || {};
+    if (!wId) return res.status(400).json({ erro: 'Campo "workerId" obrigatório.' });
+
+    const db = supabaseAdmin();
+    const ambiente = getAmbiente();
+
+    const { data: worker, error: workerErr } = await db
+      .from('workers')
+      .select('id, name, nis')
+      .eq('id', wId)
+      .maybeSingle();
+    if (workerErr || !worker) return res.status(404).json({ erro: 'Trabalhador não encontrado.' });
+
+    // ── Validações de segurança — mesma dupla camada de admissao/cessacao ──
+    const nissDigits = String(worker.nis || '').replace(/\D/g, '');
+    if (nissDigits.length !== 11) {
+      return res.status(422).json({
+        erro: `NISS inválido: deve ter exatamente 11 dígitos numéricos (o trabalhador "${worker.name}" tem NISS "${worker.nis || '(vazio)'}" com ${nissDigits.length} dígitos). Corrija na ficha antes de comunicar.`,
+      });
+    }
+    if (/\bteste\b|\btest\b|\bficticio\b|\bfictício\b|\bdummy\b|\bexemplo\b|\bamostra\b/i.test(worker.name || '')) {
+      return res.status(422).json({
+        erro: `Registo de teste bloqueado: o trabalhador "${worker.name}" parece ser fictício. Remova-o da lista de Equipa antes de usar em produção.`,
+      });
+    }
+
+    let soapBody;
+    try {
+      soapBody = buildAlterarContratoSoap({
+        nissTrabalhador:            worker.nis,
+        modalidadeContrato:         extra.modalidadeContrato,
+        prestacaoTrabalho:          extra.prestacaoTrabalho,
+        dataInicioContrato:         extra.dataInicioContrato,
+        dataFimContrato:            extra.dataFimContrato,
+        profissaoCnp:               extra.profissaoCnp,
+        remuneracaoBase:            extra.remuneracaoBase,
+        diuturnidades:              extra.diuturnidades,
+        percentagemTrabalho:        extra.percentagemTrabalho,
+        horasTrabalho:              extra.horasTrabalho,
+        diasTrabalho:               extra.diasTrabalho,
+        motivoContrato:             extra.motivoContrato,
+        nissTrabalhadorSubstituir:  extra.nissTrabalhadorSubstituir,
+      });
+    } catch (e) {
+      return res.status(400).json({ sucesso: false, erro: e.message });
+    }
+
+    let xmlResposta;
+    try {
+      ({ xmlResposta } = await callSS(
+        'alterarContratoTrabalho',
+        soapBody,
+        'http://interfaces.webservice.contrato.segsocial.pt#alterarContratoTrabalho',
+      ));
+    } catch (e) {
+      await db.from('ss_comunicacoes').insert({
+        worker_id: wId, tipo: 'alteracao_contrato', status: 'erro',
+        payload_xml: soapBody, resposta_ss: e.message,
+        confirmado_por: confPor || null, ambiente,
+      });
+      return res.status(502).json({ sucesso: false, erro: e.message });
+    }
+
+    const resultado = parseSoapResponse(xmlResposta);
+
+    await db.from('ss_comunicacoes').insert({
+      worker_id:      wId,
+      tipo:           'alteracao_contrato',
+      status:         resultado.sucesso ? 'sucesso' : 'erro',
+      payload_xml:    soapBody,
+      resposta_ss:    xmlResposta,
+      confirmado_por: confPor || null,
+      ambiente,
+    });
+
+    if (resultado.sucesso) {
+      return res.status(200).json({ sucesso: true, dataHora: new Date().toISOString(), ambiente });
+    }
+    return res.status(422).json({
+      sucesso:    false,
+      erro:       resultado.mensagemErro,
+      codigoErro: resultado.codigoErro || null,
+    });
+  }
+
+  // Cancelar Documento de Pagamento — REST PUT, escrita real sem undo documentado.
+  if (action === 'cancelar-documento-pagamento') {
+    if (!credenciaisConfiguradas()) {
+      return res.status(500).json({ erro: 'Token PSI não configurado. Defina SS_NISS_EMPRESA e SS_PSI_TOKEN nas variáveis de ambiente do Vercel.' });
+    }
+    const { identificadorDocumento, workerId: wId, confirmadoPor: confPor } = req.body || {};
+    if (!identificadorDocumento) return res.status(400).json({ erro: 'Campo "identificadorDocumento" obrigatório.' });
+
+    const db = supabaseAdmin();
+    const ambiente = getAmbiente();
+    const url = `${CI_BASE()}/documento-pagamento/${encodeURIComponent(identificadorDocumento)}`;
+    const payloadStr = JSON.stringify({ identificadorDocumento });
+
+    let r;
+    try {
+      r = await callSSRestPutUrl(url);
+    } catch (e) {
+      await db.from('ss_comunicacoes').insert({
+        worker_id: wId || null, tipo: 'cancelamento_documento_pagamento', status: 'erro',
+        payload_xml: payloadStr, resposta_ss: e.message,
+        confirmado_por: confPor || null, ambiente,
+      });
+      return res.status(502).json({ sucesso: false, erro: e.message });
+    }
+
+    const cod = r.json?.codigoResultado ?? r.json?.['codigo-resultado'];
+    const sucesso = r.httpStatus === 200 && (cod === 1 || cod === '1');
+
+    await db.from('ss_comunicacoes').insert({
+      worker_id:      wId || null,
+      tipo:           'cancelamento_documento_pagamento',
+      status:         sucesso ? 'sucesso' : 'erro',
+      payload_xml:    payloadStr,
+      resposta_ss:    JSON.stringify(r.json),
+      confirmado_por: confPor || null,
+      ambiente,
+    });
+
+    if (sucesso) {
+      return res.status(200).json({ sucesso: true, mensagem: r.json?.mensagem || null, ambiente });
+    }
+
+    // O mesmo codigoResultado "17" tem dois significados diferentes consoante
+    // o HTTP status — distinguir pelos dois, não só pelo código.
+    let erro;
+    if (r.httpStatus === 200 && (cod === 17 || cod === '17')) {
+      erro = r.json?.mensagem || 'Documento não pode ser cancelado: não está a pagamento, já expirado, já cancelado ou já pago.';
+    } else if (r.httpStatus === 400 && (cod === 17 || cod === '17')) {
+      erro = r.json?.mensagem || 'Identificador de documento tecnicamente inválido.';
+    } else if (cod === 7 || cod === '7') {
+      erro = r.json?.mensagem || 'Sem representação válida.';
+    } else if (cod === 8 || cod === '8') {
+      erro = r.json?.mensagem || 'NISS inválido.';
+    } else {
+      erro = r.json?.mensagem || `Erro HTTP ${r.httpStatus} devolvido pela Segurança Social.`;
+    }
+    return res.status(422).json({ sucesso: false, erro, codigoResultado: cod ?? null, httpStatus: r.httpStatus });
+  }
+
+  // Emitir Documento de Pagamento — passo 1: pedido de emissão (REST POST, escrita real).
+  if (action === 'emitir-documento-pagamento') {
+    if (!credenciaisConfiguradas()) {
+      return res.status(500).json({ erro: 'Token PSI não configurado. Defina SS_NISS_EMPRESA e SS_PSI_TOKEN nas variáveis de ambiente do Vercel.' });
+    }
+    const { ambito, workerId: wId, confirmadoPor: confPor } = req.body || {};
+    if (ambito == null) return res.status(400).json({ erro: 'Campo "ambito" obrigatório.' });
+
+    const db = supabaseAdmin();
+    const ambiente = getAmbiente();
+    const url = `${CI_BASE()}/documento-pagamento/pedido-emissao`;
+    const bodyPSI = { ambito: Number(ambito) };
+    const payloadStr = JSON.stringify(bodyPSI);
+
+    let r;
+    try {
+      r = await callSSRestPostUrl(url, bodyPSI);
+    } catch (e) {
+      await db.from('ss_comunicacoes').insert({
+        worker_id: wId || null, tipo: 'emissao_documento_pagamento', status: 'erro',
+        payload_xml: payloadStr, resposta_ss: e.message,
+        confirmado_por: confPor || null, ambiente,
+      });
+      return res.status(502).json({ sucesso: false, erro: e.message });
+    }
+
+    const cod = r.json?.codigoResultado ?? r.json?.['codigo-resultado'];
+    // 1=sucesso, 10=já em processamento, 11=já existe resposta válida — os
+    // três são "aceite" (não erro), a chave devolvida serve para consultar.
+    const sucesso = r.ok && (cod === 1 || cod === '1' || cod === 10 || cod === '10' || cod === 11 || cod === '11');
+
+    // Grava-se no momento do PEDIDO (não da consulta) — é aqui que o efeito
+    // real acontece do lado da SS, mesmo que o resultado só apareça depois.
+    await db.from('ss_comunicacoes').insert({
+      worker_id:      wId || null,
+      tipo:           'emissao_documento_pagamento',
+      status:         sucesso ? 'sucesso' : 'erro',
+      payload_xml:    payloadStr,
+      resposta_ss:    JSON.stringify(r.json),
+      confirmado_por: confPor || null,
+      ambiente,
+    });
+
+    if (!sucesso) {
+      return res.status(422).json({
+        sucesso: false,
+        erro:    r.json?.mensagem || r.erro || `Erro HTTP ${r.httpStatus} devolvido pela Segurança Social.`,
+        codigoResultado: cod ?? null,
+      });
+    }
+
+    return res.status(200).json({
+      sucesso:         true,
+      codigoResultado: String(cod),
+      mensagem:        r.json?.mensagem || null,
+      chave:           r.json?.chave ?? null,
+      ambiente,
+    });
+  }
+
+  // Emitir Documento de Pagamento — passo 2: consultar resultado por chave (polling, GET, sem efeitos colaterais).
+  if (action === 'consultar-emissao-documento-pagamento') {
+    if (!credenciaisConfiguradas()) return res.status(400).json({ erro: 'Token PSI não configurado.' });
+    const { chave } = req.body || {};
+    if (!chave) return res.status(400).json({ erro: 'Campo "chave" obrigatório.' });
+
+    const url = `${CI_BASE()}/documento-pagamento/consulta-pedido/${encodeURIComponent(chave)}`;
+    try {
+      const r = await callSSRestGetUrl(url);
+
+      // callSSRestGetUrl trata HTTP 404 genericamente como "sem registos" —
+      // aqui um 404 significa codigoResultado 13 (chave não pertence ao
+      // próprio pedido), não ausência de dados.
+      if (r.semRegistos) {
+        return res.status(200).json({ estado: 'erro', erro: 'Chave inválida — não corresponde a um pedido de emissão feito por esta empresa.', ambiente: getAmbiente() });
+      }
+
+      const cod = r.json?.codigoResultado ?? r.json?.['codigo-resultado'];
+
+      if (!r.ok) {
+        // HTTP 400/500: codigoResultado 13 (chave tecnicamente inválida) ou 0 (erro interno)
+        return res.status(200).json({ estado: 'erro', erro: r.json?.mensagem || r.erro || `Erro HTTP ${r.httpStatus}.`, ambiente: getAmbiente() });
+      }
+      if (cod === 10 || cod === '10') {
+        return res.status(200).json({ estado: 'processando', ambiente: getAmbiente() });
+      }
+      if (cod === 14 || cod === '14') {
+        return res.status(200).json({ estado: 'expirado', erro: r.json?.mensagem || 'Pedido expirado — repita o pedido de emissão.', ambiente: getAmbiente() });
+      }
+      if (cod === 15 || cod === '15') {
+        return res.status(200).json({ estado: 'sem_valores', mensagem: r.json?.mensagem || 'Processado, mas sem valores a pagar no momento.', ambiente: getAmbiente() });
+      }
+      if (cod === 1 || cod === '1') {
+        return res.status(200).json({ estado: 'sucesso', resultado: r.json?.resultado || [], ambiente: getAmbiente() });
+      }
+      return res.status(200).json({ estado: 'erro', erro: r.json?.mensagem || `Código de resultado desconhecido: ${cod ?? 'nenhum'}`, ambiente: getAmbiente() });
+    } catch (e) {
+      return res.status(502).json({ estado: 'erro', erro: e.message });
+    }
   }
 
   const { workerId, dadosExtra = {}, confirmadoPor } = req.body || {};

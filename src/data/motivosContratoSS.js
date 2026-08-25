@@ -24,6 +24,11 @@ export const MOTIVOS_CONTRATO_CERTO = [
   { value: 'STTT', label: 'STTT — Substituição de trabalhador temporário' },
   { value: 'S2MT', label: 'S2MT — Substituição de dois ou mais trabalhadores' },
   { value: 'VAPT', label: 'VAPT — Vacatura de posto de trabalho com processo de recrutamento em curso' },
+  // Encontrado só na spec de Alterar Contrato (Agosto 2026) — ausente da spec
+  // original de Admissão que gerou esta lista. Mesmo domínio de negócio
+  // (motivo de contrato a termo certo), por isso adicionado aqui em vez de
+  // criar uma lista paralela só para Alterar Contrato.
+  { value: 'RVEL', label: 'RVEL — Outro motivo — Conversão em contrato a termo após reforma por velhice ou idade de 70 anos' },
 ];
 
 export const MOTIVOS_CONTRATO_INCERTO = [

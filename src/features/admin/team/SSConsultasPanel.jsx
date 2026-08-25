@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
-import { Search, FileText, TrendingUp, AlertCircle, CheckCircle, Info, ShieldCheck, Bell, FileSignature, Users } from 'lucide-react';
+import { Search, FileText, TrendingUp, AlertCircle, CheckCircle, Info, ShieldCheck, Bell, FileSignature, Users, Ban, Send } from 'lucide-react';
 import { authFetch } from '../../../utils/authFetch';
 import SubTabBar from '../../../components/common/SubTabBar';
 import { FT } from '../../../styles/designTokens';
+import EmitirDocumentoPagamentoModal from './EmitirDocumentoPagamentoModal';
+import { formatReferencia } from './ssDocumentoPagamentoUtils';
 
 const CURRENT_YEAR = new Date().getFullYear();
 
@@ -103,27 +105,12 @@ function ComprovativosSection() {
   );
 }
 
-// Reduz o objeto aninhado `referenciaDocumentoPagamento` (multibanco / tesouraria /
-// transferência bancária / débito direto) a uma única linha legível — prioriza o
-// meio de pagamento mais informativo disponível.
-function formatReferencia(ref) {
-  if (!ref) return '—';
-  const mb = ref.pagamentoMultibanco;
-  if (mb?.referenciaMultibanco) return `MB ${mb.entidadeMultibanco ?? ''} ${mb.referenciaMultibanco}`.trim();
-  const tb = ref.pagamentoTransferenciaBancaria;
-  // Minúsculas — confirmado no Swagger oficial da PSI (ObterDocumentoPagamentoVO
-  // → pagamentoTransferenciaBancaria.iban/.swift), não "Iban"/"Swift".
-  if (tb?.iban) return `IBAN ${tb.iban}`;
-  if (ref.pagamentoTesouraria === 'S') return 'Tesouraria';
-  const dd = ref.pagamentoDebitoDireto;
-  if (dd?.numeroAutorizacao) return `Débito Direto (ADC ${dd.numeroAutorizacao})`;
-  return '—';
-}
-
 // ── Documentos de Pagamento ──────────────────────────────────────────────────
 
-function DocumentosPagamentoSection() {
+function DocumentosPagamentoSection({ ssAmbiente }) {
   const [estado, setEstado] = useState(null);
+  const [cancelandoId, setCancelandoId] = useState(null);
+  const [emitirAberto, setEmitirAberto] = useState(false);
 
   async function consultar() {
     setEstado({ loading: true });
@@ -133,6 +120,38 @@ function DocumentosPagamentoSection() {
       if (!r.ok) { setEstado({ erro: json.erro || `HTTP ${r.status}` }); return; }
       setEstado({ dados: json.dados || [], ambiente: json.ambiente, semRegistos: json.semRegistos });
     } catch (e) { setEstado({ erro: e.message }); }
+  }
+
+  // Não há operação de consulta prévia de "isCancelavel" documentada — a
+  // única forma de saber se é cancelável é tentar e ler o resultado (ver
+  // api/seguranca-social/index.js, action "cancelar-documento-pagamento").
+  // Sem garantia de reversão — por isso o confirm() é explícito sobre isso e
+  // distingue visualmente ambiente real de teste, mesma lógica do banner
+  // vermelho/laranja dos modais de escrita.
+  async function cancelar(row) {
+    const id = row.numeroDocumentoPagamento;
+    if (!id) return;
+    const msg = ssAmbiente === 'producao'
+      ? `⚠️ AMBIENTE REAL — Esta ação cancela o documento de pagamento nº ${id} junto da Segurança Social. NÃO HÁ GARANTIA DE REVERSÃO. Confirma?`
+      : `(MODO DE TESTE) Cancelar o documento de pagamento nº ${id}? Não afeta produção.`;
+    if (!window.confirm(msg)) return;
+
+    setCancelandoId(id);
+    try {
+      const r = await authFetch('/api/seguranca-social', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'cancelar-documento-pagamento', identificadorDocumento: id }),
+      });
+      const json = await r.json();
+      if (!json.sucesso) { alert(json.erro || 'Erro ao cancelar documento.'); return; }
+      alert('Documento cancelado com sucesso.');
+      consultar();
+    } catch (e) {
+      alert(`Erro de ligação: ${e.message}`);
+    } finally {
+      setCancelandoId(null);
+    }
   }
 
   return (
@@ -147,6 +166,14 @@ function DocumentosPagamentoSection() {
           <Search size={13} />
           {estado?.loading ? 'A consultar…' : 'Consultar Documentos'}
         </button>
+        <button
+          onClick={() => setEmitirAberto(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 border rounded text-sm hover:bg-[var(--surface)] transition-colors"
+          style={{ borderColor: FT.slate, color: 'var(--ink-soft)' }}
+        >
+          <Send size={13} />
+          Emitir Documento de Pagamento
+        </button>
         {estado?.ambiente && <AmbienteBadge ambiente={estado.ambiente} />}
       </div>
 
@@ -158,7 +185,7 @@ function DocumentosPagamentoSection() {
           <table className="min-w-full text-xs border-collapse">
             <thead>
               <tr className="bg-gray-50 text-gray-600">
-                {['Tipo', 'Subtipo', 'Nº Documento', 'Validade', 'Valor (€)', 'Referência'].map(h => (
+                {['Tipo', 'Subtipo', 'Nº Documento', 'Validade', 'Valor (€)', 'Referência', 'Ações'].map(h => (
                   <th key={h} className="px-3 py-2 text-left border border-gray-200">{h}</th>
                 ))}
               </tr>
@@ -172,11 +199,32 @@ function DocumentosPagamentoSection() {
                   <td className="px-3 py-1.5 border border-gray-200">{row.dataValidade ?? '—'}</td>
                   <td className="px-3 py-1.5 border border-gray-200 text-right">{row.valor != null ? Number(row.valor).toFixed(2) : '—'}</td>
                   <td className="px-3 py-1.5 border border-gray-200 font-mono">{formatReferencia(row.referenciaDocumentoPagamento)}</td>
+                  <td className="px-3 py-1.5 border border-gray-200">
+                    {row.numeroDocumentoPagamento && (
+                      <button
+                        onClick={() => cancelar(row)}
+                        disabled={cancelandoId === row.numeroDocumentoPagamento}
+                        className="flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold disabled:opacity-50 transition-colors"
+                        style={{ color: 'var(--bad)', borderWidth: 1, borderStyle: 'solid', borderColor: 'var(--bad)' }}
+                        title="Cancelar documento de pagamento — sem garantia de reversão"
+                      >
+                        <Ban size={11} />
+                        {cancelandoId === row.numeroDocumentoPagamento ? 'A cancelar…' : 'Cancelar'}
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+      )}
+
+      {emitirAberto && (
+        <EmitirDocumentoPagamentoModal
+          ambiente={ssAmbiente}
+          onClose={() => setEmitirAberto(false)}
+        />
       )}
     </div>
   );
@@ -677,6 +725,14 @@ function TrabalhadoresSection() {
 
 export default function SSConsultasPanel() {
   const [aba, setAba] = useState('comprovativos');
+  const [ssAmbiente, setSsAmbiente] = useState('teste');
+
+  useEffect(() => {
+    authFetch('/api/seguranca-social?action=status')
+      .then(r => r.json())
+      .then(d => { if (d.ambiente) setSsAmbiente(d.ambiente); })
+      .catch(() => {});
+  }, []);
 
   const abas = [
     { id: 'comprovativos',        label: 'Comprovativos de Pagamento',   icon: CheckCircle    },
@@ -694,7 +750,7 @@ export default function SSConsultasPanel() {
 
       <div className="pt-1">
         {aba === 'comprovativos'         && <ComprovativosSection />}
-        {aba === 'documentos-pagamento'  && <DocumentosPagamentoSection />}
+        {aba === 'documentos-pagamento'  && <DocumentosPagamentoSection ssAmbiente={ssAmbiente} />}
         {aba === 'remuneracoes'          && <RemuneracoesSection />}
         {aba === 'situacao-contributiva' && <SituacaoContributivaSection />}
         {aba === 'avisos'                && <AvisosSection />}

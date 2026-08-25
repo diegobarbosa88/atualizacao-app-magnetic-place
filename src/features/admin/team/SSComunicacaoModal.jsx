@@ -55,7 +55,7 @@ const ENQUADRAMENTOS = [
   { value: 'PFPV', label: 'PFPV — Pensionistas em funções públicas — velhice' },
 ];
 
-const MODALIDADE_CONTRATO = [
+export const MODALIDADE_CONTRATO = [
   { value: 'A',  label: 'A — Sem termo, tempo completo' },
   { value: 'B',  label: 'B — Sem termo, tempo parcial' },
   { value: 'C',  label: 'C — Sem termo, t. completo, intermitente/descontínuo' },
@@ -88,7 +88,7 @@ const MODALIDADE_CONTRATO = [
 // ── Validações de segurança ──────────────────────────────────────────────────
 
 // NISS deve ter exatamente 11 dígitos numéricos
-function validarNiss(niss) {
+export function validarNiss(niss) {
   if (!niss) return 'NISS em falta — campo obrigatório para comunicar à Segurança Social.';
   const digits = String(niss).replace(/\D/g, '');
   if (digits.length !== 11) {
@@ -99,11 +99,11 @@ function validarNiss(niss) {
 
 // Detetar registos fictícios pelo nome
 const PADROES_FICTICIO = [/\bteste\b/i, /\btest\b/i, /\bficticio\b/i, /\bfictício\b/i, /\bdummy\b/i, /\bexemplo\b/i, /\bamostra\b/i];
-function isRegistoFicticio(worker) {
+export function isRegistoFicticio(worker) {
   return PADROES_FICTICIO.some(p => p.test(worker.name || ''));
 }
 
-function computeModalidade(worker) {
+export function computeModalidade(worker) {
   const map = {
     'sem_termo+tempo_inteiro':           'A',
     'sem_termo+tempo_parcial':           'B',

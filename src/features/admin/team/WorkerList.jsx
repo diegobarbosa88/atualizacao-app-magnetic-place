@@ -3,8 +3,9 @@ import { useApp } from '../../../context/AppContext';
 import { authFetch } from '../../../utils/authFetch';
 import { consultarComunicacoesPendentes, invalidarComunicacoesPendentes } from './ssComunicacoesPendentes';
 import { impersonarTrabalhador } from '../../../utils/impersonateWorker';
-import { Search, Edit2, Trash2, CheckCircle, ShieldCheck, ShieldOff, MoreVertical, FolderOpen, SendHorizonal, AlertTriangle, Shield } from 'lucide-react';
+import { Search, Edit2, Trash2, CheckCircle, ShieldCheck, ShieldOff, MoreVertical, FolderOpen, SendHorizonal, AlertTriangle, Shield, FileEdit } from 'lucide-react';
 import SSComunicacaoModal from './SSComunicacaoModal';
+import AlterarContratoModal from './AlterarContratoModal';
 import { FT, SCALE } from '../../../styles/designTokens';
 import Card from '../../../components/common/Card';
 import { FONT_TITLE, FONT_MONO } from '../../../styles/designTokens';
@@ -157,6 +158,7 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
   const [confirmDeleteWorkerId, setConfirmDeleteWorkerId] = useState(null);
   const [openMenuId, setOpenMenuId] = useState(null);
   const [ssModal, setSsModal] = useState(null); // { worker, tipo: 'admissao'|'cessacao' }
+  const [alterarContratoWorker, setAlterarContratoWorker] = useState(null); // worker | null
   const [ssAmbiente, setSsAmbiente] = useState('teste');
   const [apoliceMap, setApoliceMap] = useState({});
   const [ssComunicacoesMap, setSsComunicacoesMap] = useState({});
@@ -386,6 +388,21 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                                 </button>
                               </>
                             )}
+                            {w.ss_admissao_comunicada_em && (
+                              <>
+                                <div className="mx-3 my-1 border-t border-[var(--border-soft)]" />
+                                <button
+                                  onClick={() => { setAlterarContratoWorker(w); setOpenMenuId(null); }}
+                                  className="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-amber-50 group transition-colors"
+                                >
+                                  <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-amber-100 text-amber-600 group-hover:bg-amber-200 transition-colors shrink-0"><FileEdit size={11} /></span>
+                                  <div className="text-left">
+                                    <span className={`${SCALE.text.body} text-[var(--ink-mid)] group-hover:text-amber-700`}>Alterar Contrato</span>
+                                    {ssAmbiente === 'teste' && <p className={`${SCALE.text.statLabel} text-orange-500 leading-none`}>TESTE</p>}
+                                  </div>
+                                </button>
+                              </>
+                            )}
                             <div className="mx-3 my-1 border-t border-[var(--border-soft)]" />
                             {confirmDeleteWorkerId === w.id ? (
                               <div className="mx-2 mb-1 p-2 bg-rose-50 rounded-lg border border-rose-100">
@@ -424,6 +441,14 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
           onSuccess={(data) => handleSsSuccess(data)}
         />
       )}
+      {alterarContratoWorker && (
+        <AlterarContratoModal
+          worker={alterarContratoWorker}
+          ambiente={ssAmbiente}
+          onClose={() => setAlterarContratoWorker(null)}
+          onSuccess={() => setAlterarContratoWorker(null)}
+        />
+      )}
     </>
     );
   }
@@ -452,6 +477,9 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                 )}
                 {w.dataFim && !w.ss_cessacao_comunicada_em && (
                   <button onClick={() => setSsModal({ worker: w, tipo: 'cessacao' })} className="p-1 text-amber-600 hover:bg-amber-50 rounded-lg transition-all border border-amber-200" title={`Comunicar Cessação à SS${ssAmbiente === 'teste' ? ' (TESTE)' : ''}`}><SendHorizonal size={10} /></button>
+                )}
+                {w.ss_admissao_comunicada_em && (
+                  <button onClick={() => setAlterarContratoWorker(w)} className="p-1 text-amber-600 hover:bg-amber-50 rounded-lg transition-all border border-amber-200" title={`Alterar Contrato na SS${ssAmbiente === 'teste' ? ' (TESTE)' : ''}`}><FileEdit size={10} /></button>
                 )}
                 {confirmDeleteWorkerId === w.id ? (
                   <div className="flex items-center gap-1">
@@ -493,6 +521,14 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
         ambiente={ssAmbiente}
         onClose={() => setSsModal(null)}
         onSuccess={(data) => handleSsSuccess(data)}
+      />
+    )}
+    {alterarContratoWorker && (
+      <AlterarContratoModal
+        worker={alterarContratoWorker}
+        ambiente={ssAmbiente}
+        onClose={() => setAlterarContratoWorker(null)}
+        onSuccess={() => setAlterarContratoWorker(null)}
       />
     )}
     </>
