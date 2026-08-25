@@ -173,37 +173,13 @@ export default async function handler(req, res) {
     } catch (e) { return res.status(502).json({ erro: e.message }); }
   }
 
-  // ── POST: comunicar admissão/cessação ou consultar remunerações ──────────────
-  if (req.method !== 'POST') {
-    return res.status(405).json({ erro: 'Método não permitido. Use POST.' });
-  }
-
-  // Remunerações (POST de consulta, sem efeitos colaterais)
-  if (action === 'remuneracoes') {
-    if (!credenciaisConfiguradas()) return res.status(400).json({ erro: 'Token PSI não configurado.' });
-    const { nissTrabalhadores = [], dataInicio, dataFim } = req.body || {};
-    const nissEmpresa = process.env.SS_NISS_EMPRESA;
-    const bodyPSI = {
-      'niss-entidade-empregadora': Number(nissEmpresa),
-      ...(nissTrabalhadores.length ? { 'niss-trabalhadores': nissTrabalhadores.map(Number) } : {}),
-      ...(dataInicio ? { 'data-inicio': dataInicio } : {}),
-      ...(dataFim    ? { 'data-fim':    dataFim    } : {}),
-    };
-    try {
-      const r = await callSSRestPostUrl(REMUN_URL(), bodyPSI);
-      if (r.semRegistos) return res.status(200).json({ semRegistos: true, dados: [] });
-      if (!r.ok) return res.status(422).json({ erro: r.erro });
-      const dados = Array.isArray(r.json) ? r.json : (r.json?.remuneracoes || r.json?.resultado || []);
-      return res.status(200).json({ semRegistos: dados.length === 0, dados, ambiente: getAmbiente() });
-    } catch (e) { return res.status(502).json({ erro: e.message }); }
-  }
-
   // Proxy do PDF da declaração de Situação Contributiva. A SS devolve um
   // `caminho` já qualificado (https://app.seg-social.pt/ptss/fraw/download/...)
   // mas exige o mesmo Bearer da API — um <a href> direto do browser não tem
   // como enviar esse header, e o download falha em silêncio ("erro ao
   // carregar o documento PDF"). O browser autentica-se à nossa app (token de
   // sessão), a nossa app autentica-se à SS (token PSI) e devolve o binário.
+  // Tem de ficar ANTES do bloqueio "Método não permitido" abaixo — é GET, não POST.
   if (req.method === 'GET' && action === 'situacao-contributiva-pdf') {
     if (!credenciaisConfiguradas()) return res.status(400).json({ erro: 'Token PSI não configurado.' });
     const caminho = req.query?.caminho;
@@ -226,6 +202,31 @@ export default async function handler(req, res) {
       res.setHeader('Content-Type', r.headers.get('content-type') || 'application/pdf');
       res.setHeader('Content-Disposition', 'inline; filename="situacao-contributiva.pdf"');
       return res.status(200).send(buffer);
+    } catch (e) { return res.status(502).json({ erro: e.message }); }
+  }
+
+  // ── POST: comunicar admissão/cessação ou consultar remunerações ──────────────
+  if (req.method !== 'POST') {
+    return res.status(405).json({ erro: 'Método não permitido. Use POST.' });
+  }
+
+  // Remunerações (POST de consulta, sem efeitos colaterais)
+  if (action === 'remuneracoes') {
+    if (!credenciaisConfiguradas()) return res.status(400).json({ erro: 'Token PSI não configurado.' });
+    const { nissTrabalhadores = [], dataInicio, dataFim } = req.body || {};
+    const nissEmpresa = process.env.SS_NISS_EMPRESA;
+    const bodyPSI = {
+      'niss-entidade-empregadora': Number(nissEmpresa),
+      ...(nissTrabalhadores.length ? { 'niss-trabalhadores': nissTrabalhadores.map(Number) } : {}),
+      ...(dataInicio ? { 'data-inicio': dataInicio } : {}),
+      ...(dataFim    ? { 'data-fim':    dataFim    } : {}),
+    };
+    try {
+      const r = await callSSRestPostUrl(REMUN_URL(), bodyPSI);
+      if (r.semRegistos) return res.status(200).json({ semRegistos: true, dados: [] });
+      if (!r.ok) return res.status(422).json({ erro: r.erro });
+      const dados = Array.isArray(r.json) ? r.json : (r.json?.remuneracoes || r.json?.resultado || []);
+      return res.status(200).json({ semRegistos: dados.length === 0, dados, ambiente: getAmbiente() });
     } catch (e) { return res.status(502).json({ erro: e.message }); }
   }
 
