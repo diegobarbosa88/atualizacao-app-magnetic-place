@@ -78,17 +78,28 @@ export async function callSSRestGetUrl(url) {
     headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
   });
 
-  if (res.status === 401) throw new Error('Token PSI inválido ou expirado (HTTP 401).');
-  if (res.status === 403) throw new Error('Acesso negado pela Segurança Social (HTTP 403).');
   if (res.status === 404) return { httpStatus: 404, ok: true, semRegistos: true, json: null };
 
   const text = await res.text();
   let json = null;
   try { json = JSON.parse(text); } catch { /* deixar null */ }
 
+  // Lê o corpo antes de decidir 401/403 — a spec da PSI documenta mensagens
+  // específicas para "Operação não permitida" (ex. NISS sem autorização para
+  // um serviço em concreto), que se perdiam ao lançar o erro genérico antes
+  // de ler a resposta.
+  if (res.status === 401) throw new Error(json?.message || 'Token PSI inválido ou expirado (HTTP 401).');
+  if (res.status === 403) throw new Error(json?.message || `Acesso negado pela Segurança Social (HTTP 403) — o NISS/token pode não estar autorizado para este serviço específico. Contacte suporte-psi@seg-social.pt indicando NISS e endpoint se persistir.`);
+
   if (res.ok) return { httpStatus: res.status, ok: true, json };
 
-  const erro = json?.message || json?.erro || json?.descricao || `HTTP ${res.status}`;
+  // Nem todos os serviços REST da PSI devolvem {message}/{erro}/{descricao} —
+  // vários (ex. comprovativos, documentos de pagamento) só devolvem
+  // {"codigoResultado": "N"}, sem texto nenhum. Sem isto, um erro real ficava
+  // reduzido a "HTTP 400" sem pista nenhuma do que a SS quis dizer.
+  const erro = json?.message || json?.erro || json?.descricao
+    || (json?.codigoResultado != null ? `Código de resultado da Segurança Social: "${json.codigoResultado}" (HTTP ${res.status})` : null)
+    || (text ? `HTTP ${res.status}: ${text.slice(0, 300)}` : `HTTP ${res.status}`);
   return { httpStatus: res.status, ok: false, erro, json };
 }
 
