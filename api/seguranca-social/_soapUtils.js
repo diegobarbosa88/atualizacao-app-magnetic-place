@@ -93,6 +93,14 @@ export async function callSSRestGetUrl(url) {
 
   if (res.ok) return { httpStatus: res.status, ok: true, json };
 
+  // codigoResultado "4" = sem resultados em pelo menos dois serviços
+  // confirmados (comprovativos, documentos de pagamento) — mas o HTTP que o
+  // envolve varia (confirmado ao vivo em produção: comprovativos devolveu
+  // HTTP 400, não 404 como os exemplos da spec sugeriam). Não é erro, é
+  // "não há dados", mesmo critério já usado em callSSRestPostUrl.
+  const cod = json?.codigoResultado;
+  if (cod === 4 || cod === '4') return { httpStatus: res.status, ok: true, semRegistos: true, json };
+
   // Nem todos os serviços REST da PSI devolvem {message}/{erro}/{descricao} —
   // vários (ex. comprovativos, documentos de pagamento) só devolvem
   // {"codigoResultado": "N"}, sem texto nenhum. Sem isto, um erro real ficava
