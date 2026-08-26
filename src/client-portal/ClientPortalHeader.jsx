@@ -1,12 +1,14 @@
 import React from 'react';
-import { Bell, LogOut, LogIn } from 'lucide-react';
+import { Bell, BellRing, LogOut, LogIn } from 'lucide-react';
 import { SCALE } from '../styles/designTokens';
+import { usePushSubscription } from '../hooks/usePushSubscription';
 
 export default function ClientPortalHeader({
   systemSettings, lang, changeLang, selectedTab, t,
   activeNow, workers, showNotifDropdown, setShowNotifDropdown,
-  notifRef, clientSession, handleLogout,
+  notifRef, clientSession, handleLogout, supabase, clientId,
 }) {
+  const { isSubscribed, subscribing, subscribe, unsubscribe, supported: pushSupported } = usePushSubscription({ supabase, role: 'client', userId: clientId });
   return (
     <header className="bg-white border-b border-slate-200 sticky top-0 z-10 w-full shadow-sm">
       <div className="max-w-6xl mx-auto px-4 md:px-8 py-4 flex items-center justify-between gap-4">
@@ -44,8 +46,8 @@ export default function ClientPortalHeader({
               </button>
               {showNotifDropdown && (
                 <div className="absolute right-0 mt-2 w-72 max-w-[calc(100vw-1rem)] bg-white rounded-2xl shadow-xl border border-slate-200 z-50 overflow-hidden">
-                  <div className="p-4 border-b border-slate-100 bg-indigo-50 flex items-center gap-2">
-                    <Bell size={16} className="text-indigo-600" />
+                  <div className="p-4 border-b border-slate-100 bg-[#FDF3E4] flex items-center gap-2">
+                    <Bell size={16} className="text-[#8a4a00]" />
                     <span className="font-black text-slate-800 text-sm uppercase tracking-widest">{t('notifications')}</span>
                   </div>
                   <div className="max-h-64 overflow-y-auto">
@@ -67,12 +69,22 @@ export default function ClientPortalHeader({
               )}
             </div>
           )}
+          {clientSession && pushSupported && (
+            <button
+              onClick={isSubscribed ? unsubscribe : subscribe}
+              disabled={subscribing}
+              className={`p-1.5 transition-all disabled:opacity-40 ${isSubscribed ? 'text-emerald-500' : 'text-slate-400 hover:text-slate-800'}`}
+              title={isSubscribed ? 'Notificações push ativas — clique para desativar' : 'Ativar notificações push'}
+            >
+              {isSubscribed ? <BellRing size={18} /> : <Bell size={18} />}
+            </button>
+          )}
           {clientSession ? (
             <button onClick={handleLogout} className="p-1.5 text-slate-400 hover:text-rose-500 transition-all" title="Sair">
               <LogOut size={18} />
             </button>
           ) : (
-            <a href="https://painelcliente.magneticplace.pt/" className="p-1.5 text-indigo-500 hover:text-indigo-700 transition-all" title="Efetuar Login">
+            <a href="https://painelcliente.magneticplace.pt/" className="p-1.5 text-[#8a4a00] hover:text-[#1B3A57] transition-all" title="Efetuar Login">
               <LogIn size={18} />
             </a>
           )}

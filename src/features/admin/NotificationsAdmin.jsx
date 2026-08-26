@@ -30,6 +30,17 @@ const NotificationsAdmin = ({ workers, appNotifications, saveToDb, handleDelete,
   const [showViewDetails, setShowViewDetails] = useState(null);
   const [viewDetailsTab, setViewDetailsTab] = useState('viewed');
   const [dismissedNotifs, setDismissedNotifs] = useState([]);
+  const [pushCounts, setPushCounts] = useState(null);
+
+  useEffect(() => {
+    if (!supabase) return;
+    supabase.from('push_subscriptions').select('role').then(({ data, error }) => {
+      if (error) return console.warn('[NotificationsAdmin] falha a contar push_subscriptions:', error);
+      const counts = { admin: 0, worker: 0, client: 0 };
+      (data || []).forEach(r => { counts[r.role] = (counts[r.role] || 0) + 1; });
+      setPushCounts(counts);
+    });
+  }, [supabase]);
 
   useEffect(() => {
     try {
@@ -108,6 +119,17 @@ const NotificationsAdmin = ({ workers, appNotifications, saveToDb, handleDelete,
           </button>
         )}
       </div>
+
+      {pushCounts && (
+        <div className="flex flex-wrap items-center gap-2 mb-5">
+          <span className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Subscrições push ativas:</span>
+          {[{ label: 'Admin', key: 'admin' }, { label: 'Trabalhadores', key: 'worker' }, { label: 'Clientes', key: 'client' }].map(({ label, key }) => (
+            <span key={key} className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg ${SCALE.text.meta} bg-[var(--surface-dim)] text-[var(--ink-soft)]`}>
+              {pushCounts[key]} {label}
+            </span>
+          ))}
+        </div>
+      )}
 
       <div className="bg-[var(--surface)] rounded-2xl sm:rounded-[2rem] p-4 sm:p-6 mb-5 border border-[var(--border-soft)]">
         <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] mb-4 ml-1`}>Criar Novo Aviso</p>

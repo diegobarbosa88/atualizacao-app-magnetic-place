@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { User, Phone, Mail, MapPin, CreditCard, Shield, Landmark, Edit2, X, Send, Clock, CheckCircle, XCircle, FileCheck, Download } from 'lucide-react';
+import { User, Phone, Mail, MapPin, CreditCard, Shield, Landmark, Edit2, X, Send, Clock, CheckCircle, XCircle, FileCheck, Download, Bell, BellRing, Loader2 } from 'lucide-react';
 import { isSigned } from '../../constants/documentStatus';
 import { FT, FONT_TITLE, FONT_MONO, SCALE } from '../../styles/designTokens';
 import { notifyEvent, TARGET } from '../../utils/notifyEvent';
+import { usePushSubscription } from '../../hooks/usePushSubscription';
 
 const FIELDS = [
   { key: 'tel',     label: 'Telefone',           icon: Phone,      type: 'tel' },
@@ -36,6 +37,7 @@ const WorkerProfile = ({ worker, changeRequests, documents = [] }) => {
   const [draft, setDraft] = useState('');
   const [loading, setLoading] = useState(false);
   const [successField, setSuccessField] = useState(null);
+  const { permission, isSubscribed, subscribing, subscribe, unsubscribe, supported: pushSupported } = usePushSubscription({ supabase, role: 'worker', userId: worker?.id });
 
   const pendingFor = (key) => changeRequests.find(r => r.field === key && r.status === 'pending');
 
@@ -202,6 +204,36 @@ const WorkerProfile = ({ worker, changeRequests, documents = [] }) => {
           })}
         </div>
       </div>
+
+      {/* Notificações */}
+      {pushSupported && (
+        <div>
+          <SectionLabel>Notificações</SectionLabel>
+          <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden px-4 py-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-7 h-7 rounded-xl bg-slate-50 flex items-center justify-center shrink-0">
+                  {isSubscribed ? <BellRing size={12} style={{ color: FT.ok }} /> : <Bell size={12} className="text-slate-400" />}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-bold text-slate-800">Avisos no telemóvel</p>
+                  <p className={`${SCALE.text.meta} text-slate-400`}>
+                    {isSubscribed ? 'Ativos neste dispositivo' : permission === 'denied' ? 'Bloqueados nas definições do browser' : 'Recebe avisos mesmo com a app fechada'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={isSubscribed ? unsubscribe : subscribe}
+                disabled={subscribing || (!isSubscribed && permission === 'denied')}
+                className="shrink-0 px-3 py-2 rounded-xl font-black text-xs uppercase tracking-wide transition-all disabled:opacity-40"
+                style={isSubscribed ? { background: FT.okBg, color: FT.ok } : { background: FT.orange, color: FT.navy }}
+              >
+                {subscribing ? <Loader2 size={13} className="animate-spin" /> : isSubscribed ? 'Ativo' : permission === 'denied' ? 'Bloqueado' : 'Ativar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Documentos Assinados */}
       {signedDocs.length > 0 && (

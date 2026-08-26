@@ -16,36 +16,17 @@ import WorkerRequestsView from './client-portal/WorkerRequestsView';
 import LogManagementModal from './client-portal/LogManagementModal';
 import ModalShell from './components/common/ModalShell';
 import { CLIENT_REQUESTS_CUTOFF } from './utils/clientPortalApi';
-
-const calculateHoursDiff = (entry, exit, breakStart, breakEnd) => {
-    if (!entry || !exit || !entry.includes(':') || !exit.includes(':')) return 0;
-    const [eh, em] = entry.split(':').map(n => parseInt(n, 10) || 0);
-    const [xh, xm] = exit.split(':').map(n => parseInt(n, 10) || 0);
-    let diffMins = (xh * 60 + xm) - (eh * 60 + em);
-    if (diffMins < 0) diffMins += 24 * 60;
-    if (breakStart && breakEnd && breakStart !== '--:--' && breakEnd !== '--:--') {
-        const [bsh, bsm] = breakStart.split(':').map(Number);
-        const [beh, bem] = breakEnd.split(':').map(Number);
-        let breakDiffMins = (beh * 60 + bem) - (bsh * 60 + bsm);
-        if (breakDiffMins < 0) breakDiffMins += 24 * 60;
-        diffMins -= breakDiffMins;
-    }
-    return Number(Math.max(0, diffMins / 60).toFixed(2));
-};
+import { calculateDuration as calculateHoursDiff } from './utils/formatUtils';
 
 export default function ClientPortal({ clients, workers, logs: initialLogs, saveToDb, initialClientId, initialMonth, initialTokenClientId, renderReport, systemSettings, appNotifications, clientApprovals, supabase }) {
     const { companySignature, corrections, correctionItems } = useApp();
     const [logs, setLogs] = useState(initialLogs || []);
     const [currentView, setCurrentView] = useState('inicio');
     const [expandedWorkers, setExpandedWorkers] = useState([]);
-    const [isZipping, setIsZipping] = useState(false);
     const [printingWorker, setPrintingWorker] = useState(null);
     const [clientIp, setClientIp] = useState('Localhost');
-    const [lastRealtimeUpdate, setLastRealtimeUpdate] = useState(null);
     const [now, setNow] = useState(() => new Date());
-    const [todayLogs, setTodayLogs] = useState([]);
     const [expandedLogLocations, setExpandedLogLocations] = useState(new Set());
-    const [expandedHistoryDays, setExpandedHistoryDays] = useState(new Set());
     const [calSelectedDay, setCalSelectedDay] = useState(null);
     const [isWorkersModalOpen, setIsWorkersModalOpen] = useState(false);
     const [rotatingWorkerIdx, setRotatingWorkerIdx] = useState(0);
@@ -162,8 +143,6 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
             return months[0] || null;
         } catch { return null; }
     });
-    const [validarSubView, setValidarSubView] = useState('selector');
-
     // Reforço para o caminho assíncrono: initialTokenClientId (resolvido via
     // fetch a api/pagamentos?action=resolver-token-cliente, ver app.jsx) só
     // fica disponível DEPOIS do primeiro render — o useState inicializador de
@@ -188,27 +167,6 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
     }, []);
 
     useEffect(() => {
-        if (currentView !== 'hoje' || !supabase || !effectiveClientId) return;
-        const today = new Date().toLocaleDateString('en-CA');
-        supabase.from('logs').select('*').eq('clientId', effectiveClientId).eq('date', today)
-            .then(({ data, error }) => {
-                if (error) { console.error('[ClientPortal] todayLogs fetch error:', error); return; }
-                setTodayLogs(data || []);
-            });
-    }, [currentView, supabase, effectiveClientId]);
-
-    useEffect(() => {
-        if (!lastRealtimeUpdate) return;
-        if (currentView !== 'hoje' || !supabase || !effectiveClientId) return;
-        const today = new Date().toLocaleDateString('en-CA');
-        supabase.from('logs').select('*').eq('clientId', effectiveClientId).eq('date', today)
-            .then(({ data, error }) => {
-                if (error) { console.error('[ClientPortal] todayLogs fetch error:', error); return; }
-                setTodayLogs(data || []);
-            });
-    }, [lastRealtimeUpdate, currentView, supabase, effectiveClientId]);
-
-    useEffect(() => {
         setLogs(initialLogs || []);
     }, [initialLogs]);
 
@@ -228,7 +186,6 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                 } else if (payload.eventType === 'INSERT') {
                     setLogs(prev => [...prev, payload.new]);
                 }
-                setLastRealtimeUpdate(new Date());
             })
             .subscribe();
         return () => { supabase.removeChannel(channel); };
@@ -259,7 +216,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
         handleApproveCreationRequest, handleRejectCreationRequest,
     } = useClientNotifications({
         appNotifications, effectiveClientId, corrections, correctionItems,
-        logs, setLogs, saveToDb, clientData, workers, supabase,
+        logs, setLogs, saveToDb, clientData, supabase,
     });
 
     const availableMonths = useMemo(() => {
@@ -329,13 +286,13 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
     }, [corrections, effectiveClientId]);
 
     const {
-        draftData, setDraftData, draftTotal,
+        draftData, draftTotal,
         reportJustification, setReportJustification,
-        startReport, handleTimeChange, handleDeleteDay, handleRevertDay, generateCorrectionMessage, handlePrecisionConfirm,
-    } = useDraftReport({ originalWorkersData, selectedMonth, logs, originalTotal, clientData, effectiveClientId, initialMonth, saveToDb, goToView, supabase, companySignature });
+        startReport, handleTimeChange, handleDeleteDay, handleRevertDay, handlePrecisionConfirm,
+    } = useDraftReport({ originalWorkersData, selectedMonth, logs, clientData, effectiveClientId, initialMonth, saveToDb, goToView, supabase, companySignature });
 
     const {
-        canvasRef, isDrawing, hasSignature, setHasSignature,
+        canvasRef, hasSignature,
         signatureSaved, setSignatureSaved,
         startDrawing, draw, stopDrawing, clearCanvas,
     } = useSignatureCanvas({ currentView, printingWorker, isApproved });
@@ -387,7 +344,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
         return (
             <div className="min-h-screen bg-slate-50 flex items-center justify-center">
                 <div className="flex flex-col items-center gap-4">
-                    <div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+                    <div className="w-10 h-10 border-4 border-[#FBE7C6] border-t-[#EB8D00] rounded-full animate-spin" />
                     <p className="text-xs font-black text-slate-400 uppercase tracking-widest">A carregar...</p>
                 </div>
             </div>
@@ -401,8 +358,8 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
     }
 
     return (
-        <div className={`min-h-screen bg-slate-50 text-slate-900 selection:bg-indigo-200 font-sans ${printingWorker ? 'pb-0 bg-white' : 'pb-20'}`}>
-            {!printingWorker && <ClientPortalHeader systemSettings={systemSettings} lang={lang} changeLang={changeLang} selectedTab={selectedTab} t={t} activeNow={activeNow} workers={workers} showNotifDropdown={showNotifDropdown} setShowNotifDropdown={setShowNotifDropdown} notifRef={notifRef} clientSession={clientSession} handleLogout={handleLogout} />}
+        <div className={`min-h-screen bg-slate-50 text-slate-900 selection:bg-[#FBE7C6] font-sans ${printingWorker ? 'pb-0 bg-white' : 'pb-20'}`}>
+            {!printingWorker && <ClientPortalHeader systemSettings={systemSettings} lang={lang} changeLang={changeLang} selectedTab={selectedTab} t={t} activeNow={activeNow} workers={workers} showNotifDropdown={showNotifDropdown} setShowNotifDropdown={setShowNotifDropdown} notifRef={notifRef} clientSession={clientSession} handleLogout={handleLogout} supabase={supabase} clientId={effectiveClientId} />}
 
             {!printingWorker ? (
                 <main className="max-w-6xl mx-auto px-4 md:px-8 py-8">
@@ -490,7 +447,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
 
                     {currentView === 'sucesso_reporte' && (
                         <div className="animate-fade-in flex flex-col items-center justify-center py-20 px-4 text-center mt-10 w-full max-w-2xl mx-auto bg-white rounded-[3rem] shadow-xl border border-slate-100">
-                            <div className="w-24 h-24 bg-indigo-50 text-indigo-600 rounded-[2rem] flex items-center justify-center mb-8 shadow-inner border border-indigo-100">🚀</div>
+                            <div className="w-24 h-24 bg-[#FDF3E4] text-[#8a4a00] rounded-[2rem] flex items-center justify-center mb-8 shadow-inner border border-[#FBE7C6]">🚀</div>
                             <h2 className="text-4xl font-black text-slate-800 uppercase tracking-tighter mb-4">{t('corrections_sent')}</h2>
                             <p className="text-sm font-bold text-slate-500 uppercase tracking-widest max-w-md mx-auto mb-10 leading-relaxed">{t('corrections_desc')}</p>
                             <button onClick={() => goToView('inicio')} className="text-slate-500 font-black text-[10px] uppercase tracking-widest bg-slate-50 px-8 py-4 rounded-2xl border border-slate-200 hover:bg-slate-100 hover:text-slate-800 transition-all shadow-sm">{t('back_to_start')}</button>
@@ -514,7 +471,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                     <div className="max-w-6xl mx-auto px-4 flex items-center justify-center gap-1 py-2">
                         <button
                             onClick={() => { setCurrentView('inicio'); setSelectedTab('dashboard'); window.scrollTo(0,0); }}
-                            className={`flex flex-col items-center gap-0.5 px-6 py-2 rounded-xl transition-all ${currentView === 'inicio' && selectedTab === 'dashboard' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-400 hover:text-slate-700'}`}
+                            className={`flex flex-col items-center gap-0.5 px-6 py-2 rounded-xl transition-all ${currentView === 'inicio' && selectedTab === 'dashboard' ? 'bg-[#FDF3E4] text-[#8a4a00]' : 'text-slate-400 hover:text-slate-700'}`}
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
                             <span className="text-[9px] font-black uppercase tracking-widest">Dashboard</span>

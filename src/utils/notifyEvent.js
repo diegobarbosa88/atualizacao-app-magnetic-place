@@ -32,7 +32,11 @@ export const newId = (prefix) => `${prefix}_${Date.now()}_${Math.random().toStri
  * @param notifType chave de notification_preferences — se omitido, o email (quando pedido) é sempre enviado
  * @param preferences objeto de notification_preferences, só relevante com notifType
  * @param email { to, name, link } — opcional; só envia se `to` estiver presente
- * @param push { url, image, tag } — opcional; envia push real (só suportado para TARGET.ADMIN por agora)
+ * @param push { url, image, tag, role, userId, userIds, dedupeKey } — opcional; envia push real.
+ *   role/userId(s) são opcionais — se omitidos, infere-se de target/targetClientId/targetWorkerIds
+ *   (ADMIN→role 'admin'; CLIENT→role 'client' + userId=targetClientId; WORKER→role 'worker' +
+ *   userIds=targetWorkerIds). dedupeKey é opcional — quando fornecido, o endpoint não reenvia se já
+ *   tiver mandado com a mesma chave (ver handlePushSend em api/formacao/index.js).
  * @param banner default true — quando false, não grava em app_notifications (o evento passa a existir só como push/email, sem o banner in-app)
  */
 export async function notifyEvent(supabase, {
@@ -93,12 +97,29 @@ export async function notifyEvent(supabase, {
     }
   }
 
-  if (push && target === TARGET.ADMIN) {
-    fetch('/api/push/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ role: 'admin', title, body: message, url: push.url, image: push.image, tag: push.tag }),
-    }).catch((e) => console.warn(`[notifyEvent] falha no push (${idPrefix}):`, e));
+  if (push) {
+    const role = push.role || (
+      target === TARGET.ADMIN ? 'admin' :
+      target === TARGET.CLIENT ? 'client' :
+      target === TARGET.WORKER ? 'worker' : null
+    );
+    if (role) {
+      const userId = push.userId !== undefined ? push.userId : (target === TARGET.CLIENT ? targetClientId : undefined);
+      const userIds = push.userIds || (target === TARGET.WORKER ? targetWorkerIds : undefined);
+      fetch('/api/push/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          role,
+          userId: userId != null ? String(userId) : undefined,
+          userIds: userIds?.length ? userIds.map(String) : undefined,
+          title, body: message, url: push.url, image: push.image, tag: push.tag,
+          dedupeKey: push.dedupeKey,
+        }),
+      }).catch((e) => console.warn(`[notifyEvent] falha no push (${idPrefix}):`, e));
+    } else {
+      console.warn(`[notifyEvent] push pedido sem role determinável (${idPrefix}) — passa push.role explicitamente.`);
+    }
   }
 
   return { error, id };

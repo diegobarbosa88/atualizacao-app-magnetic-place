@@ -68,5 +68,27 @@ export function usePushSubscription({ supabase, role, userId }) {
     }
   }, [supabase, role, userId]);
 
-  return { permission, isSubscribed, subscribing, subscribe, supported: PUSH_SUPPORTED };
+  const unsubscribe = useCallback(async () => {
+    if (!PUSH_SUPPORTED || !supabase) return false;
+    setSubscribing(true);
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      const subscription = await registration.pushManager.getSubscription();
+      if (subscription) {
+        const endpoint = subscription.endpoint;
+        await subscription.unsubscribe();
+        const { error } = await supabase.from('push_subscriptions').delete().eq('endpoint', endpoint);
+        if (error) throw error;
+      }
+      setIsSubscribed(false);
+      return true;
+    } catch (e) {
+      console.error('[usePushSubscription] falha ao cancelar subscrição:', e);
+      return false;
+    } finally {
+      setSubscribing(false);
+    }
+  }, [supabase]);
+
+  return { permission, isSubscribed, subscribing, subscribe, unsubscribe, supported: PUSH_SUPPORTED };
 }
