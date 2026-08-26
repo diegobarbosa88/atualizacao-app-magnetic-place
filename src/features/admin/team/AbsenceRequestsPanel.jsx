@@ -249,6 +249,7 @@ export default function AbsenceRequestsPanel({ requests, systemSettings, clients
         target: TARGET.WORKER,
         targetWorkerIds: [req.worker_id],
         payload: { absenceId: req.id, kind: 'absence' },
+        push: { url: '/worker', tag: 'absence-approved' },
       });
     }
   };
@@ -280,6 +281,7 @@ export default function AbsenceRequestsPanel({ requests, systemSettings, clients
           target: TARGET.WORKER,
           targetWorkerIds: [req.worker_id],
           payload: { absenceId: req.id, kind: 'absence' },
+          push: { url: '/worker', tag: 'absence-archived' },
         });
       }
     }

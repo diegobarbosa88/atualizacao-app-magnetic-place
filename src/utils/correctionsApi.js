@@ -93,6 +93,7 @@ export async function submitCorrection(supabase, payload) {
     target: TARGET.ADMIN,
     targetClientId: payload.clientId,
     payload: { correction_id: correctionId, kind: 'submitted' },
+    push: { url: '/?view=admin', tag: 'correction-submitted' },
   });
 
   if (payload.adminEmail) {
@@ -228,24 +229,24 @@ export async function applyCorrection(supabase, { correction, items, logs, clien
     .eq('id', correction.id);
   if (e3) throw e3;
 
-  if (shouldSendNotification('correction_applied', 'db', globalThis.__notificationPreferences)) {
-    const msg = `A sua correção para ${correction.month} foi aplicada.`;
-    await notifyEvent(supabase, {
-      title: `Correção Aplicada: ${clientName || ''}`.trim(),
-      message: msg,
-      type: 'success',
-      target: TARGET.CLIENT,
-      targetClientId: correction.client_id,
-      payload: { correction_id: correction.id, kind: 'applied' },
-      notifType: 'correction_applied',
-      preferences: globalThis.__notificationPreferences,
-      email: clientEmail ? {
-        to: clientEmail,
-        name: clientName,
-        link: buildClientLink(correction.client_id, correction.month, portalBase, shareToken),
-      } : undefined,
-    });
-  }
+  const msg = `A sua correção para ${correction.month} foi aplicada.`;
+  await notifyEvent(supabase, {
+    title: `Correção Aplicada: ${clientName || ''}`.trim(),
+    message: msg,
+    type: 'success',
+    target: TARGET.CLIENT,
+    targetClientId: correction.client_id,
+    payload: { correction_id: correction.id, kind: 'applied' },
+    banner: shouldSendNotification('correction_applied', 'db', globalThis.__notificationPreferences),
+    push: { url: `/?client=${correction.client_id}`, tag: 'correction-applied' },
+    notifType: 'correction_applied',
+    preferences: globalThis.__notificationPreferences,
+    email: clientEmail ? {
+      to: clientEmail,
+      name: clientName,
+      link: buildClientLink(correction.client_id, correction.month, portalBase, shareToken),
+    } : undefined,
+  });
 }
 
 /**
@@ -296,23 +297,23 @@ export async function markResolved(supabase, { correctionId, clientId, month, no
   const resolvedMsg = note
     ? `O administrador analisou o seu pedido (${month}).\n\n${note}`
     : `O administrador analisou o seu pedido para ${month}.`;
-  if (shouldSendNotification('correction_resolved', 'db', globalThis.__notificationPreferences)) {
-    await notifyEvent(supabase, {
-      title: `Correção Resolvida: ${clientName || ''}`.trim(),
-      message: resolvedMsg,
-      type: 'success',
-      target: TARGET.CLIENT,
-      targetClientId: clientId,
-      payload: { correction_id: correctionId, kind: 'resolved' },
-      notifType: 'correction_resolved',
-      preferences: globalThis.__notificationPreferences,
-      email: clientEmail ? {
-        to: clientEmail,
-        name: clientName,
-        link: buildClientLink(clientId, month, portalBase, shareToken),
-      } : undefined,
-    });
-  }
+  await notifyEvent(supabase, {
+    title: `Correção Resolvida: ${clientName || ''}`.trim(),
+    message: resolvedMsg,
+    type: 'success',
+    target: TARGET.CLIENT,
+    targetClientId: clientId,
+    payload: { correction_id: correctionId, kind: 'resolved' },
+    banner: shouldSendNotification('correction_resolved', 'db', globalThis.__notificationPreferences),
+    push: { url: `/?client=${clientId}`, tag: 'correction-resolved' },
+    notifType: 'correction_resolved',
+    preferences: globalThis.__notificationPreferences,
+    email: clientEmail ? {
+      to: clientEmail,
+      name: clientName,
+      link: buildClientLink(clientId, month, portalBase, shareToken),
+    } : undefined,
+  });
 }
 
 export async function applyCreationRequest(supabase, { correction, items, clientName, clientEmail, portalBase, shareToken }) {
@@ -439,23 +440,23 @@ export async function applyCreationRequest(supabase, { correction, items, client
   }).eq('id', correction.id);
 
   const msg = `O seu pedido de registo foi aprovado.`;
-  if (shouldSendNotification('creation_request_approved', 'db', globalThis.__notificationPreferences)) {
-    await notifyEvent(supabase, {
-      title: `Pedido de Registo Aprovado: ${clientName || ''}`.trim(),
-      message: msg,
-      type: 'success',
-      target: TARGET.CLIENT,
-      targetClientId: correction.client_id,
-      payload: { correction_id: correction.id, kind: 'applied' },
-      notifType: 'creation_request_approved',
-      preferences: globalThis.__notificationPreferences,
-      email: clientEmail ? {
-        to: clientEmail,
-        name: clientName,
-        link: buildClientLink(correction.client_id, correction.month, portalBase, shareToken),
-      } : undefined,
-    });
-  }
+  await notifyEvent(supabase, {
+    title: `Pedido de Registo Aprovado: ${clientName || ''}`.trim(),
+    message: msg,
+    type: 'success',
+    target: TARGET.CLIENT,
+    targetClientId: correction.client_id,
+    payload: { correction_id: correction.id, kind: 'applied' },
+    banner: shouldSendNotification('creation_request_approved', 'db', globalThis.__notificationPreferences),
+    push: { url: `/?client=${correction.client_id}`, tag: 'creation-request-approved' },
+    notifType: 'creation_request_approved',
+    preferences: globalThis.__notificationPreferences,
+    email: clientEmail ? {
+      to: clientEmail,
+      name: clientName,
+      link: buildClientLink(correction.client_id, correction.month, portalBase, shareToken),
+    } : undefined,
+  });
 }
 
 export async function rejectCorrection(supabase, { correctionId, clientId, month, reason, reviewer, clientName, clientEmail, portalBase, shareToken }) {
@@ -486,21 +487,21 @@ export async function rejectCorrection(supabase, { correctionId, clientId, month
   if (error) throw error;
 
   const rejectMsg = reason ? `Motivo: ${reason}` : `A sua correção para ${month} foi rejeitada.`;
-  if (shouldSendNotification('correction_rejected', 'db', globalThis.__notificationPreferences)) {
-    await notifyEvent(supabase, {
-      title: `Correção Rejeitada: ${clientName || ''}`.trim(),
-      message: rejectMsg,
-      type: 'error',
-      target: TARGET.CLIENT,
-      targetClientId: clientId,
-      payload: { correction_id: correctionId, kind: 'rejected' },
-      notifType: 'correction_rejected',
-      preferences: globalThis.__notificationPreferences,
-      email: clientEmail ? {
-        to: clientEmail,
-        name: clientName,
-        link: buildClientLink(clientId, month, portalBase, shareToken),
-      } : undefined,
-    });
-  }
+  await notifyEvent(supabase, {
+    title: `Correção Rejeitada: ${clientName || ''}`.trim(),
+    message: rejectMsg,
+    type: 'error',
+    target: TARGET.CLIENT,
+    targetClientId: clientId,
+    payload: { correction_id: correctionId, kind: 'rejected' },
+    banner: shouldSendNotification('correction_rejected', 'db', globalThis.__notificationPreferences),
+    push: { url: `/?client=${clientId}`, tag: 'correction-rejected' },
+    notifType: 'correction_rejected',
+    preferences: globalThis.__notificationPreferences,
+    email: clientEmail ? {
+      to: clientEmail,
+      name: clientName,
+      link: buildClientLink(clientId, month, portalBase, shareToken),
+    } : undefined,
+  });
 }

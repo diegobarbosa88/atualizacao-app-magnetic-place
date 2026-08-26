@@ -21,13 +21,27 @@ export function usePushSubscription({ supabase, role, userId }) {
   const [subscribing, setSubscribing] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
 
+  // "Ativo" só é verdade se as duas metades concordarem: o browser tem uma
+  // PushSubscription real E a Supabase tem a linha correspondente (mesmo
+  // endpoint). Só olhar para o browser (como fazia antes) mostra "ativo"
+  // mesmo quando a gravação na BD falhou silenciosamente — o ícone mentia,
+  // porque nunca chegaria push nenhum a essa subscrição fantasma.
   useEffect(() => {
-    if (!PUSH_SUPPORTED) return;
-    navigator.serviceWorker.ready
-      .then((reg) => reg.pushManager.getSubscription())
-      .then((sub) => setIsSubscribed(!!sub))
-      .catch(() => {});
-  }, []);
+    if (!PUSH_SUPPORTED || !supabase) return undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        const reg = await navigator.serviceWorker.ready;
+        const sub = await reg.pushManager.getSubscription();
+        if (!sub) { if (!cancelled) setIsSubscribed(false); return; }
+        const { data } = await supabase.from('push_subscriptions').select('id').eq('endpoint', sub.endpoint).maybeSingle();
+        if (!cancelled) setIsSubscribed(!!data);
+      } catch {
+        if (!cancelled) setIsSubscribed(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [supabase]);
 
   const subscribe = useCallback(async () => {
     if (!PUSH_SUPPORTED || !supabase || !VAPID_PUBLIC_KEY) return false;

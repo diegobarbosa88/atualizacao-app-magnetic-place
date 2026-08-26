@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bell, BellRing, LogOut, LogIn } from 'lucide-react';
+import { Bell, BellRing, Smartphone, LogOut, LogIn } from 'lucide-react';
 import { SCALE } from '../styles/designTokens';
 import { usePushSubscription } from '../hooks/usePushSubscription';
 
@@ -8,7 +8,7 @@ export default function ClientPortalHeader({
   activeNow, workers, showNotifDropdown, setShowNotifDropdown,
   notifRef, clientSession, handleLogout, supabase, clientId,
 }) {
-  const { isSubscribed, subscribing, subscribe, unsubscribe, supported: pushSupported } = usePushSubscription({ supabase, role: 'client', userId: clientId });
+  const { permission, isSubscribed, subscribing, subscribe, unsubscribe, supported: pushSupported } = usePushSubscription({ supabase, role: 'client', userId: clientId });
   return (
     <header className="bg-white border-b border-slate-200 sticky top-0 z-10 w-full shadow-sm">
       <div className="max-w-6xl mx-auto px-4 md:px-8 py-4 flex items-center justify-between gap-4">
@@ -70,13 +70,17 @@ export default function ClientPortalHeader({
             </div>
           )}
           {clientSession && pushSupported && (
+            // Ícone deliberadamente diferente do sino de "quem está em serviço"
+            // acima (Smartphone/BellRing, nunca Bell simples) — os dois eram
+            // visualmente indistinguíveis e cliques neste iam parar ao outro.
             <button
               onClick={isSubscribed ? unsubscribe : subscribe}
-              disabled={subscribing}
-              className={`p-1.5 transition-all disabled:opacity-40 ${isSubscribed ? 'text-emerald-500' : 'text-slate-400 hover:text-slate-800'}`}
-              title={isSubscribed ? 'Notificações push ativas — clique para desativar' : 'Ativar notificações push'}
+              disabled={subscribing || (!isSubscribed && permission === 'denied')}
+              className={`flex items-center gap-1 px-2 py-1.5 rounded-lg transition-all disabled:opacity-40 ${SCALE.text.badge} ${isSubscribed ? 'bg-emerald-50 text-emerald-600' : 'text-slate-400 hover:bg-slate-50 hover:text-slate-700'}`}
+              title={isSubscribed ? 'Notificações push ativas — clique para desativar' : permission === 'denied' ? 'Bloqueado nas definições do browser — muda a permissão de notificações para este site' : 'Ativar notificações push neste dispositivo'}
             >
-              {isSubscribed ? <BellRing size={18} /> : <Bell size={18} />}
+              {isSubscribed ? <BellRing size={15} /> : <Smartphone size={15} />}
+              <span className="hidden sm:inline">{isSubscribed ? 'Push' : permission === 'denied' ? 'Bloqueado' : 'Push'}</span>
             </button>
           )}
           {clientSession ? (

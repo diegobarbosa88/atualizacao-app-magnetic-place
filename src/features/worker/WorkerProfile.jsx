@@ -209,7 +209,12 @@ const WorkerProfile = ({ worker, changeRequests, documents = [] }) => {
       {pushSupported && (
         <div>
           <SectionLabel>Notificações</SectionLabel>
-          <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden px-4 py-3">
+          <button
+            type="button"
+            onClick={isSubscribed ? unsubscribe : subscribe}
+            disabled={subscribing || (!isSubscribed && permission === 'denied')}
+            className="w-full bg-white rounded-2xl border border-slate-100 overflow-hidden px-4 py-3 text-left disabled:opacity-60"
+          >
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
                 <div className="w-7 h-7 rounded-xl bg-slate-50 flex items-center justify-center shrink-0">
@@ -218,20 +223,18 @@ const WorkerProfile = ({ worker, changeRequests, documents = [] }) => {
                 <div className="min-w-0">
                   <p className="text-sm font-bold text-slate-800">Avisos no telemóvel</p>
                   <p className={`${SCALE.text.meta} text-slate-400`}>
-                    {isSubscribed ? 'Ativos neste dispositivo' : permission === 'denied' ? 'Bloqueados nas definições do browser' : 'Recebe avisos mesmo com a app fechada'}
+                    {isSubscribed ? 'Ativos neste dispositivo — toca para desativar' : permission === 'denied' ? 'Bloqueados nas definições do browser' : 'Recebe avisos mesmo com a app fechada'}
                   </p>
                 </div>
               </div>
-              <button
-                onClick={isSubscribed ? unsubscribe : subscribe}
-                disabled={subscribing || (!isSubscribed && permission === 'denied')}
-                className="shrink-0 px-3 py-2 rounded-xl font-black text-xs uppercase tracking-wide transition-all disabled:opacity-40"
+              <span
+                className="shrink-0 px-3 py-2 rounded-xl font-black text-xs uppercase tracking-wide transition-all"
                 style={isSubscribed ? { background: FT.okBg, color: FT.ok } : { background: FT.orange, color: FT.navy }}
               >
                 {subscribing ? <Loader2 size={13} className="animate-spin" /> : isSubscribed ? 'Ativo' : permission === 'denied' ? 'Bloqueado' : 'Ativar'}
-              </button>
+              </span>
             </div>
-          </div>
+          </button>
         </div>
       )}
 

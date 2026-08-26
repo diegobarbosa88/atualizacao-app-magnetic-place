@@ -1,6 +1,7 @@
-import React from 'react';
-import { LogOut, Timer, Users, UserCircle, Bell, Home, CalendarX, FileText, GraduationCap } from 'lucide-react';
+import React, { useState } from 'react';
+import { LogOut, Timer, Users, UserCircle, Bell, Home, CalendarX, FileText, GraduationCap, Smartphone, CheckCircle2 } from 'lucide-react';
 import { FT, FONT_TITLE, FONT_MONO, SCALE } from './formacaoDesignTokens';
+import { usePushSubscription } from '../../../hooks/usePushSubscription';
 
 const formatShortName = (fullName) => {
   if (!fullName) return '';
@@ -41,10 +42,19 @@ const TabButton = ({ active, onClick, icon, label, badge }) => (
   </button>
 );
 
-export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, activeWorkerSchedule, workerChangeRequests, onLogin, onLogout, alertCount, onOpenAlerts, onOpenAbsenceModal, onOpenScheduleModal, onOpenProfileModal, onOpenDocumentsModal, onOpenFormacaoModal, isCurrentMonth, absencePendingCount, documentsPendingCount, formacaoPendingCount, notifCount, onOpenNotifs }) {
+export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, activeWorkerSchedule, workerChangeRequests, onLogin, onLogout, alertCount, onOpenAlerts, onOpenAbsenceModal, onOpenScheduleModal, onOpenProfileModal, onOpenDocumentsModal, onOpenFormacaoModal, isCurrentMonth, absencePendingCount, documentsPendingCount, formacaoPendingCount, notifCount, onOpenNotifs, supabase }) {
   const pendingRequests = (workerChangeRequests || []).filter(r => r.worker_id === currentUser?.id && r.status === 'pending').length;
   const totalBellCount = (alertCount || 0) + (notifCount || 0);
   const handleBellClick = () => { if (alertCount > 0) onOpenAlerts(); else if (notifCount > 0) onOpenNotifs?.(); };
+  const { permission, isSubscribed, subscribing, subscribe, supported: pushSupported } = usePushSubscription({ supabase, role: 'worker', userId: currentUser?.id });
+  const [justActivated, setJustActivated] = useState(false);
+  const handleActivatePush = async () => {
+    const ok = await subscribe();
+    if (ok) {
+      setJustActivated(true);
+      setTimeout(() => setJustActivated(false), 2500);
+    }
+  };
 
   return (
     <>
@@ -79,15 +89,31 @@ export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, act
         </button>
 
         <div className="flex items-center gap-2">
+          {/* Push — só aparece na barra enquanto NÃO está ativo (convite a
+              ativar); depois de ativo, some daqui e a informação passa a
+              viver só no Perfil, como antes. Ícone (Smartphone) fixo nas
+              duas cores, nunca um sino — evita confundir com o sino de
+              alertas ao lado. */}
+          {pushSupported && (!isSubscribed || justActivated) && (
+            <button
+              onClick={handleActivatePush}
+              disabled={subscribing || permission === 'denied' || justActivated}
+              className={`relative p-1.5 rounded-xl transition-all shadow-sm disabled:opacity-100 ${justActivated ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'}`}
+              title={justActivated ? 'Ativado' : permission === 'denied' ? 'Bloqueado nas definições do browser' : 'Ativar avisos no telemóvel'}
+            >
+              {justActivated ? <CheckCircle2 size={15} /> : <Smartphone size={15} />}
+            </button>
+          )}
+
           {/* Sino — visível se há alertas ou notificações */}
           {totalBellCount > 0 && (
             <button
               onClick={handleBellClick}
-              className="relative p-2 bg-[#1B3A57]/10 text-[var(--navy)] hover:bg-[var(--navy-solid)] hover:text-white rounded-xl transition-all shadow-sm"
+              className="relative p-1.5 bg-[#1B3A57]/10 text-[var(--navy)] hover:bg-[var(--navy-solid)] hover:text-white rounded-xl transition-all shadow-sm"
               title={alertCount > 0 ? 'Avisos pendentes' : 'Notificações'}
             >
-              <Bell size={18} />
-              <span className={`absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-rose-500 rounded-full text-white flex items-center justify-center px-1 ${SCALE.text.badge}`}>
+              <Bell size={15} />
+              <span className={`absolute -top-1 -right-1 min-w-[16px] h-[16px] bg-rose-500 rounded-full text-white flex items-center justify-center px-1 ${SCALE.text.badge}`}>
                 {totalBellCount}
               </span>
             </button>

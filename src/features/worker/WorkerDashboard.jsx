@@ -278,6 +278,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
         formacaoPendingCount={pendingFormacaoCount}
         notifCount={myNotifications.length}
         onOpenNotifs={() => setNotifModalOpen(true)}
+        supabase={supabase}
       />
 
       <main className="mx-auto px-4 sm:px-6 md:px-10 lg:px-16 mt-6 md:mt-8" style={{ maxWidth: 'var(--app-max-width)' }}>

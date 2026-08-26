@@ -113,7 +113,7 @@ export async function notifyEvent(supabase, {
           role,
           userId: userId != null ? String(userId) : undefined,
           userIds: userIds?.length ? userIds.map(String) : undefined,
-          title, body: message, url: push.url, image: push.image, tag: push.tag,
+          title, body: message, url: push.url, image: push.image, tag: push.tag, type,
           dedupeKey: push.dedupeKey,
         }),
       }).catch((e) => console.warn(`[notifyEvent] falha no push (${idPrefix}):`, e));
