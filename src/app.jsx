@@ -2,7 +2,7 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import './App.css';
 import {
-  AlertCircle, CheckCircle, ChevronLeft, ChevronRight, LogOut, Mail,
+  CheckCircle, ChevronLeft, ChevronRight, LogOut, Mail,
   Megaphone, Plus, Sparkles, Loader2, Send, X, XCircle, BarChart3,
   Settings, AlertTriangle, Clock, TrendingUp, TrendingDown, Wallet,
   FileText, LayoutGrid, Activity, History, Trophy, Building2, Palette,
@@ -142,7 +142,7 @@ export default function App() {
       n.is_active &&
       (n.target_type === 'all' ||
         (currentUser.role === 'admin' && n.target_type === 'admin') ||
-        (currentUser.role !== 'admin' && n.target_worker_ids && n.target_worker_ids.includes(currentUser.id))) &&
+        (n.target_type === 'specific' && n.target_worker_ids && n.target_worker_ids.includes(currentUser.id))) &&
       !dismissedNotifs.includes(n.id) &&
       !(n.dismissed_by_ids || []).includes(currentUser.id)
     );
@@ -192,6 +192,15 @@ export default function App() {
       }
     }
   }, [location.pathname, myNotifications, currentUser?.role]);
+
+  // Ícone + cor do banner de notificação por tipo — mesmos tokens de estado
+  // (--tone-*) já usados no resto da app, para não destoar visualmente.
+  const NOTIF_TONE = {
+    success: { icon: CheckCircle, accent: 'var(--tone-emerald)', bg: 'var(--tone-emerald-bg)' },
+    warning: { icon: AlertTriangle, accent: 'var(--tone-amber)', bg: 'var(--tone-amber-bg)' },
+    error: { icon: XCircle, accent: 'var(--tone-rose)', bg: 'var(--tone-rose-bg)' },
+    info: { icon: Megaphone, accent: 'var(--tone-indigo)', bg: 'var(--tone-indigo-bg)' },
+  };
 
   const handleBannerClick = (notif) => {
     handleDismissNotif(notif.id);
@@ -470,24 +479,27 @@ export default function App() {
       )}
       {(location.pathname.startsWith('/admin') || location.pathname.startsWith('/worker')) && currentUser && myNotifications.length > 0 && (
         <div className="fixed top-4 left-4 right-4 z-[9999] pointer-events-none space-y-3 max-w-xl mx-auto">
-          {myNotifications.map(notif => (
-            <div key={notif.id} onClick={() => handleBannerClick(notif)} className={`pointer-events-auto animate-in slide-in-from-top-4 duration-700 ${notif.title?.includes('Pedido de Correção') ? 'cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-all' : ''}`}>
-              <div className={`rounded-[2rem] p-0.5 shadow-2xl ${notif.type === 'urgent' ? 'bg-gradient-to-br from-rose-500 to-red-600' : notif.type === 'warning' ? 'bg-gradient-to-br from-amber-500 to-orange-600' : notif.type === 'success' ? 'bg-gradient-to-br from-emerald-500 to-teal-600' : 'bg-gradient-to-br from-indigo-500 to-violet-600'}`}>
-                <div className="bg-white/95 backdrop-blur-md rounded-[1.95rem] p-4 shadow-inner">
-                  <div className="flex items-center gap-4">
-                    <div className={`p-2.5 rounded-2xl ${notif.type === 'urgent' ? 'bg-rose-50 text-rose-600' : notif.type === 'warning' ? 'bg-amber-50 text-amber-600' : notif.type === 'success' ? 'bg-emerald-50 text-emerald-600' : 'bg-indigo-50 text-indigo-600'}`}>
-                      {notif.type === 'urgent' ? <AlertCircle size={20} /> : <Megaphone size={20} />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-xs font-black text-slate-800 uppercase tracking-tight truncate">{notif.title}</h3>
-                      <p className="text-[10px] font-bold text-slate-500 mt-0.5 leading-tight line-clamp-1">{notif.title.includes('Pedido de Correção') ? notif.message.split('\n')[0] : notif.message}</p>
-                    </div>
-                    {notif.is_dismissible && <button onClick={(e) => { e.stopPropagation(); handleDismissNotif(notif.id); }} className="p-1.5 text-slate-300 hover:text-slate-600 transition-all hover:bg-slate-50 rounded-xl"><X size={18} /></button>}
-                  </div>
+          {myNotifications.map(notif => {
+            const tone = NOTIF_TONE[notif.type] || NOTIF_TONE.info;
+            const Icon = tone.icon;
+            return (
+              <div
+                key={notif.id}
+                onClick={() => handleBannerClick(notif)}
+                className={`pointer-events-auto animate-in slide-in-from-top-4 duration-500 bg-[var(--panel)] border border-[var(--border)] rounded-2xl shadow-2xl p-4 flex items-center gap-4 border-l-4 ${notif.title?.includes('Pedido de Correção') ? 'cursor-pointer hover:scale-[1.01] active:scale-[0.99] transition-transform' : ''}`}
+                style={{ borderLeftColor: tone.accent, borderLeftWidth: 4 }}
+              >
+                <div className="p-2.5 rounded-2xl shrink-0" style={{ background: tone.bg, color: tone.accent }}>
+                  <Icon size={20} />
                 </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-xs font-black uppercase tracking-tight truncate" style={{ color: 'var(--ink)' }}>{notif.title}</h3>
+                  <p className="text-[10px] font-bold mt-0.5 leading-tight line-clamp-1" style={{ color: 'var(--ink-soft)' }}>{notif.title.includes('Pedido de Correção') ? notif.message.split('\n')[0] : notif.message}</p>
+                </div>
+                {notif.is_dismissible && <button onClick={(e) => { e.stopPropagation(); handleDismissNotif(notif.id); }} className="p-1.5 rounded-xl shrink-0 transition-opacity hover:opacity-60" style={{ color: 'var(--slate-dim)' }}><X size={18} /></button>}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
       {view === 'login' && <LoginView onLogin={handleLogin} />}
