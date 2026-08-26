@@ -2,20 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { Plus, Edit2, Trash2, Check, AlertTriangle } from 'lucide-react';
 import ModalShell from '../components/common/ModalShell';
 import { createLogByClient, updateLogByClient, deleteLogByClient } from '../utils/clientPortalApi';
-import { calculateDuration } from '../utils/formatUtils';
-import { roundTimeToIntervalTimeUp, roundTimeToIntervalTimeDown, getIntervalSettings } from '../utils/timeUtils';
+import { calculateRoundedHoursDiff as calculateHoursDiff } from '../utils/timeUtils';
 import { SCALE } from '../styles/designTokens';
-
-const calculateHoursDiff = (entry, exit, breakStart, breakEnd) => {
-  if (!entry || !exit || !entry.includes(':') || !exit.includes(':')) return 0;
-  const { interval, tolerance } = getIntervalSettings();
-  return calculateDuration(
-    roundTimeToIntervalTimeUp(entry, interval, tolerance),
-    roundTimeToIntervalTimeDown(exit, interval),
-    breakStart && breakStart !== '--:--' ? roundTimeToIntervalTimeUp(breakStart, interval, tolerance) : null,
-    breakEnd && breakEnd !== '--:--' ? roundTimeToIntervalTimeDown(breakEnd, interval) : null,
-  );
-};
 
 const EMPTY_FORM = { date: '', startTime: '', endTime: '', breakStart: '', breakEnd: '' };
 
@@ -27,7 +15,7 @@ function TimeInput({ label, value, onChange }) {
         type="time"
         value={value || ''}
         onChange={e => onChange(e.target.value)}
-        className="px-2 py-1.5 text-sm font-mono border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white text-slate-800"
+        className="px-2 py-1.5 text-sm font-mono border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FBCB77] bg-white text-slate-800"
       />
     </div>
   );
@@ -75,15 +63,15 @@ function AddLogForm({ clientId, clientName, workerId, workerName, selectedMonth,
   };
 
   return (
-    <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-4 space-y-3">
-      <p className={`${SCALE.text.statLabel} text-indigo-600`}>Novo Registo</p>
+    <div className="bg-[#EAF0F5] border border-[#C7D6E2] rounded-2xl p-4 space-y-3">
+      <p className={`${SCALE.text.statLabel} text-[#1B3A57]`}>Novo Registo</p>
       <div className="flex flex-col gap-1">
         <label className={`${SCALE.text.statLabel} text-slate-400`}>Data</label>
         <input
           type="date"
           value={form.date}
           onChange={e => set('date', e.target.value)}
-          className="px-2 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white text-slate-800"
+          className="px-2 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FBCB77] bg-white text-slate-800"
         />
       </div>
       <div className="grid grid-cols-2 gap-3">
@@ -93,14 +81,14 @@ function AddLogForm({ clientId, clientName, workerId, workerName, selectedMonth,
         <TimeInput label="Pausa fim" value={form.breakEnd} onChange={v => set('breakEnd', v)} />
       </div>
       {hours !== null && (
-        <p className="text-xs font-bold text-indigo-700 text-right">{hours}h calculadas</p>
+        <p className="text-xs font-bold text-[#1B3A57] text-right">{hours}h calculadas</p>
       )}
       {error && <p className="text-xs text-rose-600 font-bold">{error}</p>}
       <div className="flex gap-2 pt-1">
         <button
           onClick={handleSubmit}
           disabled={loading}
-          className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all disabled:opacity-50"
+          className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-[#EB8D00] hover:bg-[#F59B1C] text-[#1B3A57] font-black text-xs uppercase tracking-wider rounded-xl transition-all disabled:opacity-50"
         >
           <Check size={14} /> {loading ? 'A guardar…' : 'Guardar'}
         </button>
@@ -196,7 +184,7 @@ function LogRow({ log, clientId, clientName, workerId, workerName, supabase, onD
   };
 
   const sourceTag = log.source === 'client_portal' ? (
-    <span className={`${SCALE.text.meta} text-indigo-400 bg-indigo-50 px-1.5 py-0.5 rounded`}>portal</span>
+    <span className={`${SCALE.text.meta} text-[#1B3A57] bg-[#EAF0F5] px-1.5 py-0.5 rounded`}>portal</span>
   ) : log.source === 'gps_auto' ? (
     <span className={`${SCALE.text.meta} text-emerald-400 bg-emerald-50 px-1.5 py-0.5 rounded`}>GPS</span>
   ) : log.source === 'manual_admin' ? (
@@ -306,7 +294,7 @@ export default function LogManagementModal({ worker, clientId, clientName, selec
           ) : (
             <button
               onClick={() => setShowAddForm(true)}
-              className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-indigo-200 text-indigo-500 hover:border-indigo-400 hover:bg-indigo-50 font-black text-xs uppercase tracking-wider rounded-2xl transition-all"
+              className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-[#FBE7C6] text-[#8a4a00] hover:border-[#EB8D00] hover:bg-[#FDF3E4] font-black text-xs uppercase tracking-wider rounded-2xl transition-all"
             >
               <Plus size={15} /> Adicionar Registo
             </button>

@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
+import { approveWorkerRequest, rejectWorkerRequest } from '../utils/clientPortalApi';
 
 export function useClientNotifications({
   appNotifications,
@@ -9,7 +10,6 @@ export function useClientNotifications({
   setLogs,
   saveToDb,
   clientData,
-  workers,
   supabase,
 }) {
   const [dismissedNotifs, setDismissedNotifs] = useState([]);
@@ -154,25 +154,7 @@ export function useClientNotifications({
     if (!confirm('Aprovar este pedido de registo? Os horários serão atualizados/criados no relatório.')) return;
 
     try {
-      for (const item of items) {
-        if (correction.type === 'deletion_request') {
-          const delQuery = item.before?.log_id
-            ? supabase.from('logs').delete().eq('id', item.before.log_id)
-            : supabase.from('logs').delete().eq('workerId', item.worker_id).eq('date', item.date);
-          const { error: delError } = await delQuery;
-          if (delError) throw delError;
-        } else if (item.proposed) {
-          const existingLog = logs.find(l => String(l.workerId) === String(item.worker_id) && l.date === item.date);
-          if (existingLog) {
-            await saveToDb('logs', existingLog.id, { ...existingLog, ...item.proposed, edited_at: new Date().toISOString(), edited_source: 'client_portal' });
-          } else {
-            const newId = `log_${crypto.randomUUID()}`;
-            await saveToDb('logs', newId, { id: newId, workerId: item.worker_id, clientId: effectiveClientId, date: item.date, ...item.proposed, created_at: new Date().toISOString(), source: 'client_portal' });
-          }
-        }
-      }
-
-      await supabase.from('corrections').update({ status: 'applied' }).eq('id', correctionId);
+      const results = await approveWorkerRequest(supabase, { clientId: effectiveClientId, clientName: clientData?.name, correction, items });
 
       const adminNotifId = `accp_cr_${notif.id}_${Date.now()}`;
       await saveToDb('app_notifications', adminNotifId, {
@@ -185,36 +167,22 @@ export function useClientNotifications({
         read_by_ids: [],
       });
 
-      for (const item of items) {
-        if (item.worker_id) {
-          const workerNotifId = `accp_wr_${item.id}_${Date.now()}`;
-          await saveToDb('app_notifications', workerNotifId, {
-            title: '✅ Pedido de Registo Aprovado',
-            message: `O seu pedido de ${item.date} foi aprovado pelo cliente.`,
-            type: 'success',
-            target_type: 'specific',
-            target_worker_ids: [String(item.worker_id)],
-            created_at: new Date().toISOString(),
-            is_active: true,
-            read_by_ids: [],
-          });
-        }
-      }
-
       handleDismissNotif(notif.id);
       setLogs(prev => {
         const updated = [...prev];
-        for (const item of items) {
-          const existingIdx = updated.findIndex(l => String(l.workerId) === String(item.worker_id) && l.date === item.date);
-          if (correction.type === 'deletion_request') {
-            const idxToDel = item.before?.log_id
-              ? updated.findIndex(l => l.id === item.before.log_id)
-              : existingIdx;
+        for (const r of results) {
+          if (r.isDeletion) {
+            const idxToDel = r.deletedLogId
+              ? updated.findIndex(l => l.id === r.deletedLogId)
+              : updated.findIndex(l => String(l.workerId) === String(r.worker_id) && l.date === r.date);
             if (idxToDel >= 0) updated.splice(idxToDel, 1);
-          } else if (existingIdx >= 0 && item.proposed) {
-            updated[existingIdx] = { ...updated[existingIdx], ...item.proposed };
-          } else if (!item.before && item.proposed) {
-            updated.push({ id: `log_${crypto.randomUUID()}`, workerId: item.worker_id, clientId: effectiveClientId, date: item.date, ...item.proposed });
+          } else {
+            const idx = updated.findIndex(l => l.id === r.logId);
+            if (idx >= 0) {
+              updated[idx] = { ...updated[idx], ...r.times };
+            } else {
+              updated.push({ id: r.logId, workerId: r.worker_id, clientId: effectiveClientId, date: r.date, ...r.times });
+            }
           }
         }
         return updated;
@@ -225,18 +193,21 @@ export function useClientNotifications({
       console.error('Erro ao aprovar pedido:', error);
       alert('Ocorreu um erro ao aprovar o pedido. Por favor, tente novamente.');
     }
-  }, [corrections, correctionItems, supabase, effectiveClientId, saveToDb, handleDismissNotif, logs, setLogs, clientData]);
+  }, [corrections, correctionItems, supabase, effectiveClientId, saveToDb, handleDismissNotif, setLogs, clientData]);
 
   const handleRejectCreationRequest = useCallback(async (notif) => {
     const correctionId = notif.payload?.correction_id;
     if (!correctionId) return;
 
+    const correction = corrections?.find(c => c.id === correctionId);
     const items = (correctionItems || []).filter(it => it.correction_id === correctionId);
+    if (!correction) { alert('Erro: Pedido não encontrado.'); return; }
+
     const reason = prompt('Motivo da rejeição (opcional):');
     if (reason === null) return;
 
     try {
-      await supabase.from('corrections').update({ status: 'rejected' }).eq('id', correctionId);
+      await rejectWorkerRequest(supabase, { clientId: effectiveClientId, clientName: clientData?.name, correction, items, reason: reason.trim() || undefined });
 
       const adminNotifId = `rej_cr_${notif.id}_${Date.now()}`;
       await saveToDb('app_notifications', adminNotifId, {
@@ -249,30 +220,13 @@ export function useClientNotifications({
         read_by_ids: [],
       });
 
-      const rejectionMsg = reason ? ` Motivo: ${reason}` : '';
-      for (const item of items) {
-        if (item.worker_id) {
-          const workerNotifId = `rej_wr_${item.id}_${Date.now()}`;
-          await saveToDb('app_notifications', workerNotifId, {
-            title: '❌ Pedido de Registo Rejeitado',
-            message: `O seu pedido de ${item.date} foi rejeitado pelo cliente.${rejectionMsg}`,
-            type: 'error',
-            target_type: 'specific',
-            target_worker_ids: [String(item.worker_id)],
-            created_at: new Date().toISOString(),
-            is_active: true,
-            read_by_ids: [],
-          });
-        }
-      }
-
       handleDismissNotif(notif.id);
       alert('Pedido rejeitado.');
     } catch (error) {
       console.error('Erro ao rejeitar pedido:', error);
       alert('Ocorreu um erro ao rejeitar o pedido.');
     }
-  }, [supabase, saveToDb, handleDismissNotif, correctionItems, clientData]);
+  }, [corrections, correctionItems, supabase, effectiveClientId, saveToDb, handleDismissNotif, clientData]);
 
   return {
     dismissedNotifs,

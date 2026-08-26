@@ -1,23 +1,8 @@
 import { useState, useCallback } from 'react';
 import { submitCorrection } from '../utils/correctionsApi';
+import { calculateDuration as calculateHoursDiff } from '../utils/formatUtils';
 
-const calculateHoursDiff = (entry, exit, breakStart, breakEnd) => {
-    if (!entry || !exit || !entry.includes(':') || !exit.includes(':')) return 0;
-    const [eh, em] = entry.split(':').map(n => parseInt(n, 10) || 0);
-    const [xh, xm] = exit.split(':').map(n => parseInt(n, 10) || 0);
-    let diffMins = (xh * 60 + xm) - (eh * 60 + em);
-    if (diffMins < 0) diffMins += 24 * 60;
-    if (breakStart && breakEnd && breakStart !== '--:--' && breakEnd !== '--:--') {
-        const [bsh, bsm] = breakStart.split(':').map(Number);
-        const [beh, bem] = breakEnd.split(':').map(Number);
-        let bDiff = (beh * 60 + bem) - (bsh * 60 + bsm);
-        if (bDiff < 0) bDiff += 24 * 60;
-        diffMins -= bDiff;
-    }
-    return Number(Math.max(0, diffMins / 60).toFixed(2));
-};
-
-export function useDraftReport({ originalWorkersData, selectedMonth, logs, originalTotal, clientData, effectiveClientId, initialMonth, saveToDb, goToView, supabase, companySignature }) {
+export function useDraftReport({ originalWorkersData, selectedMonth, logs, clientData, effectiveClientId, initialMonth, saveToDb, goToView, supabase, companySignature }) {
     const [draftData, setDraftData] = useState([]);
     const [reportJustification, setReportJustification] = useState('');
 
@@ -91,52 +76,6 @@ export function useDraftReport({ originalWorkersData, selectedMonth, logs, origi
         }));
     }, []);
 
-    const generateCorrectionMessage = useCallback((isQuickMessage = false) => {
-        const changedWorkers = isQuickMessage ? draftData : draftData.filter(w => w.dailyRecords.some(d => {
-            const isNewDay = !d.entry || d.entry === '--:--' || !d.exit || d.exit === '--:--';
-            const origEntry = d.entry === '--:--' ? '' : d.entry;
-            const origExit = d.exit === '--:--' ? '' : d.exit;
-            const wasEdited = d.editedEntry || d.editedExit || d.editedBreakStart || d.editedBreakEnd;
-            const hasChange = d.editedEntry !== origEntry || d.editedExit !== origExit || d.editedBreakStart !== (d.breakStart || '') || d.editedBreakEnd !== (d.breakEnd || '');
-            return isNewDay ? wasEdited : hasChange;
-        }));
-
-        const diffTotal = (draftTotal - originalTotal).toFixed(2);
-        let txt = isQuickMessage ? `💬 MENSAGEM DE DIVERGÊNCIA: ${clientData.name}\n` : `⚠️ PEDIDO DE CORREÇÃO: ${clientData.name}\n`;
-        txt += `📅 Período: ${clientData.period}\n\n`;
-
-        if (!isQuickMessage) {
-            txt += `📊 RESUMO GERAL:\n• Total Original: ${originalTotal}h\n• Novo Total Sugerido: ${draftTotal}h\n• Diferença: ${diffTotal > 0 ? '+' : ''}${diffTotal}h\n\n👥 DETALHES POR COLABORADOR:\n\n`;
-            changedWorkers.forEach(w => {
-                const wDiff = (w.editedTotalHours - w.totalHours).toFixed(2);
-                txt += `👤 ${w.name.toUpperCase()} [ID:${w.id}]\n   Total: ${w.totalHours}h ➔ ${w.editedTotalHours}h (${wDiff > 0 ? '+' : ''}${wDiff}h)\n   Alterações:\n`;
-                w.dailyRecords.filter(d => {
-                    const isNewDay = !d.entry || d.entry === '--:--' || !d.exit || d.exit === '--:--';
-                    const origEntry = d.entry === '--:--' ? '' : d.entry;
-                    const origExit = d.exit === '--:--' ? '' : d.exit;
-                    const wasEdited = d.editedEntry || d.editedExit || d.editedBreakStart || d.editedBreakEnd;
-                    const hasChange = d.editedEntry !== origEntry || d.editedExit !== origExit || d.editedBreakStart !== (d.breakStart || '') || d.editedBreakEnd !== (d.breakEnd || '');
-                    return isNewDay ? wasEdited : hasChange;
-                }).forEach(d => {
-                    const isNewDay = !d.entry || d.entry === '--:--' || !d.exit || d.exit === '--:--';
-                    const origEntry = d.entry === '--:--' || !d.entry ? '' : d.entry;
-                    const origExit = d.exit === '--:--' || !d.exit ? '' : d.exit;
-                    const origShift = (!origEntry || !origExit || origEntry === '--' || origExit === '--') ? '--:--' : `${origEntry}-${origExit}`;
-                    const editedShift = `${d.editedEntry || '--:--'}-${d.editedExit || '--:--'}`;
-                    const origBreak = `${d.breakStart || '--:--'}-${d.breakEnd || '--:--'}`;
-                    const editedBreak = `${d.editedBreakStart || '--:--'}-${d.editedBreakEnd || '--:--'}`;
-                    const displayDate = d.rawDate && d.rawDate.includes('/') ? d.date : (d.rawDate || d.date);
-                    txt += `   • ${displayDate}:\n     - Turno: ${origShift} ➔ ${editedShift}\n`;
-                    if (origBreak !== '--:----:--' || editedBreak !== '--:----:--') txt += `     - Pausa: ${origBreak} ➔ ${editedBreak}\n`;
-                    txt += `     - Horas: ${isNewDay ? 0 : d.hours}h ➔ ${d.editedHours}h\n`;
-                });
-                txt += '\n';
-            });
-        }
-        if (reportJustification) txt += `💬 JUSTIFICAÇÃO:\n"${reportJustification}"`;
-        return txt;
-    }, [draftData, draftTotal, originalTotal, clientData, reportJustification]);
-
     const handlePrecisionConfirm = useCallback(async () => {
         const items = [];
         for (const worker of draftData) {
@@ -182,6 +121,6 @@ export function useDraftReport({ originalWorkersData, selectedMonth, logs, origi
     return {
         draftData, setDraftData, draftTotal,
         reportJustification, setReportJustification,
-        startReport, handleTimeChange, handleDeleteDay, handleRevertDay, generateCorrectionMessage, handlePrecisionConfirm,
+        startReport, handleTimeChange, handleDeleteDay, handleRevertDay, handlePrecisionConfirm,
     };
 }

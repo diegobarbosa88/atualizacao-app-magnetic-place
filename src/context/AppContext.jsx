@@ -39,17 +39,6 @@ export const AppProvider = ({ children }) => {
     return defaults;
   });
 
-  useEffect(() => {
-    localStorage.setItem('magnetic_settings', JSON.stringify(systemSettings));
-    const root = document.documentElement;
-    root.style.setProperty('--app-max-width', `${systemSettings.appWidth}px`);
-    if (systemSettings.darkMode) {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
-  }, [systemSettings]);
-
   // --- VIEW & AUTH STATE ---
   const [view, setView] = useState(() => {
     const params = new URLSearchParams(window.location.search);
@@ -57,6 +46,20 @@ export const AppProvider = ({ children }) => {
     if (isClientPortalDomain) return 'client_portal';
     return params.get('view') || localStorage.getItem('magnetic_view') || 'login';
   });
+
+  useEffect(() => {
+    localStorage.setItem('magnetic_settings', JSON.stringify(systemSettings));
+    const root = document.documentElement;
+    root.style.setProperty('--app-max-width', `${systemSettings.appWidth}px`);
+    // O portal do cliente tem identidade visual própria (navy/laranja fixos, sem par
+    // dark) e nunca reage ao modo escuro — aplicar .dark aqui inverteria os fundos
+    // bg-white/slate-* dele via App.css, sem os textos acompanharem.
+    if (systemSettings.darkMode && view !== 'client_portal') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+  }, [systemSettings, view]);
   
   const [currentUser, setCurrentUser] = useState(() => {
     const saved = localStorage.getItem('magnetic_user');

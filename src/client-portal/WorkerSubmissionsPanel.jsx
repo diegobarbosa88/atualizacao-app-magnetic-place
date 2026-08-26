@@ -1,22 +1,7 @@
 import React from 'react';
 import { ChevronDown, X, Clock } from 'lucide-react';
 import { SCALE } from '../styles/designTokens';
-
-const calculateHoursDiff = (entry, exit, breakStart, breakEnd) => {
-    if (!entry || !exit || !entry.includes(':') || !exit.includes(':')) return 0;
-    const [eh, em] = entry.split(':').map(n => parseInt(n, 10) || 0);
-    const [xh, xm] = exit.split(':').map(n => parseInt(n, 10) || 0);
-    let diffMins = (xh * 60 + xm) - (eh * 60 + em);
-    if (diffMins < 0) diffMins += 24 * 60;
-    if (breakStart && breakEnd && breakStart !== '--:--' && breakEnd !== '--:--') {
-        const [bsh, bsm] = breakStart.split(':').map(Number);
-        const [beh, bem] = breakEnd.split(':').map(Number);
-        let bDiff = (beh * 60 + bem) - (bsh * 60 + bsm);
-        if (bDiff < 0) bDiff += 24 * 60;
-        diffMins -= bDiff;
-    }
-    return Number(Math.max(0, diffMins / 60).toFixed(2));
-};
+import { calculateDuration as calculateHoursDiff } from '../utils/formatUtils';
 
 export default function WorkerSubmissionsPanel({ workerSubmissionsResolved, workerSubmissionsPending, corrections, correctionItems, workers, expandedCards, setExpandedCards, handleDismissNotif, handleApproveCreationRequest, handleRejectCreationRequest }) {
     return (

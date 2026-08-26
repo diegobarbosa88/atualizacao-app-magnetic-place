@@ -2,22 +2,7 @@ import React from 'react';
 import { Calendar, Activity, ChevronLeft, ChevronRight, LogOut, LogIn, Coffee, PlayCircle, Navigation, MapPin, CheckCircle, Edit2 } from 'lucide-react';
 import ModalShell from '../components/common/ModalShell';
 import { SCALE } from '../styles/designTokens';
-
-const calculateHoursDiff = (entry, exit, breakStart, breakEnd) => {
-    if (!entry || !exit || !entry.includes(':') || !exit.includes(':')) return 0;
-    const [eh, em] = entry.split(':').map(n => parseInt(n, 10) || 0);
-    const [xh, xm] = exit.split(':').map(n => parseInt(n, 10) || 0);
-    let diffMins = (xh * 60 + xm) - (eh * 60 + em);
-    if (diffMins < 0) diffMins += 24 * 60;
-    if (breakStart && breakEnd && breakStart !== '--:--' && breakEnd !== '--:--') {
-        const [bsh, bsm] = breakStart.split(':').map(Number);
-        const [beh, bem] = breakEnd.split(':').map(Number);
-        let bDiff = (beh * 60 + bem) - (bsh * 60 + bsm);
-        if (bDiff < 0) bDiff += 24 * 60;
-        diffMins -= bDiff;
-    }
-    return Number(Math.max(0, diffMins / 60).toFixed(2));
-};
+import { calculateDuration as calculateHoursDiff } from '../utils/formatUtils';
 
 const LocationDot = ({ lat, lng, verified }) => {
     if (lat == null || lng == null) return null;
@@ -89,10 +74,10 @@ export default function DashboardView({ logs, workers, clients, effectiveClientI
                         {log.endTime && <LocationDot lat={log.check_out_lat} lng={log.check_out_lng} verified={null} />}
                     </div>
                     <span className="text-slate-200">|</span>
-                    <span className="text-sm font-black text-indigo-700">{h > 0 ? `${h.toFixed(2)}h` : '–'}</span>
+                    <span className="text-sm font-black text-[#1B3A57]">{h > 0 ? `${h.toFixed(2)}h` : '–'}</span>
                     {logHasGps && (
                         <button onClick={(e) => { e.stopPropagation(); setExpandedLogLocations(prev => { const n = new Set(prev); n.has(log.id) ? n.delete(log.id) : n.add(log.id); return n; }); }}
-                            className={`ml-auto flex items-center gap-1 px-2 py-1 rounded-lg transition-all ${SCALE.text.meta} ${isLocExpanded ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50'}`}>
+                            className={`ml-auto flex items-center gap-1 px-2 py-1 rounded-lg transition-all ${SCALE.text.meta} ${isLocExpanded ? 'bg-[#1B3A57] text-white' : 'bg-slate-100 text-slate-400 hover:text-[#8a4a00] hover:bg-[#FDF3E4]'}`}>
                             <Navigation size={9} /> {t('locations')}
                         </button>
                     )}
@@ -101,7 +86,7 @@ export default function DashboardView({ logs, workers, clients, effectiveClientI
                     <div className="mt-2 p-3 bg-slate-50 rounded-xl border border-slate-100">
                         <div className="flex flex-wrap gap-1.5">
                             {thisClient?.morada && (
-                                <a href={moradaMapsLink(thisClient.morada)} target="_blank" rel="noreferrer" className={`flex items-center gap-1 px-2 py-1 rounded-lg text-indigo-700 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 transition-all ${SCALE.text.meta}`}>
+                                <a href={moradaMapsLink(thisClient.morada)} target="_blank" rel="noreferrer" className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[#1B3A57] bg-[#EAF0F5] border border-[#C7D6E2] hover:bg-[#DCE6EE] transition-all ${SCALE.text.meta}`}>
                                     <MapPin size={10} /> {thisClient.morada}
                                 </a>
                             )}
@@ -122,7 +107,7 @@ export default function DashboardView({ logs, workers, clients, effectiveClientI
             <div className="flex flex-col lg:flex-row lg:items-end w-full gap-8 mb-10 pb-8 border-b border-zinc-200">
                 <div className="flex-1">
                     <div className="flex items-center gap-4 mb-5">
-                        <span className={`px-2.5 py-1 rounded-md bg-zinc-900 text-zinc-50 shadow-sm ${SCALE.text.badge}`}>
+                        <span className={`px-2.5 py-1 rounded-md bg-[#1B3A57] text-[#FDF3E4] shadow-sm ${SCALE.text.badge}`}>
                             {t('client_panel')}
                         </span>
                         <div className="w-1 h-1 rounded-full bg-zinc-300 hidden sm:block" />
@@ -170,9 +155,9 @@ export default function DashboardView({ logs, workers, clients, effectiveClientI
                         ><ChevronRight size={14} /></button>
                     </div>
                 </div>
-                <div className="bg-indigo-600 rounded-[2rem] shadow-lg shadow-indigo-200 p-6 text-center">
-                    <p className={`${SCALE.text.statLabel} text-indigo-300 mb-2`}>{t('total_hours')}</p>
-                    <p className="text-3xl font-black text-white">{originalTotal}h</p>
+                <div className="bg-[#1B3A57] rounded-[2rem] shadow-lg shadow-[#1B3A57]/20 p-6 text-center">
+                    <p className={`${SCALE.text.statLabel} text-white/55 mb-2`}>{t('total_hours')}</p>
+                    <p className="text-3xl font-black text-[#EB8D00]">{originalTotal}h</p>
                 </div>
                 <div className="bg-white rounded-[2rem] shadow-lg border border-slate-100 p-6 text-center col-span-2 md:col-span-1">
                     <p className={`${SCALE.text.statLabel} text-slate-400 mb-2`}>{t('workers')}</p>
@@ -323,13 +308,13 @@ export default function DashboardView({ logs, workers, clients, effectiveClientI
                                     return (
                                         <div key={dateStr}
                                             onClick={() => setCalSelectedDay(isSelected ? null : dateStr)}
-                                            className={`relative aspect-[3/2] p-2 rounded-xl m-0.5 flex flex-col cursor-pointer transition-all select-none ${isSelected ? 'bg-indigo-600' : hasLogs ? 'hover:bg-indigo-50 bg-white border border-indigo-100' : 'hover:bg-slate-50 bg-white border border-slate-100'}`}>
-                                            <span className={`text-xs font-black leading-none ${isSelected ? 'text-white/70' : hasLogs ? 'text-slate-400' : 'text-slate-300'}`}>{dayNum}</span>
+                                            className={`relative aspect-[3/2] p-2 rounded-xl m-0.5 flex flex-col cursor-pointer transition-all select-none ${isSelected ? 'bg-[#EB8D00]' : hasLogs ? 'hover:bg-[#FDF3E4] bg-white border border-[#FBE7C6]' : 'hover:bg-slate-50 bg-white border border-slate-100'}`}>
+                                            <span className={`text-xs font-black leading-none ${isSelected ? 'text-[#1B3A57]/65' : hasLogs ? 'text-slate-400' : 'text-slate-300'}`}>{dayNum}</span>
                                             {hasOpen && <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />}
                                             {hasLogs && (
                                                 <div className="flex-1 flex flex-col items-center justify-center gap-0.5">
-                                                    <p className={`text-base font-black leading-none ${isSelected ? 'text-white' : 'text-slate-500'}`}>{dayTotal.toFixed(1)}h</p>
-                                                    <p className={`${SCALE.text.meta} leading-none ${isSelected ? 'text-indigo-200' : 'text-slate-400'}`}>{dayLogs.length} {dayLogs.length === 1 ? t('record_singular') : t('record_plural')}</p>
+                                                    <p className={`text-base font-black leading-none ${isSelected ? 'text-[#1B3A57]' : 'text-slate-500'}`}>{dayTotal.toFixed(1)}h</p>
+                                                    <p className={`${SCALE.text.meta} leading-none ${isSelected ? 'text-[#1B3A57]/70' : 'text-slate-400'}`}>{dayLogs.length} {dayLogs.length === 1 ? t('record_singular') : t('record_plural')}</p>
                                                 </div>
                                             )}
                                         </div>
@@ -368,18 +353,18 @@ export default function DashboardView({ logs, workers, clients, effectiveClientI
                             const workerObj = workers.find(w => String(w.id) === String(worker.id));
                             return (
                                 <div key={worker.id} className="px-5 py-2.5 flex items-center gap-3">
-                                    <div className="w-7 h-7 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-700 font-black text-xs flex-shrink-0 uppercase">
+                                    <div className="w-7 h-7 rounded-xl bg-[#FBE7C6] flex items-center justify-center text-[#1B3A57] font-black text-xs flex-shrink-0 uppercase">
                                         {worker.name.charAt(0)}
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <p className="font-black text-slate-700 text-xs truncate">{worker.name}</p>
                                         <p className={`${SCALE.text.statLabel} text-slate-400`}>{worker.role}</p>
                                     </div>
-                                    <span className="text-sm font-black text-indigo-600">{worker.totalHours}h</span>
+                                    <span className="text-sm font-black text-[#1B3A57]">{worker.totalHours}h</span>
                                     {onManageLogs && (
                                         <button
                                             onClick={() => onManageLogs(workerObj || { id: worker.id, name: worker.name, profissao: worker.role })}
-                                            className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                                            className="p-1.5 text-slate-400 hover:text-[#8a4a00] hover:bg-[#FDF3E4] rounded-lg transition-all"
                                             title="Gerir registos"
                                         >
                                             <Edit2 size={13} />
@@ -400,7 +385,7 @@ export default function DashboardView({ logs, workers, clients, effectiveClientI
             {effectiveClientId && selectedMonth && (
                 <a
                     href={`${window.location.origin}${window.location.pathname}?client=${effectiveClientId}&month=${selectedMonth}`}
-                    className="w-full flex items-center justify-center gap-3 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-black text-sm uppercase tracking-widest py-5 rounded-[2rem] shadow-lg shadow-indigo-200 transition-all"
+                    className="w-full flex items-center justify-center gap-3 bg-[#EB8D00] hover:bg-[#F59B1C] active:scale-95 text-[#1B3A57] font-black text-sm uppercase tracking-widest py-5 rounded-[2rem] shadow-lg shadow-[#EB8D00]/30 transition-all"
                 >
                     <CheckCircle size={20} />
                     {t('validate_period')}

@@ -1,3 +1,5 @@
+import { calculateDuration } from './formatUtils';
+
 /**
  * Converts "HH:mm" string to decimal hours.
  */
@@ -118,4 +120,21 @@ export const roundTimeToIntervalTimeUp = (timeStr, intervalMinutes = 30, toleran
   const hours = Math.floor(roundedMinutes / 60) % 24;
   const minutes = roundedMinutes % 60;
   return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+};
+
+/**
+ * Calcula a duração entre dois horários arredondando ao intervalo configurado
+ * (entrada e fim de pausa arredondam para cima, saída e início de pausa para baixo).
+ * Usado nas pré-visualizações do portal do cliente, para refletir a mesma
+ * regra de arredondamento aplicada quando o registo é efetivamente gravado.
+ */
+export const calculateRoundedHoursDiff = (entry, exit, breakStart, breakEnd) => {
+  if (!entry || !exit || !entry.includes(':') || !exit.includes(':')) return 0;
+  const { interval, tolerance } = getIntervalSettings();
+  return calculateDuration(
+    roundTimeToIntervalTimeUp(entry, interval, tolerance),
+    roundTimeToIntervalTimeDown(exit, interval),
+    breakStart && breakStart !== '--:--' ? roundTimeToIntervalTimeUp(breakStart, interval, tolerance) : null,
+    breakEnd && breakEnd !== '--:--' ? roundTimeToIntervalTimeDown(breakEnd, interval) : null,
+  );
 };

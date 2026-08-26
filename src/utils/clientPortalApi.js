@@ -132,14 +132,17 @@ export async function deleteLogByClient(supabase, { clientId, clientName, worker
 export async function approveWorkerRequest(supabase, { clientId, clientName, correction, items }) {
   if (!supabase) throw new Error('Supabase indisponível');
 
+  const results = [];
+
   for (const item of items) {
     const proposed = item.proposed;
     const isDeletion = !proposed || (!proposed.startTime && !proposed.endTime);
 
     if (isDeletion) {
       // deletion_request: apagar o registo referenciado
-      if (item.before?.log_id) {
-        const { error } = await supabase.from('logs').delete().eq('id', item.before.log_id);
+      const deletedLogId = item.before?.log_id || null;
+      if (deletedLogId) {
+        const { error } = await supabase.from('logs').delete().eq('id', deletedLogId);
         if (error) throw error;
       } else if (item.worker_id && item.date) {
         const { error } = await supabase.from('logs').delete()
@@ -147,6 +150,7 @@ export async function approveWorkerRequest(supabase, { clientId, clientName, cor
           .eq('date', item.date);
         if (error) throw error;
       }
+      results.push({ worker_id: item.worker_id, date: item.date, isDeletion: true, deletedLogId });
       continue;
     }
 
@@ -159,6 +163,8 @@ export async function approveWorkerRequest(supabase, { clientId, clientName, cor
     }
 
     const times = buildLogTimes(proposed);
+    let logId = existing?.id || null;
+    let finalTimes = times;
 
     if (item.before && existing) {
       const { error } = await supabase.from('logs').update({
@@ -172,10 +178,10 @@ export async function approveWorkerRequest(supabase, { clientId, clientName, cor
       const { data: provisional } = await supabase.from('logs').select('id, endTime')
         .eq('workerId', item.worker_id).eq('date', item.date).eq('source', 'request').maybeSingle();
 
-      const logId = provisional?.id || newId('l');
+      logId = provisional?.id || newId('l');
       if (provisional) {
         const endTime = provisional.endTime ?? times.endTime ?? null;
-        const finalTimes = buildLogTimes({ startTime: times.startTime, endTime, breakStart: times.breakStart, breakEnd: times.breakEnd });
+        finalTimes = buildLogTimes({ startTime: times.startTime, endTime, breakStart: times.breakStart, breakEnd: times.breakEnd });
         const { error } = await supabase.from('logs').update({
           ...finalTimes,
           edited_at: new Date().toISOString(),
@@ -194,6 +200,8 @@ export async function approveWorkerRequest(supabase, { clientId, clientName, cor
         if (error) throw error;
       }
     }
+
+    results.push({ worker_id: item.worker_id, date: item.date, isDeletion: false, logId, times: finalTimes });
   }
 
   await supabase.from('corrections').update({
@@ -220,6 +228,8 @@ export async function approveWorkerRequest(supabase, { clientId, clientName, cor
     targetWorkerIds: workerId ? [workerId] : [],
     payload: { correction_id: correction.id, kind: 'applied' },
   });
+
+  return results;
 }
 
 /**

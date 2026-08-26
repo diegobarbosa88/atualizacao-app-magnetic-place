@@ -24,7 +24,7 @@ export function useSignatureCanvas({ currentView, printingWorker, isApproved }) 
                 const ctx = canvas.getContext('2d');
                 ctx.lineWidth = 3;
                 ctx.lineCap = 'round';
-                ctx.strokeStyle = '#4f46e5';
+                ctx.strokeStyle = '#1B3A57';
 
                 if (signatureSaved && !printingWorker) {
                     const img = new Image();

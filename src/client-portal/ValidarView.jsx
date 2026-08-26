@@ -10,7 +10,7 @@ export default function ValidarView({ clientObj, clientData, clientSession, t, o
             <div className="flex flex-col lg:flex-row lg:items-end w-full gap-8 mb-10 pb-8 border-b border-zinc-200">
                 <div className="flex-1">
                     <div className="flex items-center gap-4 mb-5">
-                        <span className={`px-2.5 py-1 rounded-md bg-zinc-900 text-zinc-50 shadow-sm ${SCALE.text.badge}`}>
+                        <span className={`px-2.5 py-1 rounded-md bg-[#1B3A57] text-[#FDF3E4] shadow-sm ${SCALE.text.badge}`}>
                             {t('client_panel')}
                         </span>
                         <div className="w-1 h-1 rounded-full bg-zinc-300 hidden sm:block" />
@@ -29,7 +29,7 @@ export default function ValidarView({ clientObj, clientData, clientSession, t, o
             </div>
 
             {clientSession && (
-                <button onClick={() => window.location.href = window.location.origin + window.location.pathname} className={`flex items-center gap-2 text-slate-400 hover:text-indigo-600 transition-all ${SCALE.text.badge}`}>
+                <button onClick={() => window.location.href = window.location.origin + window.location.pathname} className={`flex items-center gap-2 text-slate-400 hover:text-[#8a4a00] transition-all ${SCALE.text.badge}`}>
                     <ChevronLeft size={16} /> {t('back_dashboard')}
                 </button>
             )}
@@ -39,9 +39,9 @@ export default function ValidarView({ clientObj, clientData, clientSession, t, o
                     <h2 className={`${SCALE.text.statLabel} text-slate-400`}>{t('selected_period')}</h2>
                     <p className="text-3xl font-black text-slate-800 mt-2 uppercase">{clientData.period || '—'}</p>
                 </div>
-                <div className="bg-indigo-50 border border-indigo-100 rounded-3xl p-6 md:min-w-[200px] text-center shadow-inner">
-                    <p className={`${SCALE.text.statLabel} text-indigo-500 mb-1`}>{t('total_hours')}</p>
-                    <p className="text-4xl font-black text-indigo-700">{originalTotal}h</p>
+                <div className="bg-[#1B3A57] rounded-3xl p-6 md:min-w-[200px] text-center shadow-inner">
+                    <p className={`${SCALE.text.statLabel} text-white/55 mb-1`}>{t('total_hours')}</p>
+                    <p className="text-4xl font-black text-[#EB8D00]">{originalTotal}h</p>
                 </div>
             </section>
 
@@ -73,7 +73,7 @@ export default function ValidarView({ clientObj, clientData, clientSession, t, o
                                 const isExpanded = expandedWorkers.includes(worker.id);
                                 return (
                                     <React.Fragment key={worker.id}>
-                                        <tr className={`transition-colors cursor-pointer ${isExpanded ? 'bg-indigo-50/50' : 'hover:bg-slate-50'}`} onClick={() => toggleWorkerDetails(worker.id)}>
+                                        <tr className={`transition-colors cursor-pointer ${isExpanded ? 'bg-[#FDF3E4]/70' : 'hover:bg-slate-50'}`} onClick={() => toggleWorkerDetails(worker.id)}>
                                             <td className="p-6">
                                                 <p className="font-black text-slate-800">{worker.name}</p>
                                                 <p className={`${SCALE.text.statLabel} text-slate-400 mt-1`}>{worker.role}</p>
@@ -84,14 +84,14 @@ export default function ValidarView({ clientObj, clientData, clientSession, t, o
                                                     <button onClick={(e) => handleDownloadIndividual(e, worker)} className="p-3 text-emerald-600 hover:text-emerald-800 transition-colors rounded-xl hover:bg-emerald-100" title="Baixar Relatório PDF">
                                                         <Download className="w-5 h-5" />
                                                     </button>
-                                                    <button className="p-3 text-indigo-600 hover:text-indigo-800 transition-colors rounded-xl hover:bg-indigo-100">
+                                                    <button className="p-3 text-[#8a4a00] hover:text-[#1B3A57] transition-colors rounded-xl hover:bg-[#FDF3E4]">
                                                         <ChevronDown className={`w-6 h-6 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
                                                     </button>
                                                 </div>
                                             </td>
                                         </tr>
                                         {isExpanded && (
-                                            <tr className="bg-slate-50 border-b-2 border-indigo-100 shadow-inner">
+                                            <tr className="bg-slate-50 border-b-2 border-[#FBE7C6] shadow-inner">
                                                 <td colSpan="3" className="p-0">
                                                     <div className="p-6">
                                                         <div id={`report-worker-${worker.id}`} className="overflow-hidden bg-white">
@@ -211,14 +211,14 @@ export default function ValidarView({ clientObj, clientData, clientSession, t, o
                                             console.error("Erro ao salvar validação:", err);
                                             alert("Erro ao guardar a validação. Por favor, tente novamente.");
                                         });
-                                }} disabled={!hasSignature || originalTotal === 0} className={`w-full sm:flex-1 px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl flex justify-center ${hasSignature && originalTotal > 0 ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-600/30 active:scale-95' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}>
+                                }} disabled={!hasSignature || originalTotal === 0} className={`w-full sm:flex-1 px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl flex justify-center ${hasSignature && originalTotal > 0 ? 'bg-[#EB8D00] hover:bg-[#F59B1C] text-[#1B3A57] shadow-[#EB8D00]/30 active:scale-95' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}>
                                     {t('validate_approve')}
                                 </button>
                             </div>
 
                             <div className="mt-12 pt-8 border-t border-slate-100 text-center">
                                 <p className={`${SCALE.text.statLabel} text-slate-400 mb-4`}>{t('found_divergence')}</p>
-                                <button onClick={startReport} className={`inline-flex items-center gap-3 text-white bg-slate-900 hover:bg-slate-800 px-6 py-3 rounded-xl transition-all shadow-lg active:scale-95 disabled:opacity-50 ${SCALE.text.badge}`} disabled={originalTotal === 0}>
+                                <button onClick={startReport} className={`inline-flex items-center gap-3 text-white bg-[#1B3A57] hover:bg-[#122741] px-6 py-3 rounded-xl transition-all shadow-lg active:scale-95 disabled:opacity-50 ${SCALE.text.badge}`} disabled={originalTotal === 0}>
                                     {t('edit_report')}
                                 </button>
                             </div>

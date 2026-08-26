@@ -62,7 +62,7 @@ export default function SimpleReportView({ draftData, handleTimeChange, handleDe
                 <div className="text-slate-300 font-black text-xl">→</div>
                 <div className="text-center">
                     <p className={`${SCALE.text.statLabel} text-slate-400 mb-1`}>Proposto</p>
-                    <p className={`text-2xl font-black ${hasDiff ? 'text-indigo-600' : 'text-slate-500'}`}>{draftTotal}h</p>
+                    <p className={`text-2xl font-black ${hasDiff ? 'text-[#8a4a00]' : 'text-slate-500'}`}>{draftTotal}h</p>
                 </div>
                 {hasDiff && (
                     <div className={`ml-auto px-3 py-1.5 rounded-xl text-xs font-black ${diff > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
@@ -86,7 +86,7 @@ export default function SimpleReportView({ draftData, handleTimeChange, handleDe
                             className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50 transition-colors"
                         >
                             <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-700 font-black text-xs uppercase flex-shrink-0">
+                                <div className="w-8 h-8 rounded-xl bg-[#FBE7C6] flex items-center justify-center text-[#1B3A57] font-black text-xs uppercase flex-shrink-0">
                                     {worker.name.charAt(0)}
                                 </div>
                                 <div className="text-left">
@@ -102,7 +102,7 @@ export default function SimpleReportView({ draftData, handleTimeChange, handleDe
                                 )}
                                 <div className="text-right">
                                     <p className="text-xs font-black text-slate-500 line-through">{worker.totalHours}h</p>
-                                    <p className={`text-sm font-black ${workerDiff !== 0 ? 'text-indigo-600' : 'text-slate-600'}`}>{worker.editedTotalHours}h</p>
+                                    <p className={`text-sm font-black ${workerDiff !== 0 ? 'text-[#8a4a00]' : 'text-slate-600'}`}>{worker.editedTotalHours}h</p>
                                 </div>
                                 {isExpanded ? <ChevronUp size={16} className="text-slate-400" /> : <ChevronDown size={16} className="text-slate-400" />}
                             </div>
@@ -125,7 +125,7 @@ export default function SimpleReportView({ draftData, handleTimeChange, handleDe
                                                         <div className="flex items-center gap-2">
                                                             {deleted && <span className={`${SCALE.text.meta} text-rose-600 bg-rose-100 px-1.5 py-0.5 rounded`}>eliminado</span>}
                                                             {!deleted && changed && <span className={`${SCALE.text.meta} text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded`}>editado</span>}
-                                                            {!deleted && !changed && day.editedHours > 0 && <span className={`${SCALE.text.meta} text-indigo-600`}>{day.editedHours}h</span>}
+                                                            {!deleted && !changed && day.editedHours > 0 && <span className={`${SCALE.text.meta} text-[#1B3A57]`}>{day.editedHours}h</span>}
                                                             {deleted && handleRevertDay && (
                                                                 <button
                                                                     onClick={() => handleRevertDay(worker.id, day.rawDate)}
@@ -159,7 +159,7 @@ export default function SimpleReportView({ draftData, handleTimeChange, handleDe
                                                                 <TimeTextInput
                                                                     value={day.editedEntry || ''}
                                                                     onChange={val => handleTimeChange(worker.id, day.rawDate, 'entry', val)}
-                                                                    className="border border-slate-200 rounded-lg px-2 py-1 text-xs font-mono text-slate-700 bg-white focus:ring-1 focus:ring-indigo-400 focus:outline-none w-20"
+                                                                    className="border border-slate-200 rounded-lg px-2 py-1 text-xs font-mono text-slate-700 bg-white focus:ring-1 focus:ring-[#F5B84D] focus:outline-none w-20"
                                                                 />
                                                             </div>
                                                             {/* Saída */}
@@ -168,7 +168,7 @@ export default function SimpleReportView({ draftData, handleTimeChange, handleDe
                                                                 <TimeTextInput
                                                                     value={day.editedExit || ''}
                                                                     onChange={val => handleTimeChange(worker.id, day.rawDate, 'exit', val)}
-                                                                    className="border border-slate-200 rounded-lg px-2 py-1 text-xs font-mono text-slate-700 bg-white focus:ring-1 focus:ring-indigo-400 focus:outline-none w-20"
+                                                                    className="border border-slate-200 rounded-lg px-2 py-1 text-xs font-mono text-slate-700 bg-white focus:ring-1 focus:ring-[#F5B84D] focus:outline-none w-20"
                                                                 />
                                                             </div>
                                                             {/* Pausa */}
@@ -177,13 +177,13 @@ export default function SimpleReportView({ draftData, handleTimeChange, handleDe
                                                                 <TimeTextInput
                                                                     value={day.editedBreakStart || ''}
                                                                     onChange={val => handleTimeChange(worker.id, day.rawDate, 'breakStart', val)}
-                                                                    className="border border-slate-200 rounded-lg px-2 py-1 text-xs font-mono text-slate-700 bg-white focus:ring-1 focus:ring-indigo-400 focus:outline-none w-20"
+                                                                    className="border border-slate-200 rounded-lg px-2 py-1 text-xs font-mono text-slate-700 bg-white focus:ring-1 focus:ring-[#F5B84D] focus:outline-none w-20"
                                                                 />
                                                                 <span className="text-slate-300 text-xs">–</span>
                                                                 <TimeTextInput
                                                                     value={day.editedBreakEnd || ''}
                                                                     onChange={val => handleTimeChange(worker.id, day.rawDate, 'breakEnd', val)}
-                                                                    className="border border-slate-200 rounded-lg px-2 py-1 text-xs font-mono text-slate-700 bg-white focus:ring-1 focus:ring-indigo-400 focus:outline-none w-20"
+                                                                    className="border border-slate-200 rounded-lg px-2 py-1 text-xs font-mono text-slate-700 bg-white focus:ring-1 focus:ring-[#F5B84D] focus:outline-none w-20"
                                                                 />
                                                             </div>
                                                             {changed && (
@@ -199,7 +199,7 @@ export default function SimpleReportView({ draftData, handleTimeChange, handleDe
                                 <div className="px-5 py-3 border-t border-slate-50">
                                     <button
                                         onClick={() => setShowAllDays(prev => ({ ...prev, [worker.id]: !seeAll }))}
-                                        className={`text-slate-400 hover:text-indigo-600 transition-colors ${SCALE.text.badge}`}
+                                        className={`text-slate-400 hover:text-[#8a4a00] transition-colors ${SCALE.text.badge}`}
                                     >
                                         {seeAll ? '↑ Ocultar dias sem registo' : '↓ Mostrar todos os dias do mês'}
                                     </button>
@@ -220,7 +220,7 @@ export default function SimpleReportView({ draftData, handleTimeChange, handleDe
                     onChange={e => setReportJustification(e.target.value)}
                     placeholder="Descreve brevemente o motivo da divergência..."
                     rows={3}
-                    className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-700 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-300 focus:outline-none resize-none transition-all"
+                    className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-700 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-[#F5B84D] focus:outline-none resize-none transition-all"
                 />
             </div>
 
@@ -245,7 +245,7 @@ export default function SimpleReportView({ draftData, handleTimeChange, handleDe
                     disabled={isSubmitting}
                     className={`px-8 py-3 rounded-xl transition-all shadow-lg flex items-center gap-2 ${SCALE.text.badge} ${
                         !isSubmitting
-                            ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-200 active:scale-95'
+                            ? 'bg-[#EB8D00] hover:bg-[#F59B1C] text-[#1B3A57] shadow-[#FBE7C6] active:scale-95'
                             : 'bg-slate-200 text-slate-400 cursor-not-allowed'
                     }`}
                 >

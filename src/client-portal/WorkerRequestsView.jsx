@@ -1,20 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { Clock, Check, X, ChevronDown, ClipboardList } from 'lucide-react';
 import { CLIENT_REQUESTS_CUTOFF, approveWorkerRequest, rejectWorkerRequest } from '../utils/clientPortalApi';
-import { calculateDuration } from '../utils/formatUtils';
-import { roundTimeToIntervalTimeUp, roundTimeToIntervalTimeDown, getIntervalSettings } from '../utils/timeUtils';
+import { calculateRoundedHoursDiff as calculateHoursDiff } from '../utils/timeUtils';
 import { SCALE } from '../styles/designTokens';
-
-const calculateHoursDiff = (entry, exit, breakStart, breakEnd) => {
-  if (!entry || !exit || !entry.includes(':') || !exit.includes(':')) return 0;
-  const { interval, tolerance } = getIntervalSettings();
-  return calculateDuration(
-    roundTimeToIntervalTimeUp(entry, interval, tolerance),
-    roundTimeToIntervalTimeDown(exit, interval),
-    breakStart && breakStart !== '--:--' ? roundTimeToIntervalTimeUp(breakStart, interval, tolerance) : null,
-    breakEnd && breakEnd !== '--:--' ? roundTimeToIntervalTimeDown(breakEnd, interval) : null,
-  );
-};
 
 const dateLabel = (dateStr) => {
   if (!dateStr) return '—';
@@ -63,14 +51,14 @@ function RequestCard({ correction, items, clientId, clientName, supabase, onActi
         onClick={() => setExpanded(e => !e)}
         className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors text-left"
       >
-        <span className={`w-2 h-2 rounded-full flex-shrink-0 ${isDeletion ? 'bg-rose-400' : 'bg-indigo-400'}`} />
+        <span className={`w-2 h-2 rounded-full flex-shrink-0 ${isDeletion ? 'bg-rose-400' : 'bg-[#1B3A57]'}`} />
         <div className="flex-1 min-w-0">
           <p className="font-black text-slate-800 text-sm truncate">{workerName}</p>
           <p className={`${SCALE.text.statLabel} text-slate-400`}>
             {items.length} item{items.length > 1 ? 's' : ''} · {correction.month || dateLabel(items[0]?.date)}
           </p>
         </div>
-        <span className={`${SCALE.text.meta} px-2 py-1 rounded-lg border flex-shrink-0 ${isDeletion ? 'text-rose-600 bg-rose-50 border-rose-200' : 'text-indigo-600 bg-indigo-50 border-indigo-200'}`}>
+        <span className={`${SCALE.text.meta} px-2 py-1 rounded-lg border flex-shrink-0 ${isDeletion ? 'text-rose-600 bg-rose-50 border-rose-200' : 'text-[#1B3A57] bg-[#EAF0F5] border-[#C7D6E2]'}`}>
           {isDeletion ? 'Eliminação' : 'Criação'}
         </span>
         <ChevronDown size={14} className={`text-slate-400 flex-shrink-0 transition-transform ${expanded ? 'rotate-180' : ''}`} />
@@ -90,7 +78,7 @@ function RequestCard({ correction, items, clientId, clientName, supabase, onActi
                   <span className={`${SCALE.text.statLabel} text-slate-500`}>{dateLabel(item.date)}</span>
                   {isDel
                     ? <span className={`${SCALE.text.meta} text-rose-600`}>Eliminar</span>
-                    : proposedHours !== null && <span className={`${SCALE.text.meta} text-indigo-600`}>{proposedHours}h</span>
+                    : proposedHours !== null && <span className={`${SCALE.text.meta} text-[#1B3A57]`}>{proposedHours}h</span>
                   }
                 </div>
                 {item.before?.startTime && (
@@ -100,11 +88,11 @@ function RequestCard({ correction, items, clientId, clientName, supabase, onActi
                   </div>
                 )}
                 {!isDel && item.proposed?.startTime && (
-                  <div className="flex items-center gap-2 text-xs text-indigo-700 font-bold">
-                    <span className={`${SCALE.text.statLabel} text-indigo-400`}>Proposto</span>
+                  <div className="flex items-center gap-2 text-xs text-[#1B3A57] font-bold">
+                    <span className={`${SCALE.text.statLabel} text-[#5C7086]`}>Proposto</span>
                     <span className="font-mono">{item.proposed.startTime} → {item.proposed.endTime || '…'}</span>
                     {item.proposed.breakStart && (
-                      <span className={`text-indigo-300 ${SCALE.text.meta}`}>⏸ {item.proposed.breakStart}–{item.proposed.breakEnd || '…'}</span>
+                      <span className={`text-[#5C7086] ${SCALE.text.meta}`}>⏸ {item.proposed.breakStart}–{item.proposed.breakEnd || '…'}</span>
                     )}
                   </div>
                 )}
@@ -204,7 +192,7 @@ function HistoryCard({ correction, items }) {
               {isApproved ? 'Aprovado' : 'Rejeitado'} {reviewDate}
             </span>
           )}
-          {byClient && <span className={`${SCALE.text.meta} text-indigo-400 bg-indigo-50 px-1.5 py-0.5 rounded`}>por si</span>}
+          {byClient && <span className={`${SCALE.text.meta} text-[#1B3A57] bg-[#EAF0F5] px-1.5 py-0.5 rounded`}>por si</span>}
         </div>
       </button>
 

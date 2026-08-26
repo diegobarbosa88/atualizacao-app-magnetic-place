@@ -4,11 +4,11 @@ import { SCALE } from '../styles/designTokens';
 
 export default function CounterProposalCard({ notif, handleAcceptContestation, handleDismissNotif, handleApproveCreationRequest, handleRejectCreationRequest, t, goToView }) {
     return (
-        <div className="relative overflow-hidden bg-white border border-indigo-100 rounded-[2rem] shadow-xl shadow-indigo-100/30 animate-fade-in">
-            <div className="absolute top-0 left-0 w-1.5 h-full bg-indigo-600"></div>
+        <div className="relative overflow-hidden bg-white border border-[#C7D6E2] rounded-[2rem] shadow-xl shadow-[#C7D6E2]/30 animate-fade-in">
+            <div className="absolute top-0 left-0 w-1.5 h-full bg-[#1B3A57]"></div>
             <div className="p-6 md:p-8">
                 <div className="flex items-start gap-4 md:gap-6">
-                    <div className="bg-indigo-50 p-4 rounded-2xl text-indigo-600 shrink-0 hidden sm:block">
+                    <div className="bg-[#EAF0F5] p-4 rounded-2xl text-[#1B3A57] shrink-0 hidden sm:block">
                         <Sparkles size={24} />
                     </div>
                     <div className="flex-1">
@@ -37,9 +37,9 @@ export default function CounterProposalCard({ notif, handleAcceptContestation, h
                                                         <span className={`${SCALE.text.meta} text-slate-500`}>{worker.totalHours || worker.originalTotal}h</span>
                                                     </div>
                                                     <div className="text-slate-300">→</div>
-                                                    <div className="flex flex-col items-center bg-indigo-50 px-2 py-1 rounded-lg">
-                                                        <span className={`${SCALE.text.statLabel} text-indigo-500`}>Admin</span>
-                                                        <span className="text-xs text-indigo-700 font-black">{worker.editedTotalHours}h</span>
+                                                    <div className="flex flex-col items-center bg-[#EAF0F5] px-2 py-1 rounded-lg">
+                                                        <span className={`${SCALE.text.statLabel} text-[#1B3A57]`}>Admin</span>
+                                                        <span className="text-xs text-[#1B3A57] font-black">{worker.editedTotalHours}h</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -57,11 +57,11 @@ export default function CounterProposalCard({ notif, handleAcceptContestation, h
                                                                 </div>
                                                                 <div className="w-px h-3 bg-slate-100"></div>
                                                                 <div className="flex items-center gap-1.5">
-                                                                    <span className={`text-indigo-600 ${SCALE.text.statLabel}`}>Admin:</span>
-                                                                    <span className="text-indigo-700 font-black">{(day.adminEntry || day.editedEntry)}-{(day.adminExit || day.editedExit)}</span>
+                                                                    <span className={`text-[#1B3A57] ${SCALE.text.statLabel}`}>Admin:</span>
+                                                                    <span className="text-[#1B3A57] font-black">{(day.adminEntry || day.editedEntry)}-{(day.adminExit || day.editedExit)}</span>
                                                                 </div>
                                                                 <div className="w-px h-3 bg-slate-100"></div>
-                                                                <span className="text-indigo-700 font-black bg-indigo-50 px-1.5 py-0.5 rounded-md">{day.adminHours || day.editedHours}h</span>
+                                                                <span className="text-[#1B3A57] font-black bg-[#EAF0F5] px-1.5 py-0.5 rounded-md">{day.adminHours || day.editedHours}h</span>
                                                             </div>
                                                         </div>
                                                     );
@@ -74,10 +74,10 @@ export default function CounterProposalCard({ notif, handleAcceptContestation, h
                                 <div className="space-y-4">
                                     {notif.message.split('\n').filter(line => line.trim()).map((line, i) => {
                                         if (line.includes('👤') && line.includes('TRABALHADOR')) {
-                                            return <p key={i} className="text-base font-black text-indigo-700 mt-2">{line}</p>;
+                                            return <p key={i} className="text-base font-black text-[#1B3A57] mt-2">{line}</p>;
                                         }
                                         if (line.match(/^ {3}📋/)) {
-                                            return <p key={i} className="text-xs font-bold text-indigo-600 mt-3">{line}</p>;
+                                            return <p key={i} className="text-xs font-bold text-[#1B3A57] mt-3">{line}</p>;
                                         }
                                         if (line.match(/^ {3}[✓•]/)) {
                                             const match = line.match(/^ {3}[✓•]\s+(.+?):\s+(.+?)\s*\|\s*Pausa:\s*(.+?)\s*\|\s*([\d.]+)h/);
@@ -115,9 +115,9 @@ export default function CounterProposalCard({ notif, handleAcceptContestation, h
                                                         <span className="text-amber-600 font-black">{sugieren}h</span>
                                                     </div>
                                                     <div className="text-slate-300 font-bold">→</div>
-                                                    <div className="flex flex-col items-center bg-indigo-50 px-3 py-1 rounded-lg border border-indigo-100">
-                                                        <span className={`${SCALE.text.statLabel} text-indigo-500`}>Admin</span>
-                                                        <span className="text-indigo-700 font-black">{contra}h</span>
+                                                    <div className="flex flex-col items-center bg-[#EAF0F5] px-3 py-1 rounded-lg border border-[#C7D6E2]">
+                                                        <span className={`${SCALE.text.statLabel} text-[#1B3A57]`}>Admin</span>
+                                                        <span className="text-[#1B3A57] font-black">{contra}h</span>
                                                     </div>
                                                 </div>
                                             );
@@ -128,7 +128,7 @@ export default function CounterProposalCard({ notif, handleAcceptContestation, h
                                             const sugieren = match ? match[2] : '';
                                             const contra = match ? match[3] : '';
                                             return (
-                                                <div key={i} className="flex items-center justify-between bg-white p-3 rounded-xl border border-indigo-100 mt-2 shadow-sm">
+                                                <div key={i} className="flex items-center justify-between bg-white p-3 rounded-xl border border-[#C7D6E2] mt-2 shadow-sm">
                                                     <div className="flex flex-col items-center">
                                                         <span className={`${SCALE.text.statLabel} text-slate-400`}>Original</span>
                                                         <span className="text-slate-500 font-black">{orig}h</span>
@@ -139,9 +139,9 @@ export default function CounterProposalCard({ notif, handleAcceptContestation, h
                                                         <span className="text-amber-600 font-black">{sugieren}h</span>
                                                     </div>
                                                     <div className="text-slate-300 font-bold">→</div>
-                                                    <div className="flex flex-col items-center bg-indigo-50 px-3 py-1 rounded-lg border border-indigo-100">
-                                                        <span className={`${SCALE.text.statLabel} text-indigo-500`}>Admin</span>
-                                                        <span className="text-indigo-700 font-black">{contra}h</span>
+                                                    <div className="flex flex-col items-center bg-[#EAF0F5] px-3 py-1 rounded-lg border border-[#C7D6E2]">
+                                                        <span className={`${SCALE.text.statLabel} text-[#1B3A57]`}>Admin</span>
+                                                        <span className="text-[#1B3A57] font-black">{contra}h</span>
                                                     </div>
                                                 </div>
                                             );
@@ -153,7 +153,7 @@ export default function CounterProposalCard({ notif, handleAcceptContestation, h
                                                 let valueClass = 'text-xs text-slate-700 font-mono';
                                                 if (label.includes('Original')) valueClass = 'text-xs text-slate-500 font-mono';
                                                 else if (label.includes('Cliente')) valueClass = 'text-xs text-amber-600 font-mono font-bold';
-                                                else if (label.includes('Admin')) valueClass = 'text-xs text-indigo-600 font-mono font-bold';
+                                                else if (label.includes('Admin')) valueClass = 'text-xs text-[#1B3A57] font-mono font-bold';
                                                 return (
                                                     <div key={i} className="flex items-center ml-4 gap-2 py-0.5">
                                                         <span className={`${SCALE.text.meta} text-slate-500`}>{label}:</span>
@@ -169,7 +169,7 @@ export default function CounterProposalCard({ notif, handleAcceptContestation, h
                                             return <p key={i} className="text-xs font-bold text-slate-600 mt-3">{line}</p>;
                                         }
                                         if (line.includes('⏰') || line.includes('☕') || line.includes('⏱️')) {
-                                            return <p key={i} className="text-xs font-bold text-indigo-600 mt-2">{line}</p>;
+                                            return <p key={i} className="text-xs font-bold text-[#1B3A57] mt-2">{line}</p>;
                                         }
                                         return <p key={i} className="text-xs text-slate-600">{line}</p>;
                                     })}
