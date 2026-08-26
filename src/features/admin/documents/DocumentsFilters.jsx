@@ -1,11 +1,18 @@
 import React from 'react';
-import { Search, Plus, X } from 'lucide-react';
-import { CATEGORIAS_RH_ACT } from '../../../constants/rhCategories';
-import { FT, SCALE } from '../../../styles/designTokens';
+import { Search, X } from 'lucide-react';
+import { SCALE } from '../../../styles/designTokens';
+
+const SOURCE_OPTIONS = [
+  { v: 'all', l: 'Todas' },
+  { v: 'manual', l: 'Manual' },
+  { v: 'template', l: 'Template' },
+];
 
 // Tabs de estado com contador e o botão "A Expirar" foram substituídos pelo
 // stat strip clicável no cabeçalho de DocumentsAdmin.jsx — evita repetir o
 // mesmo sinal (contagens por estado) em dois sítios da mesma página.
+// Categoria saiu daqui para a rail vertical (DocumentsAdmin.jsx); "Adicionar"
+// saiu para o botão de ação do cabeçalho partilhado.
 export default function DocumentsFilters({
   stateFilter, setStateFilter,
   counts,
@@ -13,9 +20,7 @@ export default function DocumentsFilters({
   sourceFilter, setSourceFilter,
   tipoFilter, setTipoFilter,
   tipoOptions,
-  categoriaFilter, setCategoriaFilter,
   validadeFilter, setValidadeFilter,
-  onShowUpload,
 }) {
   const hasActiveFilter = stateFilter !== 'all' || (validadeFilter === 'expiring');
   return (
@@ -40,53 +45,33 @@ export default function DocumentsFilters({
         </div>
       )}
 
-      {/* Filtro por categoria — dropdown */}
-      <div className="mb-4">
-        <select
-          className="w-full p-2.5 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-xs font-bold text-[var(--ink-mid)] outline-none"
-          value={categoriaFilter || ''}
-          onChange={(e) => setCategoriaFilter && setCategoriaFilter(e.target.value)}
-        >
-          <option value="">Todas as categorias</option>
-          {CATEGORIAS_RH_ACT.map(c => (
-            <option key={c} value={c}>{c}</option>
-          ))}
-        </select>
-      </div>
-
       <div className="flex flex-col gap-2 mb-5">
-        <div className="flex gap-2 items-center">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--slate)]" size={15} />
-            <input
-              type="text"
-              placeholder="Pesquisar..."
-              className="w-full pl-9 pr-3 py-2.5 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-sm outline-none transition-all"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <button
-            onClick={onShowUpload}
-            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-black text-xs uppercase transition-all shadow-md shrink-0 whitespace-nowrap"
-            style={{ backgroundColor: FT.orange, color: FT.navy }}
-            title="Adicionar documento"
-          >
-            <Plus size={16} /> Adicionar
-          </button>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--slate)]" size={15} />
+          <input
+            type="text"
+            placeholder="Pesquisar..."
+            className="w-full pl-9 pr-3 py-2.5 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-sm outline-none transition-all"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2 items-center">
+          <div className="inline-flex bg-[var(--surface-dim)] rounded-lg p-1">
+            {SOURCE_OPTIONS.map(opt => (
+              <button
+                key={opt.v}
+                onClick={() => setSourceFilter(opt.v)}
+                className={`px-3 py-1.5 rounded-md transition-all ${SCALE.text.badge} ${
+                  sourceFilter === opt.v ? 'bg-white text-[var(--navy)] shadow-sm' : 'text-[var(--slate-dim)] hover:text-[var(--ink-soft)]'
+                }`}
+              >
+                {opt.l}
+              </button>
+            ))}
+          </div>
           <select
-            className="flex-1 p-2.5 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-xs font-bold text-[var(--ink-mid)] outline-none"
-            value={sourceFilter}
-            onChange={(e) => setSourceFilter(e.target.value)}
-          >
-            <option value="all">Todas as fontes</option>
-            <option value="manual">Manual</option>
-            <option value="template">Template</option>
-          </select>
-          <select
-            className="flex-1 p-2.5 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-xs font-bold text-[var(--ink-mid)] outline-none"
+            className="flex-1 min-w-[140px] p-2.5 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-xs font-bold text-[var(--ink-mid)] outline-none"
             value={tipoFilter}
             onChange={(e) => setTipoFilter(e.target.value)}
           >

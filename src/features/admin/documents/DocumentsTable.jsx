@@ -4,27 +4,23 @@ import {
 } from 'lucide-react';
 import { formatDocDate } from '../../../utils/dateUtils';
 import { toSentenceCase, toSentenceCaseFilename } from '../../../utils/textUtils';
-import { FT, SCALE } from '../../../styles/designTokens';
+import { SCALE } from '../../../styles/designTokens';
 import SortableTh from './SortableTh';
 import { getValidadeStatus, getDiasRestantes, CATEGORIAS_RH_ACT, CATEGORIA_CONFIG, CATEGORIA_COLOR_MAP } from '../../../constants/rhCategories';
 
-const ACTION_ICON_CLS = "p-1.5 bg-white rounded-lg border border-[var(--border)] hover:text-white transition-all shadow-sm";
-const ACTION_ICON_STYLE = { color: FT.slate };
+const ACTION_ICON_CLS = "p-1.5 rounded-lg transition-all text-[var(--slate)] hover:text-[var(--navy)] hover:bg-[var(--surface)]";
+const ACTION_ICON_DELETE_CLS = "p-1.5 rounded-lg transition-all text-[var(--bad)] hover:bg-[var(--bad-bg)]";
 
 function StateBadge({ state }) {
-  if (state === 'signed') return (
-    <span title="Assinado" className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg ${SCALE.text.meta} bg-emerald-100 text-emerald-700`}>
-      <CheckCircle size={12} /> Assinado
-    </span>
-  );
-  if (state === 'awaiting_admin') return (
-    <span title="Aguarda aprovação" className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg ${SCALE.text.meta} bg-[var(--surface-dim)] text-[var(--navy)]`}>
-      <FileSignature size={12} /> Aguarda aprovação
-    </span>
-  );
+  const map = {
+    signed:          { icon: CheckCircle,   label: 'Assinado',          color: 'var(--ok)',        bg: 'var(--ok-bg)' },
+    awaiting_admin:  { icon: FileSignature, label: 'Aguarda aprovação', color: 'var(--slate-dim)',  bg: 'var(--surface-dim)' },
+  };
+  const cfg = map[state] || { icon: Clock, label: 'Pendente', color: 'var(--warn)', bg: 'var(--warn-bg)' };
+  const Icon = cfg.icon;
   return (
-    <span title="Pendente" className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg ${SCALE.text.meta} bg-amber-100 text-amber-700`}>
-      <Clock size={12} /> Pendente
+    <span title={cfg.label} className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg ${SCALE.text.meta}`} style={{ color: cfg.color, backgroundColor: cfg.bg }}>
+      <Icon size={12} /> {cfg.label}
     </span>
   );
 }
@@ -33,16 +29,29 @@ function ValidadeBadge({ dataValidade }) {
   const status = getValidadeStatus(dataValidade);
   if (!status) return null;
   const dias = getDiasRestantes(dataValidade);
-  const config = {
-    expirado: { cls: 'bg-red-50 text-red-600 border-red-200',        icon: <AlertTriangle size={9} />, label: 'Expirado' },
-    urgente:  { cls: 'bg-amber-50 text-amber-600 border-amber-200',  icon: <Clock size={9} />,         label: `${dias}d restantes` },
-    aviso:    { cls: 'bg-yellow-50 text-yellow-700 border-yellow-200',icon: <Clock size={9} />,         label: `${dias}d restantes` },
-    ok:       { cls: 'bg-emerald-50 text-emerald-600 border-emerald-100', icon: <CheckCircle size={9} />, label: 'Válido' },
+  const map = {
+    expirado: { color: 'var(--bad)',  bg: 'var(--bad-bg)',  border: 'var(--bad-border)',  icon: AlertTriangle, label: 'Expirado' },
+    urgente:  { color: 'var(--warn)', bg: 'var(--warn-bg)', border: 'var(--warn-border)', icon: Clock,         label: `${dias}d restantes` },
+    aviso:    { color: 'var(--warn)', bg: 'var(--warn-bg)', border: 'var(--warn-border)', icon: Clock,         label: `${dias}d restantes` },
+    ok:       { color: 'var(--ok)',   bg: 'var(--ok-bg)',   border: 'var(--ok-border)',   icon: CheckCircle,   label: 'Válido' },
   };
-  const { cls, icon, label } = config[status];
+  const { color, bg, border, icon: Icon, label } = map[status];
   return (
-    <span className={`inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded-lg ${SCALE.text.meta} border ${cls}`}>
-      {icon} {label}
+    <span className={`inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded-lg border ${SCALE.text.meta}`} style={{ color, backgroundColor: bg, borderColor: border }}>
+      <Icon size={9} /> {label}
+    </span>
+  );
+}
+
+function CategoriaTag({ categoria }) {
+  const semCategoria = !categoria;
+  const colors = semCategoria
+    ? { bg: 'bg-orange-100', text: 'text-orange-700', border: 'border-orange-200' }
+    : CATEGORIA_COLOR_MAP[(CATEGORIA_CONFIG[categoria] || CATEGORIA_CONFIG["Outros"]).color];
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg ${SCALE.text.meta} border ${colors.bg} ${colors.text} ${colors.border}`}>
+      {semCategoria && <AlertTriangle size={8} />}
+      {categoria || 'Sem categoria'}
     </span>
   );
 }
@@ -58,21 +67,17 @@ function CategoriaEditor({ docId, source, categoria, onSave }) {
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
 
-  const semCategoria = !categoria;
-  const colors = semCategoria
-    ? { bg: 'bg-orange-100', text: 'text-orange-700', border: 'border-orange-200' }
-    : CATEGORIA_COLOR_MAP[(CATEGORIA_CONFIG[categoria] || CATEGORIA_CONFIG["Outros"]).color];
-
   return (
     <div className="relative inline-block" ref={ref}>
       <button
         onClick={() => setOpen(o => !o)}
-        className={`inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-lg ${SCALE.text.meta} border transition-all group ${colors.bg} ${colors.text} ${colors.border} hover:brightness-95`}
-        title={semCategoria ? 'Sem categoria — clique para definir' : 'Editar categoria'}
+        className="group"
+        title={categoria ? 'Editar categoria' : 'Sem categoria — clique para definir'}
       >
-        {semCategoria && <AlertTriangle size={8} />}
-        {categoria || 'Sem categoria'}
-        <Pencil size={8} className="opacity-50 group-hover:opacity-100" />
+        <span className="inline-flex items-center gap-1">
+          <CategoriaTag categoria={categoria} />
+          <Pencil size={8} className="opacity-0 group-hover:opacity-60 text-[var(--slate-dim)] transition-opacity" />
+        </span>
       </button>
 
       {open && (
@@ -85,7 +90,7 @@ function CategoriaEditor({ docId, source, categoria, onSave }) {
               <button
                 key={c}
                 onClick={() => { onSave(docId, source, c); setOpen(false); }}
-                className={`w-full text-left px-3 py-2 text-xs font-bold hover:bg-indigo-50 hover:text-indigo-700 transition-colors ${c === categoria ? 'bg-indigo-50 text-indigo-700' : 'text-[var(--ink-mid)]'}`}
+                className={`w-full text-left px-3 py-2 text-xs font-bold hover:bg-[var(--navy-soft)] hover:text-[var(--navy)] transition-colors ${c === categoria ? 'bg-[var(--navy-soft)] text-[var(--navy)]' : 'text-[var(--ink-mid)]'}`}
               >
                 {c === categoria && <span className="mr-1">✓</span>}{c}
               </button>
@@ -117,7 +122,7 @@ export default function DocumentsTable({
             <SortableTh label="Data" columnKey="createdAt" sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
             <SortableTh label="Colaborador" columnKey="workerName" sortKey={sortKey} sortDir={sortDir} onSort={onSort} className="hidden md:table-cell" />
             <SortableTh label="Documento" columnKey="title" sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
-            <SortableTh label="Tipo / Categoria" columnKey="tipo" sortKey={sortKey} sortDir={sortDir} onSort={onSort} className="hidden md:table-cell" />
+            <th className={`hidden md:table-cell px-4 py-2 ${SCALE.text.statLabel}`}>Categoria</th>
             <SortableTh label="Estado" columnKey="state" sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
             <th className={`px-4 py-2 ${SCALE.text.statLabel} text-right`}>Ações</th>
           </tr>
@@ -141,7 +146,7 @@ export default function DocumentsTable({
               const rowHighlight = validadeStatus === 'expirado' ? 'border-l-2 border-red-300'
                 : validadeStatus === 'urgente' ? 'border-l-2 border-amber-300' : '';
               return (
-                <tr key={d.id} className={`bg-[var(--surface)] hover:bg-white hover:shadow-md transition-all duration-300 ${rowHighlight}`}>
+                <tr key={d.id} className={`bg-[var(--surface)] hover:bg-white transition-colors duration-200 ${rowHighlight}`}>
                   <td className="px-4 py-4 rounded-l-2xl border-y border-l border-[var(--border-soft)]">
                     <span className="text-xs font-bold text-[var(--slate-dim)] font-mono">
                       {d.createdAt ? formatDocDate(d.createdAt.toISOString(), true) : '—'}
@@ -150,38 +155,25 @@ export default function DocumentsTable({
                   <td className="hidden md:table-cell px-4 py-4 border-y border-[var(--border-soft)]">
                     <p className="text-sm font-black text-[var(--ink)]">{toSentenceCase(d.workerName)}</p>
                   </td>
+                  {/* Documento — nome do ficheiro + tipo juntos (antes repetia
+                      o tipo numa coluna à parte). */}
                   <td className="px-4 py-4 border-y border-[var(--border-soft)]">
                     <p className="text-xs font-bold text-[var(--ink-mid)] truncate max-w-[260px]" title={d.title}>{toSentenceCaseFilename(d.title)}</p>
-                    {d.subtitle && <p className={`${SCALE.text.meta} text-[var(--slate-dim)] mt-0.5 truncate max-w-[260px]`}>{d.subtitle}</p>}
+                    {d.tipo && <p className={`${SCALE.text.meta} text-[var(--slate-dim)] mt-0.5 truncate max-w-[260px]`}>{d.tipo}</p>}
                     {(d.signedAtWorker || d.signedAtAdmin) && (
                       <div className="mt-1 flex flex-col gap-0.5">
-                        {d.signedAtWorker && <p className={`${SCALE.text.meta} text-emerald-600`}>Trabalhador: {formatDocDate(d.signedAtWorker.toISOString(), true)}</p>}
+                        {d.signedAtWorker && <p className={`${SCALE.text.meta}`} style={{ color: 'var(--ok)' }}>Trabalhador: {formatDocDate(d.signedAtWorker.toISOString(), true)}</p>}
                         {d.signedAtAdmin && <p className={`${SCALE.text.meta} text-indigo-600`}>Magnetic Place: {formatDocDate(d.signedAtAdmin.toISOString(), true)}</p>}
                       </div>
                     )}
                   </td>
                   <td className="hidden md:table-cell px-4 py-4 border-y border-[var(--border-soft)]">
-                    <p className="text-xs font-bold text-[var(--ink-mid)]">{d.tipo || '—'}</p>
                     {onEditCategoria ? (
-                      <CategoriaEditor
-                        docId={d.raw.id}
-                        source={d.source}
-                        categoria={d.categoria}
-                        onSave={onEditCategoria}
-                      />
-                    ) : (() => {
-                      const semCategoria = !d.categoria;
-                      const colors = semCategoria
-                        ? { bg: 'bg-orange-100', text: 'text-orange-700', border: 'border-orange-200' }
-                        : CATEGORIA_COLOR_MAP[(CATEGORIA_CONFIG[d.categoria] || CATEGORIA_CONFIG["Outros"]).color];
-                      return (
-                        <span className={`inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-lg ${SCALE.text.meta} border ${colors.bg} ${colors.text} ${colors.border}`}>
-                          {semCategoria && <AlertTriangle size={8} />}
-                          {d.categoria || 'Sem categoria'}
-                        </span>
-                      );
-                    })()}
-                    <ValidadeBadge dataValidade={d.data_validade} />
+                      <CategoriaEditor docId={d.raw.id} source={d.source} categoria={d.categoria} onSave={onEditCategoria} />
+                    ) : (
+                      <CategoriaTag categoria={d.categoria} />
+                    )}
+                    <div><ValidadeBadge dataValidade={d.data_validade} /></div>
                   </td>
                   <td className="px-4 py-4 border-y border-[var(--border-soft)]"><StateBadge state={d.state} /></td>
                   <td className="px-4 py-4 rounded-r-2xl border-y border-r border-[var(--border-soft)] text-right">
@@ -189,43 +181,36 @@ export default function DocumentsTable({
                       {d.source === 'manual' ? (
                         <>
                           {d.viewUrl && (
-                            <a href={d.viewUrl} target="_blank" rel="noreferrer"
-                              className={`${ACTION_ICON_CLS} hover:bg-[var(--slate)]`} style={ACTION_ICON_STYLE} title="Visualizar original">
-                              <Eye size={12} />
+                            <a href={d.viewUrl} target="_blank" rel="noreferrer" className={ACTION_ICON_CLS} title="Visualizar original">
+                              <Eye size={14} />
                             </a>
                           )}
                           {d.signedPdfUrl && (
-                            <a href={d.signedPdfUrl} target="_blank" rel="noreferrer"
-                              className={`${ACTION_ICON_CLS} hover:bg-[var(--slate)]`} style={ACTION_ICON_STYLE} title="Visualizar assinado">
-                              <CheckCircle size={12} />
+                            <a href={d.signedPdfUrl} target="_blank" rel="noreferrer" className={ACTION_ICON_CLS} title="Visualizar assinado">
+                              <CheckCircle size={14} />
                             </a>
                           )}
-                          <button onClick={() => onDeleteManual(d.raw)}
-                            className="p-1.5 bg-white text-red-600 rounded-lg border border-red-100 hover:bg-red-600 hover:text-white transition-all shadow-sm" title="Eliminar">
-                            <Trash2 size={12} />
+                          <button onClick={() => onDeleteManual(d.raw)} className={ACTION_ICON_DELETE_CLS} title="Eliminar">
+                            <Trash2 size={14} />
                           </button>
                         </>
                       ) : (
                         <>
-                          <button onClick={() => onPreview(d.raw)}
-                            className={`${ACTION_ICON_CLS} hover:bg-[var(--slate)]`} style={ACTION_ICON_STYLE} title="Pré-visualizar">
-                            <Eye size={12} />
+                          <button onClick={() => onPreview(d.raw)} className={ACTION_ICON_CLS} title="Pré-visualizar">
+                            <Eye size={14} />
                           </button>
                           {d.signedPdfUrl && (
-                            <a href={d.signedPdfUrl} target="_blank" rel="noreferrer"
-                              className={`${ACTION_ICON_CLS} hover:bg-[var(--slate)]`} style={ACTION_ICON_STYLE} title="Visualizar assinado">
-                              <CheckCircle size={12} />
+                            <a href={d.signedPdfUrl} target="_blank" rel="noreferrer" className={ACTION_ICON_CLS} title="Visualizar assinado">
+                              <CheckCircle size={14} />
                             </a>
                           )}
                           {d.state === 'awaiting_admin' && (
-                            <button onClick={() => onApprove(d.raw)} disabled={isApproving || saving}
-                              className={`${ACTION_ICON_CLS} hover:bg-[var(--slate)] disabled:opacity-50`} style={ACTION_ICON_STYLE} title="Aplicar carimbo">
-                              {isApproving ? <Loader2 size={12} className="animate-spin" /> : <FileSignature size={12} />}
+                            <button onClick={() => onApprove(d.raw)} disabled={isApproving || saving} className={`${ACTION_ICON_CLS} disabled:opacity-50`} title="Aplicar carimbo">
+                              {isApproving ? <Loader2 size={14} className="animate-spin" /> : <FileSignature size={14} />}
                             </button>
                           )}
-                          <button onClick={() => onDeleteGenerated(d.raw.id)}
-                            className="p-1.5 bg-white text-red-600 rounded-lg border border-red-100 hover:bg-red-600 hover:text-white transition-all shadow-sm" title="Eliminar">
-                            <Trash2 size={12} />
+                          <button onClick={() => onDeleteGenerated(d.raw.id)} className={ACTION_ICON_DELETE_CLS} title="Eliminar">
+                            <Trash2 size={14} />
                           </button>
                         </>
                       )}

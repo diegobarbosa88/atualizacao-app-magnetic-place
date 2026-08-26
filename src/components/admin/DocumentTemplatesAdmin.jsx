@@ -1,15 +1,15 @@
-import React, { useState, useMemo } from 'react';
-import { FileText, Plus, Trash2, Eye, Edit3, Send, Loader2 } from 'lucide-react';
+import React, { useState, useMemo, forwardRef, useImperativeHandle } from 'react';
+import { FileText, Trash2, Eye, Edit3, Send, Loader2 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { downloadTemplateBytes } from '../../utils/docxTemplateService';
 import DocxPreviewModal from '../common/DocxPreviewModal';
 import { SCALE } from '../../styles/designTokens';
 import TemplateEditorModal from './templates/TemplateEditorModal';
 import Card, { CardGrid } from '../common/Card';
-import { FT, FONT_TITLE } from '../../styles/designTokens';
+import { FONT_TITLE } from '../../styles/designTokens';
 import TemplateGenerateModal from './templates/TemplateGenerateModal';
 
-export default function DocumentTemplatesAdmin({
+const DocumentTemplatesAdmin = forwardRef(function DocumentTemplatesAdmin({
   workers = [],
   templates = [],
   loading = false,
@@ -18,7 +18,7 @@ export default function DocumentTemplatesAdmin({
   onUpdateTemplate,
   onDeleteTemplate,
   onGenerateDocuments,
-}) {
+}, ref) {
   const { supabase, clients } = useApp();
 
   const [showEditorModal, setShowEditorModal] = useState(false);
@@ -40,6 +40,11 @@ export default function DocumentTemplatesAdmin({
   const openCreateModal = () => { setEditingTemplate(null); setShowEditorModal(true); };
   const openEditModal = (template) => { setEditingTemplate(template); setShowEditorModal(true); };
   const closeEditorModal = () => { setShowEditorModal(false); setEditingTemplate(null); };
+
+  // O botão "+ Novo Template" vive agora no cabeçalho partilhado
+  // (DocumentsAdmin.jsx), que não vê este estado local — expõe-se só a
+  // abertura, sem tocar no contrato de props existente.
+  useImperativeHandle(ref, () => ({ openCreate: openCreateModal }));
 
   const openTemplatePreview = async (template) => {
     if (!template.template_docx_path && !template.template_pdf_path && template.html_content) {
@@ -94,16 +99,6 @@ export default function DocumentTemplatesAdmin({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-black text-[var(--ink)]">Templates de Documentos</h2>
-          <p className="text-sm text-[var(--slate-dim)] mt-1">Templates Word (.docx) com variáveis preenchidas automaticamente.</p>
-        </div>
-        <button onClick={openCreateModal} className="flex items-center gap-2 px-4 py-2 font-bold rounded-xl hover:opacity-90" style={{ backgroundColor: FT.orange, color: FT.navy }}>
-          <Plus className="w-4 h-4" /> Novo Template
-        </button>
-      </div>
-
       <div>
         {loading ? (
           <div className="py-16 text-center text-[var(--slate-dim)]">
@@ -124,14 +119,14 @@ export default function DocumentTemplatesAdmin({
                   <FileText size={17} />
                 </div>
                 <p className="text-[1.05rem] font-bold leading-[1.15] text-[var(--ink-mid)] truncate" style={{ fontFamily: FONT_TITLE }} title={t.name}>{t.name}</p>
-                <p className={`${SCALE.text.body} text-[var(--ink-soft)] mt-1 mb-3 line-clamp-2 min-h-[2rem]`}>
+                <p className={`${SCALE.text.body} text-[var(--ink-soft)] mt-1 mb-3 line-clamp-3 min-h-[3rem]`}>
                   {t.description || <span className="italic text-[var(--slate-dim)]">Sem descrição</span>}
                 </p>
-                <div className="flex items-center gap-1.5 pt-[0.7rem] border-t border-[#F1EFE8]">
-                  <button onClick={() => openTemplatePreview(t)} className="p-1.5 bg-white text-[var(--slate-dim)] rounded-lg border border-[var(--border)] hover:bg-[var(--navy-solid)] hover:text-white transition-all" title="Pré-visualizar"><Eye className="w-3.5 h-3.5" /></button>
-                  <button onClick={() => openEditModal(t)} className="p-1.5 bg-white rounded-lg border border-[var(--border)] text-[var(--slate)] hover:bg-[var(--slate)] hover:text-white transition-all" title="Editar"><Edit3 className="w-3.5 h-3.5" /></button>
-                  <button onClick={() => openGenerateModal(t)} className="p-1.5 bg-white rounded-lg border border-[var(--border)] text-[var(--slate)] hover:bg-[var(--slate)] hover:text-white transition-all" title="Gerar"><Send className="w-3.5 h-3.5" /></button>
-                  <button onClick={() => onDeleteTemplate(t)} className="p-1.5 bg-white text-rose-500 rounded-lg border border-rose-100 hover:bg-rose-500 hover:text-white transition-all ml-auto" title="Apagar"><Trash2 className="w-3.5 h-3.5" /></button>
+                <div className="flex items-center gap-1 pt-[0.7rem] border-t border-[#F1EFE8]">
+                  <button onClick={() => openTemplatePreview(t)} className="p-1.5 rounded-lg transition-all text-[var(--slate)] hover:text-[var(--navy)] hover:bg-[var(--surface)]" title="Pré-visualizar"><Eye className="w-3.5 h-3.5" /></button>
+                  <button onClick={() => openEditModal(t)} className="p-1.5 rounded-lg transition-all text-[var(--slate)] hover:text-[var(--navy)] hover:bg-[var(--surface)]" title="Editar"><Edit3 className="w-3.5 h-3.5" /></button>
+                  <button onClick={() => openGenerateModal(t)} className="p-1.5 rounded-lg transition-all text-[var(--slate)] hover:text-[var(--navy)] hover:bg-[var(--surface)]" title="Gerar"><Send className="w-3.5 h-3.5" /></button>
+                  <button onClick={() => onDeleteTemplate(t)} className="p-1.5 rounded-lg transition-all text-[var(--slate)] hover:text-[var(--bad)] hover:bg-[var(--bad-bg)] ml-auto" title="Apagar"><Trash2 className="w-3.5 h-3.5" /></button>
                 </div>
               </Card>
             ))}
@@ -186,4 +181,6 @@ export default function DocumentTemplatesAdmin({
       )}
     </div>
   );
-}
+});
+
+export default DocumentTemplatesAdmin;
