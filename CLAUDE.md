@@ -1715,3 +1715,36 @@ lotes de conversão.
   material que sai da empresa, não housekeeping de UI.
 - `pill de estado` no modal de cliente (`clients.status`: pendente/enviado) e `Badge.jsx` — decisão
   de design ainda por tomar.
+
+  ## Fluxo de redesenho visual (mockups em chat)
+
+Processo estabelecido: Diego cola HTML/screenshots de uma tela real no Claude (chat), que constrói
+um mockup HTML interativo de referência antes de qualquer implementação. O mockup usa cores/hex
+aproximados só para comunicar estrutura, hierarquia e comportamento — **nunca são a fonte de
+verdade de cor**, pela mesma razão que qualquer valor deste ficheiro é medido, não assumido.
+
+**Ao implementar a partir de um desses mockups:**
+
+1. Ignorar os hex literais do mockup. Ler `src/styles/designTokens.js` + `src/index.css` para os
+   tokens reais.
+2. Decidir qual sistema de cor de estado se aplica, não assumir `--ok/--warn/--bad` por serem os
+   nomes mais óbvios:
+   - Estado simples binário/ternário (válido/pendente/expirado, turno fixo/variável) → `--ok`/
+     `--warn`/`--bad`.
+   - Hierarquia de peso dentro do mesmo cartão (rótulo vs. metadado vs. valor vs. identidade, como
+     em Correções/Faturação) → família `--tone-{amber,emerald,rose,indigo}-{label,meta,value,identity}`.
+   - Se nenhum dos dois encaixar (cor é *dado*, não estado — ex. paleta de categorias de documento
+     à escolha do utilizador), não forçar semântica: tratar como mapa de cor-à-escolha, mesmo
+     critério já usado em `TagBadge.jsx`/`constants/rhCategories.js`.
+3. Qualquer par texto+fundo novo introduzido pelo mockup (badge, chip, faixa lateral) precisa de
+   medição de contraste nos dois modos antes de ser dado como pronto — mesma disciplina do resto
+   deste ficheiro, incluindo desconfiar do instrumento de medição (ver "Armadilhas conhecidas").
+4. Convenções recorrentes já validadas nos mockups, para reaproveitar sem redesenhar do zero:
+   fita de dias compacta de 7 posições; valores ausentes em itálico neutro ("sem intervalo", "Não
+   disponível") em vez de placeholders tipo `--:--`; badges de estado ligados à condição real dos
+   dados, não fixos; faixa lateral fina de cor para categorização rápida de cartões; contagens como
+   chips, não texto solto; modais com 3 colunas apertadas reestruturados em abas com progressive
+   disclosure (itens selecionados como chips que expandem um de cada vez, não cartões sempre
+   abertos); icon-buttons com hover neutro, vermelho só em ações destrutivas.
+5. Cada mockup aprovado vem acompanhado de um prompt de implementação em PT, colado pelo Diego
+   nesta sessão. Confirmar os ficheiros reais citados no prompt contra este
