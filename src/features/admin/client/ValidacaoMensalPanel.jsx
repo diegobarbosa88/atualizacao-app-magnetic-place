@@ -16,28 +16,42 @@ function monthLabel(monthStr) {
 }
 
 export default function ValidacaoMensalPanel() {
-  const { clients, logs, clientApprovals, supabase } = useApp();
+  const { clients, clientApprovals, supabase } = useApp();
   const [month, setMonth] = useState(() => shiftMonth(new Date().toISOString().slice(0, 7), -1));
   const [waivers, setWaivers] = useState([]);
+  const [logsDoMes, setLogsDoMes] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [loadingId, setLoadingId] = useState(null);
 
+  // Consulta direta ao Supabase, sempre limitada ao mês selecionado — a `logs`
+  // partilhada por toda a app (AppContext.jsx) carrega só desde o ano passado
+  // e sem paginar, por isso corta silenciosamente ao fim de ~1000 linhas (há
+  // 1627 só desde 2025-01-01); um mês mais antigo pode ficar parcialmente de
+  // fora dessa cache. Aqui teria dado clientes reais como "sem horas" em vez
+  // de "pendente" — confirmado ao vivo com Maio/2026 (2 clientes desaparecidos
+  // da lista antes desta correção). A mesma consulta scoped que o cron usa.
   useEffect(() => {
     if (!supabase) return;
     let cancelled = false;
-    supabase.from('client_month_waivers').select('*').eq('month', month).then(({ data }) => {
-      if (!cancelled) setWaivers(data || []);
+    setLoading(true);
+    const inicio = `${month}-01`;
+    const [y, m] = month.split('-').map(Number);
+    const fimExclusive = new Date(y, m, 1).toISOString().slice(0, 10);
+    Promise.all([
+      supabase.from('logs').select('clientId, startTime, endTime, breakStart, breakEnd, hours').gte('date', inicio).lt('date', fimExclusive),
+      supabase.from('client_month_waivers').select('*').eq('month', month),
+    ]).then(([logsRes, waiversRes]) => {
+      if (cancelled) return;
+      setLogsDoMes(logsRes.data || []);
+      setWaivers(waiversRes.data || []);
+      setLoading(false);
     });
     return () => { cancelled = true; };
   }, [month, supabase]);
 
   const rows = useMemo(() => {
-    const inicio = `${month}-01`;
-    const [y, m] = month.split('-').map(Number);
-    const fimExclusive = new Date(y, m, 1).toISOString().slice(0, 10);
-
     const horasPorCliente = new Map();
-    for (const l of logs) {
-      if (!l.date || l.date < inicio || l.date >= fimExclusive) continue;
+    for (const l of logsDoMes) {
       const h = l.hours ?? calculateDuration(l.startTime, l.endTime, l.breakStart, l.breakEnd);
       if (h <= 0) continue;
       const id = String(l.clientId);
@@ -63,7 +77,7 @@ export default function ValidacaoMensalPanel() {
         const ordem = { pendente: 0, dispensado: 1, aprovado: 2 };
         return ordem[a.status] - ordem[b.status] || a.clientName.localeCompare(b.clientName);
       });
-  }, [logs, clients, clientApprovals, waivers, month]);
+  }, [logsDoMes, clients, clientApprovals, waivers, month]);
 
   const pendentes = rows.filter(r => r.status === 'pendente').length;
 
@@ -114,7 +128,9 @@ export default function ValidacaoMensalPanel() {
       </div>
 
       <div className="bg-[var(--panel)] border border-[var(--border)] rounded-2xl overflow-hidden">
-        {rows.length === 0 ? (
+        {loading ? (
+          <div className="p-10 text-center text-[var(--slate)] text-sm font-bold">A carregar…</div>
+        ) : rows.length === 0 ? (
           <div className="p-10 text-center text-[var(--slate)] text-sm font-bold">Sem horas registadas neste mês.</div>
         ) : (
           <div className="divide-y divide-[var(--border-soft)]">
