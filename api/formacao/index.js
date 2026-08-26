@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import webpush from 'web-push';
 import { requireAuth } from '../_authUtils.js';
+import { calculateDuration } from '../../src/utils/formatUtils.js';
 
 // Todos os endpoints de Formação Interna vivem numa única função serverless
 // — o plano Hobby da Vercel limita a 12 funções por deployment; ter um
@@ -596,14 +597,29 @@ async function handlePushSend(req, res) {
   const vapidPrivate = process.env.VAPID_PRIVATE_KEY;
   if (!vapidPublic || !vapidPrivate) return res.status(500).json({ error: 'VAPID não configurado' });
 
-  const { role, userId, title, body, url, image, tag } = req.body || {};
+  const { role, userId, userIds, title, body, url, image, tag, dedupeKey } = req.body || {};
   if (!role || !title) return res.status(400).json({ error: 'Campos obrigatórios: role, title.' });
+
+  const supabase = getSupabase();
+
+  // dedupeKey é opcional, para chamadores repetitivos (crons) que não devem
+  // reenviar o mesmo aviso enquanto a condição de origem se mantiver — reaproveita
+  // notificacoes_proativas_log, já usada com o mesmo padrão pelos crons do
+  // agente WhatsApp (conselheiro-estrategico), na mesma base de dados.
+  if (dedupeKey) {
+    const { data: existing } = await supabase
+      .from('notificacoes_proativas_log')
+      .select('id')
+      .eq('chave', dedupeKey)
+      .maybeSingle();
+    if (existing) return res.status(200).json({ sent: 0, failed: 0, reason: 'já enviado (dedup)' });
+  }
 
   webpush.setVapidDetails('mailto:geral@magneticplace.pt', vapidPublic, vapidPrivate);
 
-  const supabase = getSupabase();
   let query = supabase.from('push_subscriptions').select('*').eq('role', role);
   if (userId) query = query.eq('user_id', String(userId));
+  else if (userIds?.length) query = query.in('user_id', userIds.map(String));
   const { data: subs, error } = await query;
   if (error) return res.status(500).json({ error: error.message });
   if (!subs?.length) return res.status(200).json({ sent: 0, failed: 0, reason: 'sem subscrições' });
@@ -623,10 +639,140 @@ async function handlePushSend(req, res) {
     await supabase.from('push_subscriptions').delete().in('id', deadIds);
   }
 
+  if (dedupeKey) {
+    await supabase.from('notificacoes_proativas_log').insert({
+      chave: dedupeKey,
+      tipo: 'push',
+      canal: 'push',
+      enviado_em: new Date().toISOString(),
+      resolvido: true,
+    });
+  }
+
   return res.status(200).json({
     sent: results.filter((r) => r.status === 'fulfilled').length,
     failed: results.filter((r) => r.status === 'rejected').length,
   });
+}
+
+// lembrete-validacao não é de Formação Interna — vive aqui pela mesma razão
+// que push-send acima (ver nota no topo do ficheiro: limite de 12 funções
+// serverless do plano Hobby). Cron diário que avisa o cliente (banner +
+// push — sem email: o email deste projeto usa o SDK de browser do EmailJS,
+// não invocável a partir de uma function Node) quando o mês de referência
+// (o último já fechado por completo) continua sem client_approvals passados
+// DIAS_LEMBRETE dias do fim do mês. Nunca reenvia o mesmo aviso duas vezes
+// (dedup em notificacoes_proativas_log, mesmo padrão do handlePushSend
+// acima) e nunca avisa se houver uma correção do cliente ainda por rever
+// pela Magnetic (status submitted/under_review) — nesse caso a bola está do
+// nosso lado, não do cliente. Decisão de negócio (2026-08-25): isto é só um
+// lembrete — nunca bloqueia nem substitui a faturação, e nunca há aprovação
+// silenciosa: o mês fica pendente até o cliente assinar.
+const DIAS_LEMBRETE = 7;
+const NOMES_MES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+
+function mesReferenciaParaLembrete(hoje = new Date()) {
+  const ano = hoje.getUTCFullYear();
+  const mes = hoje.getUTCMonth(); // mês corrente, 0-indexed
+  const anoRef = mes === 0 ? ano - 1 : ano;
+  const mesRefIdx = mes === 0 ? 11 : mes - 1;
+  const inicioMesCorrente = new Date(Date.UTC(ano, mes, 1));
+  const diasDesdeFim = Math.floor((hoje.getTime() - inicioMesCorrente.getTime()) / 86400000);
+  const fmt = (d) => d.toISOString().slice(0, 10);
+  return {
+    mesStr: `${anoRef}-${String(mesRefIdx + 1).padStart(2, '0')}`,
+    inicio: fmt(new Date(Date.UTC(anoRef, mesRefIdx, 1))),
+    fimExclusive: fmt(inicioMesCorrente),
+    label: `${NOMES_MES[mesRefIdx]} de ${anoRef}`,
+    diasDesdeFim,
+  };
+}
+
+async function handleLembreteValidacao(req, res) {
+  const secret = process.env.CRON_SECRET;
+  if (!secret || req.headers['authorization'] !== `Bearer ${secret}`) {
+    return res.status(401).json({ error: 'Não autorizado.' });
+  }
+
+  const { mesStr, inicio, fimExclusive, label, diasDesdeFim } = mesReferenciaParaLembrete();
+  if (diasDesdeFim < DIAS_LEMBRETE) {
+    return res.status(200).json({ ok: true, skip: 'ainda dentro da janela de tolerância', mes: mesStr, diasDesdeFim });
+  }
+
+  const supabase = getSupabase();
+
+  const [{ data: logsDoMes }, { data: aprovacoes }, { data: correcoesPendentes }, { data: jaNotificados }] = await Promise.all([
+    supabase.from('logs').select('clientId, startTime, endTime, breakStart, breakEnd').gte('date', inicio).lt('date', fimExclusive),
+    supabase.from('client_approvals').select('client_id').eq('month', mesStr),
+    supabase.from('corrections').select('client_id').eq('month', mesStr).in('status', ['submitted', 'under_review']),
+    supabase.from('notificacoes_proativas_log').select('chave').eq('tipo', 'lembrete_validacao_mensal').like('chave', `%_${mesStr}`),
+  ]);
+
+  const clientesComHoras = new Set(
+    (logsDoMes || [])
+      .filter((l) => calculateDuration(l.startTime, l.endTime, l.breakStart, l.breakEnd) > 0)
+      .map((l) => String(l.clientId))
+  );
+  const clientesValidados = new Set((aprovacoes || []).map((a) => String(a.client_id)));
+  const clientesComBolaConosco = new Set((correcoesPendentes || []).map((c) => String(c.client_id)));
+  const chavesJaEnviadas = new Set((jaNotificados || []).map((n) => n.chave));
+
+  const clientesAlvo = [...clientesComHoras].filter((id) =>
+    !clientesValidados.has(id) &&
+    !clientesComBolaConosco.has(id) &&
+    !chavesJaEnviadas.has(`lembrete_validacao_${id}_${mesStr}`)
+  );
+
+  if (!clientesAlvo.length) {
+    return res.status(200).json({ ok: true, mes: mesStr, clientesNotificados: 0 });
+  }
+
+  const vapidPublic = process.env.VAPID_PUBLIC_KEY;
+  const vapidPrivate = process.env.VAPID_PRIVATE_KEY;
+  const pushDisponivel = !!(vapidPublic && vapidPrivate);
+  if (pushDisponivel) webpush.setVapidDetails('mailto:geral@magneticplace.pt', vapidPublic, vapidPrivate);
+
+  const titulo = `Relatório de ${label} por validar`;
+  const mensagem = `O relatório de horas de ${label} ainda não foi validado. Acede ao portal para conferir e assinar.`;
+
+  for (const clienteId of clientesAlvo) {
+    await supabase.from('app_notifications').insert({
+      id: `notif_lembrete_${clienteId}_${mesStr}`,
+      title: titulo,
+      message: mensagem,
+      type: 'warning',
+      target_type: 'client',
+      target_client_id: clienteId,
+      payload: { kind: 'reminder_validacao', month: mesStr },
+      is_dismissible: true,
+      is_active: true,
+      read_by_ids: [],
+      dismissed_by_ids: [],
+      viewed_by_ids: [],
+      read_by_admin_ids: [],
+      created_at: new Date().toISOString(),
+    });
+
+    if (pushDisponivel) {
+      const { data: subs } = await supabase.from('push_subscriptions').select('*').eq('role', 'client').eq('user_id', clienteId);
+      if (subs?.length) {
+        const payload = JSON.stringify({ title: titulo, body: mensagem, url: `/?view=client_portal&client=${clienteId}&month=${mesStr}` });
+        await Promise.allSettled(subs.map((s) =>
+          webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload)
+        ));
+      }
+    }
+
+    await supabase.from('notificacoes_proativas_log').insert({
+      chave: `lembrete_validacao_${clienteId}_${mesStr}`,
+      tipo: 'lembrete_validacao_mensal',
+      canal: 'banner+push',
+      enviado_em: new Date().toISOString(),
+      resolvido: true,
+    });
+  }
+
+  return res.status(200).json({ ok: true, mes: mesStr, clientesNotificados: clientesAlvo.length });
 }
 
 const ACTIONS = {
@@ -641,6 +787,7 @@ const ACTIONS = {
   'certificacoes': handleCertificacoes,
   'horas-por-trabalhador': handleHorasPorTrabalhador,
   'push-send': handlePushSend,
+  'lembrete-validacao': handleLembreteValidacao,
 };
 
 export default async function handler(req, res) {

@@ -28,7 +28,8 @@
     }
   },
   "crons": [
-    { "path": "/api/contador?tipo=preparar_mensal", "schedule": "0 9 5 * *" }
+    { "path": "/api/contador?tipo=preparar_mensal", "schedule": "0 9 5 * *" },
+    { "path": "/api/formacao?action=lembrete-validacao", "schedule": "0 8 * * *" }
   ],
   "headers": [
     {
