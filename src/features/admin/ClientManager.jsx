@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { useClient, ClientProvider } from './contexts/ClientContext';
 import {
-  Briefcase, LayoutGrid, List, Edit2, Trash2, MapPin, Euro, ShieldOff, Send, AlertTriangle, Shield, Search, MoreVertical, Check, X, Building2, Save, Clock
+  Briefcase, LayoutGrid, List, Edit2, Trash2, MapPin, Euro, ShieldOff, Send, AlertTriangle, Shield, Search, MoreVertical, Check, X, Building2, Save, Clock, ClipboardCheck
 } from 'lucide-react';
 import Card, { CardGrid } from '../../components/common/Card';
 import { FT, FONT_TITLE, FONT_MONO, SCALE } from '../../styles/designTokens';
@@ -11,6 +11,7 @@ import ClientForm from './client/ClientForm';
 import ClientEnviosPanel from './client/ClientEnviosPanel';
 import CorrectionsInbox from './corrections/CorrectionsInbox';
 import ClientPortalAuditPanel from './client/ClientPortalAuditPanel';
+import ValidacaoMensalPanel from './client/ValidacaoMensalPanel';
 import ModalShell from '../../components/common/ModalShell';
 import SectionHeaderShell from '../../components/common/SectionHeaderShell';
 
@@ -125,6 +126,7 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
           { id: 'list',      label: 'Clientes',        icon: Building2 },
           { id: 'envios',    label: 'Envios',          icon: Send },
           { id: 'correcoes', label: 'Correções',       icon: AlertTriangle, badge: pendingClientCorrections || null },
+          { id: 'validacao', label: 'Validação',       icon: ClipboardCheck },
           { id: 'auditoria', label: 'Auditoria Portal', icon: Shield },
         ]}
         activeTab={clientSubTab}
@@ -149,6 +151,10 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
 
       {clientSubTab === 'correcoes' && (
         <CorrectionsInbox forcedSource="clients" />
+      )}
+
+      {clientSubTab === 'validacao' && (
+        <ValidacaoMensalPanel />
       )}
 
       {clientSubTab === 'auditoria' && (

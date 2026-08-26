@@ -701,11 +701,12 @@ async function handleLembreteValidacao(req, res) {
 
   const supabase = getSupabase();
 
-  const [{ data: logsDoMes }, { data: aprovacoes }, { data: correcoesPendentes }, { data: jaNotificados }] = await Promise.all([
+  const [{ data: logsDoMes }, { data: aprovacoes }, { data: correcoesPendentes }, { data: jaNotificados }, { data: dispensados }] = await Promise.all([
     supabase.from('logs').select('clientId, startTime, endTime, breakStart, breakEnd').gte('date', inicio).lt('date', fimExclusive),
     supabase.from('client_approvals').select('client_id').eq('month', mesStr),
     supabase.from('corrections').select('client_id').eq('month', mesStr).in('status', ['submitted', 'under_review']),
     supabase.from('notificacoes_proativas_log').select('chave').eq('tipo', 'lembrete_validacao_mensal').like('chave', `%_${mesStr}`),
+    supabase.from('client_month_waivers').select('client_id').eq('month', mesStr),
   ]);
 
   const clientesComHoras = new Set(
@@ -716,10 +717,14 @@ async function handleLembreteValidacao(req, res) {
   const clientesValidados = new Set((aprovacoes || []).map((a) => String(a.client_id)));
   const clientesComBolaConosco = new Set((correcoesPendentes || []).map((c) => String(c.client_id)));
   const chavesJaEnviadas = new Set((jaNotificados || []).map((n) => n.chave));
+  // Dispensado pelo admin (client_month_waivers) — não é aprovação/assinatura do
+  // cliente, só evita o lembrete automático para este mês. Ver ValidacaoMensalPanel.jsx.
+  const clientesDispensados = new Set((dispensados || []).map((d) => String(d.client_id)));
 
   const clientesAlvo = [...clientesComHoras].filter((id) =>
     !clientesValidados.has(id) &&
     !clientesComBolaConosco.has(id) &&
+    !clientesDispensados.has(id) &&
     !chavesJaEnviadas.has(`lembrete_validacao_${id}_${mesStr}`)
   );
 
