@@ -161,6 +161,7 @@ export default function EmitirDocumentoPagamentoModal({ ambiente, onClose }) {
               <div>
                 <p className="text-xs font-black text-red-700 mb-0.5">Erro devolvido pela Segurança Social</p>
                 <p className="text-xs text-red-600 leading-relaxed">{erro}</p>
+                <p className="text-[10px] text-red-400 mt-1">Esta tentativa fica registada em Definições → Segurança Social PSI → Consultas → Histórico de Comunicações.</p>
               </div>
             </div>
           )}
@@ -169,13 +170,18 @@ export default function EmitirDocumentoPagamentoModal({ ambiente, onClose }) {
           {pedido && (
             <div className="flex items-start gap-2.5 bg-emerald-50 border border-emerald-200 rounded-xl p-3">
               <CheckCircle2 size={14} className="text-emerald-600 shrink-0 mt-0.5" />
-              <p className="text-xs text-emerald-700 font-medium leading-relaxed">
-                {pedido.codigoResultado === '10'
-                  ? 'Já existe um pedido em processamento para este âmbito — a consultar o resultado desse pedido.'
-                  : pedido.codigoResultado === '11'
-                  ? 'Já existe uma resposta na validade para este âmbito — a obter os documentos já emitidos.'
-                  : 'Pedido de emissão aceite — processamento assíncrono, a consultar o resultado.'}
-              </p>
+              <div>
+                <p className="text-xs text-emerald-700 font-medium leading-relaxed">
+                  {pedido.codigoResultado === '10'
+                    ? 'Já existe um pedido em processamento para este âmbito — a consultar o resultado desse pedido.'
+                    : pedido.codigoResultado === '11'
+                    ? 'Já existe uma resposta na validade para este âmbito — a obter os documentos já emitidos.'
+                    : 'Pedido de emissão aceite — processamento assíncrono, a consultar o resultado.'}
+                </p>
+                <p className="text-[10px] text-emerald-400 mt-1 pt-1 border-t border-emerald-100">
+                  Este pedido fica guardado em Definições → Segurança Social PSI → Consultas → Histórico de Comunicações.
+                </p>
+              </div>
             </div>
           )}
 

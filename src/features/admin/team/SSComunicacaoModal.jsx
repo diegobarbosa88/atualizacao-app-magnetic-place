@@ -560,6 +560,7 @@ export default function SSComunicacaoModal({ worker, tipo, ambiente, onClose, on
               <div>
                 <p className="text-xs font-black text-red-700 mb-0.5">Erro devolvido pela Segurança Social</p>
                 <p className="text-xs text-red-600 leading-relaxed">{erro}</p>
+                <p className="text-[10px] text-red-400 mt-1">Esta tentativa fica registada em Definições → Segurança Social PSI → Consultas → Histórico de Comunicações.</p>
               </div>
             </div>
           )}
@@ -577,6 +578,9 @@ export default function SSComunicacaoModal({ worker, tipo, ambiente, onClose, on
                   {sucesso.ambiente === 'teste'
                     ? '(ambiente de teste — não é uma comunicação real)'
                     : `Data/hora: ${new Date(sucesso.dataHora).toLocaleString('pt-PT')}`}
+                </p>
+                <p className="text-[10px] text-emerald-400 mt-1 pt-1 border-t border-emerald-100">
+                  Este registo fica guardado em Definições → Segurança Social PSI → Consultas → Histórico de Comunicações.
                 </p>
               </div>
             </div>

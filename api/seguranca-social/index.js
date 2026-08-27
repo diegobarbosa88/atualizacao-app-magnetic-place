@@ -175,6 +175,24 @@ export default async function handler(req, res) {
     } catch (e) { return res.status(502).json({ erro: e.message }); }
   }
 
+  // ── GET histórico de comunicações já registadas (auditoria local, não à PSI) ──
+  // Ao contrário das consultas acima, isto não chama a Segurança Social — lê
+  // só a nossa própria tabela de auditoria (ss_comunicacoes), que já grava
+  // cada tentativa de escrita real (admissão/cessação/alteração de contrato/
+  // documentos de pagamento), sucesso ou erro. Até agora só era consultável
+  // por SQL direto ao Supabase.
+  if (req.method === 'GET' && action === 'historico-comunicacoes') {
+    const db = supabaseAdmin();
+    const limite = Math.min(Number(req.query?.limite) || 200, 500);
+    const { data, error } = await db
+      .from('ss_comunicacoes')
+      .select('id, tipo, status, resposta_ss, num_registo, motivo_cessacao, confirmado_por, ambiente, created_at, worker_id, workers(name)')
+      .order('created_at', { ascending: false })
+      .limit(limite);
+    if (error) return res.status(500).json({ erro: error.message });
+    return res.status(200).json({ comunicacoes: data || [] });
+  }
+
   // Proxy do PDF da declaração de Situação Contributiva. A SS devolve um
   // `caminho` já qualificado (https://app.seg-social.pt/ptss/fraw/download/...)
   // mas exige o mesmo Bearer da API — um <a href> direto do browser não tem

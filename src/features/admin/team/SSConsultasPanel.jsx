@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
-import { Search, FileText, TrendingUp, AlertCircle, CheckCircle, Info, ShieldCheck, Bell, FileSignature, Users, Ban, Send } from 'lucide-react';
+import { useState, useRef, useEffect, Fragment } from 'react';
+import { Search, FileText, TrendingUp, AlertCircle, CheckCircle, Info, ShieldCheck, Bell, FileSignature, Users, Ban, Send, History } from 'lucide-react';
 import { authFetch } from '../../../utils/authFetch';
 import SubTabBar from '../../../components/common/SubTabBar';
 import { FT } from '../../../styles/designTokens';
@@ -721,6 +721,122 @@ function TrabalhadoresSection() {
   );
 }
 
+// ── Histórico de Comunicações ────────────────────────────────────────────────
+// Ao contrário das secções acima, isto não chama a Segurança Social — é a
+// auditoria local (ss_comunicacoes) de tudo o que já foi realmente enviado
+// (admissão, cessação, alteração de contrato, documentos de pagamento),
+// sucesso ou erro. Até agora só era consultável por SQL direto ao Supabase.
+
+const TIPO_COMUNICACAO_LABEL = {
+  admissao: 'Admissão',
+  cessacao: 'Cessação',
+  alteracao_contrato: 'Alteração de Contrato',
+  emissao_documento_pagamento: 'Emissão Doc. Pagamento',
+  cancelamento_documento_pagamento: 'Cancelamento Doc. Pagamento',
+  consulta: 'Consulta',
+};
+
+const STATUS_COMUNICACAO_STYLE = {
+  sucesso:  { background: 'var(--ok-bg)',   color: 'var(--ok)' },
+  erro:     { background: 'var(--bad-bg)',  color: 'var(--bad)' },
+  pendente: { background: 'var(--warn-bg)', color: 'var(--warn)' },
+};
+
+function fmtDataHora(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleString('pt-PT');
+}
+
+function HistoricoComunicacoesSection() {
+  const [estado, setEstado] = useState(null); // null | { loading } | { dados } | { erro }
+  const [expandidoId, setExpandidoId] = useState(null);
+
+  async function consultar() {
+    setEstado({ loading: true });
+    try {
+      const r = await authFetch('/api/seguranca-social?action=historico-comunicacoes');
+      const json = await r.json();
+      if (!r.ok) { setEstado({ erro: json.erro || `HTTP ${r.status}` }); return; }
+      setEstado({ dados: json.comunicacoes || [] });
+    } catch (e) { setEstado({ erro: e.message }); }
+  }
+
+  useEffect(() => { consultar(); }, []);
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-3">
+        <button
+          onClick={consultar}
+          disabled={estado?.loading}
+          className="flex items-center gap-1.5 px-3 py-1.5 border rounded text-sm disabled:opacity-50 hover:bg-[var(--surface)] transition-colors"
+          style={{ borderColor: FT.slate, color: 'var(--ink-soft)' }}
+        >
+          <Search size={13} />
+          {estado?.loading ? 'A atualizar…' : 'Atualizar'}
+        </button>
+      </div>
+
+      {estado?.erro && <ErroMsg erro={estado.erro} />}
+      {estado?.dados && estado.dados.length === 0 && <SemRegistos />}
+
+      {estado?.dados?.length > 0 && (
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-xs border-collapse">
+            <thead>
+              <tr className="bg-gray-50 text-gray-600">
+                {['Data/Hora', 'Trabalhador', 'Tipo', 'Estado', 'Nº Registo', 'Ambiente', 'Confirmado por', ''].map(h => (
+                  <th key={h} className="px-3 py-2 text-left border border-gray-200">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {estado.dados.map(row => (
+                <Fragment key={row.id}>
+                  <tr className="odd:bg-white even:bg-gray-50">
+                    <td className="px-3 py-1.5 border border-gray-200 whitespace-nowrap">{fmtDataHora(row.created_at)}</td>
+                    <td className="px-3 py-1.5 border border-gray-200">{row.workers?.name || '—'}</td>
+                    <td className="px-3 py-1.5 border border-gray-200">{TIPO_COMUNICACAO_LABEL[row.tipo] || row.tipo}</td>
+                    <td className="px-3 py-1.5 border border-gray-200">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold" style={STATUS_COMUNICACAO_STYLE[row.status] || {}}>
+                        {row.status}
+                      </span>
+                    </td>
+                    <td className="px-3 py-1.5 border border-gray-200 font-mono">{row.num_registo || '—'}</td>
+                    <td className="px-3 py-1.5 border border-gray-200"><AmbienteBadge ambiente={row.ambiente} /></td>
+                    <td className="px-3 py-1.5 border border-gray-200">{row.confirmado_por || '—'}</td>
+                    <td className="px-3 py-1.5 border border-gray-200">
+                      {row.resposta_ss && (
+                        <button
+                          onClick={() => setExpandidoId(id => id === row.id ? null : row.id)}
+                          className="text-xs underline"
+                          style={{ color: 'var(--navy)' }}
+                        >
+                          {expandidoId === row.id ? 'Ocultar' : 'Ver resposta'}
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                  {expandidoId === row.id && (
+                    <tr>
+                      <td colSpan={8} className="px-3 py-2 border border-gray-200 bg-gray-50">
+                        {row.motivo_cessacao && (
+                          <p className="text-xs mb-1"><strong>Motivo de cessação:</strong> {row.motivo_cessacao}</p>
+                        )}
+                        <pre className="text-[10px] whitespace-pre-wrap break-all text-gray-600">{row.resposta_ss}</pre>
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Painel principal ─────────────────────────────────────────────────────────
 
 export default function SSConsultasPanel() {
@@ -735,6 +851,7 @@ export default function SSConsultasPanel() {
   }, []);
 
   const abas = [
+    { id: 'historico',             label: 'Histórico de Comunicações',   icon: History        },
     { id: 'comprovativos',        label: 'Comprovativos de Pagamento',   icon: CheckCircle    },
     { id: 'documentos-pagamento', label: 'Documentos de Pagamento',      icon: FileText       },
     { id: 'remuneracoes',         label: 'Remunerações Permanentes',     icon: TrendingUp     },
@@ -749,6 +866,7 @@ export default function SSConsultasPanel() {
       <SubTabBar tabs={abas} activeTab={aba} onTabChange={setAba} />
 
       <div className="pt-1">
+        {aba === 'historico'              && <HistoricoComunicacoesSection />}
         {aba === 'comprovativos'         && <ComprovativosSection />}
         {aba === 'documentos-pagamento'  && <DocumentosPagamentoSection ssAmbiente={ssAmbiente} />}
         {aba === 'remuneracoes'          && <RemuneracoesSection />}
