@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Bot, Search, Send, MessageSquareText, Users, X, Check, Paperclip, MapPin, Contact, ListPlus, Reply, Smile } from 'lucide-react';
+import { Bot, Search, Send, MessageSquareText, Users, X, Check, Paperclip, MapPin, Contact, ListPlus, Reply, Smile, ArrowLeft } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { authFetch } from '../../utils/authFetch';
 
@@ -84,6 +84,12 @@ export default function WhatsAppInbox() {
   const [localEndereco, setLocalEndereco] = useState('');
   const [botoesCorpo, setBotoesCorpo] = useState('');
   const [botoesLista, setBotoesLista] = useState(['', '', '']);
+  // Em ecrãs estreitos só cabe um painel de cada vez -- lista OU conversa,
+  // nunca os dois lado a lado como no desktop. Começa na lista (como o
+  // WhatsApp a sério); tocar num contacto passa para a conversa, o botão
+  // de voltar regressa à lista. Em desktop (md:) esta flag é ignorada, os
+  // dois painéis ficam sempre visíveis lado a lado.
+  const [verConversaMobile, setVerConversaMobile] = useState(false);
   const fimRef = useRef(null);
   const anexoInputRef = useRef(null);
   // O canal Realtime dos resumos só é criado uma vez (depende só de
@@ -452,10 +458,14 @@ export default function WhatsAppInbox() {
 
   return (
     <div className="flex h-[calc(100vh-140px)] rounded-2xl overflow-hidden border border-black/10 shadow-sm">
-      {/* Lista de contactos */}
-      <div className="w-[320px] shrink-0 flex flex-col" style={{ backgroundColor: '#ffffff', borderRight: '1px solid #e9edef' }}>
-        <div className="px-4 py-4 flex items-center justify-between gap-2" style={{ backgroundColor: '#f0f2f5' }}>
-          <p className="font-bold text-[15px]" style={{ color: '#111b21' }}>WhatsApp — Trabalhador Virtual</p>
+      {/* Lista de contactos -- em mobile só aparece quando não há conversa
+          aberta; em desktop (md:) aparece sempre, lado a lado com a conversa. */}
+      <div
+        className={`${verConversaMobile ? 'hidden' : 'flex'} md:flex w-full md:w-[320px] shrink-0 flex-col min-w-0`}
+        style={{ backgroundColor: '#ffffff', borderRight: '1px solid #e9edef' }}
+      >
+        <div className="px-3 sm:px-4 py-4 flex items-center justify-between gap-2" style={{ backgroundColor: '#f0f2f5' }}>
+          <p className="font-bold text-[15px] truncate" style={{ color: '#111b21' }}>WhatsApp</p>
           <button
             onClick={() => (modoSelecao ? sairDoModoSelecao() : setModoSelecao(true))}
             title="Enviar a vários trabalhadores"
@@ -494,7 +504,11 @@ export default function WhatsAppInbox() {
             return (
               <button
                 key={c.worker_id}
-                onClick={() => (modoSelecao ? alternarSelecionado(c.worker_id) : setContatoAtivo(c))}
+                onClick={() => {
+                  if (modoSelecao) { alternarSelecionado(c.worker_id); return; }
+                  setContatoAtivo(c);
+                  setVerConversaMobile(true);
+                }}
                 className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors"
                 style={{ backgroundColor: selecionado ? '#e7f8f3' : ativo ? '#f0f2f5' : 'transparent' }}
               >
@@ -608,24 +622,31 @@ export default function WhatsAppInbox() {
         )}
       </div>
 
-      {/* Conversa */}
-      <div className="flex-1 flex flex-col" style={{ backgroundColor: '#efeae2' }}>
-        <div className="flex items-center gap-3 px-5 py-3" style={{ backgroundColor: '#f0f2f5', borderBottom: '1px solid #e9edef' }}>
+      {/* Conversa -- em mobile só aparece depois de tocar num contacto. */}
+      <div className={`${verConversaMobile ? 'flex' : 'hidden'} md:flex flex-1 flex-col min-w-0`} style={{ backgroundColor: '#efeae2' }}>
+        <div className="flex items-center gap-3 px-3 sm:px-5 py-3" style={{ backgroundColor: '#f0f2f5', borderBottom: '1px solid #e9edef' }}>
+          <button
+            onClick={() => setVerConversaMobile(false)}
+            className="md:hidden w-8 h-8 rounded-full flex items-center justify-center shrink-0 -ml-1"
+            style={{ color: '#54656f' }}
+          >
+            <ArrowLeft size={20} />
+          </button>
           <div
-            className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm"
+            className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0"
             style={{ backgroundColor: contatoAtivo.worker_id === '__bot__' ? '#00a884' : '#8696a0' }}
           >
             {contatoAtivo.worker_id === '__bot__' ? <Bot size={18} /> : iniciais(contatoAtivo.nome)}
           </div>
-          <div>
-            <p className="font-semibold text-[15px]" style={{ color: '#111b21' }}>{contatoAtivo.nome}</p>
+          <div className="min-w-0">
+            <p className="font-semibold text-[15px] truncate" style={{ color: '#111b21' }}>{contatoAtivo.nome}</p>
             {contatoAtivo.tel && <p className="text-xs" style={{ color: '#667781' }}>{contatoAtivo.tel}</p>}
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-1.5">
+        <div className="flex-1 overflow-y-auto px-3 sm:px-6 py-4 space-y-1.5">
           {carregando && <p className="text-center text-sm" style={{ color: '#667781' }}>A carregar…</p>}
-          {erro && <p className="text-center text-sm text-rose-600 bg-rose-50 rounded-lg py-2 px-3">{erro}</p>}
+          {erro && <p className="text-center text-sm text-rose-600 bg-rose-50 rounded-lg py-2 px-3 break-words">{erro}</p>}
           {!carregando && !erro && mensagens.length === 0 && (
             <div className="h-full flex items-center justify-center">
               <p className="text-sm" style={{ color: '#667781' }}>Sem mensagens ainda.</p>
@@ -650,7 +671,7 @@ export default function WhatsAppInbox() {
                   </div>
                 )}
                 <div
-                  className="max-w-[65%] rounded-lg px-3 py-2 shadow-sm relative"
+                  className="max-w-[85%] sm:max-w-[65%] rounded-lg px-3 py-2 shadow-sm relative"
                   style={{ backgroundColor: enviada ? '#d9fdd3' : '#ffffff' }}
                 >
                   {mostrarReacaoPara === m.id && (
@@ -690,7 +711,7 @@ export default function WhatsAppInbox() {
           <div style={{ backgroundColor: '#f0f2f5' }}>
             {modoComposer === 'texto' && (
               <>
-                <div className="flex gap-2 px-4 pt-2.5 overflow-x-auto">
+                <div className="flex gap-2 px-2 sm:px-4 pt-2.5 overflow-x-auto">
                   {TEMPLATES_RAPIDOS.map(t => (
                     <button
                       key={t}
@@ -704,7 +725,7 @@ export default function WhatsAppInbox() {
                 </div>
 
                 {respondendoA && (
-                  <div className="flex items-center justify-between gap-2 mx-4 mt-2 px-3 py-2 rounded-lg" style={{ backgroundColor: '#ffffff', borderLeft: '3px solid #00a884' }}>
+                  <div className="flex items-center justify-between gap-2 mx-2 sm:mx-4 mt-2 px-3 py-2 rounded-lg" style={{ backgroundColor: '#ffffff', borderLeft: '3px solid #00a884' }}>
                     <p className="text-xs truncate" style={{ color: '#667781' }}>A responder: {resumirTexto(respondendoA.texto, 60)}</p>
                     <button onClick={() => setRespondendoA(null)} className="shrink-0">
                       <X size={14} color="#667781" />
@@ -712,7 +733,7 @@ export default function WhatsAppInbox() {
                   </div>
                 )}
 
-                <div className="flex items-center gap-1 px-4 py-3">
+                <div className="flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-4 py-3">
                   <input
                     ref={anexoInputRef}
                     type="file"
@@ -724,23 +745,23 @@ export default function WhatsAppInbox() {
                     onClick={() => anexoInputRef.current?.click()}
                     disabled={enviandoAnexo}
                     title="Anexar ficheiro (imagem, áudio, vídeo ou documento, máx. 3MB)"
-                    className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 disabled:opacity-40 transition-opacity"
+                    className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center shrink-0 disabled:opacity-40 transition-opacity"
                     style={{ color: '#54656f' }}
                   >
-                    <Paperclip size={19} />
+                    <Paperclip size={18} />
                   </button>
                   <button
                     onClick={() => setModoComposer('localizacao')}
                     title="Enviar localização"
-                    className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-opacity"
+                    className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center shrink-0 transition-opacity"
                     style={{ color: '#54656f' }}
                   >
-                    <MapPin size={18} />
+                    <MapPin size={17} />
                   </button>
                   <button
                     onClick={() => setModoComposer('contacto')}
                     title="Enviar cartão de contacto"
-                    className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-opacity"
+                    className="hidden sm:flex w-9 h-9 rounded-full items-center justify-center shrink-0 transition-opacity"
                     style={{ color: '#54656f' }}
                   >
                     <Contact size={18} />
@@ -748,7 +769,7 @@ export default function WhatsAppInbox() {
                   <button
                     onClick={() => setModoComposer('botoes')}
                     title="Enviar pergunta com botões de resposta rápida"
-                    className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-opacity"
+                    className="hidden sm:flex w-9 h-9 rounded-full items-center justify-center shrink-0 transition-opacity"
                     style={{ color: '#54656f' }}
                   >
                     <ListPlus size={18} />
@@ -758,24 +779,32 @@ export default function WhatsAppInbox() {
                     onChange={e => setTexto(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviar(); } }}
                     placeholder={enviandoAnexo ? 'A enviar anexo…' : 'Escreve uma mensagem'}
-                    className="flex-1 rounded-lg px-4 py-2.5 text-sm outline-none"
+                    className="flex-1 min-w-0 rounded-lg px-3 sm:px-4 py-2.5 text-sm outline-none"
                     style={{ backgroundColor: '#ffffff', color: '#111b21' }}
                     disabled={enviando || enviandoAnexo}
                   />
                   <button
                     onClick={enviar}
                     disabled={enviando || enviandoAnexo || !texto.trim()}
-                    className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 disabled:opacity-40 transition-opacity"
+                    className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0 disabled:opacity-40 transition-opacity"
                     style={{ backgroundColor: '#00a884' }}
                   >
-                    <Send size={17} color="#ffffff" />
+                    <Send size={16} color="#ffffff" />
+                  </button>
+                </div>
+                <div className="flex sm:hidden items-center gap-3 px-3 pb-2 -mt-1">
+                  <button onClick={() => setModoComposer('contacto')} className="flex items-center gap-1 text-xs" style={{ color: '#54656f' }}>
+                    <Contact size={14} /> Contacto
+                  </button>
+                  <button onClick={() => setModoComposer('botoes')} className="flex items-center gap-1 text-xs" style={{ color: '#54656f' }}>
+                    <ListPlus size={14} /> Botões
                   </button>
                 </div>
               </>
             )}
 
             {modoComposer === 'localizacao' && (
-              <div className="mx-4 my-3 p-3 rounded-lg space-y-2" style={{ backgroundColor: '#ffffff' }}>
+              <div className="mx-2 sm:mx-4 my-3 p-3 rounded-lg space-y-2" style={{ backgroundColor: '#ffffff' }}>
                 <p className="text-sm font-semibold" style={{ color: '#111b21' }}>Enviar localização atual</p>
                 <input
                   value={localNome}
@@ -803,7 +832,7 @@ export default function WhatsAppInbox() {
             )}
 
             {modoComposer === 'contacto' && (
-              <div className="mx-4 my-3 p-3 rounded-lg space-y-2" style={{ backgroundColor: '#ffffff' }}>
+              <div className="mx-2 sm:mx-4 my-3 p-3 rounded-lg space-y-2" style={{ backgroundColor: '#ffffff' }}>
                 <p className="text-sm font-semibold" style={{ color: '#111b21' }}>Enviar cartão de contacto</p>
                 {CONTATOS_UTEIS_FRONT.map(c => (
                   <button
@@ -823,7 +852,7 @@ export default function WhatsAppInbox() {
             )}
 
             {modoComposer === 'botoes' && (
-              <div className="mx-4 my-3 p-3 rounded-lg space-y-2" style={{ backgroundColor: '#ffffff' }}>
+              <div className="mx-2 sm:mx-4 my-3 p-3 rounded-lg space-y-2" style={{ backgroundColor: '#ffffff' }}>
                 <p className="text-sm font-semibold" style={{ color: '#111b21' }}>Enviar pergunta com botões</p>
                 <textarea
                   value={botoesCorpo}
