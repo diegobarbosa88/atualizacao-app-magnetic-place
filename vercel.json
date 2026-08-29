@@ -78,6 +78,7 @@
     { "source": "/api/formacao/certificacoes", "destination": "/api/formacao?action=certificacoes" },
     { "source": "/api/formacao/horas-por-trabalhador", "destination": "/api/formacao?action=horas-por-trabalhador" },
     { "source": "/api/push/send", "destination": "/api/formacao?action=push-send" },
+    { "source": "/api/whatsapp", "destination": "/api/salarios/exportar-sepa" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
