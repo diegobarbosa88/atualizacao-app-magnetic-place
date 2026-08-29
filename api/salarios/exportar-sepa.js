@@ -168,13 +168,19 @@ async function handlerWhatsApp(req, res, action) {
           error: 'CONSELHEIRO_SUPABASE_URL/CONSELHEIRO_SUPABASE_SERVICE_KEY não configurados neste projeto.',
         });
       }
+      // Ordena descendente + limite para apanhar as 200 mais RECENTES (não
+      // as 200 mais antigas, que é o que "ascending + limit" devolvia --
+      // bug real: com >200 mensagens no total, ficava preso para sempre
+      // nas mesmas 200 mais velhas, por mais que passasse tempo). Inverte
+      // no fim para a conversa continuar a aparecer do mais antigo para o
+      // mais recente na UI.
       const { data, error } = await db
         .from('whatsapp_conversas')
         .select('direcao, texto, criado_em')
-        .order('criado_em', { ascending: true })
+        .order('criado_em', { ascending: false })
         .limit(200);
       if (error) return res.status(500).json({ error: error.message });
-      return res.status(200).json({ mensagens: data || [] });
+      return res.status(200).json({ mensagens: (data || []).reverse() });
     }
 
     if (req.method !== 'POST') return res.status(405).json({ error: 'Método não permitido.' });
