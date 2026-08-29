@@ -364,6 +364,10 @@ export default function OnboardingForm({ token }) {
         // com o resto da equipa.
         nome: formatPersonName(form.nome),
         n_dependentes: Number(form.n_dependentes) || 0,
+        // data_nascimento/documento_validade são colunas `date` — Postgres rejeita
+        // string vazia ("invalid input syntax for type date"), só aceita null.
+        data_nascimento: form.data_nascimento || null,
+        documento_validade: form.documento_validade || null,
         submitted_at: new Date().toISOString(), status: 'pending',
       });
       if (insertErr) throw insertErr;
