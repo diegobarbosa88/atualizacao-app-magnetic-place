@@ -40,6 +40,7 @@ function LogSourceBadge({ log }) {
   );
 }
 import TeamManager from './TeamManager';
+import WhatsAppInbox from './WhatsAppInbox';
 import ClientManager from './ClientManager';
 import FornecedorManager from './FornecedorManager';
 import ScheduleManager from './ScheduleManager';
@@ -514,6 +515,10 @@ function AdminDashboard(props) {
 
       {!auditWorkerId && activeTab === 'reports' && (
         <AdminReports printingReport={printingReport} setPrintingReport={setPrintingReport} />
+      )}
+
+      {!auditWorkerId && activeTab === 'whatsapp' && (
+        <WhatsAppInbox />
       )}
 
       {!auditWorkerId && activeTab === 'team' && (

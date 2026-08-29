@@ -8,6 +8,7 @@ import {
 
 export const ADMIN_SECTIONS = [
   { id: 'overview', label: 'Geral', icon: LayoutGrid, badgeType: null },
+  { id: 'whatsapp', label: 'WhatsApp', icon: MessageSquareText, badgeType: null },
   {
     id: 'team', label: 'Equipa', icon: Trophy, badgeType: 'team',
     subtabs: [
