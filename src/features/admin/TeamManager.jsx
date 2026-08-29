@@ -28,7 +28,9 @@ const TeamManagerContent = ({ onLogin }) => {
   const [inviteModal, setInviteModal] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [generatedLink, setGeneratedLink] = useState('');
+  const [generatedWaLink, setGeneratedWaLink] = useState('');
   const [linkCopied, setLinkCopied] = useState(false);
+  const [waLinkCopied, setWaLinkCopied] = useState(false);
   const [inviteEmailSent, setInviteEmailSent] = useState(false);
   const [inviteLoading, setInviteLoading] = useState(false);
   const [inviteError, setInviteError] = useState('');
@@ -90,7 +92,15 @@ const TeamManagerContent = ({ onLogin }) => {
       if (error) throw error;
       const link = `${window.location.origin}/onboarding/${token}`;
       setGeneratedLink(link);
+      // Segunda via: o trabalhador abre este link no telemóvel dele e envia a
+      // mensagem já escrita ao número da empresa. Isso abre a janela de 24h da
+      // Meta, e o Trabalhador Virtual responde com o Flow de registo — sem
+      // precisar de um template aprovado. Fica vazio se o número não estiver
+      // configurado; a via web continua a funcionar na mesma.
+      const numeroEmpresa = (import.meta.env.VITE_WHATSAPP_NUMERO || '').replace(/[^\d]/g, '');
+      setGeneratedWaLink(numeroEmpresa ? `https://wa.me/${numeroEmpresa}?text=${encodeURIComponent(`ONBOARD ${token}`)}` : '');
       setLinkCopied(false);
+      setWaLinkCopied(false);
       setInviteEmailSent(false);
     } catch (e) {
       console.error('[onboarding] Erro ao gerar convite:', e);
@@ -104,6 +114,13 @@ const TeamManagerContent = ({ onLogin }) => {
     navigator.clipboard.writeText(generatedLink).then(() => {
       setLinkCopied(true);
       setTimeout(() => setLinkCopied(false), 2000);
+    });
+  };
+
+  const copyWaLink = () => {
+    navigator.clipboard.writeText(generatedWaLink).then(() => {
+      setWaLinkCopied(true);
+      setTimeout(() => setWaLinkCopied(false), 2000);
     });
   };
 
@@ -385,8 +402,26 @@ const TeamManagerContent = ({ onLogin }) => {
                 Expira em 7 dias · uso único
               </p>
             </div>
+            {generatedWaLink && (
+              <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-100 space-y-3">
+                <p className={`${SCALE.text.statLabel} text-emerald-700`}>Ou preencher pelo WhatsApp</p>
+                <div className="bg-white rounded-lg border border-emerald-200 px-3 py-2.5">
+                  <p className="text-xs font-mono text-emerald-800 break-all select-all leading-relaxed">{generatedWaLink}</p>
+                </div>
+                <button
+                  onClick={copyWaLink}
+                  className={`w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-black uppercase transition-all ${waLinkCopied ? 'bg-emerald-600 text-white' : 'bg-emerald-700 text-white hover:bg-emerald-800'}`}
+                >
+                  {waLinkCopied ? <Check size={13} /> : <Copy size={13} />}
+                  {waLinkCopied ? 'Copiado!' : 'Copiar link WhatsApp'}
+                </button>
+                <p className={`text-emerald-600 ${SCALE.text.meta}`}>
+                  O trabalhador abre este link no telemóvel e envia a mensagem já escrita. O Trabalhador Virtual responde com o formulário. A assinatura é sempre feita no link acima.
+                </p>
+              </div>
+            )}
             <button
-              onClick={() => { setGeneratedLink(''); setInviteEmail(''); setInviteError(''); setInviteVencimentoBase(''); setInviteDataInicio(''); setInviteLocalTrabalho(''); }}
+              onClick={() => { setGeneratedLink(''); setGeneratedWaLink(''); setInviteEmail(''); setInviteError(''); setInviteVencimentoBase(''); setInviteDataInicio(''); setInviteLocalTrabalho(''); }}
               className="w-full text-xs text-[var(--slate-dim)] hover:text-[var(--ink-soft)] font-bold py-1 transition-colors"
             >
               Gerar novo link

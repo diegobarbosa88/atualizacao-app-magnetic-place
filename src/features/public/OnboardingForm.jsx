@@ -261,6 +261,15 @@ export default function OnboardingForm({ token }) {
           setPageState('invalid');
         } else {
           setInvite(data);
+          // Rascunho preenchido pelo trabalhador no WhatsApp (Flow): hidrata os
+          // passos 1-3 e abre já na Revisão. Não saltamos direto ao Compromisso
+          // de propósito — é na Revisão que se aceita o RGPD e que se corrige um
+          // NIF/IBAN mal digitado, e o Flow não tem forma de mostrar erros de
+          // validação campo a campo como o formulário web mostra.
+          if (data.draft_data && typeof data.draft_data === 'object') {
+            setForm(prev => ({ ...prev, ...data.draft_data }));
+            setStep(3);
+          }
           setPageState('form');
         }
       });
