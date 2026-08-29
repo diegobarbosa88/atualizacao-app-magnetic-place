@@ -128,9 +128,10 @@ export default function WhatsAppInbox() {
       });
       const json = await r.json();
       if (!r.ok) throw new Error(json.error || `HTTP ${r.status}`);
-      setMensagens(prev => [...prev, {
-        id: `local_${Date.now()}`, direcao: 'enviada', texto: corpo, criado_em: new Date().toISOString(),
-      }]);
+      // Não adiciona localmente aqui — o Realtime (INSERT em
+      // worker_whatsapp_messages) já trata disso com o id real da BD.
+      // Adicionar os dois causava duplicado (ids diferentes, o dedupe do
+      // Realtime não reconhecia como a mesma mensagem).
       setTexto('');
     } catch (e) {
       setErro(e.message);
