@@ -272,7 +272,20 @@ async function handlerWhatsApp(req, res, action) {
       if (!numeros.length) {
         return res.status(500).json({ error: 'WHATSAPP_NUMEROS_AUTORIZADOS não configurado neste projeto.' });
       }
-      const corpo = [title, message].filter(Boolean).join(': ');
+      // Parâmetros de template da Meta são mais restritivos que o corpo
+      // estático do template -- emoji (frequentes nos títulos das
+      // notificações do admin, ex. "✍️ Documento assinado") disparam
+      // "(#131009) Parameter value is not valid". Remove-os e normaliza
+      // espaços em branco antes de enviar.
+      const corpo = [title, message].filter(Boolean).join(': ')
+        // \p{Extended_Pictographic} apanha o emoji em si; ️ (variation
+        // selector) e ‍ (zero-width joiner) ficam de fora dessa
+        // categoria mas sobram como caracteres invisíveis se não forem
+        // removidos à parte (confirmado ao testar contra o caso real que
+        // falhou: "✍️" deixava o ️ solto no início do texto).
+        .replace(/[\p{Extended_Pictographic}️‍]/gu, '')
+        .replace(/\s+/g, ' ')
+        .trim();
       const resultados = await Promise.allSettled(numeros.map(n => enviarGraphApiTemplate(n, corpo)));
       const falhas = resultados.filter(r => r.status === 'rejected');
       if (falhas.length) console.error('[notificar-admin] falhas ao enviar:', falhas.map(f => f.reason?.message));
