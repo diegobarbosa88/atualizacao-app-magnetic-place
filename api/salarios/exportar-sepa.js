@@ -88,6 +88,52 @@ async function enviarGraphApiTemplate(to, variavel1) {
   return dados;
 }
 
+// Anexos -- sobe o ficheiro para a Meta (fica hospedado do lado deles,
+// nada guardado aqui) e devolve o media id a usar na mensagem a seguir.
+// https://graph.facebook.com/{Phone-Number-ID}/media, multipart/form-data.
+async function enviarMediaGraphApi(buffer, mimetype) {
+  const token = process.env.WHATSAPP_TOKEN;
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  if (!token || !phoneNumberId) {
+    throw new Error('WHATSAPP_TOKEN/WHATSAPP_PHONE_NUMBER_ID não configurados neste projeto.');
+  }
+  const formData = new FormData();
+  formData.append('messaging_product', 'whatsapp');
+  formData.append('file', new Blob([buffer], { type: mimetype }));
+  formData.append('type', mimetype);
+  const resposta = await fetch(`https://graph.facebook.com/${GRAPH_API_VERSION}/${phoneNumberId}/media`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  });
+  const dados = await resposta.json().catch(() => ({}));
+  if (!resposta.ok) {
+    throw new Error(dados?.error?.message || `Falha ao enviar ficheiro (HTTP ${resposta.status})`);
+  }
+  return dados.id;
+}
+
+// Manda a mensagem de imagem/documento propriamente dita, referenciando o
+// media id já enviado. filename só é usado (e obrigatório) para documento
+// -- imagem não tem nome de ficheiro visível no WhatsApp.
+async function enviarMensagemComMedia(to, mediaId, isImagem, filename) {
+  const token = process.env.WHATSAPP_TOKEN;
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  const payload = isImagem
+    ? { type: 'image', image: { id: mediaId } }
+    : { type: 'document', document: { id: mediaId, filename } };
+  const resposta = await fetch(`https://graph.facebook.com/${GRAPH_API_VERSION}/${phoneNumberId}/messages`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messaging_product: 'whatsapp', to, ...payload }),
+  });
+  const dados = await resposta.json().catch(() => ({}));
+  if (!resposta.ok) {
+    throw new Error(dados?.error?.message || `Falha ao enviar mensagem (HTTP ${resposta.status})`);
+  }
+  return dados;
+}
+
 // Só chamada depois do worker_id já ter sido resolvido/validado pelo
 // chamador -- reaproveitada por 'enviar' (um) e 'enviar-lote' (vários).
 async function enviarParaTrabalhador(db, workerId, tel, texto) {
@@ -226,6 +272,55 @@ async function handlerWhatsApp(req, res, action) {
       return res.status(200).json({ sucesso: true });
     }
 
+    // Envia um anexo (imagem ou documento) a um trabalhador -- só envio,
+    // não guarda o ficheiro aqui, fica hospedado do lado da Meta. O
+    // frontend manda o ficheiro em base64 dentro do JSON (mais simples do
+    // que multipart neste endpoint), por isso o limite prático é o do
+    // corpo do pedido -- 5MB dá margem confortável para fotos/PDFs
+    // normais sem se aproximar do limite do runtime serverless.
+    if (action === 'enviar-anexo') {
+      const { worker_id: workerId, filename, mimetype, data_base64: dataBase64 } = req.body || {};
+      if (!workerId || !filename || !mimetype || !dataBase64) {
+        return res.status(400).json({ error: 'worker_id, filename, mimetype e data_base64 são obrigatórios.' });
+      }
+      const db = supabaseAdmin();
+      const { data: worker, error: errWorker } = await db
+        .from('workers')
+        .select('id, tel, name')
+        .eq('id', workerId)
+        .maybeSingle();
+      if (errWorker) return res.status(500).json({ error: errWorker.message });
+      if (!worker?.tel) return res.status(404).json({ error: 'Trabalhador sem número de telemóvel registado.' });
+
+      const buffer = Buffer.from(dataBase64, 'base64');
+      // 3MB de ficheiro original -- em base64 (+33%) mais o resto do JSON
+      // fica confortavelmente sob o limite de 4.5MB do corpo do pedido nas
+      // Serverless Functions da Vercel (que rejeitaria antes disto sequer
+      // correr, com um 413 genérico em vez desta mensagem clara).
+      const LIMITE_BYTES = 3 * 1024 * 1024;
+      if (buffer.length > LIMITE_BYTES) {
+        return res.status(400).json({ error: 'Ficheiro demasiado grande (máx. 3MB).' });
+      }
+
+      try {
+        const isImagem = mimetype.startsWith('image/');
+        const mediaId = await enviarMediaGraphApi(buffer, mimetype);
+        await enviarMensagemComMedia(worker.tel.replace(/[^\d]/g, ''), mediaId, isImagem, filename);
+      } catch (e) {
+        return res.status(502).json({ error: e.message });
+      }
+
+      const { error: errInsert } = await db.from('worker_whatsapp_messages').insert({
+        id: `wwm_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        worker_id: workerId,
+        direcao: 'enviada',
+        texto: `📎 ${filename}`,
+      });
+      if (errInsert) return res.status(500).json({ error: errInsert.message });
+
+      return res.status(200).json({ sucesso: true });
+    }
+
     // Envia a mesma mensagem a vários trabalhadores de uma vez -- continua
     // mesmo que um envio individual falhe, para não travar os restantes
     // por causa de um único erro (ex: trabalhador sem tel válido).
@@ -328,7 +423,7 @@ export default async function handler(req, res) {
 
   if (!requireAuth(req, res, ['admin'])) return;
 
-  if (['listar-conversas', 'historico', 'historico-bot', 'marcar-lida', 'enviar', 'enviar-lote'].includes(whatsappAction)) {
+  if (['listar-conversas', 'historico', 'historico-bot', 'marcar-lida', 'enviar', 'enviar-lote', 'enviar-anexo'].includes(whatsappAction)) {
     return handlerWhatsApp(req, res, whatsappAction);
   }
 

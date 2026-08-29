@@ -1,7 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Bot, Search, Send, MessageSquareText, Users, X, Check } from 'lucide-react';
+import { Bot, Search, Send, MessageSquareText, Users, X, Check, Paperclip } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { authFetch } from '../../utils/authFetch';
+
+// Mesmo limite do backend (api/salarios/exportar-sepa.js) -- verificado
+// aqui também para dar feedback imediato sem gastar um pedido.
+const LIMITE_ANEXO_BYTES = 3 * 1024 * 1024;
 
 // Mensagens curtas para inserir no campo de texto com um toque, em vez de
 // escrever sempre do zero as perguntas mais comuns. Só sugestões — o Diego
@@ -50,6 +54,7 @@ export default function WhatsAppInbox() {
   const [carregando, setCarregando] = useState(false);
   const [texto, setTexto] = useState('');
   const [enviando, setEnviando] = useState(false);
+  const [enviandoAnexo, setEnviandoAnexo] = useState(false);
   const [erro, setErro] = useState('');
   // Última mensagem de cada trabalhador, para a pré-visualização na lista
   // de contactos — worker_id -> { texto, direcao, criado_em, nao_lidas }.
@@ -62,6 +67,7 @@ export default function WhatsAppInbox() {
   const [enviandoLote, setEnviandoLote] = useState(false);
   const [resultadoLote, setResultadoLote] = useState('');
   const fimRef = useRef(null);
+  const anexoInputRef = useRef(null);
   // O canal Realtime dos resumos só é criado uma vez (depende só de
   // `supabase`) — usa um ref para saber qual é o contacto ativo NO
   // MOMENTO de cada evento, sem recriar o canal a cada troca de contacto.
@@ -229,6 +235,51 @@ export default function WhatsAppInbox() {
       setErro(e.message);
     } finally {
       setEnviando(false);
+    }
+  }
+
+  function lerFicheiroComoBase64(ficheiro) {
+    return new Promise((resolve, reject) => {
+      const leitor = new FileReader();
+      leitor.onload = () => {
+        // FileReader.readAsDataURL devolve "data:<mime>;base64,<dados>" --
+        // só a parte depois da vírgula interessa ao backend.
+        const base64 = String(leitor.result).split(',')[1] || '';
+        resolve(base64);
+      };
+      leitor.onerror = () => reject(new Error('Não consegui ler o ficheiro.'));
+      leitor.readAsDataURL(ficheiro);
+    });
+  }
+
+  async function enviarAnexo(ficheiro) {
+    if (!ficheiro || enviandoAnexo || contatoAtivo.worker_id === '__bot__') return;
+    if (ficheiro.size > LIMITE_ANEXO_BYTES) {
+      setErro(`"${ficheiro.name}" é maior que 3MB — não dá para enviar.`);
+      return;
+    }
+    setEnviandoAnexo(true);
+    setErro('');
+    try {
+      const dataBase64 = await lerFicheiroComoBase64(ficheiro);
+      const r = await authFetch('/api/whatsapp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'enviar-anexo',
+          worker_id: contatoAtivo.worker_id,
+          filename: ficheiro.name,
+          mimetype: ficheiro.type || 'application/octet-stream',
+          data_base64: dataBase64,
+        }),
+      });
+      const json = await r.json();
+      if (!r.ok) throw new Error(json.error || `HTTP ${r.status}`);
+      // Idem enviar() -- o Realtime trata de mostrar a mensagem.
+    } catch (e) {
+      setErro(e.message);
+    } finally {
+      setEnviandoAnexo(false);
     }
   }
 
@@ -491,17 +542,33 @@ export default function WhatsAppInbox() {
             </div>
             <div className="flex items-center gap-2 px-4 py-3">
             <input
+              ref={anexoInputRef}
+              type="file"
+              accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx"
+              className="hidden"
+              onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) enviarAnexo(f); }}
+            />
+            <button
+              onClick={() => anexoInputRef.current?.click()}
+              disabled={enviandoAnexo}
+              title="Anexar ficheiro (imagem ou documento, máx. 3MB)"
+              className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 disabled:opacity-40 transition-opacity"
+              style={{ color: '#54656f' }}
+            >
+              <Paperclip size={19} />
+            </button>
+            <input
               value={texto}
               onChange={e => setTexto(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviar(); } }}
-              placeholder="Escreve uma mensagem"
+              placeholder={enviandoAnexo ? 'A enviar anexo…' : 'Escreve uma mensagem'}
               className="flex-1 rounded-lg px-4 py-2.5 text-sm outline-none"
               style={{ backgroundColor: '#ffffff', color: '#111b21' }}
-              disabled={enviando}
+              disabled={enviando || enviandoAnexo}
             />
             <button
               onClick={enviar}
-              disabled={enviando || !texto.trim()}
+              disabled={enviando || enviandoAnexo || !texto.trim()}
               className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 disabled:opacity-40 transition-opacity"
               style={{ backgroundColor: '#00a884' }}
             >
