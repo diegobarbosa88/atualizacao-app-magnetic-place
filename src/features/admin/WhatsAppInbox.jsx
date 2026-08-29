@@ -24,6 +24,14 @@ function iniciais(nome) {
   return (nome || '?').trim().split(/\s+/).slice(0, 2).map(p => p[0]?.toUpperCase()).join('');
 }
 
+// Corta a pré-visualização da última mensagem para caber numa linha —
+// mensagens longas (ex. o menu do bot) não devem esticar a lista.
+function resumirTexto(texto, max = 42) {
+  if (!texto) return '';
+  const plano = texto.replace(/\s+/g, ' ').trim();
+  return plano.length > max ? `${plano.slice(0, max - 1)}…` : plano;
+}
+
 export default function WhatsAppInbox() {
   const { workers, supabase } = useApp();
   const [contatoAtivo, setContatoAtivo] = useState(CONTATO_BOT);
@@ -33,18 +41,62 @@ export default function WhatsAppInbox() {
   const [texto, setTexto] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState('');
+  // Última mensagem de cada trabalhador, para a pré-visualização na lista
+  // de contactos — worker_id -> { texto, direcao, criado_em }.
+  const [resumos, setResumos] = useState({});
   const fimRef = useRef(null);
+
+  // Carrega os resumos uma vez ao abrir a aba.
+  useEffect(() => {
+    let cancelado = false;
+    (async () => {
+      try {
+        const r = await authFetch('/api/whatsapp?action=listar-conversas');
+        const json = await r.json();
+        if (!r.ok || cancelado) return;
+        const mapa = {};
+        for (const c of json.conversas || []) {
+          mapa[c.worker_id] = { texto: c.ultima_mensagem, direcao: c.ultima_direcao, criado_em: c.ultima_em };
+        }
+        setResumos(mapa);
+      } catch {
+        // silencioso -- a lista só fica sem pré-visualização, não é crítico
+      }
+    })();
+    return () => { cancelado = true; };
+  }, []);
+
+  // Mantém os resumos atualizados para QUALQUER trabalhador (não só a
+  // conversa aberta), para a lista de contactos nunca ficar desatualizada.
+  useEffect(() => {
+    if (!supabase) return;
+    const canal = supabase
+      .channel('whatsapp-resumos')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'worker_whatsapp_messages' }, (payload) => {
+        const m = payload.new;
+        setResumos(prev => ({ ...prev, [m.worker_id]: { texto: m.texto, direcao: m.direcao, criado_em: m.criado_em } }));
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(canal); };
+  }, [supabase]);
 
   const contatos = useMemo(() => {
     const trabalhadores = (workers || [])
       .filter(w => w.is_active && w.tel)
-      .map(w => ({ worker_id: w.id, nome: w.name, tel: w.tel }))
-      .sort((a, b) => a.nome.localeCompare(b.nome));
+      .map(w => ({ worker_id: w.id, nome: w.name, tel: w.tel, resumo: resumos[w.id] || null }))
+      .sort((a, b) => {
+        // Quem tem conversa mais recente sobe ao topo; sem conversa nenhuma
+        // fica por ordem alfabética no fim.
+        if (a.resumo && b.resumo) return new Date(b.resumo.criado_em) - new Date(a.resumo.criado_em);
+        if (a.resumo) return -1;
+        if (b.resumo) return 1;
+        return a.nome.localeCompare(b.nome);
+      });
     const filtrados = busca.trim()
       ? trabalhadores.filter(t => t.nome.toLowerCase().includes(busca.trim().toLowerCase()))
       : trabalhadores;
     return [CONTATO_BOT, ...filtrados];
-  }, [workers, busca]);
+  }, [workers, busca, resumos]);
 
   // Carrega o histórico ao trocar de contacto.
   useEffect(() => {
@@ -176,9 +228,23 @@ export default function WhatsAppInbox() {
                 >
                   {isBot ? <Bot size={20} /> : iniciais(c.nome)}
                 </div>
-                <div className="min-w-0">
-                  <p className="text-[15px] truncate" style={{ color: '#111b21' }}>{c.nome}</p>
-                  {isBot && <p className="text-xs truncate" style={{ color: '#667781' }}>Conversa com o Diego</p>}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[15px] truncate" style={{ color: '#111b21' }}>{c.nome}</p>
+                    {c.resumo?.criado_em && (
+                      <span className="text-[11px] shrink-0" style={{ color: '#667781' }}>{formatarHora(c.resumo.criado_em)}</span>
+                    )}
+                  </div>
+                  {isBot ? (
+                    <p className="text-xs truncate" style={{ color: '#667781' }}>Conversa com o Diego</p>
+                  ) : c.resumo ? (
+                    <p className="text-xs truncate" style={{ color: '#667781' }}>
+                      {c.resumo.direcao === 'enviada' && <span style={{ color: '#00a884' }}>Tu: </span>}
+                      {resumirTexto(c.resumo.texto)}
+                    </p>
+                  ) : (
+                    <p className="text-xs truncate" style={{ color: '#8696a0' }}>Sem mensagens ainda</p>
+                  )}
                 </div>
               </button>
             );
