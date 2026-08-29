@@ -51,17 +51,44 @@ async function enviarGraphApi(to, body) {
   return dados;
 }
 
+// Só chamada depois do worker_id já ter sido resolvido/validado pelo
+// chamador -- reaproveitada por 'enviar' (um) e 'enviar-lote' (vários).
+async function enviarParaTrabalhador(db, workerId, tel, texto) {
+  await enviarGraphApi(tel.replace(/[^\d]/g, ''), texto);
+  const { error } = await db.from('worker_whatsapp_messages').insert({
+    id: `wwm_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    worker_id: workerId,
+    direcao: 'enviada',
+    texto,
+  });
+  if (error) throw new Error(error.message);
+}
+
 async function handlerWhatsApp(req, res, action) {
   try {
     // Lista de trabalhadores com pelo menos uma mensagem trocada (contactos
-    // da aba), ordenados pela mensagem mais recente.
+    // da aba), ordenados pela mensagem mais recente, com a contagem de
+    // mensagens recebidas por ler.
     if (action === 'listar-conversas') {
       const db = supabaseAdmin();
-      const { data, error } = await db
-        .from('worker_whatsapp_messages')
-        .select('worker_id, texto, direcao, criado_em, workers!inner(name, tel)')
-        .order('criado_em', { ascending: false });
+      const [{ data, error }, { data: naoLidas, error: errNaoLidas }] = await Promise.all([
+        db
+          .from('worker_whatsapp_messages')
+          .select('worker_id, texto, direcao, criado_em, workers!inner(name, tel)')
+          .order('criado_em', { ascending: false }),
+        db
+          .from('worker_whatsapp_messages')
+          .select('worker_id')
+          .eq('direcao', 'recebida')
+          .eq('lida', false),
+      ]);
       if (error) return res.status(500).json({ error: error.message });
+      if (errNaoLidas) return res.status(500).json({ error: errNaoLidas.message });
+
+      const contagemNaoLidas = new Map();
+      for (const linha of naoLidas || []) {
+        contagemNaoLidas.set(linha.worker_id, (contagemNaoLidas.get(linha.worker_id) || 0) + 1);
+      }
 
       const porTrabalhador = new Map();
       for (const linha of data || []) {
@@ -73,6 +100,7 @@ async function handlerWhatsApp(req, res, action) {
             ultima_mensagem: linha.texto,
             ultima_direcao: linha.direcao,
             ultima_em: linha.criado_em,
+            nao_lidas: contagemNaoLidas.get(linha.worker_id) || 0,
           });
         }
       }
@@ -92,6 +120,7 @@ async function handlerWhatsApp(req, res, action) {
       if (error) return res.status(500).json({ error: error.message });
       return res.status(200).json({ mensagens: data || [] });
     }
+
 
     // Histórico de conversa do Trabalhador Virtual com o próprio Diego —
     // lido diretamente da BD do conselheiro (projeto Supabase separado).
@@ -113,6 +142,23 @@ async function handlerWhatsApp(req, res, action) {
 
     if (req.method !== 'POST') return res.status(405).json({ error: 'Método não permitido.' });
 
+    // Marca as mensagens recebidas de um trabalhador como lidas -- chamado
+    // pelo frontend ao abrir essa conversa, para o indicador de não lidas
+    // da lista de contactos desaparecer.
+    if (action === 'marcar-lida') {
+      const { worker_id: workerId } = req.body || {};
+      if (!workerId) return res.status(400).json({ error: 'worker_id em falta.' });
+      const db = supabaseAdmin();
+      const { error } = await db
+        .from('worker_whatsapp_messages')
+        .update({ lida: true })
+        .eq('worker_id', workerId)
+        .eq('direcao', 'recebida')
+        .eq('lida', false);
+      if (error) return res.status(500).json({ error: error.message });
+      return res.status(200).json({ sucesso: true });
+    }
+
     // Envia uma mensagem de texto livre a um trabalhador e regista.
     if (action === 'enviar') {
       const { worker_id: workerId, texto } = req.body || {};
@@ -129,20 +175,50 @@ async function handlerWhatsApp(req, res, action) {
       if (!worker?.tel) return res.status(404).json({ error: 'Trabalhador sem número de telemóvel registado.' });
 
       try {
-        await enviarGraphApi(worker.tel.replace(/[^\d]/g, ''), texto.trim());
+        await enviarParaTrabalhador(db, workerId, worker.tel, texto.trim());
       } catch (e) {
         return res.status(502).json({ error: e.message });
       }
 
-      const { error: errInsert } = await db.from('worker_whatsapp_messages').insert({
-        id: `wwm_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-        worker_id: workerId,
-        direcao: 'enviada',
-        texto: texto.trim(),
-      });
-      if (errInsert) return res.status(500).json({ error: errInsert.message });
-
       return res.status(200).json({ sucesso: true });
+    }
+
+    // Envia a mesma mensagem a vários trabalhadores de uma vez -- continua
+    // mesmo que um envio individual falhe, para não travar os restantes
+    // por causa de um único erro (ex: trabalhador sem tel válido).
+    if (action === 'enviar-lote') {
+      const { worker_ids: workerIds, texto } = req.body || {};
+      if (!Array.isArray(workerIds) || workerIds.length === 0 || !texto?.trim()) {
+        return res.status(400).json({ error: 'worker_ids (array) e texto são obrigatórios.' });
+      }
+      const db = supabaseAdmin();
+      const { data: trabalhadores, error: errWorkers } = await db
+        .from('workers')
+        .select('id, tel, name')
+        .in('id', workerIds);
+      if (errWorkers) return res.status(500).json({ error: errWorkers.message });
+
+      const resultados = [];
+      for (const workerId of workerIds) {
+        const worker = trabalhadores.find(w => w.id === workerId);
+        if (!worker?.tel) {
+          resultados.push({ worker_id: workerId, sucesso: false, error: 'Sem número de telemóvel registado.' });
+          continue;
+        }
+        try {
+          await enviarParaTrabalhador(db, workerId, worker.tel, texto.trim());
+          resultados.push({ worker_id: workerId, sucesso: true });
+        } catch (e) {
+          resultados.push({ worker_id: workerId, sucesso: false, error: e.message });
+        }
+      }
+
+      const falhas = resultados.filter(r => !r.sucesso);
+      return res.status(200).json({
+        sucesso: falhas.length === 0,
+        mensagem: `${resultados.length - falhas.length}/${resultados.length} mensagens enviadas.`,
+        resultados,
+      });
     }
 
     return res.status(400).json({ error: `Ação desconhecida: ${action}` });
@@ -160,7 +236,7 @@ export default async function handler(req, res) {
   // WHATSAPP_ACTIONS decide o desvio ANTES do guard "só POST" abaixo,
   // porque listar-conversas/historico/historico-bot são GET.
   const whatsappAction = req.method === 'GET' ? req.query?.action : req.body?.action;
-  if (['listar-conversas', 'historico', 'historico-bot', 'enviar'].includes(whatsappAction)) {
+  if (['listar-conversas', 'historico', 'historico-bot', 'marcar-lida', 'enviar', 'enviar-lote'].includes(whatsappAction)) {
     return handlerWhatsApp(req, res, whatsappAction);
   }
 
