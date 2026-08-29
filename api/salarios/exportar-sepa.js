@@ -45,6 +45,9 @@ async function enviarGraphApi(to, body) {
     body: JSON.stringify({ messaging_product: 'whatsapp', to, type: 'text', text: { body } }),
   });
   const dados = await resposta.json().catch(() => ({}));
+  // Temporário — para diagnosticar mensagens que a Meta aceita (HTTP 200)
+  // mas não chegam ao destinatário. Remover depois de confirmado o motivo.
+  console.log('[whatsapp/enviar] resposta da Meta:', JSON.stringify({ to, status: resposta.status, dados }));
   if (!resposta.ok) {
     throw new Error(dados?.error?.message || `Falha ao enviar WhatsApp (HTTP ${resposta.status})`);
   }
