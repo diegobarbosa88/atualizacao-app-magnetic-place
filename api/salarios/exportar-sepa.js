@@ -51,6 +51,43 @@ async function enviarGraphApi(to, body) {
   return dados;
 }
 
+// Mensagem iniciada pela empresa (as notificações do admin podem disparar a
+// qualquer hora, sem garantia de estar dentro da janela de 24h de conversa
+// com o Diego) -- por isso é sempre por template aprovado, nunca texto
+// livre. Reaproveita mp_aviso_pendencia_botao, já aprovado pela Meta para
+// os avisos automáticos do conselheiro (mesmo formato {{1}} + botão "Ver
+// pendências").
+async function enviarGraphApiTemplate(to, variavel1) {
+  const token = process.env.WHATSAPP_TOKEN;
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  const nomeTemplate = process.env.WHATSAPP_TEMPLATE_AVISO_BOTAO;
+  if (!token || !phoneNumberId || !nomeTemplate) {
+    throw new Error('WHATSAPP_TOKEN/WHATSAPP_PHONE_NUMBER_ID/WHATSAPP_TEMPLATE_AVISO_BOTAO não configurados neste projeto.');
+  }
+  const resposta = await fetch(`https://graph.facebook.com/${GRAPH_API_VERSION}/${phoneNumberId}/messages`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      messaging_product: 'whatsapp',
+      to,
+      type: 'template',
+      template: {
+        name: nomeTemplate,
+        language: { code: 'pt_PT' },
+        components: [{ type: 'body', parameters: [{ type: 'text', text: variavel1 }] }],
+      },
+    }),
+  });
+  const dados = await resposta.json().catch(() => ({}));
+  if (!resposta.ok) {
+    throw new Error(dados?.error?.message || `Falha ao enviar WhatsApp (HTTP ${resposta.status})`);
+  }
+  return dados;
+}
+
 // Só chamada depois do worker_id já ter sido resolvido/validado pelo
 // chamador -- reaproveitada por 'enviar' (um) e 'enviar-lote' (vários).
 async function enviarParaTrabalhador(db, workerId, tel, texto) {
@@ -221,6 +258,27 @@ async function handlerWhatsApp(req, res, action) {
       });
     }
 
+    // Relay de notificações do admin para WhatsApp -- chamado pelo trigger
+    // Postgres em app_notifications (ver migração
+    // 20260829_notificar_admin_whatsapp.sql), nunca diretamente pelo
+    // browser. Autenticado por segredo partilhado, não por sessão admin
+    // (o trigger dispara também para eventos originados por trabalhadores
+    // ou pela página pública de onboarding, sem sessão admin nenhuma).
+    if (action === 'notificar-admin') {
+      const { title, message } = req.body || {};
+      if (!title && !message) return res.status(400).json({ error: 'title ou message em falta.' });
+      const numeros = (process.env.WHATSAPP_NUMEROS_AUTORIZADOS || '')
+        .split(',').map(n => n.trim().replace(/[^\d]/g, '')).filter(Boolean);
+      if (!numeros.length) {
+        return res.status(500).json({ error: 'WHATSAPP_NUMEROS_AUTORIZADOS não configurado neste projeto.' });
+      }
+      const corpo = [title, message].filter(Boolean).join(': ');
+      const resultados = await Promise.allSettled(numeros.map(n => enviarGraphApiTemplate(n, corpo)));
+      const falhas = resultados.filter(r => r.status === 'rejected');
+      if (falhas.length) console.error('[notificar-admin] falhas ao enviar:', falhas.map(f => f.reason?.message));
+      return res.status(200).json({ sucesso: falhas.length < resultados.length, enviados: resultados.length - falhas.length });
+    }
+
     return res.status(400).json({ error: `Ação desconhecida: ${action}` });
   } catch (e) {
     console.error('[api/whatsapp] erro:', e);
@@ -230,12 +288,27 @@ async function handlerWhatsApp(req, res, action) {
 
 // ─── SEPA (exportação de salários) ─────────────────────────────────
 
-export default async function handler(req, res) {
-  if (!requireAuth(req, res, ['admin'])) return;
+// notificar-admin vem do trigger Postgres (net.http_post), nunca de uma
+// sessão de browser -- por isso é autenticado por segredo partilhado, não
+// pelo requireAuth normal. Mesmo espírito do isAgenteAutorizado em
+// api/seguranca-social/index.js.
+function isWebhookAutorizado(req) {
+  const segredo = process.env.ADMIN_NOTIF_WEBHOOK_SECRET;
+  return !!segredo && req.headers['x-webhook-secret'] === segredo;
+}
 
+export default async function handler(req, res) {
   // WHATSAPP_ACTIONS decide o desvio ANTES do guard "só POST" abaixo,
   // porque listar-conversas/historico/historico-bot são GET.
   const whatsappAction = req.method === 'GET' ? req.query?.action : req.body?.action;
+
+  if (whatsappAction === 'notificar-admin') {
+    if (!isWebhookAutorizado(req)) return res.status(401).json({ error: 'Não autorizado.' });
+    return handlerWhatsApp(req, res, whatsappAction);
+  }
+
+  if (!requireAuth(req, res, ['admin'])) return;
+
   if (['listar-conversas', 'historico', 'historico-bot', 'marcar-lida', 'enviar', 'enviar-lote'].includes(whatsappAction)) {
     return handlerWhatsApp(req, res, whatsappAction);
   }
