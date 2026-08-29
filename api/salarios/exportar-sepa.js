@@ -30,7 +30,10 @@ function conselheiroSupabase() {
 
 const GRAPH_API_VERSION = 'v25.0';
 
-async function enviarGraphApi(to, body) {
+// replyTo (wamid, opcional) responde a uma mensagem concreta -- aparece no
+// WhatsApp do trabalhador como citação por cima do texto, tal como quando
+// se responde a uma mensagem à mão na app normal.
+async function enviarGraphApi(to, body, replyTo) {
   const token = process.env.WHATSAPP_TOKEN;
   const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
   if (!token || !phoneNumberId) {
@@ -42,7 +45,13 @@ async function enviarGraphApi(to, body) {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ messaging_product: 'whatsapp', to, type: 'text', text: { body } }),
+    body: JSON.stringify({
+      messaging_product: 'whatsapp',
+      to,
+      type: 'text',
+      text: { body },
+      ...(replyTo ? { context: { message_id: replyTo } } : {}),
+    }),
   });
   const dados = await resposta.json().catch(() => ({}));
   if (!resposta.ok) {
@@ -113,15 +122,26 @@ async function enviarMediaGraphApi(buffer, mimetype) {
   return dados.id;
 }
 
-// Manda a mensagem de imagem/documento propriamente dita, referenciando o
-// media id já enviado. filename só é usado (e obrigatório) para documento
-// -- imagem não tem nome de ficheiro visível no WhatsApp.
-async function enviarMensagemComMedia(to, mediaId, isImagem, filename) {
+// Deduz o tipo de mensagem da Meta a partir do mimetype do ficheiro --
+// imagem/áudio/vídeo têm tipo próprio, tudo o resto (pdf, word, excel...)
+// vai como documento genérico.
+function tipoMediaPorMimetype(mimetype) {
+  if (mimetype.startsWith('image/')) return 'image';
+  if (mimetype.startsWith('audio/')) return 'audio';
+  if (mimetype.startsWith('video/')) return 'video';
+  return 'document';
+}
+
+// Manda a mensagem de imagem/documento/áudio/vídeo propriamente dita,
+// referenciando o media id já enviado. filename só é usado (e aceite) para
+// documento -- os outros tipos não têm nome de ficheiro visível no
+// WhatsApp.
+async function enviarMensagemComMedia(to, mediaId, tipoMedia, filename) {
   const token = process.env.WHATSAPP_TOKEN;
   const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
-  const payload = isImagem
-    ? { type: 'image', image: { id: mediaId } }
-    : { type: 'document', document: { id: mediaId, filename } };
+  const payload = tipoMedia === 'document'
+    ? { type: 'document', document: { id: mediaId, filename } }
+    : { type: tipoMedia, [tipoMedia]: { id: mediaId } };
   const resposta = await fetch(`https://graph.facebook.com/${GRAPH_API_VERSION}/${phoneNumberId}/messages`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -134,15 +154,146 @@ async function enviarMensagemComMedia(to, mediaId, isImagem, filename) {
   return dados;
 }
 
+// Localização -- morada de um cliente/obra, mostrada como pin no mapa
+// dentro do WhatsApp do trabalhador.
+async function enviarMensagemLocalizacao(to, { latitude, longitude, nome, endereco }) {
+  const token = process.env.WHATSAPP_TOKEN;
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  const resposta = await fetch(`https://graph.facebook.com/${GRAPH_API_VERSION}/${phoneNumberId}/messages`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      messaging_product: 'whatsapp',
+      to,
+      type: 'location',
+      location: { latitude, longitude, name: nome, address: endereco },
+    }),
+  });
+  const dados = await resposta.json().catch(() => ({}));
+  if (!resposta.ok) {
+    throw new Error(dados?.error?.message || `Falha ao enviar localização (HTTP ${resposta.status})`);
+  }
+  return dados;
+}
+
+// Cartão de contacto -- ex. mediador de seguros, contabilista. Lista curta
+// e fixa no código de propósito (não vale a pena um CRUD para isto).
+const CONTACTOS_UTEIS = {
+  mediador: { nome: 'Mediador de Seguros', tel: process.env.WHATSAPP_MEDIADOR_SEGUROS },
+};
+
+async function enviarMensagemContacto(to, contatoId) {
+  const contato = CONTACTOS_UTEIS[contatoId];
+  if (!contato) throw new Error(`Contacto desconhecido: ${contatoId}`);
+  if (!contato.tel) throw new Error(`Número não configurado para "${contato.nome}".`);
+  const token = process.env.WHATSAPP_TOKEN;
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  const resposta = await fetch(`https://graph.facebook.com/${GRAPH_API_VERSION}/${phoneNumberId}/messages`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      messaging_product: 'whatsapp',
+      to,
+      type: 'contacts',
+      contacts: [{
+        name: { formatted_name: contato.nome, first_name: contato.nome },
+        phones: [{ phone: contato.tel, type: 'WORK' }],
+      }],
+    }),
+  });
+  const dados = await resposta.json().catch(() => ({}));
+  if (!resposta.ok) {
+    throw new Error(dados?.error?.message || `Falha ao enviar contacto (HTTP ${resposta.status})`);
+  }
+  return { dados, nome: contato.nome };
+}
+
+// Reação com emoji a uma mensagem concreta (pelo wamid). Emoji vazio ("")
+// remove uma reação já colocada -- comportamento nativo da Meta.
+async function enviarReacaoGraphApi(to, wamid, emoji) {
+  const token = process.env.WHATSAPP_TOKEN;
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  const resposta = await fetch(`https://graph.facebook.com/${GRAPH_API_VERSION}/${phoneNumberId}/messages`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      messaging_product: 'whatsapp',
+      to,
+      type: 'reaction',
+      reaction: { message_id: wamid, emoji },
+    }),
+  });
+  const dados = await resposta.json().catch(() => ({}));
+  if (!resposta.ok) {
+    throw new Error(dados?.error?.message || `Falha ao enviar reação (HTTP ${resposta.status})`);
+  }
+  return dados;
+}
+
+// Botões de resposta rápida -- até 3, cada um com id (o que volta na
+// resposta) e title (o que o trabalhador vê). Mesma constraint da Meta já
+// conhecida do lado do conselheiro (enviarBotoesRapidos).
+async function enviarBotoesGraphApi(to, corpo, botoes) {
+  const token = process.env.WHATSAPP_TOKEN;
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  const resposta = await fetch(`https://graph.facebook.com/${GRAPH_API_VERSION}/${phoneNumberId}/messages`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      messaging_product: 'whatsapp',
+      to,
+      type: 'interactive',
+      interactive: {
+        type: 'button',
+        body: { text: corpo },
+        action: { buttons: botoes.map(b => ({ type: 'reply', reply: { id: b.id, title: b.title } })) },
+      },
+    }),
+  });
+  const dados = await resposta.json().catch(() => ({}));
+  if (!resposta.ok) {
+    throw new Error(dados?.error?.message || `Falha ao enviar botões (HTTP ${resposta.status})`);
+  }
+  return dados;
+}
+
+// Marca como lida no WhatsApp real do trabalhador (o ✓✓ azul) e mostra
+// "a escrever…" por alguns segundos -- mesmo pedido único que a Meta usa
+// para as duas coisas (ver "Send typing indicator and read receipt" na
+// spec oficial). wamid tem de ser de uma mensagem RECEBIDA (nunca das que
+// nós enviámos).
+async function marcarComoLidaGraphApi(wamid) {
+  const token = process.env.WHATSAPP_TOKEN;
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  const resposta = await fetch(`https://graph.facebook.com/${GRAPH_API_VERSION}/${phoneNumberId}/messages`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      messaging_product: 'whatsapp',
+      status: 'read',
+      message_id: wamid,
+      typing_indicator: { type: 'text' },
+    }),
+  });
+  const dados = await resposta.json().catch(() => ({}));
+  if (!resposta.ok) {
+    throw new Error(dados?.error?.message || `Falha ao marcar como lida (HTTP ${resposta.status})`);
+  }
+  return dados;
+}
+
 // Só chamada depois do worker_id já ter sido resolvido/validado pelo
 // chamador -- reaproveitada por 'enviar' (um) e 'enviar-lote' (vários).
-async function enviarParaTrabalhador(db, workerId, tel, texto) {
-  await enviarGraphApi(tel.replace(/[^\d]/g, ''), texto);
+// replyTo (wamid, opcional) só faz sentido no envio individual -- em lote
+// não há "a mensagem a que se está a responder" para vários de uma vez.
+async function enviarParaTrabalhador(db, workerId, tel, texto, replyTo) {
+  const dados = await enviarGraphApi(tel.replace(/[^\d]/g, ''), texto, replyTo);
   const { error } = await db.from('worker_whatsapp_messages').insert({
     id: `wwm_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
     worker_id: workerId,
     direcao: 'enviada',
     texto,
+    wamid: dados?.messages?.[0]?.id || null,
   });
   if (error) throw new Error(error.message);
 }
@@ -197,7 +348,7 @@ async function handlerWhatsApp(req, res, action) {
       const db = supabaseAdmin();
       const { data, error } = await db
         .from('worker_whatsapp_messages')
-        .select('id, direcao, texto, criado_em')
+        .select('id, direcao, texto, criado_em, wamid')
         .eq('worker_id', workerId)
         .order('criado_em', { ascending: true });
       if (error) return res.status(500).json({ error: error.message });
@@ -238,6 +389,29 @@ async function handlerWhatsApp(req, res, action) {
       const { worker_id: workerId } = req.body || {};
       if (!workerId) return res.status(400).json({ error: 'worker_id em falta.' });
       const db = supabaseAdmin();
+
+      // Marca no WhatsApp REAL do trabalhador (o ✓✓ azul) -- só a mensagem
+      // recebida mais recente, é o que a própria app do WhatsApp faz (a
+      // Meta trata as anteriores da mesma conversa como lidas também).
+      // Falha aqui não deve impedir marcar como lida no nosso lado --
+      // regista o erro e continua.
+      const { data: ultimaRecebida } = await db
+        .from('worker_whatsapp_messages')
+        .select('wamid')
+        .eq('worker_id', workerId)
+        .eq('direcao', 'recebida')
+        .not('wamid', 'is', null)
+        .order('criado_em', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (ultimaRecebida?.wamid) {
+        try {
+          await marcarComoLidaGraphApi(ultimaRecebida.wamid);
+        } catch (e) {
+          console.error('[marcar-lida] falha ao marcar no WhatsApp real:', e.message);
+        }
+      }
+
       const { error } = await db
         .from('worker_whatsapp_messages')
         .update({ lida: true })
@@ -249,8 +423,10 @@ async function handlerWhatsApp(req, res, action) {
     }
 
     // Envia uma mensagem de texto livre a um trabalhador e regista.
+    // reply_to (wamid, opcional): responde a uma mensagem concreta em vez
+    // de mandar solto no fim da conversa.
     if (action === 'enviar') {
-      const { worker_id: workerId, texto } = req.body || {};
+      const { worker_id: workerId, texto, reply_to: replyTo } = req.body || {};
       if (!workerId || !texto?.trim()) {
         return res.status(400).json({ error: 'worker_id e texto são obrigatórios.' });
       }
@@ -264,7 +440,7 @@ async function handlerWhatsApp(req, res, action) {
       if (!worker?.tel) return res.status(404).json({ error: 'Trabalhador sem número de telemóvel registado.' });
 
       try {
-        await enviarParaTrabalhador(db, workerId, worker.tel, texto.trim());
+        await enviarParaTrabalhador(db, workerId, worker.tel, texto.trim(), replyTo || undefined);
       } catch (e) {
         return res.status(502).json({ error: e.message });
       }
@@ -272,12 +448,12 @@ async function handlerWhatsApp(req, res, action) {
       return res.status(200).json({ sucesso: true });
     }
 
-    // Envia um anexo (imagem ou documento) a um trabalhador -- só envio,
-    // não guarda o ficheiro aqui, fica hospedado do lado da Meta. O
-    // frontend manda o ficheiro em base64 dentro do JSON (mais simples do
-    // que multipart neste endpoint), por isso o limite prático é o do
-    // corpo do pedido -- 5MB dá margem confortável para fotos/PDFs
-    // normais sem se aproximar do limite do runtime serverless.
+    // Envia um anexo (imagem, documento, áudio ou vídeo) a um trabalhador
+    // -- só envio, não guarda o ficheiro aqui, fica hospedado do lado da
+    // Meta. O frontend manda o ficheiro em base64 dentro do JSON (mais
+    // simples do que multipart neste endpoint), por isso o limite prático
+    // é o do corpo do pedido -- 3MB dá margem confortável sem se aproximar
+    // do limite do runtime serverless.
     if (action === 'enviar-anexo') {
       const { worker_id: workerId, filename, mimetype, data_base64: dataBase64 } = req.body || {};
       if (!workerId || !filename || !mimetype || !dataBase64) {
@@ -302,10 +478,48 @@ async function handlerWhatsApp(req, res, action) {
         return res.status(400).json({ error: 'Ficheiro demasiado grande (máx. 3MB).' });
       }
 
+      const tipoMedia = tipoMediaPorMimetype(mimetype);
+      let wamid = null;
       try {
-        const isImagem = mimetype.startsWith('image/');
         const mediaId = await enviarMediaGraphApi(buffer, mimetype);
-        await enviarMensagemComMedia(worker.tel.replace(/[^\d]/g, ''), mediaId, isImagem, filename);
+        const dados = await enviarMensagemComMedia(worker.tel.replace(/[^\d]/g, ''), mediaId, tipoMedia, filename);
+        wamid = dados?.messages?.[0]?.id || null;
+      } catch (e) {
+        return res.status(502).json({ error: e.message });
+      }
+
+      const ICONES = { image: '🖼️', audio: '🎤', video: '🎥', document: '📎' };
+      const { error: errInsert } = await db.from('worker_whatsapp_messages').insert({
+        id: `wwm_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        worker_id: workerId,
+        direcao: 'enviada',
+        texto: `${ICONES[tipoMedia]} ${filename}`,
+        wamid,
+      });
+      if (errInsert) return res.status(500).json({ error: errInsert.message });
+
+      return res.status(200).json({ sucesso: true });
+    }
+
+    // Envia uma localização (morada de obra/cliente) a um trabalhador.
+    if (action === 'enviar-localizacao') {
+      const { worker_id: workerId, latitude, longitude, nome, endereco } = req.body || {};
+      if (!workerId || latitude == null || longitude == null) {
+        return res.status(400).json({ error: 'worker_id, latitude e longitude são obrigatórios.' });
+      }
+      const db = supabaseAdmin();
+      const { data: worker, error: errWorker } = await db
+        .from('workers')
+        .select('id, tel, name')
+        .eq('id', workerId)
+        .maybeSingle();
+      if (errWorker) return res.status(500).json({ error: errWorker.message });
+      if (!worker?.tel) return res.status(404).json({ error: 'Trabalhador sem número de telemóvel registado.' });
+
+      let wamid = null;
+      try {
+        const dados = await enviarMensagemLocalizacao(worker.tel.replace(/[^\d]/g, ''), { latitude, longitude, nome, endereco });
+        wamid = dados?.messages?.[0]?.id || null;
       } catch (e) {
         return res.status(502).json({ error: e.message });
       }
@@ -314,7 +528,95 @@ async function handlerWhatsApp(req, res, action) {
         id: `wwm_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
         worker_id: workerId,
         direcao: 'enviada',
-        texto: `📎 ${filename}`,
+        texto: `📍 ${nome || 'Localização'}${endereco ? ` — ${endereco}` : ''}`,
+        wamid,
+      });
+      if (errInsert) return res.status(500).json({ error: errInsert.message });
+
+      return res.status(200).json({ sucesso: true });
+    }
+
+    // Envia um cartão de contacto (ex. mediador de seguros) a um trabalhador.
+    if (action === 'enviar-contacto') {
+      const { worker_id: workerId, contato_id: contatoId } = req.body || {};
+      if (!workerId || !contatoId) {
+        return res.status(400).json({ error: 'worker_id e contato_id são obrigatórios.' });
+      }
+      const db = supabaseAdmin();
+      const { data: worker, error: errWorker } = await db
+        .from('workers')
+        .select('id, tel, name')
+        .eq('id', workerId)
+        .maybeSingle();
+      if (errWorker) return res.status(500).json({ error: errWorker.message });
+      if (!worker?.tel) return res.status(404).json({ error: 'Trabalhador sem número de telemóvel registado.' });
+
+      let wamid = null;
+      let nomeContato = '';
+      try {
+        const { dados, nome } = await enviarMensagemContacto(worker.tel.replace(/[^\d]/g, ''), contatoId);
+        wamid = dados?.messages?.[0]?.id || null;
+        nomeContato = nome;
+      } catch (e) {
+        return res.status(502).json({ error: e.message });
+      }
+
+      const { error: errInsert } = await db.from('worker_whatsapp_messages').insert({
+        id: `wwm_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        worker_id: workerId,
+        direcao: 'enviada',
+        texto: `👤 Contacto: ${nomeContato}`,
+        wamid,
+      });
+      if (errInsert) return res.status(500).json({ error: errInsert.message });
+
+      return res.status(200).json({ sucesso: true });
+    }
+
+    // Reage com um emoji a uma mensagem concreta (pelo wamid). emoji: ''
+    // remove uma reação já colocada.
+    if (action === 'enviar-reacao') {
+      const { wamid, to, emoji } = req.body || {};
+      if (!wamid || !to || emoji == null) {
+        return res.status(400).json({ error: 'wamid, to e emoji são obrigatórios.' });
+      }
+      try {
+        await enviarReacaoGraphApi(to.replace(/[^\d]/g, ''), wamid, emoji);
+      } catch (e) {
+        return res.status(502).json({ error: e.message });
+      }
+      return res.status(200).json({ sucesso: true });
+    }
+
+    // Envia uma pergunta com até 3 botões de resposta rápida.
+    if (action === 'enviar-botoes') {
+      const { worker_id: workerId, corpo, botoes } = req.body || {};
+      if (!workerId || !corpo?.trim() || !Array.isArray(botoes) || botoes.length === 0 || botoes.length > 3) {
+        return res.status(400).json({ error: 'worker_id, corpo e botoes (1 a 3) são obrigatórios.' });
+      }
+      const db = supabaseAdmin();
+      const { data: worker, error: errWorker } = await db
+        .from('workers')
+        .select('id, tel, name')
+        .eq('id', workerId)
+        .maybeSingle();
+      if (errWorker) return res.status(500).json({ error: errWorker.message });
+      if (!worker?.tel) return res.status(404).json({ error: 'Trabalhador sem número de telemóvel registado.' });
+
+      let wamid = null;
+      try {
+        const dados = await enviarBotoesGraphApi(worker.tel.replace(/[^\d]/g, ''), corpo.trim(), botoes);
+        wamid = dados?.messages?.[0]?.id || null;
+      } catch (e) {
+        return res.status(502).json({ error: e.message });
+      }
+
+      const { error: errInsert } = await db.from('worker_whatsapp_messages').insert({
+        id: `wwm_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        worker_id: workerId,
+        direcao: 'enviada',
+        texto: corpo.trim(),
+        wamid,
       });
       if (errInsert) return res.status(500).json({ error: errInsert.message });
 
@@ -423,7 +725,10 @@ export default async function handler(req, res) {
 
   if (!requireAuth(req, res, ['admin'])) return;
 
-  if (['listar-conversas', 'historico', 'historico-bot', 'marcar-lida', 'enviar', 'enviar-lote', 'enviar-anexo'].includes(whatsappAction)) {
+  if ([
+    'listar-conversas', 'historico', 'historico-bot', 'marcar-lida', 'enviar', 'enviar-lote', 'enviar-anexo',
+    'enviar-localizacao', 'enviar-contacto', 'enviar-reacao', 'enviar-botoes',
+  ].includes(whatsappAction)) {
     return handlerWhatsApp(req, res, whatsappAction);
   }
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Bot, Search, Send, MessageSquareText, Users, X, Check, Paperclip } from 'lucide-react';
+import { Bot, Search, Send, MessageSquareText, Users, X, Check, Paperclip, MapPin, Contact, ListPlus, Reply, Smile } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { authFetch } from '../../utils/authFetch';
 
@@ -28,6 +28,14 @@ const TEMPLATES_RAPIDOS = [
 // do próprio WhatsApp, não os tokens FT/SCALE) — pedido explícito do Diego:
 // "aba com aparência do próprio WhatsApp".
 const CONTATO_BOT = { worker_id: '__bot__', nome: 'Trabalhador Virtual', tel: null };
+
+// Espelha CONTATOS_UTEIS do backend (api/salarios/exportar-sepa.js) só para
+// dar nome a mostrar -- o telefone real fica só do lado do servidor.
+const CONTATOS_UTEIS_FRONT = [
+  { id: 'mediador', nome: 'Mediador de Seguros' },
+];
+
+const EMOJIS_REACAO = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
 function formatarHora(iso) {
   if (!iso) return '';
@@ -66,6 +74,16 @@ export default function WhatsAppInbox() {
   const [confirmandoLote, setConfirmandoLote] = useState(false);
   const [enviandoLote, setEnviandoLote] = useState(false);
   const [resultadoLote, setResultadoLote] = useState('');
+  // Composer alternativo (barra de baixo) -- 'texto' é o normal, os outros
+  // substituem a linha de texto por um mini-formulário próprio.
+  const [modoComposer, setModoComposer] = useState('texto');
+  const [enviandoExtra, setEnviandoExtra] = useState(false);
+  const [respondendoA, setRespondendoA] = useState(null); // { id, texto, wamid }
+  const [mostrarReacaoPara, setMostrarReacaoPara] = useState(null); // id da mensagem
+  const [localNome, setLocalNome] = useState('');
+  const [localEndereco, setLocalEndereco] = useState('');
+  const [botoesCorpo, setBotoesCorpo] = useState('');
+  const [botoesLista, setBotoesLista] = useState(['', '', '']);
   const fimRef = useRef(null);
   const anexoInputRef = useRef(null);
   // O canal Realtime dos resumos só é criado uma vez (depende só de
@@ -139,6 +157,9 @@ export default function WhatsAppInbox() {
     setErro('');
     setMensagens([]);
     setCarregando(true);
+    setModoComposer('texto');
+    setRespondendoA(null);
+    setMostrarReacaoPara(null);
 
     (async () => {
       try {
@@ -222,7 +243,7 @@ export default function WhatsAppInbox() {
       const r = await authFetch('/api/whatsapp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'enviar', worker_id: contatoAtivo.worker_id, texto: corpo }),
+        body: JSON.stringify({ action: 'enviar', worker_id: contatoAtivo.worker_id, texto: corpo, reply_to: respondendoA?.wamid || undefined }),
       });
       const json = await r.json();
       if (!r.ok) throw new Error(json.error || `HTTP ${r.status}`);
@@ -231,6 +252,7 @@ export default function WhatsAppInbox() {
       // Adicionar os dois causava duplicado (ids diferentes, o dedupe do
       // Realtime não reconhecia como a mesma mensagem).
       setTexto('');
+      setRespondendoA(null);
     } catch (e) {
       setErro(e.message);
     } finally {
@@ -320,6 +342,111 @@ export default function WhatsAppInbox() {
       setResultadoLote(`Erro: ${e.message}`);
     } finally {
       setEnviandoLote(false);
+    }
+  }
+
+  function enviarLocalizacao() {
+    if (!navigator.geolocation) {
+      setErro('Este navegador não suporta partilha de localização.');
+      return;
+    }
+    setEnviandoExtra(true);
+    setErro('');
+    navigator.geolocation.getCurrentPosition(
+      async (posicao) => {
+        try {
+          const r = await authFetch('/api/whatsapp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'enviar-localizacao',
+              worker_id: contatoAtivo.worker_id,
+              latitude: posicao.coords.latitude,
+              longitude: posicao.coords.longitude,
+              nome: localNome.trim() || undefined,
+              endereco: localEndereco.trim() || undefined,
+            }),
+          });
+          const json = await r.json();
+          if (!r.ok) throw new Error(json.error || `HTTP ${r.status}`);
+          setModoComposer('texto');
+          setLocalNome('');
+          setLocalEndereco('');
+        } catch (e) {
+          setErro(e.message);
+        } finally {
+          setEnviandoExtra(false);
+        }
+      },
+      (erroGeo) => {
+        setErro(`Não consegui obter a localização: ${erroGeo.message}`);
+        setEnviandoExtra(false);
+      },
+    );
+  }
+
+  async function enviarContacto(contatoId) {
+    if (enviandoExtra) return;
+    setEnviandoExtra(true);
+    setErro('');
+    try {
+      const r = await authFetch('/api/whatsapp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'enviar-contacto', worker_id: contatoAtivo.worker_id, contato_id: contatoId }),
+      });
+      const json = await r.json();
+      if (!r.ok) throw new Error(json.error || `HTTP ${r.status}`);
+      setModoComposer('texto');
+    } catch (e) {
+      setErro(e.message);
+    } finally {
+      setEnviandoExtra(false);
+    }
+  }
+
+  async function enviarBotoesCompostos() {
+    const corpo = botoesCorpo.trim();
+    const lista = botoesLista.map(b => b.trim()).filter(Boolean).slice(0, 3);
+    if (!corpo || lista.length === 0 || enviandoExtra) return;
+    setEnviandoExtra(true);
+    setErro('');
+    try {
+      const r = await authFetch('/api/whatsapp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'enviar-botoes',
+          worker_id: contatoAtivo.worker_id,
+          corpo,
+          botoes: lista.map((title, i) => ({ id: `btn_${i}`, title })),
+        }),
+      });
+      const json = await r.json();
+      if (!r.ok) throw new Error(json.error || `HTTP ${r.status}`);
+      setModoComposer('texto');
+      setBotoesCorpo('');
+      setBotoesLista(['', '', '']);
+    } catch (e) {
+      setErro(e.message);
+    } finally {
+      setEnviandoExtra(false);
+    }
+  }
+
+  // Reação é um extra -- falha silenciosa (não vale a pena bloquear a UI
+  // por um emoji que não chegou).
+  async function reagir(mensagem, emoji) {
+    setMostrarReacaoPara(null);
+    if (!mensagem.wamid || !contatoAtivo.tel) return;
+    try {
+      await authFetch('/api/whatsapp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'enviar-reacao', wamid: mensagem.wamid, to: contatoAtivo.tel, emoji }),
+      });
+    } catch {
+      // silencioso, ver comentário acima
     }
   }
 
@@ -506,15 +633,48 @@ export default function WhatsAppInbox() {
           )}
           {mensagens.map(m => {
             const enviada = m.direcao === 'enviada';
+            // Responder/reagir só fazem sentido numa conversa com trabalhador
+            // (a do bot é só leitura) e só a mensagens que já têm wamid (as
+            // antigas, de antes desta funcionalidade, não têm).
+            const podeAgir = contatoAtivo.worker_id !== '__bot__' && !!m.wamid;
             return (
-              <div key={m.id} className={`flex ${enviada ? 'justify-end' : 'justify-start'}`}>
+              <div key={m.id} className={`flex items-center gap-1 group ${enviada ? 'justify-end' : 'justify-start'}`}>
+                {!enviada && podeAgir && (
+                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => setRespondendoA({ id: m.id, texto: m.texto, wamid: m.wamid })} title="Responder" className="w-6 h-6 rounded-full flex items-center justify-center" style={{ color: '#54656f' }}>
+                      <Reply size={13} />
+                    </button>
+                    <button onClick={() => setMostrarReacaoPara(mostrarReacaoPara === m.id ? null : m.id)} title="Reagir" className="w-6 h-6 rounded-full flex items-center justify-center" style={{ color: '#54656f' }}>
+                      <Smile size={13} />
+                    </button>
+                  </div>
+                )}
                 <div
-                  className="max-w-[65%] rounded-lg px-3 py-2 shadow-sm"
+                  className="max-w-[65%] rounded-lg px-3 py-2 shadow-sm relative"
                   style={{ backgroundColor: enviada ? '#d9fdd3' : '#ffffff' }}
                 >
+                  {mostrarReacaoPara === m.id && (
+                    <div
+                      className="absolute -top-10 left-0 flex gap-1 rounded-full px-2 py-1.5 shadow-md z-10"
+                      style={{ backgroundColor: '#ffffff', border: '1px solid #e9edef' }}
+                    >
+                      {EMOJIS_REACAO.map(e => (
+                        <button key={e} onClick={() => reagir(m, e)} className="text-base leading-none hover:scale-125 transition-transform">
+                          {e}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   <p className="text-[14.5px] whitespace-pre-wrap break-words" style={{ color: '#111b21' }}>{m.texto}</p>
                   <p className="text-right text-[11px] mt-0.5" style={{ color: '#667781' }}>{formatarHora(m.criado_em)}</p>
                 </div>
+                {enviada && podeAgir && (
+                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => setRespondendoA({ id: m.id, texto: m.texto, wamid: m.wamid })} title="Responder" className="w-6 h-6 rounded-full flex items-center justify-center" style={{ color: '#54656f' }}>
+                      <Reply size={13} />
+                    </button>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -528,53 +688,177 @@ export default function WhatsAppInbox() {
           </div>
         ) : (
           <div style={{ backgroundColor: '#f0f2f5' }}>
-            <div className="flex gap-2 px-4 pt-2.5 overflow-x-auto">
-              {TEMPLATES_RAPIDOS.map(t => (
-                <button
-                  key={t}
-                  onClick={() => setTexto(t)}
-                  className="shrink-0 text-xs rounded-full px-3 py-1.5 whitespace-nowrap transition-colors"
-                  style={{ backgroundColor: '#ffffff', color: '#00a884', border: '1px solid #00a884' }}
-                >
-                  {t}
+            {modoComposer === 'texto' && (
+              <>
+                <div className="flex gap-2 px-4 pt-2.5 overflow-x-auto">
+                  {TEMPLATES_RAPIDOS.map(t => (
+                    <button
+                      key={t}
+                      onClick={() => setTexto(t)}
+                      className="shrink-0 text-xs rounded-full px-3 py-1.5 whitespace-nowrap transition-colors"
+                      style={{ backgroundColor: '#ffffff', color: '#00a884', border: '1px solid #00a884' }}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+
+                {respondendoA && (
+                  <div className="flex items-center justify-between gap-2 mx-4 mt-2 px-3 py-2 rounded-lg" style={{ backgroundColor: '#ffffff', borderLeft: '3px solid #00a884' }}>
+                    <p className="text-xs truncate" style={{ color: '#667781' }}>A responder: {resumirTexto(respondendoA.texto, 60)}</p>
+                    <button onClick={() => setRespondendoA(null)} className="shrink-0">
+                      <X size={14} color="#667781" />
+                    </button>
+                  </div>
+                )}
+
+                <div className="flex items-center gap-1 px-4 py-3">
+                  <input
+                    ref={anexoInputRef}
+                    type="file"
+                    accept="image/*,audio/*,video/*,application/pdf,.doc,.docx,.xls,.xlsx"
+                    className="hidden"
+                    onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) enviarAnexo(f); }}
+                  />
+                  <button
+                    onClick={() => anexoInputRef.current?.click()}
+                    disabled={enviandoAnexo}
+                    title="Anexar ficheiro (imagem, áudio, vídeo ou documento, máx. 3MB)"
+                    className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 disabled:opacity-40 transition-opacity"
+                    style={{ color: '#54656f' }}
+                  >
+                    <Paperclip size={19} />
+                  </button>
+                  <button
+                    onClick={() => setModoComposer('localizacao')}
+                    title="Enviar localização"
+                    className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-opacity"
+                    style={{ color: '#54656f' }}
+                  >
+                    <MapPin size={18} />
+                  </button>
+                  <button
+                    onClick={() => setModoComposer('contacto')}
+                    title="Enviar cartão de contacto"
+                    className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-opacity"
+                    style={{ color: '#54656f' }}
+                  >
+                    <Contact size={18} />
+                  </button>
+                  <button
+                    onClick={() => setModoComposer('botoes')}
+                    title="Enviar pergunta com botões de resposta rápida"
+                    className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-opacity"
+                    style={{ color: '#54656f' }}
+                  >
+                    <ListPlus size={18} />
+                  </button>
+                  <input
+                    value={texto}
+                    onChange={e => setTexto(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviar(); } }}
+                    placeholder={enviandoAnexo ? 'A enviar anexo…' : 'Escreve uma mensagem'}
+                    className="flex-1 rounded-lg px-4 py-2.5 text-sm outline-none"
+                    style={{ backgroundColor: '#ffffff', color: '#111b21' }}
+                    disabled={enviando || enviandoAnexo}
+                  />
+                  <button
+                    onClick={enviar}
+                    disabled={enviando || enviandoAnexo || !texto.trim()}
+                    className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 disabled:opacity-40 transition-opacity"
+                    style={{ backgroundColor: '#00a884' }}
+                  >
+                    <Send size={17} color="#ffffff" />
+                  </button>
+                </div>
+              </>
+            )}
+
+            {modoComposer === 'localizacao' && (
+              <div className="mx-4 my-3 p-3 rounded-lg space-y-2" style={{ backgroundColor: '#ffffff' }}>
+                <p className="text-sm font-semibold" style={{ color: '#111b21' }}>Enviar localização atual</p>
+                <input
+                  value={localNome}
+                  onChange={e => setLocalNome(e.target.value)}
+                  placeholder="Nome do local (opcional)"
+                  className="w-full rounded-lg px-3 py-2 text-sm outline-none"
+                  style={{ backgroundColor: '#f0f2f5', color: '#111b21' }}
+                />
+                <input
+                  value={localEndereco}
+                  onChange={e => setLocalEndereco(e.target.value)}
+                  placeholder="Morada (opcional)"
+                  className="w-full rounded-lg px-3 py-2 text-sm outline-none"
+                  style={{ backgroundColor: '#f0f2f5', color: '#111b21' }}
+                />
+                <div className="flex gap-2">
+                  <button onClick={() => setModoComposer('texto')} disabled={enviandoExtra} className="flex-1 py-2 rounded-lg text-sm font-semibold disabled:opacity-40" style={{ backgroundColor: '#f0f2f5', color: '#111b21' }}>
+                    Cancelar
+                  </button>
+                  <button onClick={enviarLocalizacao} disabled={enviandoExtra} className="flex-1 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-40" style={{ backgroundColor: '#00a884' }}>
+                    {enviandoExtra ? 'A obter localização…' : 'Usar localização atual'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {modoComposer === 'contacto' && (
+              <div className="mx-4 my-3 p-3 rounded-lg space-y-2" style={{ backgroundColor: '#ffffff' }}>
+                <p className="text-sm font-semibold" style={{ color: '#111b21' }}>Enviar cartão de contacto</p>
+                {CONTATOS_UTEIS_FRONT.map(c => (
+                  <button
+                    key={c.id}
+                    onClick={() => enviarContacto(c.id)}
+                    disabled={enviandoExtra}
+                    className="w-full text-left py-2 px-3 rounded-lg text-sm disabled:opacity-40"
+                    style={{ backgroundColor: '#f0f2f5', color: '#111b21' }}
+                  >
+                    {c.nome}
+                  </button>
+                ))}
+                <button onClick={() => setModoComposer('texto')} disabled={enviandoExtra} className="w-full py-2 rounded-lg text-sm font-semibold disabled:opacity-40" style={{ backgroundColor: '#f0f2f5', color: '#111b21' }}>
+                  Cancelar
                 </button>
-              ))}
-            </div>
-            <div className="flex items-center gap-2 px-4 py-3">
-            <input
-              ref={anexoInputRef}
-              type="file"
-              accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx"
-              className="hidden"
-              onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) enviarAnexo(f); }}
-            />
-            <button
-              onClick={() => anexoInputRef.current?.click()}
-              disabled={enviandoAnexo}
-              title="Anexar ficheiro (imagem ou documento, máx. 3MB)"
-              className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 disabled:opacity-40 transition-opacity"
-              style={{ color: '#54656f' }}
-            >
-              <Paperclip size={19} />
-            </button>
-            <input
-              value={texto}
-              onChange={e => setTexto(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviar(); } }}
-              placeholder={enviandoAnexo ? 'A enviar anexo…' : 'Escreve uma mensagem'}
-              className="flex-1 rounded-lg px-4 py-2.5 text-sm outline-none"
-              style={{ backgroundColor: '#ffffff', color: '#111b21' }}
-              disabled={enviando || enviandoAnexo}
-            />
-            <button
-              onClick={enviar}
-              disabled={enviando || enviandoAnexo || !texto.trim()}
-              className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 disabled:opacity-40 transition-opacity"
-              style={{ backgroundColor: '#00a884' }}
-            >
-              <Send size={17} color="#ffffff" />
-            </button>
-            </div>
+              </div>
+            )}
+
+            {modoComposer === 'botoes' && (
+              <div className="mx-4 my-3 p-3 rounded-lg space-y-2" style={{ backgroundColor: '#ffffff' }}>
+                <p className="text-sm font-semibold" style={{ color: '#111b21' }}>Enviar pergunta com botões</p>
+                <textarea
+                  value={botoesCorpo}
+                  onChange={e => setBotoesCorpo(e.target.value)}
+                  placeholder="Pergunta…"
+                  rows={2}
+                  className="w-full rounded-lg px-3 py-2 text-sm outline-none resize-none"
+                  style={{ backgroundColor: '#f0f2f5', color: '#111b21' }}
+                />
+                {botoesLista.map((valor, i) => (
+                  <input
+                    key={i}
+                    value={valor}
+                    onChange={e => setBotoesLista(prev => prev.map((v, idx) => (idx === i ? e.target.value : v)))}
+                    placeholder={`Botão ${i + 1}${i === 0 ? '' : ' (opcional)'}`}
+                    maxLength={20}
+                    className="w-full rounded-lg px-3 py-2 text-sm outline-none"
+                    style={{ backgroundColor: '#f0f2f5', color: '#111b21' }}
+                  />
+                ))}
+                <div className="flex gap-2">
+                  <button onClick={() => setModoComposer('texto')} disabled={enviandoExtra} className="flex-1 py-2 rounded-lg text-sm font-semibold disabled:opacity-40" style={{ backgroundColor: '#f0f2f5', color: '#111b21' }}>
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={enviarBotoesCompostos}
+                    disabled={enviandoExtra || !botoesCorpo.trim() || !botoesLista[0].trim()}
+                    className="flex-1 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-40"
+                    style={{ backgroundColor: '#00a884' }}
+                  >
+                    {enviandoExtra ? 'A enviar…' : 'Enviar'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
