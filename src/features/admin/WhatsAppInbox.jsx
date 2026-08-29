@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Bot, Search, Send, MessageSquareText, Users, X, Check, Paperclip, MapPin, Contact, ListPlus, Reply, Smile, ArrowLeft } from 'lucide-react';
+import { Bot, Search, Send, MessageSquareText, Users, X, Check, Paperclip, MapPin, Contact, ListPlus, Reply, Smile, ArrowLeft, Plus } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { authFetch } from '../../utils/authFetch';
 
@@ -90,6 +90,10 @@ export default function WhatsAppInbox() {
   // de voltar regressa à lista. Em desktop (md:) esta flag é ignorada, os
   // dois painéis ficam sempre visíveis lado a lado.
   const [verConversaMobile, setVerConversaMobile] = useState(false);
+  // Menu "+" (localização/contacto/botões) do compositor -- substitui a
+  // fiada de ícones + a linha de texto extra que ficava apertada em ecrãs
+  // estreitos por um único botão que abre um popup, como no WhatsApp real.
+  const [mostrarMenuExtra, setMostrarMenuExtra] = useState(false);
   const fimRef = useRef(null);
   const anexoInputRef = useRef(null);
   // O canal Realtime dos resumos só é criado uma vez (depende só de
@@ -166,6 +170,7 @@ export default function WhatsAppInbox() {
     setModoComposer('texto');
     setRespondendoA(null);
     setMostrarReacaoPara(null);
+    setMostrarMenuExtra(false);
 
     (async () => {
       try {
@@ -733,72 +738,81 @@ export default function WhatsAppInbox() {
                   </div>
                 )}
 
-                <div className="flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-4 py-3">
-                  <input
-                    ref={anexoInputRef}
-                    type="file"
-                    accept="image/*,audio/*,video/*,application/pdf,.doc,.docx,.xls,.xlsx"
-                    className="hidden"
-                    onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) enviarAnexo(f); }}
-                  />
-                  <button
-                    onClick={() => anexoInputRef.current?.click()}
-                    disabled={enviandoAnexo}
-                    title="Anexar ficheiro (imagem, áudio, vídeo ou documento, máx. 3MB)"
-                    className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center shrink-0 disabled:opacity-40 transition-opacity"
-                    style={{ color: '#54656f' }}
-                  >
-                    <Paperclip size={18} />
-                  </button>
-                  <button
-                    onClick={() => setModoComposer('localizacao')}
-                    title="Enviar localização"
-                    className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center shrink-0 transition-opacity"
-                    style={{ color: '#54656f' }}
-                  >
-                    <MapPin size={17} />
-                  </button>
-                  <button
-                    onClick={() => setModoComposer('contacto')}
-                    title="Enviar cartão de contacto"
-                    className="hidden sm:flex w-9 h-9 rounded-full items-center justify-center shrink-0 transition-opacity"
-                    style={{ color: '#54656f' }}
-                  >
-                    <Contact size={18} />
-                  </button>
-                  <button
-                    onClick={() => setModoComposer('botoes')}
-                    title="Enviar pergunta com botões de resposta rápida"
-                    className="hidden sm:flex w-9 h-9 rounded-full items-center justify-center shrink-0 transition-opacity"
-                    style={{ color: '#54656f' }}
-                  >
-                    <ListPlus size={18} />
-                  </button>
-                  <input
-                    value={texto}
-                    onChange={e => setTexto(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviar(); } }}
-                    placeholder={enviandoAnexo ? 'A enviar anexo…' : 'Escreve uma mensagem'}
-                    className="flex-1 min-w-0 rounded-lg px-3 sm:px-4 py-2.5 text-sm outline-none"
-                    style={{ backgroundColor: '#ffffff', color: '#111b21' }}
-                    disabled={enviando || enviandoAnexo}
-                  />
-                  <button
-                    onClick={enviar}
-                    disabled={enviando || enviandoAnexo || !texto.trim()}
-                    className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0 disabled:opacity-40 transition-opacity"
-                    style={{ backgroundColor: '#00a884' }}
-                  >
-                    <Send size={16} color="#ffffff" />
-                  </button>
-                </div>
-                <div className="flex sm:hidden items-center gap-3 px-3 pb-2 -mt-1">
-                  <button onClick={() => setModoComposer('contacto')} className="flex items-center gap-1 text-xs" style={{ color: '#54656f' }}>
-                    <Contact size={14} /> Contacto
-                  </button>
-                  <button onClick={() => setModoComposer('botoes')} className="flex items-center gap-1 text-xs" style={{ color: '#54656f' }}>
-                    <ListPlus size={14} /> Botões
-                  </button>
+                <div className="relative px-1.5 sm:px-4">
+                  {mostrarMenuExtra && (
+                    <div
+                      className="absolute bottom-full left-1.5 sm:left-4 mb-2 rounded-xl shadow-lg overflow-hidden z-10"
+                      style={{ backgroundColor: '#ffffff', border: '1px solid #e9edef', minWidth: 200 }}
+                    >
+                      <button
+                        onClick={() => { setMostrarMenuExtra(false); setModoComposer('localizacao'); }}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-sm text-left transition-colors hover:bg-black/[0.03]"
+                        style={{ color: '#111b21' }}
+                      >
+                        <span className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: '#eef7f4', color: '#00a884' }}><MapPin size={16} /></span>
+                        Localização
+                      </button>
+                      <button
+                        onClick={() => { setMostrarMenuExtra(false); setModoComposer('contacto'); }}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-sm text-left transition-colors hover:bg-black/[0.03]"
+                        style={{ color: '#111b21' }}
+                      >
+                        <span className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: '#eef7f4', color: '#00a884' }}><Contact size={16} /></span>
+                        Contacto
+                      </button>
+                      <button
+                        onClick={() => { setMostrarMenuExtra(false); setModoComposer('botoes'); }}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-sm text-left transition-colors hover:bg-black/[0.03]"
+                        style={{ color: '#111b21' }}
+                      >
+                        <span className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: '#eef7f4', color: '#00a884' }}><ListPlus size={16} /></span>
+                        Botões de resposta
+                      </button>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-0.5 sm:gap-1 py-3">
+                    <input
+                      ref={anexoInputRef}
+                      type="file"
+                      accept="image/*,audio/*,video/*,application/pdf,.doc,.docx,.xls,.xlsx"
+                      className="hidden"
+                      onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) enviarAnexo(f); }}
+                    />
+                    <button
+                      onClick={() => anexoInputRef.current?.click()}
+                      disabled={enviandoAnexo}
+                      title="Anexar ficheiro (imagem, áudio, vídeo ou documento, máx. 3MB)"
+                      className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 disabled:opacity-40 transition-opacity"
+                      style={{ color: '#54656f' }}
+                    >
+                      <Paperclip size={19} />
+                    </button>
+                    <button
+                      onClick={() => setMostrarMenuExtra(v => !v)}
+                      title="Mais opções (localização, contacto, botões)"
+                      className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-colors"
+                      style={{ backgroundColor: mostrarMenuExtra ? '#e7f8f3' : 'transparent', color: mostrarMenuExtra ? '#00a884' : '#54656f' }}
+                    >
+                      <Plus size={19} />
+                    </button>
+                    <input
+                      value={texto}
+                      onChange={e => setTexto(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviar(); } }}
+                      placeholder={enviandoAnexo ? 'A enviar anexo…' : 'Escreve uma mensagem'}
+                      className="flex-1 min-w-0 rounded-lg px-3 sm:px-4 py-2.5 text-sm outline-none"
+                      style={{ backgroundColor: '#ffffff', color: '#111b21' }}
+                      disabled={enviando || enviandoAnexo}
+                    />
+                    <button
+                      onClick={enviar}
+                      disabled={enviando || enviandoAnexo || !texto.trim()}
+                      className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 disabled:opacity-40 transition-opacity"
+                      style={{ backgroundColor: '#00a884' }}
+                    >
+                      <Send size={17} color="#ffffff" />
+                    </button>
+                  </div>
                 </div>
               </>
             )}
