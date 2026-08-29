@@ -92,6 +92,25 @@ export default function WhatsAppInbox() {
     return () => { supabase.removeChannel(canal); };
   }, [supabase, contatoAtivo]);
 
+  // A conversa do bot vive na BD do conselheiro (projeto Supabase
+  // separado) -- sem ligação Realtime direta do browser a esse projeto,
+  // por isso faz polling enquanto este contacto estiver ativo, em vez de
+  // só carregar uma vez ao entrar (que fazia parecer "não recebo nada").
+  useEffect(() => {
+    if (contatoAtivo.worker_id !== '__bot__') return;
+    const intervalo = setInterval(async () => {
+      try {
+        const r = await authFetch('/api/whatsapp?action=historico-bot');
+        const json = await r.json();
+        if (r.ok) setMensagens(json.mensagens || []);
+      } catch {
+        // silencioso -- o proximo ciclo tenta de novo, nao vale a pena
+        // mostrar erro por uma falha isolada de polling
+      }
+    }, 4000);
+    return () => clearInterval(intervalo);
+  }, [contatoAtivo]);
+
   useEffect(() => {
     fimRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [mensagens]);
