@@ -53,3 +53,23 @@ export function listCertificacoes({ workerId } = {}) {
   const qs = params.toString();
   return authFetch(`/api/formacao/certificacoes${qs ? `?${qs}` : ''}`).then(json);
 }
+
+export function listRequisitosProfissao() {
+  return authFetch('/api/formacao/requisitos').then(json);
+}
+
+export function setRequisitoProfissao(profissaoCnp, formacaoId, ativo) {
+  return authFetch('/api/formacao/requisitos-set', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ profissao_cnp: profissaoCnp, formacao_id: formacaoId, ativo }),
+  }).then(json);
+}
+
+export function autoAtribuirPorProfissao(workerId, profissaoCnp) {
+  return authFetch('/api/formacao/auto-atribuir', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ worker_id: workerId, profissao_cnp: profissaoCnp }),
+  }).then(json);
+}

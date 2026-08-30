@@ -13,7 +13,7 @@ import { calculateDuration } from '../../src/utils/formatUtils.js';
 // reconhecia (nenhum sub-path respondia) — o padrão de rewrite é o que já
 // está validado a funcionar no resto do projeto.
 
-const CATEGORIAS_VALIDAS = ['soldadura', 'caldeiraria', 'certificacao_formal', 'hst', 'equipamentos', 'gwo', 'onboarding'];
+const CATEGORIAS_VALIDAS = ['soldadura', 'caldeiraria', 'certificacao_formal', 'hst', 'equipamentos', 'gwo', 'onboarding', 'tecnico'];
 const CATEGORIAS_ENTIDADE_EXTERNA = ['certificacao_formal', 'gwo'];
 const CATEGORIAS_EXIGEM_VALIDADE = ['certificacao_formal', 'gwo'];
 const VALIDADE_PADRAO_MESES = { gwo: 24 };
@@ -551,6 +551,96 @@ async function handleCertificacoes(req, res) {
   return res.status(200).json({ certificacoes: data || [] });
 }
 
+async function handleRequisitos(req, res) {
+  if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+  if (!requireAuth(req, res, ['admin'])) return;
+
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from('formacao_requisitos_profissao')
+    .select('id, profissao_cnp, formacao_id, ativo, formacoes_internas(tipo_formacao, categoria, formato)')
+    .order('profissao_cnp');
+
+  if (error) return res.status(500).json({ error: error.message });
+  return res.status(200).json({ requisitos: data || [] });
+}
+
+async function handleRequisitosSet(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (!requireAuth(req, res, ['admin'])) return;
+
+  const { profissao_cnp, formacao_id, ativo } = req.body || {};
+  if (!profissao_cnp?.trim() || !formacao_id || typeof ativo !== 'boolean') {
+    return res.status(400).json({ error: 'Campos obrigatórios: profissao_cnp, formacao_id, ativo.' });
+  }
+
+  const supabase = getSupabase();
+
+  const { data: formacao, error: fetchError } = await supabase
+    .from('formacoes_internas')
+    .select('id, formato')
+    .eq('id', formacao_id)
+    .single();
+
+  if (fetchError || !formacao) {
+    return res.status(404).json({ error: 'Ação não encontrada.' });
+  }
+  // Atribuição automática só cobre e-learning — ver contexto no topo do
+  // ficheiro de migração formacao_requisitos_profissao.
+  if (formacao.formato !== 'e-learning') {
+    return res.status(400).json({ error: 'Só ações e-learning podem ser marcadas como requisito automático.' });
+  }
+
+  const { error } = await supabase
+    .from('formacao_requisitos_profissao')
+    .upsert({ profissao_cnp: profissao_cnp.trim(), formacao_id, ativo }, { onConflict: 'profissao_cnp,formacao_id' });
+
+  if (error) return res.status(500).json({ error: error.message });
+  return res.status(200).json({ ok: true });
+}
+
+async function handleAutoAtribuir(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (!requireAuth(req, res, ['admin'])) return;
+
+  const { worker_id, profissao_cnp } = req.body || {};
+  if (!worker_id || !profissao_cnp?.trim()) {
+    return res.status(400).json({ error: 'Campos obrigatórios: worker_id, profissao_cnp.' });
+  }
+
+  const supabase = getSupabase();
+
+  const { data: requisitos, error: fetchError } = await supabase
+    .from('formacao_requisitos_profissao')
+    .select('formacao_id, formacoes_internas(categoria, data_fim)')
+    .eq('profissao_cnp', profissao_cnp.trim())
+    .eq('ativo', true);
+
+  if (fetchError) return res.status(500).json({ error: fetchError.message });
+  if (!requisitos?.length) return res.status(200).json({ atribuidas: 0, ignoradas: 0 });
+
+  let atribuidas = 0;
+  let ignoradas = 0;
+  for (const requisito of requisitos) {
+    const formacao = requisito.formacoes_internas;
+    const exigeValidade = CATEGORIAS_EXIGEM_VALIDADE.includes(formacao?.categoria);
+    const validadeDefaultMeses = VALIDADE_PADRAO_MESES[formacao?.categoria];
+    const dataValidade = exigeValidade && validadeDefaultMeses ? addMeses(formacao.data_fim, validadeDefaultMeses) : null;
+
+    const { error } = await supabase
+      .from('formacao_participantes')
+      .insert({ formacao_id: requisito.formacao_id, worker_id, data_validade: dataValidade });
+
+    if (error) {
+      if (error.code === '23505') { ignoradas++; continue; }
+      return res.status(500).json({ error: error.message });
+    }
+    atribuidas++;
+  }
+
+  return res.status(200).json({ atribuidas, ignoradas });
+}
+
 async function handleHorasPorTrabalhador(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
   if (!requireAuth(req, res, ['admin'])) return;
@@ -790,6 +880,9 @@ const ACTIONS = {
   'responder-questionario': handleResponderQuestionario,
   'conteudo': handleConteudo,
   'certificacoes': handleCertificacoes,
+  'requisitos': handleRequisitos,
+  'requisitos-set': handleRequisitosSet,
+  'auto-atribuir': handleAutoAtribuir,
   'horas-por-trabalhador': handleHorasPorTrabalhador,
   'push-send': handlePushSend,
   'lembrete-validacao': handleLembreteValidacao,

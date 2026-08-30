@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { useApp } from '../../../context/AppContext';
 import { formatPersonName } from '../../../utils/textUtils';
+import { autoAtribuirPorProfissao } from '../formacao-interna/formacaoApi';
 
 const TeamContext = createContext();
 
@@ -78,6 +79,7 @@ export const TeamProvider = ({ children }) => {
 
   const handleSaveWorker = useCallback(async () => {
     if (!workerForm.name) return alert('Nome é obrigatório');
+    const isNovoTrabalhador = !workerForm.id;
     const id = workerForm.id || `worker_${Date.now()}`;
     // D-03: Se dataFim existe, automaticamente definir como inativo
     // D-06: Salvar histórico se valor hora mudou
@@ -120,6 +122,15 @@ export const TeamProvider = ({ children }) => {
       limited_entry_mode: workerForm.limited_entry_mode || false
     };
     await saveToDb('workers', id, workerToSave);
+    if (isNovoTrabalhador && workerToSave.profissao_cnp) {
+      // Atribuição de formação é um efeito secundário — nunca deve bloquear
+      // nem falhar visivelmente a criação do trabalhador, que já foi gravada.
+      try {
+        await autoAtribuirPorProfissao(id, workerToSave.profissao_cnp);
+      } catch (e) {
+        console.warn('Falha ao atribuir formações automáticas por profissão:', e.message);
+      }
+    }
     setIsAddingInTab(false);
     setWorkerForm(INITIAL_WORKER_FORM);
   }, [workerForm, saveToDb, workers]);

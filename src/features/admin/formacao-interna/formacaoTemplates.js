@@ -12,6 +12,7 @@ export const CATEGORIAS = [
   { id: 'equipamentos',         label: 'Equipamentos' },
   { id: 'gwo',                  label: 'GWO — Global Wind Organisation' },
   { id: 'onboarding',           label: 'Onboarding' },
+  { id: 'tecnico',              label: 'Técnico' },
 ];
 
 // Categorias em que a formação é sempre dada por entidade externa
