@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Bot, Search, Send, MessageSquareText, Users, X, Check, CheckCheck, Paperclip, MapPin, Contact, ListPlus, Reply, Smile, ArrowLeft, Plus, FileText, CornerUpLeft, Mail, Briefcase, Phone } from 'lucide-react';
+import { Bot, Search, Send, MessageSquareText, Users, X, Check, CheckCheck, Paperclip, MapPin, Contact, ListPlus, Reply, Smile, ArrowLeft, Plus, FileText, CornerUpLeft, Mail, Briefcase, Phone, Clock, CalendarX, Pencil, AlertTriangle } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { authFetch } from '../../utils/authFetch';
 
@@ -42,6 +42,11 @@ const EMOJIS_REACAO = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 // sentido repetir por baixo do próprio anexo já mostrado.
 const LEGENDAS_AUTOMATICAS_ANEXO = new Set(['🖼️ Imagem', '🎤 Áudio', '🎥 Vídeo', '📎 Documento']);
 
+function formatarMesAno(mesStr) {
+  const [ano, mes] = mesStr.split('-');
+  return new Date(Number(ano), Number(mes) - 1, 1).toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' });
+}
+
 function formatarHora(iso) {
   if (!iso) return '';
   return new Date(iso).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
@@ -60,7 +65,7 @@ function resumirTexto(texto, max = 42) {
 }
 
 export default function WhatsAppInbox() {
-  const { workers, supabase } = useApp();
+  const { workers, supabase, logs, approvals, absenceRequests, workerChangeRequests, documents } = useApp();
   const [contatoAtivo, setContatoAtivo] = useState(CONTATO_BOT);
   const [busca, setBusca] = useState('');
   const [mensagens, setMensagens] = useState([]);
@@ -102,6 +107,11 @@ export default function WhatsAppInbox() {
   // Ecrã de "informações do contacto" -- abre ao tocar no nome/avatar no
   // topo da conversa, ao estilo do próprio WhatsApp (ver perfil de negócio).
   const [mostrarInfoContacto, setMostrarInfoContacto] = useState(false);
+  // Contagem de docs em worker_documents (a outra tabela de documentos,
+  // gerados por template) -- só isto precisa de pedido à parte, o resto
+  // das pendências já vem de arrays que a app inteira já tem carregados
+  // (workers/logs/approvals/absenceRequests/workerChangeRequests/documents).
+  const [docsGeradosPendentes, setDocsGeradosPendentes] = useState(0);
   const fimRef = useRef(null);
   const anexoInputRef = useRef(null);
   // O canal Realtime dos resumos só é criado uma vez (depende só de
@@ -172,6 +182,41 @@ export default function WhatsAppInbox() {
     return [CONTATO_BOT, ...filtrados];
   }, [workers, busca, resumos]);
 
+  // Pendências do trabalhador ativo -- tudo derivado de arrays que a app já
+  // tem carregados globalmente (mesmas tabelas/condições "pendente" usadas
+  // em AbsenceRequestsPanel, ChangeRequestsPanel e WorkerValidationPanel),
+  // só computado aqui, sem pedidos novos. Casing das colunas não é
+  // consistente entre tabelas (worker_id vs workerId) -- reflete o schema
+  // real, não é erro de escrita.
+  const pendencias = useMemo(() => {
+    const id = contatoAtivo.worker_id;
+    if (id === '__bot__') return null;
+    const faltas = (absenceRequests || []).filter(a => a.worker_id === id && a.status === 'pending').length;
+    const alteracoes = (workerChangeRequests || []).filter(r => r.worker_id === id && r.status === 'pending').length;
+    const docsManual = (documents || []).filter(d => d.workerId === id && d.status !== 'Assinado').length;
+    const mesAtual = new Date().toISOString().slice(0, 7);
+    const temLogsMesAtual = (logs || []).some(l => l.workerId === id && l.date?.slice(0, 7) === mesAtual);
+    const aprovacaoMesAtual = (approvals || []).find(a => a.workerId === id && a.month === mesAtual);
+    const horasPorValidar = temLogsMesAtual && !aprovacaoMesAtual;
+    return { faltas, alteracoes, horasPorValidar, mesAtual, documentos: docsManual + docsGeradosPendentes };
+  }, [contatoAtivo.worker_id, absenceRequests, workerChangeRequests, documents, logs, approvals, docsGeradosPendentes]);
+
+  // A outra tabela de documentos (worker_documents, gerados por template)
+  // não vive no contexto global da app -- só aqui, sob pedido, quando o
+  // ecrã de dados do contacto abre (não vale a pena pedir sempre que o
+  // contacto muda, é uma secção que se vê pouco).
+  useEffect(() => {
+    if (!mostrarInfoContacto || !supabase || contatoAtivo.worker_id === '__bot__') return;
+    let cancelado = false;
+    supabase
+      .from('worker_documents')
+      .select('id', { count: 'exact', head: true })
+      .eq('worker_id', contatoAtivo.worker_id)
+      .in('status', ['pending', 'viewed'])
+      .then(({ count }) => { if (!cancelado) setDocsGeradosPendentes(count || 0); });
+    return () => { cancelado = true; };
+  }, [mostrarInfoContacto, supabase, contatoAtivo.worker_id]);
+
   // Carrega o histórico ao trocar de contacto.
   useEffect(() => {
     let cancelado = false;
@@ -183,6 +228,7 @@ export default function WhatsAppInbox() {
     setMostrarReacaoPara(null);
     setMostrarMenuExtra(false);
     setMostrarInfoContacto(false);
+    setDocsGeradosPendentes(0);
 
     (async () => {
       try {
@@ -781,6 +827,50 @@ export default function WhatsAppInbox() {
                   <span className="w-5 h-5 rounded-full shrink-0" style={{ backgroundColor: contatoAtivo.is_active ? '#00a884' : '#8696a0' }} />
                   <p className="text-[15px]" style={{ color: '#111b21' }}>{contatoAtivo.is_active ? 'Trabalhador ativo' : 'Trabalhador inativo'}</p>
                 </div>
+              </div>
+              <div className="pt-2" style={{ borderTop: '1px solid #e9edef' }}>
+                <p className="px-6 pt-1 pb-2 text-xs font-semibold uppercase tracking-wide flex items-center gap-1.5" style={{ color: '#667781' }}>
+                  <AlertTriangle size={13} /> Pendências
+                </p>
+                {pendencias && (pendencias.documentos > 0 || pendencias.horasPorValidar || pendencias.faltas > 0 || pendencias.alteracoes > 0) ? (
+                  <>
+                    {pendencias.documentos > 0 && (
+                      <div className="flex items-center gap-4 px-6 py-3">
+                        <FileText size={20} color="#d97706" />
+                        <p className="text-[15px]" style={{ color: '#111b21' }}>
+                          {pendencias.documentos} documento{pendencias.documentos > 1 ? 's' : ''} por assinar
+                        </p>
+                      </div>
+                    )}
+                    {pendencias.horasPorValidar && (
+                      <div className="flex items-center gap-4 px-6 py-3">
+                        <Clock size={20} color="#d97706" />
+                        <p className="text-[15px]" style={{ color: '#111b21' }}>Horas de {formatarMesAno(pendencias.mesAtual)} por validar</p>
+                      </div>
+                    )}
+                    {pendencias.faltas > 0 && (
+                      <div className="flex items-center gap-4 px-6 py-3">
+                        <CalendarX size={20} color="#d97706" />
+                        <p className="text-[15px]" style={{ color: '#111b21' }}>
+                          {pendencias.faltas} pedido{pendencias.faltas > 1 ? 's' : ''} de falta pendente{pendencias.faltas > 1 ? 's' : ''}
+                        </p>
+                      </div>
+                    )}
+                    {pendencias.alteracoes > 0 && (
+                      <div className="flex items-center gap-4 px-6 py-3">
+                        <Pencil size={20} color="#d97706" />
+                        <p className="text-[15px]" style={{ color: '#111b21' }}>
+                          {pendencias.alteracoes} pedido{pendencias.alteracoes > 1 ? 's' : ''} de alteração de dados
+                        </p>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="flex items-center gap-4 px-6 py-3">
+                    <Check size={20} color="#00a884" />
+                    <p className="text-[15px]" style={{ color: '#667781' }}>Sem pendências</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
