@@ -341,3 +341,13 @@ code {
   scrollbar-width: thin;
   scrollbar-color: rgba(235, 141, 0, 0.6) transparent;
 }
+
+/* Scrollbar invisível -- continua a fazer scroll normalmente, só não mostra
+   a barra em cima, ao estilo do WhatsApp (aba de WhatsApp do admin). */
+.scroll-oculto::-webkit-scrollbar {
+  display: none;
+}
+.scroll-oculto {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}

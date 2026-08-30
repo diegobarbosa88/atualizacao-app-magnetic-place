@@ -504,7 +504,7 @@ export default function WhatsAppInbox() {
             Toca nos trabalhadores para escolher a quem mandar a mesma mensagem.
           </p>
         )}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto scroll-oculto">
           {contatos.map(c => {
             const ativo = c.worker_id === contatoAtivo.worker_id;
             const isBot = c.worker_id === '__bot__';
@@ -654,7 +654,28 @@ export default function WhatsAppInbox() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-3 sm:px-6 py-4 space-y-1.5">
+        <div className="flex-1 overflow-y-auto scroll-oculto relative z-0 px-3 sm:px-6 py-4 space-y-1.5">
+          {/* Textura de fundo ao estilo do papel de parede do WhatsApp real
+              (padrão repetido) -- com o logótipo da Magnetic em vez dos
+              ícones do WhatsApp. Preto e branco + opacidade baixa para ler
+              como marca de água, não como imagem a competir com as
+              mensagens. Atrás de tudo (z-index negativo) e sem interceptar
+              cliques -- precisa que ESTE contentor tenha o seu próprio
+              z-index (não só position:relative) para criar um novo
+              contexto de empilhamento, senão o -1 escapa para trás de
+              ancestrais muito mais acima (ex.: o cartão branco da página)
+              e fica invisível.  */}
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{
+              backgroundImage: 'url(/logo-magnetic.png)',
+              backgroundSize: '160px 160px',
+              backgroundRepeat: 'repeat',
+              opacity: 0.05,
+              filter: 'grayscale(1) contrast(1.3) brightness(0.55)',
+              zIndex: -1,
+            }}
+          />
           {carregando && <p className="text-center text-sm" style={{ color: '#667781' }}>A carregar…</p>}
           {erro && <p className="text-center text-sm text-rose-600 bg-rose-50 rounded-lg py-2 px-3 break-words">{erro}</p>}
           {!carregando && !erro && mensagens.length === 0 && (
@@ -771,7 +792,7 @@ export default function WhatsAppInbox() {
           <div style={{ backgroundColor: '#f0f2f5' }}>
             {modoComposer === 'texto' && (
               <>
-                <div className="flex gap-2 px-2 sm:px-4 pt-2.5 overflow-x-auto">
+                <div className="flex gap-2 px-2 sm:px-4 pt-2.5 overflow-x-auto scroll-oculto">
                   {TEMPLATES_RAPIDOS.map(t => (
                     <button
                       key={t}
@@ -825,7 +846,7 @@ export default function WhatsAppInbox() {
                       </button>
                     </div>
                   )}
-                  <div className="flex items-center gap-0.5 sm:gap-1 py-3">
+                  <div className="flex items-end gap-2 py-3">
                     <input
                       ref={anexoInputRef}
                       type="file"
@@ -833,32 +854,36 @@ export default function WhatsAppInbox() {
                       className="hidden"
                       onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) enviarAnexo(f); }}
                     />
-                    <button
-                      onClick={() => anexoInputRef.current?.click()}
-                      disabled={enviandoAnexo}
-                      title="Anexar ficheiro (imagem, áudio, vídeo ou documento, máx. 3MB)"
-                      className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 disabled:opacity-40 transition-opacity"
-                      style={{ color: '#54656f' }}
-                    >
-                      <Paperclip size={19} />
-                    </button>
-                    <button
-                      onClick={() => setMostrarMenuExtra(v => !v)}
-                      title="Mais opções (localização, contacto, botões)"
-                      className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-colors"
-                      style={{ backgroundColor: mostrarMenuExtra ? '#e7f8f3' : 'transparent', color: mostrarMenuExtra ? '#00a884' : '#54656f' }}
-                    >
-                      <Plus size={19} />
-                    </button>
-                    <input
-                      value={texto}
-                      onChange={e => setTexto(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviar(); } }}
-                      placeholder={enviandoAnexo ? 'A enviar anexo…' : 'Escreve uma mensagem'}
-                      className="flex-1 min-w-0 rounded-lg px-3 sm:px-4 py-2.5 text-sm outline-none"
-                      style={{ backgroundColor: '#ffffff', color: '#111b21' }}
-                      disabled={enviando || enviandoAnexo}
-                    />
+                    {/* Pill única, ao estilo do WhatsApp real -- "+" e agrafo
+                        vivem DENTRO do campo, não como botões soltos ao lado. */}
+                    <div className="flex-1 min-w-0 flex items-center rounded-full pl-1 pr-1" style={{ backgroundColor: '#ffffff' }}>
+                      <button
+                        onClick={() => setMostrarMenuExtra(v => !v)}
+                        title="Mais opções (localização, contacto, botões)"
+                        className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-colors"
+                        style={{ backgroundColor: mostrarMenuExtra ? '#e7f8f3' : 'transparent', color: mostrarMenuExtra ? '#00a884' : '#54656f' }}
+                      >
+                        <Plus size={19} />
+                      </button>
+                      <input
+                        value={texto}
+                        onChange={e => setTexto(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviar(); } }}
+                        placeholder={enviandoAnexo ? 'A enviar anexo…' : 'Escreve uma mensagem'}
+                        className="flex-1 min-w-0 bg-transparent outline-none text-sm py-2.5 px-1"
+                        style={{ color: '#111b21' }}
+                        disabled={enviando || enviandoAnexo}
+                      />
+                      <button
+                        onClick={() => anexoInputRef.current?.click()}
+                        disabled={enviandoAnexo}
+                        title="Anexar ficheiro (imagem, áudio, vídeo ou documento, máx. 3MB)"
+                        className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 disabled:opacity-40 transition-opacity"
+                        style={{ color: '#54656f' }}
+                      >
+                        <Paperclip size={18} />
+                      </button>
+                    </div>
                     <button
                       onClick={enviar}
                       disabled={enviando || enviandoAnexo || !texto.trim()}
