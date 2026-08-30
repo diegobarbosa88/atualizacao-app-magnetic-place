@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Bot, Search, Send, MessageSquareText, Users, X, Check, CheckCheck, Paperclip, MapPin, Contact, ListPlus, Reply, Smile, ArrowLeft, Plus, FileText, CornerUpLeft } from 'lucide-react';
+import { Bot, Search, Send, MessageSquareText, Users, X, Check, CheckCheck, Paperclip, MapPin, Contact, ListPlus, Reply, Smile, ArrowLeft, Plus, FileText, CornerUpLeft, Mail, Briefcase, Phone } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { authFetch } from '../../utils/authFetch';
 
@@ -99,6 +99,9 @@ export default function WhatsAppInbox() {
   // fiada de ícones + a linha de texto extra que ficava apertada em ecrãs
   // estreitos por um único botão que abre um popup, como no WhatsApp real.
   const [mostrarMenuExtra, setMostrarMenuExtra] = useState(false);
+  // Ecrã de "informações do contacto" -- abre ao tocar no nome/avatar no
+  // topo da conversa, ao estilo do próprio WhatsApp (ver perfil de negócio).
+  const [mostrarInfoContacto, setMostrarInfoContacto] = useState(false);
   const fimRef = useRef(null);
   const anexoInputRef = useRef(null);
   // O canal Realtime dos resumos só é criado uma vez (depende só de
@@ -151,7 +154,10 @@ export default function WhatsAppInbox() {
   const contatos = useMemo(() => {
     const trabalhadores = (workers || [])
       .filter(w => w.is_active && w.tel)
-      .map(w => ({ worker_id: w.id, nome: w.name, tel: w.tel, resumo: resumos[w.id] || null }))
+      .map(w => ({
+        worker_id: w.id, nome: w.name, tel: w.tel, resumo: resumos[w.id] || null,
+        profissao: w.profissao || null, email: w.email || null, address: w.address || null, is_active: w.is_active,
+      }))
       .sort((a, b) => {
         // Quem tem conversa mais recente sobe ao topo; sem conversa nenhuma
         // fica por ordem alfabética no fim.
@@ -176,6 +182,7 @@ export default function WhatsAppInbox() {
     setRespondendoA(null);
     setMostrarReacaoPara(null);
     setMostrarMenuExtra(false);
+    setMostrarInfoContacto(false);
 
     (async () => {
       try {
@@ -691,17 +698,93 @@ export default function WhatsAppInbox() {
           >
             <ArrowLeft size={20} />
           </button>
-          <div
-            className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0"
-            style={{ backgroundColor: contatoAtivo.worker_id === '__bot__' ? '#00a884' : '#8696a0' }}
+          <button
+            onClick={() => contatoAtivo.worker_id !== '__bot__' && setMostrarInfoContacto(true)}
+            className="flex items-center gap-3 min-w-0 text-left flex-1"
+            title="Ver informações do contacto"
           >
-            {contatoAtivo.worker_id === '__bot__' ? <Bot size={18} /> : iniciais(contatoAtivo.nome)}
-          </div>
-          <div className="min-w-0">
-            <p className="font-semibold text-[15px] truncate" style={{ color: '#111b21' }}>{contatoAtivo.nome}</p>
-            {contatoAtivo.tel && <p className="text-xs" style={{ color: '#667781' }}>{contatoAtivo.tel}</p>}
-          </div>
+            <div
+              className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0"
+              style={{ backgroundColor: contatoAtivo.worker_id === '__bot__' ? '#00a884' : '#8696a0' }}
+            >
+              {contatoAtivo.worker_id === '__bot__' ? <Bot size={18} /> : iniciais(contatoAtivo.nome)}
+            </div>
+            <div className="min-w-0">
+              <p className="font-semibold text-[15px] truncate" style={{ color: '#111b21' }}>{contatoAtivo.nome}</p>
+              {contatoAtivo.tel && <p className="text-xs" style={{ color: '#667781' }}>{contatoAtivo.tel}</p>}
+            </div>
+          </button>
         </div>
+
+        {mostrarInfoContacto && (
+          <div className="absolute inset-0 z-10 flex flex-col" style={{ backgroundColor: '#ffffff' }}>
+            <div className="flex items-center gap-3 px-3 sm:px-5 py-3" style={{ backgroundColor: '#f0f2f5', borderBottom: '1px solid #e9edef' }}>
+              <button
+                onClick={() => setMostrarInfoContacto(false)}
+                className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 -ml-1"
+                style={{ color: '#54656f' }}
+              >
+                <ArrowLeft size={20} />
+              </button>
+              <p className="font-semibold text-[15px]" style={{ color: '#111b21' }}>Dados do contacto</p>
+            </div>
+            <div className="flex-1 overflow-y-auto scroll-oculto py-6">
+              <div className="flex flex-col items-center gap-2 px-6 pb-6" style={{ borderBottom: '1px solid #e9edef' }}>
+                <div
+                  className="w-24 h-24 rounded-full flex items-center justify-center text-white font-bold text-3xl"
+                  style={{ backgroundColor: '#8696a0' }}
+                >
+                  {iniciais(contatoAtivo.nome)}
+                </div>
+                <p className="text-xl font-semibold text-center" style={{ color: '#111b21' }}>{contatoAtivo.nome}</p>
+              </div>
+              <div className="py-2">
+                {contatoAtivo.tel && (
+                  <div className="flex items-center gap-4 px-6 py-3">
+                    <Phone size={20} color="#00a884" />
+                    <div className="min-w-0">
+                      <p className="text-[15px]" style={{ color: '#111b21' }}>{contatoAtivo.tel}</p>
+                      <p className="text-xs" style={{ color: '#667781' }}>Telemóvel</p>
+                    </div>
+                  </div>
+                )}
+                {contatoAtivo.profissao && (
+                  <div className="flex items-center gap-4 px-6 py-3">
+                    <Briefcase size={20} color="#00a884" />
+                    <div className="min-w-0">
+                      <p className="text-[15px]" style={{ color: '#111b21' }}>{contatoAtivo.profissao}</p>
+                      <p className="text-xs" style={{ color: '#667781' }}>Profissão</p>
+                    </div>
+                  </div>
+                )}
+                {contatoAtivo.email && (
+                  <div className="flex items-center gap-4 px-6 py-3">
+                    <Mail size={20} color="#00a884" />
+                    <div className="min-w-0">
+                      <p className="text-[15px] truncate" style={{ color: '#111b21' }}>{contatoAtivo.email}</p>
+                      <p className="text-xs" style={{ color: '#667781' }}>Email</p>
+                    </div>
+                  </div>
+                )}
+                {contatoAtivo.address && (
+                  <div className="flex items-center gap-4 px-6 py-3">
+                    <MapPin size={20} color="#00a884" />
+                    <div className="min-w-0">
+                      <p className="text-[15px]" style={{ color: '#111b21' }}>{contatoAtivo.address}</p>
+                      <p className="text-xs" style={{ color: '#667781' }}>Morada</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="pt-2" style={{ borderTop: '1px solid #e9edef' }}>
+                <div className="flex items-center gap-4 px-6 py-3">
+                  <span className="w-5 h-5 rounded-full shrink-0" style={{ backgroundColor: contatoAtivo.is_active ? '#00a884' : '#8696a0' }} />
+                  <p className="text-[15px]" style={{ color: '#111b21' }}>{contatoAtivo.is_active ? 'Trabalhador ativo' : 'Trabalhador inativo'}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="flex-1 overflow-y-auto scroll-oculto relative z-0 px-3 sm:px-6 py-4 space-y-1.5">
           {carregando && <p className="text-center text-sm" style={{ color: '#667781' }}>A carregar…</p>}
