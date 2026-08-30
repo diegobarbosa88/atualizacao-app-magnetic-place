@@ -633,7 +633,56 @@ export default function WhatsAppInbox() {
       </div>
 
       {/* Conversa -- em mobile só aparece depois de tocar num contacto. */}
-      <div className={`${verConversaMobile ? 'flex' : 'hidden'} md:flex flex-1 flex-col min-w-0`} style={{ backgroundColor: '#efeae2' }}>
+      <div className={`${verConversaMobile ? 'flex' : 'hidden'} md:flex flex-1 flex-col min-w-0 relative z-0`} style={{ backgroundColor: '#efeae2' }}>
+        {/* Textura de fundo ao estilo do papel de parede do WhatsApp real
+            (padrão repetido) -- com o logótipo e o carimbo da Magnetic em
+            vez dos ícones do WhatsApp. Duas imagens, tamanhos de
+            quadrícula diferentes (64px vs 58px) e desalinhadas de
+            propósito (posições de início diferentes) para os dois padrões
+            derivarem um do outro em vez de ficarem sobrepostos numa
+            grelha única e óbvia -- mais parecido com a disposição
+            orgânica dos ícones do WhatsApp. Preto e branco + opacidade
+            baixa para ler como marca de água, não como imagem a competir
+            com as mensagens.
+            Vive aqui, no PAINEL INTEIRO da conversa (não dentro da zona
+            com scroll) de propósito -- lá dentro, um position:absolute
+            com inset:0 fica do TAMANHO VISÍVEL da zona de scroll no
+            momento em que é medido, não cresce com o conteúdo, e como
+            elemento fora do fluxo não acompanha o scroll: resultado real
+            visto pelo Diego, o padrão só aparecia nas mensagens mais
+            antigas (perto do topo) e desaparecia a partir de metade da
+            conversa para baixo. Aqui em cima cobre sempre o painel
+            inteiro e fica fixo por trás enquanto as mensagens deslizam por
+            cima -- igual ao papel de parede do WhatsApp a sério. */}
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            backgroundImage: 'url(/logo-magnetic.png)',
+            backgroundSize: '64px 64px',
+            backgroundRepeat: 'repeat',
+            opacity: 0.05,
+            filter: 'grayscale(1) contrast(1.3) brightness(0.55)',
+            zIndex: -2,
+          }}
+        />
+        {/* Duas camadas SEPARADAS (não duas imagens no mesmo
+            background-image) de propósito -- com uma só camada, a
+            primeira imagem (opaca onde não é transparente) tapava a
+            segunda por trás sempre que os quadrados se sobrepunham. Como
+            elemento próprio, cada uma continua semi-transparente mesmo
+            por cima da outra. */}
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            backgroundImage: 'url(/carimbo-magnetic-place.png)',
+            backgroundSize: '58px 32px',
+            backgroundPosition: '29px 18px',
+            backgroundRepeat: 'repeat',
+            opacity: 0.05,
+            filter: 'grayscale(1) contrast(1.3) brightness(0.55)',
+            zIndex: -1,
+          }}
+        />
         <div className="flex items-center gap-3 px-3 sm:px-5 py-3" style={{ backgroundColor: '#f0f2f5', borderBottom: '1px solid #e9edef' }}>
           <button
             onClick={() => setVerConversaMobile(false)}
@@ -655,50 +704,6 @@ export default function WhatsAppInbox() {
         </div>
 
         <div className="flex-1 overflow-y-auto scroll-oculto relative z-0 px-3 sm:px-6 py-4 space-y-1.5">
-          {/* Textura de fundo ao estilo do papel de parede do WhatsApp real
-              (padrão repetido) -- com o logótipo e o carimbo da Magnetic em
-              vez dos ícones do WhatsApp. Duas imagens, tamanhos de
-              quadrícula diferentes (64px vs 58px) e desalinhadas de
-              propósito (posições de início diferentes) para os dois
-              padrões derivarem um do outro em vez de ficarem sobrepostos
-              numa grelha única e óbvia -- mais parecido com a disposição
-              orgânica dos ícones do WhatsApp. Preto e branco + opacidade
-              baixa para ler como marca de água, não como imagem a competir
-              com as mensagens. Atrás de tudo (z-index negativo) e sem
-              interceptar cliques -- precisa que ESTE contentor tenha o seu
-              próprio z-index (não só position:relative) para criar um novo
-              contexto de empilhamento, senão o -1 escapa para trás de
-              ancestrais muito mais acima (ex.: o cartão branco da página)
-              e fica invisível. */}
-          <div
-            className="pointer-events-none absolute inset-0"
-            style={{
-              backgroundImage: 'url(/logo-magnetic.png)',
-              backgroundSize: '64px 64px',
-              backgroundRepeat: 'repeat',
-              opacity: 0.05,
-              filter: 'grayscale(1) contrast(1.3) brightness(0.55)',
-              zIndex: -2,
-            }}
-          />
-          {/* Duas camadas SEPARADAS (não duas imagens no mesmo
-              background-image) de propósito -- com uma só camada, a
-              primeira imagem (opaca onde não é transparente) tapava a
-              segunda por trás sempre que os quadrados se sobrepunham.
-              Como elemento próprio, cada uma continua semi-transparente
-              mesmo por cima da outra. */}
-          <div
-            className="pointer-events-none absolute inset-0"
-            style={{
-              backgroundImage: 'url(/carimbo-magnetic-place.png)',
-              backgroundSize: '58px 32px',
-              backgroundPosition: '29px 18px',
-              backgroundRepeat: 'repeat',
-              opacity: 0.05,
-              filter: 'grayscale(1) contrast(1.3) brightness(0.55)',
-              zIndex: -1,
-            }}
-          />
           {carregando && <p className="text-center text-sm" style={{ color: '#667781' }}>A carregar…</p>}
           {erro && <p className="text-center text-sm text-rose-600 bg-rose-50 rounded-lg py-2 px-3 break-words">{erro}</p>}
           {!carregando && !erro && mensagens.length === 0 && (
