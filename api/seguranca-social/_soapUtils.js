@@ -24,15 +24,16 @@ const SOAP_BASE = () => isProd()
   ? 'https://app.seg-social.pt/ws/contrato/v1'
   : 'https://extservices.seg-social.pt/ws/contrato/v1';
 
+// Transferir Local de Trabalho — REST/JSON PUT, mesma família QLF da
+// admissão (204 = sucesso sem corpo, erro em {code, message}).
+const LOCAIS_TRABALHO_URL = () => isProd()
+  ? 'https://app.seg-social.pt/ptss/rest/qlf/tco/locais-trabalho/trabalhador'
+  : 'https://extwww.seg-social.pt/ptss/rest/qlf/tco/locais-trabalho/trabalhador';
+
 // Serviços de consulta CI (informação contributiva — só leitura, testáveis em produção)
 const CI_BASE   = () => isProd()
   ? 'https://app.seg-social.pt/ptss/rest/ci'
   : 'https://extwww.seg-social.pt/ptss/rest/ci';
-
-// Remunerações permanentes (QLF, mesmo host admissão, mas path diferente)
-const REMUN_URL = () => isProd()
-  ? 'https://app.seg-social.pt/ptss/rest/qlf/tco/remuneracoes/permanentes/trabalhadores'
-  : 'https://extwww.seg-social.pt/ptss/rest/qlf/tco/remuneracoes/permanentes/trabalhadores';
 
 // Situação Contributiva — REST/JSON POST síncrono, path próprio (não é filho de CI_BASE)
 const SITUACAO_CONTRIBUTIVA_URL = () => isProd()
@@ -149,11 +150,16 @@ export async function callSSRestPostUrl(url, body) {
  * cancelamento de documento de pagamento, onde o identificador vai no path
  * da URL, não no corpo do pedido (confirmado no OpenAPI oficial).
  */
-export async function callSSRestPutUrl(url) {
+export async function callSSRestPutUrl(url, body) {
   const token = getBearerToken();
   const res = await fetch(url, {
     method: 'PUT',
-    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Accept': 'application/json',
+      ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+    },
+    ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
   });
 
   if (res.status === 401) throw new Error('Token PSI inválido ou expirado (HTTP 401).');
@@ -169,7 +175,7 @@ export async function callSSRestPutUrl(url) {
   return { httpStatus: res.status, ok: res.ok, json };
 }
 
-export { CI_BASE, REMUN_URL, SITUACAO_CONTRIBUTIVA_URL, EEAOC_BASE, CONTRATOS_URL, TRABALHADORES_SS_URL };
+export { CI_BASE, SITUACAO_CONTRIBUTIVA_URL, EEAOC_BASE, CONTRATOS_URL, TRABALHADORES_SS_URL, LOCAIS_TRABALHO_URL };
 
 // ── Mapeamentos ──────────────────────────────────────────────────────────────
 
@@ -511,8 +517,13 @@ export function parseSoapResponse(xmlStr) {
 
   const codigoMatch = xmlStr.match(/<(?:[^:>]+:)?codigo-resultado[^>]*>([^<]+)<\/(?:[^:>]+:)?codigo-resultado>/i)
     || xmlStr.match(/<(?:[^:>]+:)?codigoResultado[^>]*>([^<]+)<\/(?:[^:>]+:)?codigoResultado>/i);
+  // <soapenv:Fault><detail><...Exception><mensagens><erro>...</erro></mensagens> —
+  // formato visto num timeout real (codigo-resultado 408, "Request Timeout").
+  // Mais específico que o <faultstring> genérico ("Erro comunicação servidor
+  // ptss"), por isso tentado antes.
   const mensagemMatch = xmlStr.match(/<(?:[^:>]+:)?mensagens-erro[^>]*>([^<]*)<\/(?:[^:>]+:)?mensagens-erro>/i)
     || xmlStr.match(/<(?:[^:>]+:)?mensagensErro[^>]*>([^<]*)<\/(?:[^:>]+:)?mensagensErro>/i)
+    || xmlStr.match(/<mensagens>\s*<erro>([^<]*)<\/erro>\s*<\/mensagens>/i)
     || xmlStr.match(/<faultstring[^>]*>([^<]+)<\/faultstring>/i);
 
   const codigo   = codigoMatch   ? codigoMatch[1].trim()   : null;

@@ -95,7 +95,7 @@ function Toggle({ checked, onChange }) {
 }
 
 export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInicial, ajudasValorInicial, periodoInicial, nomeToConlineInicial }) {
-  const { clients, logs, supabase, currentUser } = useApp();
+  const { clients, logs, supabase, currentUser, clientApprovals } = useApp();
   const navigate = useNavigate();
 
   const hoje = new Date().toISOString().slice(0, 10);
@@ -149,6 +149,18 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
   const [gateAjudas, setGateAjudas] = useState(null);
 
   const cliente = useMemo(() => clients?.find(c => c.id === clienteId), [clients, clienteId]);
+
+  // Camada de visibilidade em paralelo ao fluxo existente — informativa, não
+  // bloqueia a emissão. clientApprovals é gravado quando o cliente assina o
+  // relatório mensal (ValidarView.jsx, portal do cliente); até agora nenhum
+  // ponto da faturação o consultava. As regras de bloqueio/exceção ainda não
+  // foram decididas, por isso isto fica só como aviso.
+  const validacaoCliente = useMemo(() => {
+    if (!clienteId || !periodo) return null;
+    return (clientApprovals || []).find(a =>
+      String(a.client_id ?? a.clientId ?? '') === String(clienteId) && a.month === periodo
+    ) || null;
+  }, [clientApprovals, clienteId, periodo]);
 
   // Fase 2b, Ponto 2 — quando o modal é aberto com um clienteIdInicial que
   // não corresponde a nenhum cliente cadastrado (tipicamente `toc:${nome}`,
@@ -700,6 +712,23 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
                 readOnly={prazo !== -1}
                 className={`w-full px-3 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--ink-mid)] focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30 ${prazo !== -1 ? 'bg-[var(--surface)] text-[var(--slate-dim)]' : ''}`} />
             </div>
+
+            {/* Estado de validação do cliente — aviso, não bloqueia */}
+            {clienteId && periodo && (
+              validacaoCliente ? (
+                <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl" style={{ backgroundColor: 'var(--ok-bg)', color: 'var(--ok)' }}>
+                  <CheckCircle size={14} className="shrink-0" />
+                  <p className={SCALE.text.meta}>
+                    Cliente validou este período{validacaoCliente.created_at ? ` em ${new Date(validacaoCliente.created_at).toLocaleDateString('pt-PT')}` : ''}.
+                  </p>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl" style={{ backgroundColor: 'var(--warn-bg)', color: 'var(--warn)' }}>
+                  <ShieldAlert size={14} className="shrink-0" />
+                  <p className={SCALE.text.meta}>O cliente ainda não validou este período — vais emitir sem confirmação do lado dele.</p>
+                </div>
+              )
+            )}
 
             {/* Resumo horas/ajudas */}
             {clienteId && periodo && (

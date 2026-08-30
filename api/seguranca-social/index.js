@@ -13,7 +13,7 @@ import {
   callSSRestPostUrl,
   callSSRestPutUrl,
   CI_BASE,
-  REMUN_URL,
+  LOCAIS_TRABALHO_URL,
   SITUACAO_CONTRIBUTIVA_URL,
   EEAOC_BASE,
   CONTRATOS_URL,
@@ -230,26 +230,6 @@ export default async function handler(req, res) {
     return res.status(405).json({ erro: 'Método não permitido. Use POST.' });
   }
 
-  // Remunerações (POST de consulta, sem efeitos colaterais)
-  if (action === 'remuneracoes') {
-    if (!credenciaisConfiguradas()) return res.status(400).json({ erro: 'Token PSI não configurado.' });
-    const { nissTrabalhadores = [], dataInicio, dataFim } = req.body || {};
-    const nissEmpresa = process.env.SS_NISS_EMPRESA;
-    const bodyPSI = {
-      'niss-entidade-empregadora': Number(nissEmpresa),
-      ...(nissTrabalhadores.length ? { 'niss-trabalhadores': nissTrabalhadores.map(Number) } : {}),
-      ...(dataInicio ? { 'data-inicio': dataInicio } : {}),
-      ...(dataFim    ? { 'data-fim':    dataFim    } : {}),
-    };
-    try {
-      const r = await callSSRestPostUrl(REMUN_URL(), bodyPSI);
-      if (r.semRegistos) return res.status(200).json({ semRegistos: true, dados: [] });
-      if (!r.ok) return res.status(422).json({ erro: r.erro });
-      const dados = Array.isArray(r.json) ? r.json : (r.json?.remuneracoes || r.json?.resultado || []);
-      return res.status(200).json({ semRegistos: dados.length === 0, dados, ambiente: getAmbiente() });
-    } catch (e) { return res.status(502).json({ erro: e.message }); }
-  }
-
   // Situação Contributiva (POST síncrono, sem efeitos colaterais)
   if (action === 'situacao-contributiva') {
     if (!credenciaisConfiguradas()) return res.status(400).json({ erro: 'Token PSI não configurado.' });
@@ -440,6 +420,87 @@ export default async function handler(req, res) {
       sucesso:    false,
       erro:       resultado.mensagemErro,
       codigoErro: resultado.codigoErro || null,
+    });
+  }
+
+  // Transferir Local de Trabalho — REST PUT, escrita real (204 = sucesso sem
+  // corpo; erro em {code, message}, mesma família QLF da admissão).
+  if (action === 'transferir-local-trabalho') {
+    if (!credenciaisConfiguradas()) {
+      return res.status(500).json({ erro: 'Token PSI não configurado. Defina SS_NISS_EMPRESA e SS_PSI_TOKEN nas variáveis de ambiente do Vercel.' });
+    }
+    const { workerId: wId, dadosExtra: extra = {}, confirmadoPor: confPor } = req.body || {};
+    if (!wId) return res.status(400).json({ erro: 'Campo "workerId" obrigatório.' });
+
+    const db = supabaseAdmin();
+    const ambiente = getAmbiente();
+    const nissEmpresa = process.env.SS_NISS_EMPRESA;
+
+    const { data: worker, error: workerErr } = await db
+      .from('workers')
+      .select('id, name, nis')
+      .eq('id', wId)
+      .maybeSingle();
+    if (workerErr || !worker) return res.status(404).json({ erro: 'Trabalhador não encontrado.' });
+
+    // ── Validações de segurança — mesma dupla camada de alterar-contrato ──
+    const nissDigits = String(worker.nis || '').replace(/\D/g, '');
+    if (nissDigits.length !== 11) {
+      return res.status(422).json({
+        erro: `NISS inválido: deve ter exatamente 11 dígitos numéricos (o trabalhador "${worker.name}" tem NISS "${worker.nis || '(vazio)'}" com ${nissDigits.length} dígitos). Corrija na ficha antes de comunicar.`,
+      });
+    }
+    if (/\bteste\b|\btest\b|\bficticio\b|\bfictício\b|\bdummy\b|\bexemplo\b|\bamostra\b/i.test(worker.name || '')) {
+      return res.status(422).json({
+        erro: `Registo de teste bloqueado: o trabalhador "${worker.name}" parece ser fictício. Remova-o da lista de Equipa antes de usar em produção.`,
+      });
+    }
+
+    const { dataInicio, dataFim, codigoLocalTrabalho } = extra;
+    if (!dataInicio) return res.status(400).json({ erro: 'Campo "dataInicio" obrigatório.' });
+    if (codigoLocalTrabalho === undefined || codigoLocalTrabalho === null || codigoLocalTrabalho === '') {
+      return res.status(400).json({ erro: 'Campo "codigoLocalTrabalho" obrigatório.' });
+    }
+
+    const bodyPSI = {
+      'niss-entidade-empregadora': Number(nissEmpresa),
+      'niss-trabalhador':          Number(worker.nis),
+      'data-inicio':               dataInicio,
+      ...(dataFim ? { 'data-fim': dataFim } : {}),
+      'codigo-local-trabalho':     Number(codigoLocalTrabalho),
+    };
+    const payloadStr = JSON.stringify(bodyPSI);
+
+    let r;
+    try {
+      r = await callSSRestPutUrl(LOCAIS_TRABALHO_URL(), bodyPSI);
+    } catch (e) {
+      await db.from('ss_comunicacoes').insert({
+        worker_id: wId, tipo: 'transferencia_local_trabalho', status: 'erro',
+        payload_xml: payloadStr, resposta_ss: e.message,
+        confirmado_por: confPor || null, ambiente,
+      });
+      return res.status(502).json({ sucesso: false, erro: e.message });
+    }
+
+    const sucesso = r.httpStatus === 204;
+
+    await db.from('ss_comunicacoes').insert({
+      worker_id:      wId,
+      tipo:           'transferencia_local_trabalho',
+      status:         sucesso ? 'sucesso' : 'erro',
+      payload_xml:    payloadStr,
+      resposta_ss:    JSON.stringify(r.json),
+      confirmado_por: confPor || null,
+      ambiente,
+    });
+
+    if (sucesso) {
+      return res.status(200).json({ sucesso: true, dataHora: new Date().toISOString(), ambiente });
+    }
+    return res.status(422).json({
+      sucesso: false,
+      erro:    r.json?.message || `Erro HTTP ${r.httpStatus} devolvido pela Segurança Social.`,
     });
   }
 

@@ -60,10 +60,13 @@ export default defineConfig({
     port: process.env.PORT ? Number(process.env.PORT) : 4179,
     strictPort: false,
     proxy: {
+      // TEMPORÁRIO — a apontar para o vercel dev local (porta 3000) para
+      // testar contra o ambiente de Qualidade da PSI. Reverter para
+      // 'https://trabalhador.magneticplace.pt' (produção) depois dos testes.
       '/api': {
-        target: 'https://trabalhador.magneticplace.pt',
+        target: 'http://localhost:3000',
         changeOrigin: true,
-        secure: true,
+        secure: false,
       },
     },
   },

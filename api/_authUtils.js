@@ -10,7 +10,11 @@ import crypto from 'node:crypto';
 const ALGORITMO = 'sha256';
 
 function getSecret() {
-  const secret = process.env.SESSION_SECRET;
+  // Fallback SESSION_SECRET_LOCAL_DEV: o `vercel dev` não injeta o nome
+  // "SESSION_SECRET" no process.env das funções (parece reservado
+  // internamente, mesmo com o valor certo no .env) — só afecta ambiente
+  // local, a Vercel em produção/preview injeta SESSION_SECRET normalmente.
+  const secret = process.env.SESSION_SECRET || process.env.SESSION_SECRET_LOCAL_DEV;
   if (!secret) throw new Error('SESSION_SECRET não está configurado nas env vars.');
   return secret;
 }

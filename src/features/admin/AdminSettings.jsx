@@ -432,7 +432,7 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
               <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: FT.slate }}><Globe size={20} /></div>
               <div>
                 <h3 className="font-black text-lg text-[var(--ink)]">Segurança Social — Consultas</h3>
-                <p className="text-xs text-[var(--slate-dim)] font-medium">Histórico de Comunicações · Comprovativos · Documentos · Remunerações Permanentes</p>
+                <p className="text-xs text-[var(--slate-dim)] font-medium">Histórico de Comunicações · Situação Contributiva · Comprovativos · Documentos</p>
               </div>
             </div>
             <SSConsultasPanel />

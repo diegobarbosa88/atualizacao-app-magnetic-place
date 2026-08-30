@@ -230,102 +230,6 @@ function DocumentosPagamentoSection({ ssAmbiente }) {
   );
 }
 
-// ── Remunerações Permanentes ─────────────────────────────────────────────────
-
-function RemuneracoesSection() {
-  const [form, setForm] = useState({ nissTrabalhadores: '', dataInicio: '', dataFim: '' });
-  const [estado, setEstado] = useState(null);
-
-  async function consultar() {
-    setEstado({ loading: true });
-    const body = {
-      action: 'remuneracoes',
-      nissTrabalhadores: form.nissTrabalhadores
-        ? form.nissTrabalhadores.split(/[\s,;]+/).filter(Boolean)
-        : [],
-      dataInicio: form.dataInicio || undefined,
-      dataFim:    form.dataFim    || undefined,
-    };
-    try {
-      const r = await authFetch('/api/seguranca-social', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      const json = await r.json();
-      if (!r.ok) { setEstado({ erro: json.erro || `HTTP ${r.status}` }); return; }
-      setEstado({ dados: json.dados || [], ambiente: json.ambiente, semRegistos: json.semRegistos });
-    } catch (e) { setEstado({ erro: e.message }); }
-  }
-
-  return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="sm:col-span-3">
-          <label className="block text-xs text-gray-500 mb-1">NISS dos trabalhadores (opcional — separar por vírgula ou espaço)</label>
-          <input
-            type="text"
-            placeholder="ex: 12345678901, 10987654321"
-            value={form.nissTrabalhadores}
-            onChange={e => setForm(f => ({ ...f, nissTrabalhadores: e.target.value }))}
-            className="border border-gray-300 rounded px-2 py-1.5 text-sm w-full focus:outline-none focus:ring-1 focus:ring-[var(--navy)]"
-          />
-        </div>
-        <div>
-          <label className="block text-xs text-gray-500 mb-1">Data início</label>
-          <input type="date" value={form.dataInicio} onChange={e => setForm(f => ({ ...f, dataInicio: e.target.value }))}
-            className="border border-gray-300 rounded px-2 py-1.5 text-sm w-full focus:outline-none focus:ring-1 focus:ring-[var(--navy)]" />
-        </div>
-        <div>
-          <label className="block text-xs text-gray-500 mb-1">Data fim</label>
-          <input type="date" value={form.dataFim} onChange={e => setForm(f => ({ ...f, dataFim: e.target.value }))}
-            className="border border-gray-300 rounded px-2 py-1.5 text-sm w-full focus:outline-none focus:ring-1 focus:ring-[var(--navy)]" />
-        </div>
-        <div className="flex items-end gap-2">
-          <button
-            onClick={consultar}
-            disabled={estado?.loading}
-            className="flex items-center gap-1.5 px-3 py-1.5 border rounded text-sm disabled:opacity-50 hover:bg-[var(--surface)] transition-colors"
-          style={{ borderColor: FT.slate, color: 'var(--ink-soft)' }}
-          >
-            <Search size={13} />
-            {estado?.loading ? 'A consultar…' : 'Consultar'}
-          </button>
-          {estado?.ambiente && <AmbienteBadge ambiente={estado.ambiente} />}
-        </div>
-      </div>
-
-      {estado?.erro && <ErroMsg erro={estado.erro} />}
-      {estado?.semRegistos && <SemRegistos />}
-
-      {estado?.dados?.length > 0 && (
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-xs border-collapse">
-            <thead>
-              <tr className="bg-gray-50 text-gray-600">
-                {['NISS', 'Nome', 'Data Comunicação', 'Tipo Remuneração', 'Valor (€)'].map(h => (
-                  <th key={h} className="px-3 py-2 text-left border border-gray-200">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {estado.dados.map((row, i) => (
-                <tr key={i} className="odd:bg-white even:bg-gray-50">
-                  <td className="px-3 py-1.5 border border-gray-200 font-mono">{row['niss-trabalhador'] ?? row.nissTrabalhador ?? '—'}</td>
-                  <td className="px-3 py-1.5 border border-gray-200">{row['nome-trabalhador'] ?? row.nomeTrabalhador ?? '—'}</td>
-                  <td className="px-3 py-1.5 border border-gray-200">{row['data-comunicacao'] ?? row.dataComunicacao ?? '—'}</td>
-                  <td className="px-3 py-1.5 border border-gray-200">{row['tipo-remuneracao'] ?? row.tipoRemuneracao ?? '—'}</td>
-                  <td className="px-3 py-1.5 border border-gray-200 text-right">{row['valor-remuneracao'] != null ? Number(row['valor-remuneracao']).toFixed(2) : row.valorRemuneracao != null ? Number(row.valorRemuneracao).toFixed(2) : '—'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ── Situação Contributiva ────────────────────────────────────────────────────
 
 function SituacaoContributivaSection() {
@@ -854,7 +758,6 @@ export default function SSConsultasPanel() {
     { id: 'historico',             label: 'Histórico de Comunicações',   icon: History        },
     { id: 'comprovativos',        label: 'Comprovativos de Pagamento',   icon: CheckCircle    },
     { id: 'documentos-pagamento', label: 'Documentos de Pagamento',      icon: FileText       },
-    { id: 'remuneracoes',         label: 'Remunerações Permanentes',     icon: TrendingUp     },
     { id: 'situacao-contributiva', label: 'Situação Contributiva',       icon: ShieldCheck    },
     { id: 'avisos',                label: 'Avisos',                     icon: Bell           },
     { id: 'contratos',             label: 'Contratos',                  icon: FileSignature  },
@@ -869,7 +772,6 @@ export default function SSConsultasPanel() {
         {aba === 'historico'              && <HistoricoComunicacoesSection />}
         {aba === 'comprovativos'         && <ComprovativosSection />}
         {aba === 'documentos-pagamento'  && <DocumentosPagamentoSection ssAmbiente={ssAmbiente} />}
-        {aba === 'remuneracoes'          && <RemuneracoesSection />}
         {aba === 'situacao-contributiva' && <SituacaoContributivaSection />}
         {aba === 'avisos'                && <AvisosSection />}
         {aba === 'contratos'             && <ContratosSection />}

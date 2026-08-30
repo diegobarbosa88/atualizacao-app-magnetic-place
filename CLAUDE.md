@@ -27,8 +27,11 @@ validação" → "escrever testes para inputs inválidos e fazê-los passar"). E
 enunciar um plano curto com a verificação de cada passo. Critérios de sucesso fortes permitem iterar
 sem supervisão; critérios fracos ("fazer funcionar") obrigam a clarificações constantes.
 
-> Neste repo não há suite de testes, por isso o ponto 4 traduz-se em critérios verificáveis no
-> browser e nos artefactos gerados, não em testes automatizados.
+> Há suite de testes (ver "Testes" abaixo): unit/integração em Vitest (~40 ficheiros) e e2e em
+> Playwright (~69 specs). Cobrem lógica de cálculo, APIs e fluxos — **não** regressões visuais nem
+> contraste de cor. Por isso o ponto 4 continua a traduzir-se, para trabalho de UI, em critérios
+> verificáveis no browser e nos artefactos gerados; para lógica pura, escrever/correr testes é a
+> verificação preferida.
 
 Gestão de RH e operações da Magnetic Place Unipessoal, Lda (cedência de mão-de-obra, sede na Trofa,
 trabalhadores destacados em clientes industriais em PT e ES). ~28 trabalhadores, ~13 clientes.
@@ -39,11 +42,32 @@ do Diego, porque dispara deploy para produção.
 
 **Domínios:** turnos e horários, registo/validação/aprovação mensal de horas, documentos com
 assinatura digital (PDF assinado + carimbo), processamento salarial (recibos, mapas de ajudas de
-custo), faturação com TOConline, reconciliação bancária (SaltEdge/Tink), Segurança Social (admissões
-REST, cessações SOAP). Três interfaces: painel admin, dashboard do trabalhador, portal do cliente.
+custo), faturação com TOConline, reconciliação bancária (SaltEdge/Tink), Segurança Social (escritas
+REST+SOAP: admissões, cessações, alteração de contrato, documentos de pagamento; e várias consultas
+de leitura). Três interfaces: painel admin, dashboard do trabalhador, portal do cliente.
 
 **Repo irmão:** `C:\Users\diego\CONSELHEIRO-ESTRATEGICO` — agente WhatsApp "Trabalhador Virtual",
 precisa de `vercel deploy --prod` manual (deploy separado, não automático).
+
+**Projeto não confundir:** o **site institucional** `magneticplace.pt` (HTML/CSS/JS puro, sem build,
+sem repo Git, deploy direto para o projeto Vercel `magnetic-place-legal`) é um projeto **separado**
+deste. Este repo é o `app-magnetic` (GitHub `diegobarbosa88/atualizacao-app-magnetic-place`). Não
+misturar contexto, tokens de cor ("blueprint" escuro do site ≠ navy/laranja da app) nem deploys.
+
+## Testes
+
+Há suite real, com dois motores. **Não** cobre regressões visuais/contraste (isso é sempre no
+browser ao vivo), mas cobre lógica de cálculo, APIs e fluxos.
+
+- **Vitest** (unit + integração, jsdom + React Testing Library): `npm test` (watch),
+  `npm run test:unit` (`tests/unit`, ~40 ficheiros — cálculos de recibos/IRS/ajudas, matching de
+  reconciliação, reports precision/quick, feriados, etc.), `npm run test:unit:app` (`tests/unit/app`).
+  Config em `vitest.config.js`, setup em `tests/setup.js`, mocks de rede com MSW.
+- **Playwright** (e2e, ~69 specs em `tests/e2e/`): `npm run test:e2e`, UI em `npm run test:e2e:ui`.
+  Config em `playwright.config.js`; helpers de auth em `tests/e2e/helpers/`. Cobre login, painel
+  admin, correções, documentos, equipa, portal do cliente, SS comunicações, worker.
+- Relatório de referência: `tests/TEST_REPORT.md`. Ao mexer em lógica pura (utils, engines,
+  cálculos), escrever/correr o teste é a verificação preferida — não só o build.
 
 ## Armadilhas conhecidas
 
@@ -254,8 +278,9 @@ precisa de `vercel deploy --prod` manual (deploy separado, não automático).
 - Ficheiros com terminações de linha mistas (LF/CRLF); substituições por script falham
   silenciosamente nos CRLF. Verificar sempre o resultado.
 - `npx vite build` passar não prova nada sobre props erradas, ícones perdidos ou imports órfãos.
-  Correr também `npx eslint .` e confirmar no browser (localhost:4179). Não há suite de testes E2E
-  fiável para regressões visuais.
+  Correr também `npx eslint .` e confirmar no browser (localhost:4179). A suite de testes cobre
+  lógica e fluxos, mas **não** regressões visuais/contraste — para UI a verificação continua a ser
+  no browser ao vivo.
 - **Eslint e build não apanham texto errado, só sintaxe — qualquer mudança que toque em formatação
   de texto renderizado precisa sempre de verificação visual ao vivo, não é opcional.** Confirmado em
   `WorkerValidationPanel.jsx` (2026-08-24): `formatHours()` já devolve o formato completo
@@ -326,20 +351,32 @@ caminho real antes de dar como resolvido.
 ### Fluxo 1 — Segurança Social
 
 Ficheiros: `api/seguranca-social/index.js`, `api/seguranca-social/_soapUtils.js`,
-`src/data/motivosContratoSS.js`, `src/features/admin/team/SSComunicacaoModal.jsx`.
+`src/data/motivosContratoSS.js`, `src/features/admin/team/SSComunicacaoModal.jsx` (escritas) e
+`src/features/admin/team/SSConsultasPanel.jsx` (consultas de leitura).
 
-São **dois protocolos diferentes**, não um:
-- Admissão — REST/JSON — `/ptss/rest/qlf/tco/vinculos/pedido`
-- Cessação — SOAP — `/ws/contrato/v1/cessarVinculoTrabalhador`
-- Consulta — SOAP — `/ws/contrato/v1/obterComunicacoes`
+São **dois protocolos diferentes**, não um — REST/JSON e SOAP, misturados conforme a operação. O
+`index.js` encaminha por um parâmetro `action` (query/body). Operações atuais (não só as 3
+originais):
+- **Escritas** (criam/alteram registo oficial no Estado): `admissao` (REST POST
+  `/ptss/rest/qlf/tco/vinculos/pedido`), `cessacao` (SOAP `cessarVinculoTrabalhador`),
+  `alterar-contrato` (SOAP `alterarContratoTrabalho`), `emitir-documento-pagamento` e
+  `cancelar-documento-pagamento`.
+- **Consultas/leitura** (sem efeito no Estado): `comunicacoes-pendentes` (SOAP `obterComunicacoes`),
+  `situacao-contributiva` (+ `situacao-contributiva-pdf`, proxy autenticado do PDF),
+  `comprovativos`, `documentos-pagamento`, `avisos` (REST GET `/ptss/rest/eeaoc/avisos/{niss-ee}`),
+  `pesquisar-contratos`/`consultar-contratos`, `pesquisar-trabalhadores-ss`/
+  `consultar-trabalhadores-ss`, `consultar-emissao-documento-pagamento`. Diagnóstico: `status`,
+  `ping`.
 
 O ambiente é decidido por `SS_AMBIENTE` (`producao` vs qualquer outra coisa) e muda o host:
 - Produção: `app.seg-social.pt`
 - Testes: `extwww.seg-social.pt` (REST) e `extservices.seg-social.pt` (SOAP)
 
-⚠ **Em produção, cada envio cria um registo oficial no Estado. Não há desfazer pela API.** O modal
-tem um banner vermelho de propósito — foi acrescentado deliberadamente e não deve ser despromovido
-de posição (ver razão da não-migração para ModalShell acima).
+⚠ **Em produção, cada escrita cria/altera um registo oficial no Estado. Não há desfazer pela API** —
+e isto já não vale só para admissão/cessação: `alterar-contrato` e emitir/cancelar documento de
+pagamento são igualmente irreversíveis. O modal tem um banner vermelho de propósito — foi
+acrescentado deliberadamente e não deve ser despromovido de posição (ver razão da não-migração para
+ModalShell acima).
 
 Regras de negócio que já custaram rejeições reais da SS:
 - `fim-contrato` só vai para contratos a termo certo. Enviá-lo vazio em termo incerto dá

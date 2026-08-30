@@ -44,8 +44,15 @@ self.addEventListener('activate', (event) => {
 // icon-192x192.png (a cores) fica só para o Chrome desktop / ícone grande;
 // icon-badge-mono.png é a silhueta monocromática exigida pelo Android para
 // a barra de estado (um ícone a cores aí é ignorado e mostra um círculo em
-// branco). push-banner.png é a imagem de marca mostrada quando a
-// notificação é expandida.
+// branco). A imagem mostrada quando a notificação é expandida varia por
+// categoria (data.type) — success/warning/error/info — em vez de ser sempre
+// a mesma imagem de marca; push-banner.png fica só como último recurso.
+const BANNER_BY_TYPE = {
+  success: '/banners/success.svg',
+  warning: '/banners/warning.svg',
+  error: '/banners/error.svg',
+  info: '/banners/info.svg',
+};
 self.addEventListener('push', (event) => {
   if (!event.data) return;
   let data;
@@ -59,7 +66,7 @@ self.addEventListener('push', (event) => {
     body: data.body || '',
     icon: '/icon-192x192.png',
     badge: '/icon-badge-mono.png',
-    image: data.image || '/push-banner.png',
+    image: data.image || BANNER_BY_TYPE[data.type] || '/push-banner.png',
     tag: data.tag || 'default',
     renotify: true,
     vibrate: [120, 60, 120],

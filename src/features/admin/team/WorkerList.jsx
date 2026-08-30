@@ -3,9 +3,10 @@ import { useApp } from '../../../context/AppContext';
 import { authFetch } from '../../../utils/authFetch';
 import { consultarComunicacoesPendentes, invalidarComunicacoesPendentes } from './ssComunicacoesPendentes';
 import { impersonarTrabalhador } from '../../../utils/impersonateWorker';
-import { Search, Edit2, Trash2, CheckCircle, ShieldCheck, ShieldOff, MoreVertical, FolderOpen, SendHorizonal, AlertTriangle, Shield, FileEdit } from 'lucide-react';
+import { Search, Edit2, Trash2, CheckCircle, ShieldCheck, ShieldOff, MoreVertical, FolderOpen, SendHorizonal, AlertTriangle, Shield, FileEdit, MapPin } from 'lucide-react';
 import SSComunicacaoModal from './SSComunicacaoModal';
 import AlterarContratoModal from './AlterarContratoModal';
+import TransferirLocalTrabalhoModal from './TransferirLocalTrabalhoModal';
 import { FT, SCALE } from '../../../styles/designTokens';
 import Card from '../../../components/common/Card';
 import { FONT_TITLE, FONT_MONO } from '../../../styles/designTokens';
@@ -159,6 +160,7 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
   const [openMenuId, setOpenMenuId] = useState(null);
   const [ssModal, setSsModal] = useState(null); // { worker, tipo: 'admissao'|'cessacao' }
   const [alterarContratoWorker, setAlterarContratoWorker] = useState(null); // worker | null
+  const [transferirLocalWorker, setTransferirLocalWorker] = useState(null); // worker | null
   const [ssAmbiente, setSsAmbiente] = useState('teste');
   const [apoliceMap, setApoliceMap] = useState({});
   const [ssComunicacoesMap, setSsComunicacoesMap] = useState({});
@@ -401,6 +403,16 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                                     {ssAmbiente === 'teste' && <p className={`${SCALE.text.statLabel} text-orange-500 leading-none`}>TESTE</p>}
                                   </div>
                                 </button>
+                                <button
+                                  onClick={() => { setTransferirLocalWorker(w); setOpenMenuId(null); }}
+                                  className="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-amber-50 group transition-colors"
+                                >
+                                  <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-amber-100 text-amber-600 group-hover:bg-amber-200 transition-colors shrink-0"><MapPin size={11} /></span>
+                                  <div className="text-left">
+                                    <span className={`${SCALE.text.body} text-[var(--ink-mid)] group-hover:text-amber-700`}>Transferir Local de Trabalho</span>
+                                    {ssAmbiente === 'teste' && <p className={`${SCALE.text.statLabel} text-orange-500 leading-none`}>TESTE</p>}
+                                  </div>
+                                </button>
                               </>
                             )}
                             <div className="mx-3 my-1 border-t border-[var(--border-soft)]" />
@@ -449,6 +461,14 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
           onSuccess={() => setAlterarContratoWorker(null)}
         />
       )}
+      {transferirLocalWorker && (
+        <TransferirLocalTrabalhoModal
+          worker={transferirLocalWorker}
+          ambiente={ssAmbiente}
+          onClose={() => setTransferirLocalWorker(null)}
+          onSuccess={() => setTransferirLocalWorker(null)}
+        />
+      )}
     </>
     );
   }
@@ -480,6 +500,9 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                 )}
                 {w.ss_admissao_comunicada_em && (
                   <button onClick={() => setAlterarContratoWorker(w)} className="p-1 text-amber-600 hover:bg-amber-50 rounded-lg transition-all border border-amber-200" title={`Alterar Contrato na SS${ssAmbiente === 'teste' ? ' (TESTE)' : ''}`}><FileEdit size={10} /></button>
+                )}
+                {w.ss_admissao_comunicada_em && (
+                  <button onClick={() => setTransferirLocalWorker(w)} className="p-1 text-amber-600 hover:bg-amber-50 rounded-lg transition-all border border-amber-200" title={`Transferir Local de Trabalho na SS${ssAmbiente === 'teste' ? ' (TESTE)' : ''}`}><MapPin size={10} /></button>
                 )}
                 {confirmDeleteWorkerId === w.id ? (
                   <div className="flex items-center gap-1">
@@ -529,6 +552,14 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
         ambiente={ssAmbiente}
         onClose={() => setAlterarContratoWorker(null)}
         onSuccess={() => setAlterarContratoWorker(null)}
+      />
+    )}
+    {transferirLocalWorker && (
+      <TransferirLocalTrabalhoModal
+        worker={transferirLocalWorker}
+        ambiente={ssAmbiente}
+        onClose={() => setTransferirLocalWorker(null)}
+        onSuccess={() => setTransferirLocalWorker(null)}
       />
     )}
     </>
