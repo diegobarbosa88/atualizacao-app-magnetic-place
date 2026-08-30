@@ -97,6 +97,44 @@ async function enviarGraphApiTemplate(to, variavel1) {
   return dados;
 }
 
+// "Empresa escreve primeiro" -- convite de onboarding enviado diretamente
+// pelo admin a um número que NUNCA falou com o WhatsApp da empresa (por
+// isso, tal como enviarGraphApiTemplate, tem de ser sempre por template
+// aprovado). O botão do template é do tipo URL com sufixo dinâmico -- o
+// link base fica fixo no template (https://.../onboarding/), o token do
+// convite é o único parâmetro do botão. Ver
+// scripts/criar-template-onboarding.js para submeter o template à Meta.
+async function enviarGraphApiTemplateOnboarding(to, nome, tokenConvite) {
+  const token = process.env.WHATSAPP_TOKEN;
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  const nomeTemplate = process.env.WHATSAPP_TEMPLATE_ONBOARDING;
+  if (!token || !phoneNumberId || !nomeTemplate) {
+    throw new Error('WHATSAPP_TOKEN/WHATSAPP_PHONE_NUMBER_ID/WHATSAPP_TEMPLATE_ONBOARDING não configurados neste projeto.');
+  }
+  const resposta = await fetch(`https://graph.facebook.com/${GRAPH_API_VERSION}/${phoneNumberId}/messages`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      messaging_product: 'whatsapp',
+      to,
+      type: 'template',
+      template: {
+        name: nomeTemplate,
+        language: { code: 'pt_PT' },
+        components: [
+          { type: 'body', parameters: [{ type: 'text', text: nome }] },
+          { type: 'button', sub_type: 'url', index: '0', parameters: [{ type: 'text', text: tokenConvite }] },
+        ],
+      },
+    }),
+  });
+  const dados = await resposta.json().catch(() => ({}));
+  if (!resposta.ok) {
+    throw new Error(dados?.error?.message || `Falha ao enviar convite (HTTP ${resposta.status})`);
+  }
+  return dados;
+}
+
 // Anexos -- sobe o ficheiro para a Meta (fica hospedado do lado deles,
 // nada guardado aqui) e devolve o media id a usar na mensagem a seguir.
 // https://graph.facebook.com/{Phone-Number-ID}/media, multipart/form-data.
@@ -348,7 +386,7 @@ async function handlerWhatsApp(req, res, action) {
       const db = supabaseAdmin();
       const { data, error } = await db
         .from('worker_whatsapp_messages')
-        .select('id, direcao, texto, criado_em, wamid')
+        .select('id, direcao, texto, criado_em, wamid, anexo_url, anexo_tipo, anexo_nome')
         .eq('worker_id', workerId)
         .order('criado_em', { ascending: true });
       if (error) return res.status(500).json({ error: error.message });
@@ -623,6 +661,24 @@ async function handlerWhatsApp(req, res, action) {
       return res.status(200).json({ sucesso: true });
     }
 
+    // Convite de onboarding "a empresa escreve primeiro" -- envia o
+    // template mp_convite_onboarding diretamente ao número indicado (nunca
+    // conversou antes com o WhatsApp da empresa, por isso não dá para texto
+    // livre nem para reaproveitar enviarParaTrabalhador, que grava em
+    // worker_whatsapp_messages ligado a um worker_id que ainda não existe).
+    if (action === 'enviar-convite-onboarding') {
+      const { tel, nome, token: tokenConvite } = req.body || {};
+      if (!tel || !nome?.trim() || !tokenConvite) {
+        return res.status(400).json({ error: 'tel, nome e token são obrigatórios.' });
+      }
+      try {
+        await enviarGraphApiTemplateOnboarding(tel.replace(/[^\d]/g, ''), nome.trim(), tokenConvite);
+      } catch (e) {
+        return res.status(502).json({ error: e.message });
+      }
+      return res.status(200).json({ sucesso: true });
+    }
+
     // Envia a mesma mensagem a vários trabalhadores de uma vez -- continua
     // mesmo que um envio individual falhe, para não travar os restantes
     // por causa de um único erro (ex: trabalhador sem tel válido).
@@ -727,7 +783,7 @@ export default async function handler(req, res) {
 
   if ([
     'listar-conversas', 'historico', 'historico-bot', 'marcar-lida', 'enviar', 'enviar-lote', 'enviar-anexo',
-    'enviar-localizacao', 'enviar-contacto', 'enviar-reacao', 'enviar-botoes',
+    'enviar-localizacao', 'enviar-contacto', 'enviar-reacao', 'enviar-botoes', 'enviar-convite-onboarding',
   ].includes(whatsappAction)) {
     return handlerWhatsApp(req, res, whatsappAction);
   }

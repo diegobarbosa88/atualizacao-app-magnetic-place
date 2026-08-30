@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { useTeam, TeamProvider } from './contexts/TeamContext';
-import { Users, LayoutGrid, List, CalendarX, ShieldCheck, AlertTriangle, Search, ScanSearch, UserPlus, Copy, Mail, Check, Clock, Loader2 } from 'lucide-react';
+import { Users, LayoutGrid, List, CalendarX, ShieldCheck, AlertTriangle, Search, ScanSearch, UserPlus, Copy, Mail, Check, Clock, Loader2, MessageCircle } from 'lucide-react';
 import WorkerForm from './team/WorkerForm';
 import WorkerList from './team/WorkerList';
 import ModalShell from '../../components/common/ModalShell';
@@ -18,6 +18,7 @@ import DocumentScannerModal from './team/DocumentScannerModal';
 import WorkerFolderModal from './documents/WorkerFolderModal';
 import OnboardingPendentes from './team/OnboardingPendentes';
 import { sendOnboardingInviteEmail } from '../../utils/emailUtils';
+import { authFetch } from '../../utils/authFetch';
 
 const TeamManagerContent = ({ onLogin }) => {
   const { workers, schedules, clients, supabase, workerChangeRequests, absenceRequests, systemSettings } = useApp();
@@ -27,8 +28,11 @@ const TeamManagerContent = ({ onLogin }) => {
   const [pendingOnboardingCount, setPendingOnboardingCount] = useState(0);
   const [inviteModal, setInviteModal] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteNome, setInviteNome] = useState('');
+  const [inviteTel, setInviteTel] = useState('');
   const [generatedLink, setGeneratedLink] = useState('');
   const [generatedWaLink, setGeneratedWaLink] = useState('');
+  const [generatedToken, setGeneratedToken] = useState('');
   const [linkCopied, setLinkCopied] = useState(false);
   const [waLinkCopied, setWaLinkCopied] = useState(false);
   const [inviteEmailSent, setInviteEmailSent] = useState(false);
@@ -37,6 +41,13 @@ const TeamManagerContent = ({ onLogin }) => {
   const [inviteVencimentoBase, setInviteVencimentoBase] = useState('');
   const [inviteDataInicio, setInviteDataInicio] = useState('');
   const [inviteLocalTrabalho, setInviteLocalTrabalho] = useState('');
+  // Convite "a empresa escreve primeiro" -- só possível com telefone
+  // preenchido, manda logo o template aprovado pela Meta (ver
+  // scripts/criar-template-onboarding.js) em vez de depender do
+  // trabalhador escrever primeiro para abrir a janela de 24h.
+  const [enviandoConviteWa, setEnviandoConviteWa] = useState(false);
+  const [conviteWaEnviado, setConviteWaEnviado] = useState(false);
+  const [conviteWaErro, setConviteWaErro] = useState('');
 
   useEffect(() => {
     if (!supabase) return;
@@ -81,6 +92,8 @@ const TeamManagerContent = ({ onLogin }) => {
       const { error } = await supabase.from('worker_onboarding_invites').insert({
         id, token,
         email: inviteEmail || null,
+        nome: inviteNome || null,
+        tel: inviteTel || null,
         created_by: null,
         created_at: new Date().toISOString(),
         expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
@@ -92,6 +105,7 @@ const TeamManagerContent = ({ onLogin }) => {
       if (error) throw error;
       const link = `${window.location.origin}/onboarding/${token}`;
       setGeneratedLink(link);
+      setGeneratedToken(token);
       // Segunda via: o trabalhador abre este link no telemóvel dele e envia a
       // mensagem já escrita ao número da empresa. Isso abre a janela de 24h da
       // Meta, e o Trabalhador Virtual responde com o Flow de registo — sem
@@ -102,6 +116,8 @@ const TeamManagerContent = ({ onLogin }) => {
       setLinkCopied(false);
       setWaLinkCopied(false);
       setInviteEmailSent(false);
+      setConviteWaEnviado(false);
+      setConviteWaErro('');
     } catch (e) {
       console.error('[onboarding] Erro ao gerar convite:', e);
       setInviteError(e?.message || 'Erro ao gerar link. Verifica a ligação à base de dados.');
@@ -128,6 +144,26 @@ const TeamManagerContent = ({ onLogin }) => {
     if (!inviteEmail || !generatedLink) return;
     const ok = await sendOnboardingInviteEmail({ toEmail: inviteEmail, link: generatedLink });
     if (ok) setInviteEmailSent(true);
+  };
+
+  const enviarConviteWhatsApp = async () => {
+    if (!inviteTel || !inviteNome.trim() || !generatedToken || enviandoConviteWa) return;
+    setEnviandoConviteWa(true);
+    setConviteWaErro('');
+    try {
+      const r = await authFetch('/api/whatsapp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'enviar-convite-onboarding', tel: inviteTel, nome: inviteNome.trim(), token: generatedToken }),
+      });
+      const json = await r.json();
+      if (!r.ok) throw new Error(json.error || `HTTP ${r.status}`);
+      setConviteWaEnviado(true);
+    } catch (e) {
+      setConviteWaErro(e.message);
+    } finally {
+      setEnviandoConviteWa(false);
+    }
   };
 
   const pendingChangeRequests = (workerChangeRequests || []).filter(r => r.status === 'pending');
@@ -287,7 +323,7 @@ const TeamManagerContent = ({ onLogin }) => {
       {/* Modal de convite de onboarding */}
       <ModalShell
         isOpen={inviteModal}
-        onClose={() => { setInviteModal(false); setGeneratedLink(''); setInviteEmail(''); setInviteError(''); setInviteVencimentoBase(''); setInviteDataInicio(''); setInviteLocalTrabalho(''); }}
+        onClose={() => { setInviteModal(false); setGeneratedLink(''); setGeneratedWaLink(''); setGeneratedToken(''); setInviteEmail(''); setInviteNome(''); setInviteTel(''); setInviteError(''); setInviteVencimentoBase(''); setInviteDataInicio(''); setInviteLocalTrabalho(''); setConviteWaEnviado(false); setConviteWaErro(''); }}
         title="Convidar novo colaborador"
         subtitle="Link único de preenchimento de dados"
         icon={<UserPlus size={16} />}
@@ -312,6 +348,35 @@ const TeamManagerContent = ({ onLogin }) => {
                 onChange={e => setInviteEmail(e.target.value)}
               />
               <p className={`text-[var(--slate-dim)] mt-1.5 ${SCALE.text.body}`}>Se preenchido, pode enviar o link por email.</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={`block ${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1`}>
+                  Nome (opcional)
+                </label>
+                <input
+                  className="w-full bg-white border border-[var(--border)] rounded-lg py-2 px-3 text-sm font-semibold text-[var(--ink)] outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 transition-all placeholder:font-normal placeholder:text-[var(--slate-dim)]"
+                  type="text"
+                  placeholder="Ana Silva"
+                  value={inviteNome}
+                  onChange={e => setInviteNome(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className={`block ${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1`}>
+                  Telemóvel (opcional)
+                </label>
+                <input
+                  className="w-full bg-white border border-[var(--border)] rounded-lg py-2 px-3 text-sm font-semibold text-[var(--ink)] outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 transition-all placeholder:font-normal placeholder:text-[var(--slate-dim)]"
+                  type="tel"
+                  placeholder="+351912345678"
+                  value={inviteTel}
+                  onChange={e => setInviteTel(e.target.value)}
+                />
+              </div>
+              <p className={`col-span-2 text-[var(--slate-dim)] ${SCALE.text.body}`}>
+                Preenche os dois para poderes enviar o convite diretamente por WhatsApp, sem esperares que o colaborador escreva primeiro.
+              </p>
             </div>
             <div className="bg-[var(--surface)] rounded-xl p-3 border border-[var(--border)] space-y-3">
               <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>
@@ -402,6 +467,25 @@ const TeamManagerContent = ({ onLogin }) => {
                 Expira em 7 dias · uso único
               </p>
             </div>
+            {inviteTel && inviteNome.trim() && (
+              <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-100 space-y-3">
+                <p className={`${SCALE.text.statLabel} text-emerald-700`}>A empresa escreve primeiro</p>
+                {conviteWaErro && (
+                  <p className="text-xs font-bold text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">{conviteWaErro}</p>
+                )}
+                <button
+                  onClick={enviarConviteWhatsApp}
+                  disabled={enviandoConviteWa || conviteWaEnviado}
+                  className={`w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-black uppercase transition-all disabled:opacity-60 ${conviteWaEnviado ? 'bg-emerald-100 text-emerald-700' : 'bg-emerald-700 text-white hover:bg-emerald-800'}`}
+                >
+                  {enviandoConviteWa ? <Loader2 size={13} className="animate-spin" /> : conviteWaEnviado ? <Check size={13} /> : <MessageCircle size={13} />}
+                  {enviandoConviteWa ? 'A enviar…' : conviteWaEnviado ? 'Convite enviado' : `Enviar convite agora a ${inviteTel}`}
+                </button>
+                <p className={`text-emerald-600 ${SCALE.text.meta}`}>
+                  Manda logo uma mensagem da empresa com o link de registo, sem esperar que {inviteNome.trim()} escreva primeiro. Precisa do template mp_convite_onboarding aprovado pela Meta (ver scripts/criar-template-onboarding.js).
+                </p>
+              </div>
+            )}
             {generatedWaLink && (
               <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-100 space-y-3">
                 <p className={`${SCALE.text.statLabel} text-emerald-700`}>Ou preencher pelo WhatsApp</p>
@@ -421,7 +505,7 @@ const TeamManagerContent = ({ onLogin }) => {
               </div>
             )}
             <button
-              onClick={() => { setGeneratedLink(''); setGeneratedWaLink(''); setInviteEmail(''); setInviteError(''); setInviteVencimentoBase(''); setInviteDataInicio(''); setInviteLocalTrabalho(''); }}
+              onClick={() => { setGeneratedLink(''); setGeneratedWaLink(''); setGeneratedToken(''); setInviteEmail(''); setInviteNome(''); setInviteTel(''); setInviteError(''); setInviteVencimentoBase(''); setInviteDataInicio(''); setInviteLocalTrabalho(''); setConviteWaEnviado(false); setConviteWaErro(''); }}
               className="w-full text-xs text-[var(--slate-dim)] hover:text-[var(--ink-soft)] font-bold py-1 transition-colors"
             >
               Gerar novo link

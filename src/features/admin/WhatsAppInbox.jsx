@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Bot, Search, Send, MessageSquareText, Users, X, Check, Paperclip, MapPin, Contact, ListPlus, Reply, Smile, ArrowLeft, Plus } from 'lucide-react';
+import { Bot, Search, Send, MessageSquareText, Users, X, Check, Paperclip, MapPin, Contact, ListPlus, Reply, Smile, ArrowLeft, Plus, FileText } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { authFetch } from '../../utils/authFetch';
 
@@ -36,6 +36,11 @@ const CONTATOS_UTEIS_FRONT = [
 ];
 
 const EMOJIS_REACAO = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
+
+// Legendas automáticas postas pelo backend (mensagemTrabalhador.js, no
+// conselheiro) quando o trabalhador manda um anexo sem legenda -- não faz
+// sentido repetir por baixo do próprio anexo já mostrado.
+const LEGENDAS_AUTOMATICAS_ANEXO = new Set(['🖼️ Imagem', '🎤 Áudio', '🎥 Vídeo', '📎 Documento']);
 
 function formatarHora(iso) {
   if (!iso) return '';
@@ -691,7 +696,32 @@ export default function WhatsAppInbox() {
                       ))}
                     </div>
                   )}
-                  <p className="text-[14.5px] whitespace-pre-wrap break-words" style={{ color: '#111b21' }}>{m.texto}</p>
+                  {m.anexo_url && m.anexo_tipo === 'image' && (
+                    <a href={m.anexo_url} target="_blank" rel="noreferrer">
+                      <img src={m.anexo_url} alt={m.anexo_nome || 'Imagem'} className="rounded-lg mb-1 max-w-full max-h-64 object-cover" />
+                    </a>
+                  )}
+                  {m.anexo_url && m.anexo_tipo === 'video' && (
+                    <video src={m.anexo_url} controls className="rounded-lg mb-1 max-w-full max-h-64" />
+                  )}
+                  {m.anexo_url && m.anexo_tipo === 'audio' && (
+                    <audio src={m.anexo_url} controls className="mb-1 max-w-full" />
+                  )}
+                  {m.anexo_url && m.anexo_tipo === 'document' && (
+                    <a
+                      href={m.anexo_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center gap-2 mb-1 rounded-lg px-2.5 py-2"
+                      style={{ backgroundColor: '#f0f2f5' }}
+                    >
+                      <FileText size={18} color="#54656f" />
+                      <span className="text-xs truncate" style={{ color: '#111b21' }}>{m.anexo_nome || 'Documento'}</span>
+                    </a>
+                  )}
+                  {m.texto && !(m.anexo_url && LEGENDAS_AUTOMATICAS_ANEXO.has(m.texto)) && (
+                    <p className="text-[14.5px] whitespace-pre-wrap break-words" style={{ color: '#111b21' }}>{m.texto}</p>
+                  )}
                   <p className="text-right text-[11px] mt-0.5" style={{ color: '#667781' }}>{formatarHora(m.criado_em)}</p>
                 </div>
                 {enviada && podeAgir && (
