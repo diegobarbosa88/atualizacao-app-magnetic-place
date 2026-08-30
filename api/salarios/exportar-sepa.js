@@ -325,6 +325,18 @@ async function marcarComoLidaGraphApi(wamid) {
 // replyTo (wamid, opcional) só faz sentido no envio individual -- em lote
 // não há "a mensagem a que se está a responder" para vários de uma vez.
 async function enviarParaTrabalhador(db, workerId, tel, texto, replyTo) {
+  // Vai buscar o texto da mensagem citada (pelo wamid) ANTES de enviar --
+  // só para desenhar o bloco de citação na UI, ao estilo do WhatsApp real
+  // (ver resposta_a_texto). Falha aqui não deve impedir o envio.
+  let respostaATexto = null;
+  if (replyTo) {
+    const { data: citada } = await db
+      .from('worker_whatsapp_messages')
+      .select('texto')
+      .eq('wamid', replyTo)
+      .maybeSingle();
+    respostaATexto = citada?.texto || null;
+  }
   const dados = await enviarGraphApi(tel.replace(/[^\d]/g, ''), texto, replyTo);
   const { error } = await db.from('worker_whatsapp_messages').insert({
     id: `wwm_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
@@ -332,6 +344,7 @@ async function enviarParaTrabalhador(db, workerId, tel, texto, replyTo) {
     direcao: 'enviada',
     texto,
     wamid: dados?.messages?.[0]?.id || null,
+    resposta_a_texto: respostaATexto,
   });
   if (error) throw new Error(error.message);
 }
@@ -386,7 +399,7 @@ async function handlerWhatsApp(req, res, action) {
       const db = supabaseAdmin();
       const { data, error } = await db
         .from('worker_whatsapp_messages')
-        .select('id, direcao, texto, criado_em, wamid, anexo_url, anexo_tipo, anexo_nome')
+        .select('id, direcao, texto, criado_em, wamid, anexo_url, anexo_tipo, anexo_nome, resposta_a_texto, botoes')
         .eq('worker_id', workerId)
         .order('criado_em', { ascending: true });
       if (error) return res.status(500).json({ error: error.message });
@@ -655,6 +668,7 @@ async function handlerWhatsApp(req, res, action) {
         direcao: 'enviada',
         texto: corpo.trim(),
         wamid,
+        botoes,
       });
       if (errInsert) return res.status(500).json({ error: errInsert.message });
 

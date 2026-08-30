@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Bot, Search, Send, MessageSquareText, Users, X, Check, Paperclip, MapPin, Contact, ListPlus, Reply, Smile, ArrowLeft, Plus, FileText } from 'lucide-react';
+import { Bot, Search, Send, MessageSquareText, Users, X, Check, CheckCheck, Paperclip, MapPin, Contact, ListPlus, Reply, Smile, ArrowLeft, Plus, FileText, CornerUpLeft } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { authFetch } from '../../utils/authFetch';
 
@@ -696,6 +696,14 @@ export default function WhatsAppInbox() {
                       ))}
                     </div>
                   )}
+                  {m.resposta_a_texto && (
+                    <div
+                      className="rounded mb-1 pl-2 pr-2 py-1 overflow-hidden"
+                      style={{ backgroundColor: enviada ? '#c7f3bd' : '#f0f2f5', borderLeft: '3px solid #00a884' }}
+                    >
+                      <p className="text-xs truncate" style={{ color: '#00a884' }}>{resumirTexto(m.resposta_a_texto, 70)}</p>
+                    </div>
+                  )}
                   {m.anexo_url && m.anexo_tipo === 'image' && (
                     <a href={m.anexo_url} target="_blank" rel="noreferrer">
                       <img src={m.anexo_url} alt={m.anexo_nome || 'Imagem'} className="rounded-lg mb-1 max-w-full max-h-64 object-cover" />
@@ -722,7 +730,24 @@ export default function WhatsAppInbox() {
                   {m.texto && !(m.anexo_url && LEGENDAS_AUTOMATICAS_ANEXO.has(m.texto)) && (
                     <p className="text-[14.5px] whitespace-pre-wrap break-words" style={{ color: '#111b21' }}>{m.texto}</p>
                   )}
-                  <p className="text-right text-[11px] mt-0.5" style={{ color: '#667781' }}>{formatarHora(m.criado_em)}</p>
+                  <p className="flex items-center justify-end gap-1 text-[11px] mt-0.5" style={{ color: '#667781' }}>
+                    {formatarHora(m.criado_em)}
+                    {enviada && <CheckCheck size={14} color="#53bdeb" />}
+                  </p>
+                  {Array.isArray(m.botoes) && m.botoes.length > 0 && (
+                    <div className="-mx-3 mt-1.5">
+                      {m.botoes.map(b => (
+                        <div
+                          key={b.id}
+                          className="flex items-center justify-center gap-2 px-3 py-2.5"
+                          style={{ borderTop: '1px solid #e9edef', color: '#00a884' }}
+                        >
+                          <CornerUpLeft size={15} />
+                          <span className="text-sm font-medium">{b.title}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 {enviada && podeAgir && (
                   <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
