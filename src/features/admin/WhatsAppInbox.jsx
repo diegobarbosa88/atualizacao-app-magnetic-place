@@ -656,20 +656,43 @@ export default function WhatsAppInbox() {
 
         <div className="flex-1 overflow-y-auto scroll-oculto relative z-0 px-3 sm:px-6 py-4 space-y-1.5">
           {/* Textura de fundo ao estilo do papel de parede do WhatsApp real
-              (padrão repetido) -- com o logótipo da Magnetic em vez dos
-              ícones do WhatsApp. Preto e branco + opacidade baixa para ler
-              como marca de água, não como imagem a competir com as
-              mensagens. Atrás de tudo (z-index negativo) e sem interceptar
-              cliques -- precisa que ESTE contentor tenha o seu próprio
-              z-index (não só position:relative) para criar um novo
+              (padrão repetido) -- com o logótipo e o carimbo da Magnetic em
+              vez dos ícones do WhatsApp. Duas imagens, tamanhos de
+              quadrícula diferentes (160px vs 130px) e desalinhadas de
+              propósito (posições de início diferentes) para os dois
+              padrões derivarem um do outro em vez de ficarem sobrepostos
+              numa grelha única e óbvia -- mais parecido com a disposição
+              orgânica dos ícones do WhatsApp. Preto e branco + opacidade
+              baixa para ler como marca de água, não como imagem a competir
+              com as mensagens. Atrás de tudo (z-index negativo) e sem
+              interceptar cliques -- precisa que ESTE contentor tenha o seu
+              próprio z-index (não só position:relative) para criar um novo
               contexto de empilhamento, senão o -1 escapa para trás de
               ancestrais muito mais acima (ex.: o cartão branco da página)
-              e fica invisível.  */}
+              e fica invisível. */}
           <div
             className="pointer-events-none absolute inset-0"
             style={{
               backgroundImage: 'url(/logo-magnetic.png)',
               backgroundSize: '160px 160px',
+              backgroundRepeat: 'repeat',
+              opacity: 0.05,
+              filter: 'grayscale(1) contrast(1.3) brightness(0.55)',
+              zIndex: -2,
+            }}
+          />
+          {/* Duas camadas SEPARADAS (não duas imagens no mesmo
+              background-image) de propósito -- com uma só camada, a
+              primeira imagem (opaca onde não é transparente) tapava a
+              segunda por trás sempre que os quadrados se sobrepunham.
+              Como elemento próprio, cada uma continua semi-transparente
+              mesmo por cima da outra. */}
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{
+              backgroundImage: 'url(/carimbo-magnetic-place.png)',
+              backgroundSize: '130px 72px',
+              backgroundPosition: '65px 40px',
               backgroundRepeat: 'repeat',
               opacity: 0.05,
               filter: 'grayscale(1) contrast(1.3) brightness(0.55)',
