@@ -658,7 +658,7 @@ export default function WhatsAppInbox() {
           {/* Textura de fundo ao estilo do papel de parede do WhatsApp real
               (padrão repetido) -- com o logótipo e o carimbo da Magnetic em
               vez dos ícones do WhatsApp. Duas imagens, tamanhos de
-              quadrícula diferentes (160px vs 130px) e desalinhadas de
+              quadrícula diferentes (64px vs 58px) e desalinhadas de
               propósito (posições de início diferentes) para os dois
               padrões derivarem um do outro em vez de ficarem sobrepostos
               numa grelha única e óbvia -- mais parecido com a disposição
@@ -674,7 +674,7 @@ export default function WhatsAppInbox() {
             className="pointer-events-none absolute inset-0"
             style={{
               backgroundImage: 'url(/logo-magnetic.png)',
-              backgroundSize: '160px 160px',
+              backgroundSize: '64px 64px',
               backgroundRepeat: 'repeat',
               opacity: 0.05,
               filter: 'grayscale(1) contrast(1.3) brightness(0.55)',
@@ -691,8 +691,8 @@ export default function WhatsAppInbox() {
             className="pointer-events-none absolute inset-0"
             style={{
               backgroundImage: 'url(/carimbo-magnetic-place.png)',
-              backgroundSize: '130px 72px',
-              backgroundPosition: '65px 40px',
+              backgroundSize: '58px 32px',
+              backgroundPosition: '29px 18px',
               backgroundRepeat: 'repeat',
               opacity: 0.05,
               filter: 'grayscale(1) contrast(1.3) brightness(0.55)',
