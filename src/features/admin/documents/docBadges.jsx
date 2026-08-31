@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Clock, FileSignature, CheckCircle, AlertTriangle, Pencil, Tag } from 'lucide-react';
 import { SCALE } from '../../../styles/designTokens';
 import { getValidadeStatus, getDiasRestantes, getExpiryRelativeLabel, CATEGORIAS_RH_ACT, CATEGORIA_CONFIG, CATEGORIA_COLOR_MAP, isUncategorized } from '../../../constants/rhCategories';
+import { MESES_PT } from '../../../utils/validacaoHelpers';
 
 // Badges/editor de documento partilhados entre DocumentsTable.jsx (Por
 // categoria — tabela), CategoryWorkerGrid.jsx (Por categoria — cartões por
@@ -126,7 +127,7 @@ export function CategoriaEditor({ docId, source, categoria, onSave, compact }) {
 // `onClick` é opcional: em "Por categoria" a linha não é clicável (só os
 // ícones de ação, revelados no hover via `children`); em "Por colaborador"
 // a linha inteira abre a ficha do documento.
-export function CompactDocRow({ d, onClick, children }) {
+export function CompactDocRow({ d, onClick, hideMesAno, children }) {
   const validadeStatus = getValidadeStatus(d.data_validade);
   const isExpirado = validadeStatus === 'expirado';
   const isUrgente = validadeStatus === 'urgente';
@@ -134,12 +135,13 @@ export function CompactDocRow({ d, onClick, children }) {
   const meta = stateMeta(d.state);
   const rowHighlight = isExpirado ? 'border-l-4 border-[var(--bad)]'
     : isUrgente ? 'border-l-4 border-[var(--warn)]' : 'border-l-4 border-transparent';
-  const tooltip = [d.tipo, d.title, meta.label, expiry?.label].filter(Boolean).join(' — ');
+  const mesAno = d.createdAt ? `${MESES_PT[d.createdAt.getMonth()]} ${d.createdAt.getFullYear()}` : null;
+  const tooltip = [d.tipo, mesAno, d.title, meta.label, expiry?.label].filter(Boolean).join(' — ');
   const rowBg = isExpirado ? 'var(--bad-bg)' : isUrgente ? 'var(--warn-bg)' : meta.bg;
 
   return (
     <div
-      className={`group flex items-center gap-2 px-2 py-1.5 rounded-lg transition-colors ${rowHighlight} ${onClick ? 'cursor-pointer' : ''}`}
+      className={`group flex items-center gap-2 px-2 py-1.5 rounded-lg transition-all ${rowHighlight} ${onClick ? 'cursor-pointer hover:translate-x-0.5' : ''}`}
       style={{ backgroundColor: rowBg }}
       onClick={onClick}
     >
@@ -149,6 +151,7 @@ export function CompactDocRow({ d, onClick, children }) {
       )}
       <span className={`flex-1 min-w-0 truncate ${SCALE.text.body} font-semibold text-[var(--ink-mid)]`} title={tooltip}>
         {d.tipo}
+        {mesAno && !hideMesAno && <span className="font-normal text-[var(--slate-dim)]"> · {mesAno}</span>}
         {expiry && (
           <span className="font-bold ml-1.5" style={{ color: isExpirado ? 'var(--bad)' : 'var(--warn)' }}>
             · {expiry.label}

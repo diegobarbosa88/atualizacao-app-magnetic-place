@@ -427,6 +427,120 @@ z-index do modal interior só compete dentro desse contexto isolado, não contra
 Não é preciso subir a camada do modal interior para `viewer`; a hierarquia actual já é segura
 sempre que o modal exterior imediato usar `ModalShell` (todos usam).
 
+**Revitalização visual do cabeçalho/secções de `WorkerPastaView` (2026-08-31)** — proposta via
+mockup (artefacto), aceite com uma condição explícita do Diego: reaproveitar os tamanhos de fonte
+já existentes (`SCALE.text.*`), não os tamanhos maiores do mockup ilustrativo. Três mudanças:
+
+1. **Cabeçalho do trabalhador** — de faixa simples para cartão em gradiente navy
+   (`linear-gradient(135deg, var(--navy-solid), ${FT.navyDeep})`, fundo fixo, não inverte), com
+   avatar, nome, e uma faixa de 3 estatísticas (Resolvidos/Por resolver/Expirados, `docs.length`
+   dividido em 3 contentores mutuamente exclusivos — `porResolver` = estado ≠ assinado E não
+   expirado/urgente) + barra de progresso segmentada. Tamanhos mantidos:
+   `SCALE.text.statValue`/`.statLabel`/`.meta`/`.entityName`, só a cor/fundo/layout mudou.
+2. **Secções de categoria (`CategorySection`)** — ganharam acento de cor por categoria (borda
+   esquerda 3px + fração "N/M" + mini barra de progresso), via novo `CATEGORIA_HEX` (mapa
+   categoria→cor, necessário porque o JIT do Tailwind não gera CSS para classes construídas em
+   runtime, ex. `colors.text.replace('text-','border-')` — só classes literais no código-fonte).
+3. **Cabeçalho do mês (`MonthGroup`)** — de bloco de texto igual ao da categoria para uma marca de
+   linha do tempo (ponto + linha horizontal + contagem + chevron).
+
+**Bug de contraste real, encontrado por medição ao vivo, não suposto — nos DOIS modos, não só no
+escuro.** O primeiro `CATEGORIA_HEX` usava os `-600` "óbvios" do Tailwind (`#059669` emerald,
+`#0284c7` sky, `#e11d48` rose, `#0d9488` teal, etc.) directamente como hex fixo. Medido: contra o
+`--panel` branco (claro) davam 3,19–4,76:1 — a maioria **falha AA**; contra o `--panel` escuro
+(`#131d28`) davam 3,62–4,54:1 — também falha. Corrigido com dois graus de tom, um por modo, iguais
+à técnica já usada em `--tone-*`: **novos tokens `--cat-*` em `src/index.css`** (`:root` +
+`.dark`), um por cor de categoria (8: `amber-custom`, `emerald`, `sky`, `rose`, `teal`, `amber`,
+`orange`, `slate`) — graus mais escuros que os -600 no claro (`#8a4a00`…`#475569`, ≥5,47:1 contra
+branco) e graus mais claros (-300/400) no escuro (`#f0b429`…`#94a3b8`, ≥6,32:1 contra `--panel`
+escuro). `CATEGORIA_HEX` passou a apontar para `var(--cat-*)` em vez de hex literal — segue o
+`.dark` automaticamente dentro do `style` inline (mesma técnica já documentada para `FT.navy` →
+`var(--navy)`). Confirmado ao vivo, nos dois modos, com medição real (não estimada): 5,47–6,29:1
+claro, 6,32–9,14:1 escuro.
+Achado à parte, também corrigido: o número "Expirados" do cabeçalho usava `var(--bad)` sobre o
+fundo navy fixo — 2,11:1, falha AA catastroficamente (`--bad` claro não foi pensado para fundo
+navy). Corrigido para `#e08872` fixo (o próprio valor de `--bad` do modo escuro do projeto,
+4,43:1) — mesma lógica já documentada para `--on-navy`: fundo fixo, o token que inverte é que
+estava errado, não o fundo.
+
+**"cards desalinhados" (feedback do Diego, com screenshot) — `MonthGroup` tinha `px-0.5` (2px) no
+botão do cabeçalho do mês, mas o `CompactDocRow` por baixo tem `px-2` (8px) próprio dentro do
+mesmo wrapper (`px-2.5`, 10px) — o ponto do cabeçalho do mês ficava ~12px do canto do cartão, o
+ponto da linha do documento por baixo ficava ~18px, 6px de desalinhamento vertical entre os dois.**
+Corrigido trocando o `px-0.5` do botão do `MonthGroup` para `px-2`, igual ao padding próprio do
+`CompactDocRow` — confirmado ao vivo via `getBoundingClientRect()`: pontos a 153px/157px (4px de
+diferença residual, só do tamanho do próprio ponto — `w-1.5` vs `w-2` — não da posição).
+`npx eslint`/`npx vite build` limpos (os 2 erros que aparecem em `WorkerDocsFolderView.jsx`, sobre
+`PreviewThumb` declarado dentro do render, são pré-existentes, confirmados sem relação com esta
+alteração).
+
+**"não estão centrados todos cards" + "botão de voltar atrapalha" (feedback do Diego, com
+screenshot em ecrã largo ~1900px) — dois bugs distintos, mesma causa raiz.** O contentor raiz de
+`WorkerPastaView` tinha `max-w-4xl` mas **sem `mx-auto`** — num painel largo (sem modal à volta,
+rota `/admin/documentos` → "Por colaborador"), a coluna de 896px ficava encostada à esquerda em
+vez de centrada, com uma faixa enorme de vazio à direita. O botão "voltar" vivia como um `<button>`
+irmão à esquerda do cartão navy, fora do fluxo do `max-w-4xl` — ficava ainda mais desalinhado/
+solto num ecrã largo. Corrigido: `mx-auto` no contentor raiz (confirmado ao vivo com
+`getBoundingClientRect()` a 1900px: 396,5px de margem dos dois lados do painel — perfeitamente
+centrado); botão "voltar" movido para DENTRO do cartão navy, antes do avatar, como
+`hover:bg-white/10` + `color: var(--on-navy)` (em vez de fundo/texto neutros que destoavam do
+cartão) — deixou de ser um elemento solto e passou a fazer parte do cabeçalho. `npx eslint`/
+`npx vite build` limpos.
+
+**Revitalização do cartão de detalhe de documento (`DocCardSingle`), 2026-08-31** — mesmo fluxo de
+mockup→aprovação→implementação: proposta via artefacto (comparação Atual/Proposta com dados reais
+de "Mapa de Ajudas de Custo" do Adriel de Jesus dos Santos), aprovada, implementada. Três mudanças:
+cabeçalho ganha ícone+borda-topo na cor real da categoria (`CATEGORIA_HEX`/`--cat-*`, a mesma
+paleta já usada em `CategorySection`), o selo de estado (`StateBadgeSmall`)/validade
+(`ValidadeChip`) sobe para o cabeçalho junto ao título em vez de ficar só lá em baixo, e os campos
+de `getCategoryFields(d)` passam de linhas "rótulo: valor" para uma grelha 2 colunas de fichas
+(rótulo `statLabel` em cima, valor `body` em baixo). Ações ganham rótulo ("Ver"/"Visível"/"Oculto"),
+com "Apagar" isolado à direita, ícone sozinho, fundo `--bad-bg`. `DocCardPair` (par Frente/Verso,
+identidade violeta própria) não foi tocado — fora do pedido, mantém o padrão antigo.
+
+**Bug de contraste real, apanhado ao vivo — `bg-white` no cartão exterior colidia com a
+regra-ponte já documentada na "Referência central" no topo deste ficheiro.** A primeira versão
+usava `className="rounded-2xl overflow-hidden bg-white border border-[var(--border-soft)]"` com
+`style={{ borderTop: '3px solid ' + accentColor }}` (a cor da categoria). Medido em modo escuro: a
+borda superior aparecia sempre `#334155` fixo, ignorando `--cat-emerald` (ou qualquer outra cor de
+categoria) por completo. Causa: `.dark .bg-white` em `App.css:46-50` não muda só o fundo — define
+também `border-color: #334155 !important`, que vence QUALQUER outro valor de `border-color`
+(mesmo vindo de `style` inline, que normalmente venceria classes) porque `!important` tem
+prioridade sobre a cascata normal independentemente da origem. Corrigido trocando `bg-white` por
+`bg-[var(--panel)]` (mesmo token já usado por `CategorySection`) — sem `!important` nenhum a
+interceptar, a cor da categoria passou a aplicar-se correctamente. Confirmado ao vivo nos dois
+modos: claro `rgb(0,117,74)` (`#00754a`), escuro `rgb(52,211,153)` (`#34d399`) — ambos os valores
+exactos de `--cat-emerald`. Contraste dos campos da grelha medido nos dois modos: rótulos
+4,81–5,10:1, valores 8,96:1, "Não disponível" 4,81–5,10:1 — todos AA com folga.
+**Lição a reter, além da já registada:** a regra-ponte não é só um problema de "o fundo não é o
+que eu esperava" — o `!important` no `border-color` pode silenciosamente anular uma cor de borda
+definida via `style` inline em qualquer componente novo que combine `bg-white` com uma borda
+colorida própria (accent de categoria, estado, o que for). Qualquer cartão novo com borda de
+destaque sobre fundo branco/`bg-white` deve usar `bg-[var(--panel)]` desde o início, não só depois
+de medir o bug.
+`npx eslint`/`npx vite build` limpos (mesmos 2 erros pré-existentes de sempre, sem relação).
+
+**Rótulo do botão de formação por assinar corrigido (2026-08-31, feedback do Diego com screenshot
+do telemóvel).** `FormacaoModal.jsx` (lista "As tuas formações" do trabalhador) mostrava o mesmo
+selo de estado ("Por iniciar"/"Em progresso"/"Reprovado") para qualquer formação e-learning por
+concluir — descrevia a SITUAÇÃO, não dizia o que tocar na linha fazia. Diego pediu explicitamente:
+"o curso sem iniciar tem botão Iniciar e curso iniciado tem botão terminar". Corrigido: e-learning
+`nao_iniciado` → "Iniciar" (abre a primeira etapa); qualquer outro estado por concluir
+(`em_progresso`, `reprovado` a repetir, ou `concluido` no questionário mas por assinar — este
+último um caso que só existe porque `FormacaoElearningFlow.jsx` tem uma etapa de assinatura FINAL
+mesmo depois de passar no questionário) → "Terminar" (retoma a seguir). Presencial não tem duas
+fases — a única acção é assinar em si, por isso ficou "Assinar" (não "Iniciar"/"Terminar"), mudança
+mínima face ao "Por assinar" anterior. Constante `STATUS_LABEL` (só usada nesta troca) removida por
+ficar órfã. Não confirmado ao vivo — o dashboard do trabalhador está atrás do mesmo bloqueio de
+sessão já registado (`403 Sem permissão`, "Ver Portal" em `/admin/team`); `npx eslint`/
+`npx vite build` limpos.
+**Nota separada, não corrigida:** o botão "Assinar Agora" da secção "Formações por Assinar" em
+`PendingAlertsModal.jsx` (o modal "Avisos Pendentes" visível no screenshot) continua com esse texto
+— abre a lista inteira (`FormacaoModal`), não uma formação específica, por isso não faz sentido
+herdar directamente "Iniciar"/"Terminar" aí. Ficou fora do pedido (o Diego confirmou que o problema
+era a semântica Iniciar/Terminar por curso, não este botão de entrada) — registado caso um dia se
+decida renomear também este CTA de entrada.
+
 ## Design system (em migração)
 
 `src/styles/designTokens.js` (paleta FT, tons TONES, escala SCALE) e `src/components/common/`

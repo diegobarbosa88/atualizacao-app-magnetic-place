@@ -70,12 +70,6 @@ const TIPO_ICON = {
   'Regras do Cliente/Estaleiro': MapPin,
 };
 
-const STATUS_LABEL = {
-  nao_iniciado: 'Por iniciar',
-  em_progresso: 'Em progresso',
-  reprovado: 'Reprovado',
-};
-
 export default function FormacaoModal({ isOpen, onClose, currentUser, onChanged }) {
   const [participacoes, setParticipacoes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -175,11 +169,19 @@ export default function FormacaoModal({ isOpen, onClose, currentUser, onChanged 
               {participacoes.map(p => {
                 const concluidoTotal = !!p.assinado_em;
                 const Icone = TIPO_ICON[p.tipo_formacao] || CATEGORIA_ICON[p.categoria] || GraduationCap;
+                // Rótulo como verbo de ação, não de estado — "Por iniciar"/
+                // "Em progresso" descreviam a situação mas não diziam o que
+                // o toque na linha faz. e-learning: só "nao_iniciado" abre a
+                // primeira etapa; qualquer outro estado por concluir
+                // (em progresso, reprovado a repetir, ou já aprovado no
+                // questionário mas por assinar) retoma a seguir, logo
+                // "Terminar". Presencial não tem duas fases — a única ação
+                // é a assinatura em si. (Feedback do Diego, 2026-08-31.)
                 const statusLabel = concluidoTotal
                   ? 'Concluído'
                   : p.formato === 'e-learning'
-                    ? (STATUS_LABEL[p.estado_conclusao] || 'Por iniciar')
-                    : 'Por assinar';
+                    ? (p.estado_conclusao === 'nao_iniciado' ? 'Iniciar' : 'Terminar')
+                    : 'Assinar';
                 return (
                   <div
                     key={p.participante_id}

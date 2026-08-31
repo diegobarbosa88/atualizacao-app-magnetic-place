@@ -115,6 +115,21 @@
   --tone-indigo-bg: #e0e7ff;
   --tone-indigo-border: rgba(67, 45, 215, 0.3);
 
+  /* Cor de identidade por categoria ACT (CATEGORIA_CONFIG) — usada como
+     acento (borda esquerda, fração N/M, barra de progresso) em
+     WorkerDocsFolderView.jsx. 8 tons, um por categoria, medidos contra
+     --panel branco (>=5.47:1 no claro) — ver CLAUDE.md, revitalização
+     2026-08-31. Degraus mais escuros que os -600 "óbvios" do Tailwind
+     porque esses falhavam AA (3.19-4.76:1). */
+  --cat-amber-custom: #8a4a00;
+  --cat-emerald: #00754a;
+  --cat-sky: #0369a1;
+  --cat-rose: #be123c;
+  --cat-teal: #0f766e;
+  --cat-amber: #92400e;
+  --cat-orange: #9a3412;
+  --cat-slate: #475569;
+
   /* Variantes de papel (não de domínio) — para hierarquia tipográfica REAL
      dentro de uma mesma cor de estado, confirmada em CorrectionsInbox.jsx/
      ItemRow.jsx: rótulo repetido < metadado < valor < identidade, no mesmo
@@ -241,6 +256,17 @@
   --tone-indigo: #7c86ff;
   --tone-indigo-bg: rgba(67, 45, 215, 0.22);
   --tone-indigo-border: rgba(124, 134, 255, 0.35);
+
+  /* --cat-* escuro: degraus mais claros do Tailwind (300/400), medidos
+     contra --panel escuro #131d28 (>=6.32:1). Ver definição clara acima. */
+  --cat-amber-custom: #f0b429;
+  --cat-emerald: #34d399;
+  --cat-sky: #38bdf8;
+  --cat-rose: #fb7185;
+  --cat-teal: #2dd4bf;
+  --cat-amber: #fbbf24;
+  --cat-orange: #fb923c;
+  --cat-slate: #94a3b8;
 
   /* Variantes de papel — hierarquia INVERTIDA em relação ao claro: no claro
      identity é o degrau mais escuro (900), no escuro tem de ser o mais claro
