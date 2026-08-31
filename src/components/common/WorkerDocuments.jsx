@@ -7,6 +7,7 @@ import { DocumentViewer } from '../worker/DocumentViewer';
 import { HtmlDocumentViewer } from '../worker/HtmlDocumentViewer';
 import SignDrawModal from '../worker/SignDrawModal';
 import ModalShell from './ModalShell';
+import FitToWidthHtmlFrame from './FitToWidthHtmlFrame';
 import { useDocumentPreview } from './workerDocuments/useDocumentPreview';
 import { useSignDocument } from './workerDocuments/useSignDocument';
 import { FT, FONT_TITLE, FONT_MONO, SCALE } from '../../styles/designTokens';
@@ -461,7 +462,12 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb, pendingOnly = false
                     )}
                   </>
                 ) : selectedDoc.generated_html ? (
-                  <iframe srcDoc={injectSignaturePlaceholder(selectedDoc.generated_html)} sandbox="allow-scripts" className="w-full h-full rounded-xl" title="Document Preview" />
+                  <FitToWidthHtmlFrame
+                    html={injectSignaturePlaceholder(selectedDoc.generated_html)}
+                    title="Document Preview"
+                    sandbox="allow-scripts"
+                    containerClassName="absolute inset-0 overflow-auto p-2 rounded-xl"
+                  />
                 ) : (
                   <div className="flex items-center justify-center h-full">
                     <p className="text-slate-400">Documento não disponível</p>

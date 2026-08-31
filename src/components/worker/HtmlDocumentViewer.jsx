@@ -4,6 +4,7 @@ import { useApp } from '../../context/AppContext';
 import { replaceTemplateFields } from '../../utils/templateFields';
 import { DOC_STATUS } from '../../constants/documentStatus';
 import SignDrawModal from './SignDrawModal';
+import FitToWidthHtmlFrame from '../common/FitToWidthHtmlFrame';
 
 // Irmão de DocumentViewer.jsx, para documentos com document_templates.formato
 // = 'html' — a assinatura entra como <img> normal dentro do próprio fluxo
@@ -135,12 +136,7 @@ export function HtmlDocumentViewer({ document: docRecord, onBack, onSigned }) {
             <Loader2 className="w-8 h-8 animate-spin" />
           </div>
         ) : (
-          <iframe
-            title={docRecord.title}
-            srcDoc={filledHtml}
-            sandbox="allow-same-origin"
-            className="absolute inset-0 w-full h-full border-0 bg-white"
-          />
+          <FitToWidthHtmlFrame html={filledHtml} title={docRecord.title} />
         )}
 
         {saving && (

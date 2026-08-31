@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { FileText, FileSignature, Users, ScanSearch, Plus, AlertTriangle } from 'lucide-react';
+import { FileText, FileSignature, Users, ScanSearch, Plus, AlertTriangle, ChevronDown } from 'lucide-react';
 import DocumentTemplatesAdmin from '../../components/admin/DocumentTemplatesAdmin';
 import DocxPreviewModal from '../../components/common/DocxPreviewModal';
 import { getValidadeStatus, CATEGORIAS_RH_ACT, isUncategorized, SEM_CATEGORIA } from '../../constants/rhCategories';
@@ -43,6 +43,15 @@ function StatCard({ label, value, tone, active, onClick }) {
 // destes ficarem invisíveis em qualquer item da rail, só apareciam a rever
 // "Todas" linha a linha (achado real, 2026-08-31 — ver CLAUDE.md).
 function CategoryRail({ categories, counts, total, semCategoriaCount, active, onSelect }) {
+  // Em mobile fica fechado por omissão, como um acordeão — a lista de 10
+  // categorias ocupava a maior parte do ecrã antes de chegar aos documentos
+  // em si (achado do Diego, 2026-08-31). Em desktop (md:) o comportamento
+  // não muda: a rail continua sempre aberta, `open` é ignorado.
+  const [open, setOpen] = useState(false);
+  const activeLabel = !active ? 'Todas' : active === SEM_CATEGORIA ? 'Sem categoria / a rever' : active;
+  const activeCount = !active ? total : active === SEM_CATEGORIA ? semCategoriaCount : (counts[active] || 0);
+  const pick = (val) => { onSelect(val); setOpen(false); };
+
   const itemCls = (isActive, warn) =>
     `w-full flex items-center justify-between gap-2 px-3 py-2.5 text-left border-t border-[var(--border-soft)] first:border-t-0 transition-colors ${SCALE.text.body} ${
       isActive
@@ -51,20 +60,30 @@ function CategoryRail({ categories, counts, total, semCategoriaCount, active, on
     }`;
   return (
     <div className="md:w-56 shrink-0 bg-white rounded-xl border border-[var(--border-soft)] overflow-hidden h-fit">
-      <button onClick={() => onSelect('')} className={itemCls(!active)}>
-        <span>Todas</span>
-        <span className={SCALE.text.meta}>{total}</span>
+      <button onClick={() => setOpen(o => !o)} className="md:hidden w-full flex items-center justify-between gap-2 px-3 py-2.5 text-left">
+        <span className={`flex items-center gap-1.5 truncate font-bold ${active === SEM_CATEGORIA ? 'text-[var(--warn)]' : 'text-[var(--ink)]'}`}>
+          {active === SEM_CATEGORIA && <AlertTriangle size={12} className="shrink-0" />}
+          <span className="truncate">{activeLabel}</span>
+          <span className={`${SCALE.text.meta} text-[var(--slate-dim)] font-normal shrink-0`}>({activeCount})</span>
+        </span>
+        <ChevronDown size={16} className={`shrink-0 text-[var(--slate)] transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
-      <button onClick={() => onSelect(SEM_CATEGORIA)} className={itemCls(active === SEM_CATEGORIA, true)}>
-        <span className="flex items-center gap-1.5 truncate"><AlertTriangle size={12} /> Sem categoria / a rever</span>
-        <span className={SCALE.text.meta} style={active === SEM_CATEGORIA ? undefined : { backgroundColor: 'var(--warn-bg)' }}>{semCategoriaCount}</span>
-      </button>
-      {categories.map(cat => (
-        <button key={cat} onClick={() => onSelect(cat)} className={itemCls(active === cat)}>
-          <span className="truncate">{cat}</span>
-          <span className={SCALE.text.meta}>{counts[cat] || 0}</span>
+      <div className={`${open ? 'block' : 'hidden'} md:block`}>
+        <button onClick={() => pick('')} className={itemCls(!active)}>
+          <span>Todas</span>
+          <span className={SCALE.text.meta}>{total}</span>
         </button>
-      ))}
+        <button onClick={() => pick(SEM_CATEGORIA)} className={itemCls(active === SEM_CATEGORIA, true)}>
+          <span className="flex items-center gap-1.5 truncate"><AlertTriangle size={12} /> Sem categoria / a rever</span>
+          <span className={SCALE.text.meta} style={active === SEM_CATEGORIA ? undefined : { backgroundColor: 'var(--warn-bg)' }}>{semCategoriaCount}</span>
+        </button>
+        {categories.map(cat => (
+          <button key={cat} onClick={() => pick(cat)} className={itemCls(active === cat)}>
+            <span className="truncate">{cat}</span>
+            <span className={SCALE.text.meta}>{counts[cat] || 0}</span>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

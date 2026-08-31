@@ -239,12 +239,11 @@ export default function OnboardingPendentes() {
         onClose={() => setSelected(null)}
         busy={saving}
         title={selected?.nome || 'Pedido de Onboarding'}
-        subtitle="Reveja os dados e complete os campos necessários antes de aprovar."
         icon={<Users size={16} />}
         accent="brand"
         size="lg"
         footer={
-          <div className="flex items-center justify-between gap-3 w-full">
+          <div className="flex items-center justify-between gap-3 w-full px-6 py-4">
             <div>
               {!showRejectInput ? (
                 <button
@@ -287,7 +286,10 @@ export default function OnboardingPendentes() {
         }
       >
         {selected && (
-          <div className="space-y-5">
+          <div className="p-6 space-y-5">
+            <p className="text-sm text-[var(--slate-dim)] leading-relaxed -mt-1">
+              Reveja os dados e complete os campos necessários antes de aprovar.
+            </p>
             {/* Tabs */}
             <div className="flex items-end gap-1 border-b border-[var(--border-soft)]">
               {['dados', 'completar'].map(t => (

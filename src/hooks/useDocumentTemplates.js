@@ -16,6 +16,19 @@ import { convertHtmlToPdf } from '../utils/pdfCoService';
 import { DOC_STATUS } from '../constants/documentStatus';
 import { inferirCategoria } from '../constants/rhCategories';
 import { notifyEvent, TARGET } from '../utils/notifyEvent';
+import { generateUniqueVerificationCode } from '../utils/verificationCode';
+import QRCode from 'qrcode';
+
+// Mesmo padrão de useSignatureStamp.jsx buildVerifyUrl, mas para a nova
+// página pública de verificação por código (?view=verify-doc&code=...) —
+// rota distinta da do Fluxo 2 (?view=verify&id=), que expõe dados a mais
+// (ver plano desta sessão).
+function buildVerifyDocUrl(code) {
+  const origin = (typeof window !== 'undefined' && window.location)
+    ? `${window.location.origin}${window.location.pathname}`
+    : '';
+  return `${origin}?view=verify-doc&code=${encodeURIComponent(code)}`;
+}
 
 // Mesma lógica de src/data/... não existe utilitário partilhado — versão
 // mínima, igual à do servidor (api/formacao/index.js slugify), só para
@@ -459,13 +472,30 @@ export function useDocumentTemplates(supabase, { onError } = {}) {
         if (!doc.generated_html || !doc.signature_data) throw new Error('Documento ainda não foi assinado pelo trabalhador');
 
         adminSignedAt = new Date().toISOString();
+
+        // Código curto de verificação, gerado agora (não antes — só faz
+        // sentido a partir do momento em que o documento fica "signed") e
+        // gravado abaixo junto com o resto do update. QR opcional, mesmo
+        // pacote/padrão já usado por useSignatureStamp.jsx (Fluxo 2).
+        const { data: workerRow } = await supabase.from('workers').select('name').eq('id', doc.worker_id).maybeSingle();
+        const verificationCode = await generateUniqueVerificationCode(workerRow?.name, supabase);
+        let qrImgTag = '';
+        try {
+          const qrDataUrl = await QRCode.toDataURL(buildVerifyDocUrl(verificationCode), { errorCorrectionLevel: 'M', margin: 0, width: 120 });
+          qrImgTag = `<img class="sign-qr" src="${qrDataUrl}" alt="QR de verificação" />`;
+        } catch (qrErr) {
+          console.warn('Falha a gerar QR de verificação (não bloqueia aprovação):', qrErr);
+        }
+
         const finalHtml = doc.generated_html
-          .replace('{worker_signature}', `<img src="${doc.signature_data}" alt="Assinatura do trabalhador" style="max-width:220px;max-height:90px;" />`)
+          .replace('{worker_signature}', `<img src="${doc.signature_data}" alt="Assinatura do trabalhador" style="max-width:180px;max-height:64px;" />`)
           .replace(
             '{admin_stamp}',
-            `<img src="${companySignature.signatureDataUrl}" alt="Assinatura da empresa" style="max-width:180px;max-height:80px;" />` +
+            `<img src="${companySignature.signatureDataUrl}" alt="Assinatura da empresa" style="max-width:180px;max-height:64px;" />` +
             (companySignature.responsibleName ? `<p style="margin:4px 0 0;font-size:11px;">${companySignature.responsibleName}${companySignature.responsibleRole ? ' — ' + companySignature.responsibleRole : ''}</p>` : '')
-          );
+          )
+          .replaceAll('{verification_code}', verificationCode)
+          .replaceAll('{verification_qr}', qrImgTag);
 
         const pdfBlob = await convertHtmlToPdf(finalHtml);
         const finalPath = `signed/${doc.id}_${Date.now()}.pdf`;
@@ -483,6 +513,7 @@ export function useDocumentTemplates(supabase, { onError } = {}) {
             admin_signed_at: adminSignedAt,
             signed_pdf_url: publicUrl,
             generated_html: finalHtml,
+            verification_code: verificationCode,
           })
           .eq('id', doc.id);
         if (dbErr) throw dbErr;

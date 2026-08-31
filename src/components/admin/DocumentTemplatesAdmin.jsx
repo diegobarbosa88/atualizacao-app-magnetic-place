@@ -49,8 +49,15 @@ const DocumentTemplatesAdmin = forwardRef(function DocumentTemplatesAdmin({
   useImperativeHandle(ref, () => ({ openCreate: openCreateModal }));
 
   const openTemplatePreview = async (template) => {
-    if (!template.template_docx_path && !template.template_pdf_path && template.html_content) {
-      setPreview({ title: template.name, loading: false, blob: null, html: template.html_content, error: '' });
+    // formato 'html': mostra o template tal como está gravado (tags
+    // {worker_name} etc. ainda literais) — mesmo espírito do preview docx,
+    // que também renderiza o .docx em bruto sem resolver campos.
+    if (template.formato === 'html') {
+      if (!template.template_html) {
+        setPreview({ title: template.name, loading: false, blob: null, error: 'Este modelo não tem conteúdo HTML associado.' });
+        return;
+      }
+      setPreview({ title: template.name, loading: false, blob: null, html: template.template_html, error: '' });
       return;
     }
     setPreview({ title: template.name, loading: true, blob: null, error: '' });
@@ -130,11 +137,12 @@ const DocumentTemplatesAdmin = forwardRef(function DocumentTemplatesAdmin({
                   {t.description || <span className="italic text-[var(--slate-dim)]">Sem descrição</span>}
                 </p>
                 <div className="flex items-center gap-1 pt-[0.7rem] border-t border-[#F1EFE8]">
+                  {/* Pré-visualizar funciona para docx e html — só o Editar
+                      (TemplateEditorModal, calibração de carimbo por
+                      coordenadas) é específico de docx e fica de fora. */}
+                  <button onClick={() => openTemplatePreview(t)} className="p-1.5 rounded-lg transition-all text-[var(--slate)] hover:text-[var(--navy)] hover:bg-[var(--surface)]" title="Pré-visualizar"><Eye className="w-3.5 h-3.5" /></button>
                   {t.formato !== 'html' && (
-                    <>
-                      <button onClick={() => openTemplatePreview(t)} className="p-1.5 rounded-lg transition-all text-[var(--slate)] hover:text-[var(--navy)] hover:bg-[var(--surface)]" title="Pré-visualizar"><Eye className="w-3.5 h-3.5" /></button>
-                      <button onClick={() => openEditModal(t)} className="p-1.5 rounded-lg transition-all text-[var(--slate)] hover:text-[var(--navy)] hover:bg-[var(--surface)]" title="Editar"><Edit3 className="w-3.5 h-3.5" /></button>
-                    </>
+                    <button onClick={() => openEditModal(t)} className="p-1.5 rounded-lg transition-all text-[var(--slate)] hover:text-[var(--navy)] hover:bg-[var(--surface)]" title="Editar"><Edit3 className="w-3.5 h-3.5" /></button>
                   )}
                   <button onClick={() => openGenerateModal(t)} className="p-1.5 rounded-lg transition-all text-[var(--slate)] hover:text-[var(--navy)] hover:bg-[var(--surface)]" title="Gerar"><Send className="w-3.5 h-3.5" /></button>
                   <button

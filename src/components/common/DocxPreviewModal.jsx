@@ -2,6 +2,11 @@ import React, { useEffect, useRef } from 'react';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { renderAsync } from 'docx-preview';
 import ModalShell from './ModalShell';
+import FitToWidthHtmlFrame from './FitToWidthHtmlFrame';
+
+// Largura de referência de uma página A4 a 96dpi, usada como fallback pelo
+// ramo docx abaixo (mesmo valor usado por FitToWidthHtmlFrame no ramo html).
+const A4_WIDTH_PX = 794;
 
 export default function DocxPreviewModal({ title, blob, html, loading, error, onClose }) {
   const previewContainerRef = useRef(null);
@@ -39,7 +44,7 @@ export default function DocxPreviewModal({ title, blob, html, loading, error, on
         wrapper.querySelector('section.docx') ||
         wrapper.querySelector('section');
       if (!firstPage) return;
-      const naturalWidth = firstPage.offsetWidth || 794;
+      const naturalWidth = firstPage.offsetWidth || A4_WIDTH_PX;
       const availableWidth = container.clientWidth - 32;
       const scale = Math.min(1, availableWidth / naturalWidth);
       if (scale >= 1) return;
@@ -103,12 +108,7 @@ export default function DocxPreviewModal({ title, blob, html, loading, error, on
               </div>
             </div>
           ) : html ? (
-            <iframe
-              title={title || 'Pré-visualização'}
-              srcDoc={html}
-              sandbox=""
-              className="absolute inset-0 w-full h-full bg-white border-0"
-            />
+            <FitToWidthHtmlFrame html={html} title={title} />
           ) : loading || !blob ? (
             <div className="h-full flex items-center justify-center text-slate-400">
               <Loader2 className="w-8 h-8 animate-spin" />

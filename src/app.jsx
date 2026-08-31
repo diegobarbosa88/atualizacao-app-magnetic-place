@@ -25,6 +25,7 @@ import EntryForm from './components/common/EntryForm';
 import ClientTimesheetReport from './components/common/ClientTimesheetReport';
 import WorkerDocuments from './components/common/WorkerDocuments';
 import VerificationPortal from './components/common/VerificationPortal';
+import DocumentVerificationPortal from './components/common/DocumentVerificationPortal';
 import ResumoMensalPublico from './features/public/ResumoMensalPublico';
 import OnboardingForm from './features/public/OnboardingForm';
 import {
@@ -429,6 +430,7 @@ export default function App() {
   const urlMonth = urlParams.get('month');
   const urlView = urlParams.get('view');
   const urlVerifyId = urlParams.get('id');
+  const urlVerifyCode = urlParams.get('code');
   const urlToken = urlParams.get('token');
 
   // Resolver clientId a partir do token (links públicos sem login) — via
@@ -452,6 +454,13 @@ export default function App() {
   // Portal público de verificação de assinaturas (não requer login)
   if (urlView === 'verify' && urlVerifyId) {
     return <VerificationPortal signatureId={urlVerifyId} />;
+  }
+
+  // Portal público de verificação por código curto (Fluxo 3 — documentos
+  // HTML→PDF.co com carimbo Opção E). Distinto do acima: mostra só o
+  // mínimo (sem IP, sem imagem da assinatura, sem link direto ao PDF).
+  if (urlView === 'verify-doc' && urlVerifyCode) {
+    return <DocumentVerificationPortal code={urlVerifyCode} />;
   }
 
   // Resumo Mensal partilhado com contabilista (não requer login)

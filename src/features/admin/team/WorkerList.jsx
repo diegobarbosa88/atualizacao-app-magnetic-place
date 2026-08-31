@@ -3,7 +3,7 @@ import { useApp } from '../../../context/AppContext';
 import { authFetch } from '../../../utils/authFetch';
 import { consultarComunicacoesPendentes, invalidarComunicacoesPendentes } from './ssComunicacoesPendentes';
 import { impersonarTrabalhador } from '../../../utils/impersonateWorker';
-import { Search, Edit2, Trash2, CheckCircle, ShieldCheck, ShieldOff, MoreVertical, FolderOpen, SendHorizonal, AlertTriangle, Shield, FileEdit, MapPin } from 'lucide-react';
+import { Search, Edit2, Trash2, CheckCircle, ShieldCheck, ShieldOff, MoreVertical, FolderOpen, SendHorizonal, AlertTriangle, Shield, FileEdit, MapPin, Clock, Briefcase } from 'lucide-react';
 import SSComunicacaoModal from './SSComunicacaoModal';
 import AlterarContratoModal from './AlterarContratoModal';
 import TransferirLocalTrabalhoModal from './TransferirLocalTrabalhoModal';
@@ -76,7 +76,9 @@ function MiniTimeline({ w, ssFlag }) {
 // num só selo — verde "OK" quando SS e Apólice estão ambos regularizados,
 // laranja com as mensagens específicas (não um "pendente" genérico) quando
 // há 1+ problema. Vista de tabela mantém-se em MiniTimeline/apoliceBadge.
-function vinculoBadge(w, apoliceMap, ssFlag) {
+// Extraído de vinculoBadge para o avatar (anel colorido) poder saber
+// ok/problema sem duplicar a deteção de estado.
+function vinculoState(w, apoliceMap, ssFlag) {
   const admissaoFeita = !!w.ss_admissao_comunicada_em;
   const cessacaoFeita = !!w.ss_cessacao_comunicada_em;
   const temFim = !!w.dataFim;
@@ -92,6 +94,12 @@ function vinculoBadge(w, apoliceMap, ssFlag) {
   if (apoliceStatus === 'solicitado' || apoliceStatus === 'pendente') apoliceProblema = 'Apólice Solicitada';
   else if (apoliceStatus === 'excluido') apoliceProblema = 'Apólice Excluída';
   else if (apoliceStatus !== 'ativo') apoliceProblema = 'Apólice por confirmar';
+
+  return { ssProblema, apoliceProblema };
+}
+
+function vinculoBadge(w, apoliceMap, ssFlag) {
+  const { ssProblema, apoliceProblema } = vinculoState(w, apoliceMap, ssFlag);
 
   // Cores fixas (não var(--...)), de propósito: o badge tem fundo próprio
   // (FT.okBg/FT.warnBg) autocontido, não herda do cartão à volta — por
@@ -478,59 +486,128 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
       {sortedWorkers.map(w => {
         const workerApproval = approvals.find(a => a.workerId === w.id && a.month === currentMonthStr);
+        const { ssProblema, apoliceProblema } = vinculoState(w, apoliceMap, ssComunicacoesMap[w.nis]);
+        const vinculoOk = !ssProblema && !apoliceProblema;
+        // Ações de Segurança Social são situacionais (só 1-2 aparecem de
+        // cada vez, dependendo do estado do vínculo) — só valem um item no
+        // menu "⋯" se houver pelo menos uma a mostrar.
+        const temAcoesSS = (w.status === 'ativo' && !w.ss_admissao_comunicada_em)
+          || (w.dataFim && !w.ss_cessacao_comunicada_em)
+          || w.ss_admissao_comunicada_em;
         return (
           // Mantém-se a grelha responsiva própria em vez do CardGrid de 230px:
-          // este cartão leva linha do tempo, badge de apólice e seis ações, e
-          // a 230px o conteúdo ficava espremido.
+          // este cartão leva linha do tempo, badge de apólice e ações
+          // situacionais de SS, e a 230px o conteúdo ficava espremido.
           <Card key={w.id} variant="item" interactive onClick={() => onEdit(w)} className="!px-3 !py-3">
             <div className="flex justify-between items-start mb-2">
               <div className={`px-1.5 py-0.5 rounded-full border flex items-center gap-1 ${SCALE.text.statLabel} ${w.status === 'inativo' ? 'text-rose-600 border-rose-200 bg-rose-50' : 'text-emerald-600 border-emerald-200 bg-emerald-50'}`}>
                 {w.status !== 'inativo' && <CheckCircle size={8} />}
                 {w.status === 'inativo' ? 'Inativo' : 'Ativo'}
               </div>
+              {/* 3 ações do dia-a-dia sempre visíveis; SS (situacional) e
+                  Eliminar ficam atrás do "⋯" — antes eram até 6 ícones
+                  sempre visíveis, e as de SS só aparecem em parte dos
+                  cartões (achado do Diego, 2026-08-31). */}
               <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
                 <button onClick={() => verPortal(w)} className="p-1 hover:bg-[var(--surface)] rounded-lg transition-all border border-[var(--border-soft)]" style={{ color: 'var(--slate-dim)' }} title="Ver Portal"><Search size={10} /></button>
-                <button onClick={() => onEdit(w)} className="p-1 text-amber-600 hover:bg-amber-50 rounded-lg transition-all border border-amber-100" title="Editar"><Edit2 size={10} /></button>
                 <button onClick={() => onVerPasta?.(w.id)} className="p-1 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all border border-emerald-100" title="Ver Pasta de Documentos"><FolderOpen size={10} /></button>
-                {w.status === 'ativo' && !w.ss_admissao_comunicada_em && (
-                  <button onClick={() => setSsModal({ worker: w, tipo: 'admissao' })} className="p-1 text-amber-600 hover:bg-amber-50 rounded-lg transition-all border border-amber-200" title={`Comunicar Admissão à SS${ssAmbiente === 'teste' ? ' (TESTE)' : ''}`}><SendHorizonal size={10} /></button>
-                )}
-                {w.dataFim && !w.ss_cessacao_comunicada_em && (
-                  <button onClick={() => setSsModal({ worker: w, tipo: 'cessacao' })} className="p-1 text-amber-600 hover:bg-amber-50 rounded-lg transition-all border border-amber-200" title={`Comunicar Cessação à SS${ssAmbiente === 'teste' ? ' (TESTE)' : ''}`}><SendHorizonal size={10} /></button>
-                )}
-                {w.ss_admissao_comunicada_em && (
-                  <button onClick={() => setAlterarContratoWorker(w)} className="p-1 text-amber-600 hover:bg-amber-50 rounded-lg transition-all border border-amber-200" title={`Alterar Contrato na SS${ssAmbiente === 'teste' ? ' (TESTE)' : ''}`}><FileEdit size={10} /></button>
-                )}
-                {w.ss_admissao_comunicada_em && (
-                  <button onClick={() => setTransferirLocalWorker(w)} className="p-1 text-amber-600 hover:bg-amber-50 rounded-lg transition-all border border-amber-200" title={`Transferir Local de Trabalho na SS${ssAmbiente === 'teste' ? ' (TESTE)' : ''}`}><MapPin size={10} /></button>
-                )}
-                {confirmDeleteWorkerId === w.id ? (
-                  <div className="flex items-center gap-1">
-                    <button onClick={() => { handleDelete(w.id); setConfirmDeleteWorkerId(null); }} className={`px-1.5 py-0.5 bg-red-600 text-white rounded-lg ${SCALE.text.meta}`}>Sim</button>
-                    <button onClick={() => setConfirmDeleteWorkerId(null)} className={`px-1.5 py-0.5 bg-[var(--border)] text-[var(--ink-soft)] rounded-lg ${SCALE.text.meta}`}>Não</button>
+                <button onClick={() => onEdit(w)} className="p-1 text-amber-600 hover:bg-amber-50 rounded-lg transition-all border border-amber-100" title="Editar"><Edit2 size={10} /></button>
+                {/* Eliminar vive sempre aqui dentro, por isso o menu nunca
+                    fica vazio mesmo sem nenhuma ação de SS pendente. */}
+                <div className="relative">
+                    <button onClick={() => setOpenMenuId(openMenuId === w.id ? null : w.id)} className="p-1 text-[var(--slate)] hover:text-[var(--ink-soft)] hover:bg-[var(--surface-dim)] rounded-lg transition-all border border-[var(--border-soft)]" title="Mais ações">
+                      <MoreVertical size={10} />
+                    </button>
+                    {openMenuId === w.id && (
+                      <>
+                        <div className="fixed inset-0 z-10" onClick={() => setOpenMenuId(null)} />
+                        <div className="absolute right-0 top-full mt-1 z-20 bg-white border border-[var(--border)] rounded-xl shadow-xl ring-1 ring-black/5 py-1 min-w-[190px]">
+                          {w.status === 'ativo' && !w.ss_admissao_comunicada_em && (
+                            <button onClick={() => { setSsModal({ worker: w, tipo: 'admissao' }); setOpenMenuId(null); }} className="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-amber-50 group transition-colors">
+                              <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-amber-100 text-amber-600 group-hover:bg-amber-200 transition-colors shrink-0"><SendHorizonal size={11} /></span>
+                              <div className="text-left">
+                                <span className={`${SCALE.text.body} text-[var(--ink-mid)] group-hover:text-amber-700`}>Comunicar Admissão</span>
+                                {ssAmbiente === 'teste' && <p className={`${SCALE.text.statLabel} text-orange-500 leading-none`}>TESTE</p>}
+                              </div>
+                            </button>
+                          )}
+                          {w.dataFim && !w.ss_cessacao_comunicada_em && (
+                            <button onClick={() => { setSsModal({ worker: w, tipo: 'cessacao' }); setOpenMenuId(null); }} className="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-amber-50 group transition-colors">
+                              <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-amber-100 text-amber-600 group-hover:bg-amber-200 transition-colors shrink-0"><SendHorizonal size={11} /></span>
+                              <div className="text-left">
+                                <span className={`${SCALE.text.body} text-[var(--ink-mid)] group-hover:text-amber-700`}>Comunicar Cessação</span>
+                                {ssAmbiente === 'teste' && <p className={`${SCALE.text.statLabel} text-orange-500 leading-none`}>TESTE</p>}
+                              </div>
+                            </button>
+                          )}
+                          {w.ss_admissao_comunicada_em && (
+                            <>
+                              <button onClick={() => { setAlterarContratoWorker(w); setOpenMenuId(null); }} className="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-amber-50 group transition-colors">
+                                <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-amber-100 text-amber-600 group-hover:bg-amber-200 transition-colors shrink-0"><FileEdit size={11} /></span>
+                                <div className="text-left">
+                                  <span className={`${SCALE.text.body} text-[var(--ink-mid)] group-hover:text-amber-700`}>Alterar Contrato</span>
+                                  {ssAmbiente === 'teste' && <p className={`${SCALE.text.statLabel} text-orange-500 leading-none`}>TESTE</p>}
+                                </div>
+                              </button>
+                              <button onClick={() => { setTransferirLocalWorker(w); setOpenMenuId(null); }} className="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-amber-50 group transition-colors">
+                                <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-amber-100 text-amber-600 group-hover:bg-amber-200 transition-colors shrink-0"><MapPin size={11} /></span>
+                                <div className="text-left">
+                                  <span className={`${SCALE.text.body} text-[var(--ink-mid)] group-hover:text-amber-700`}>Transferir Local de Trabalho</span>
+                                  {ssAmbiente === 'teste' && <p className={`${SCALE.text.statLabel} text-orange-500 leading-none`}>TESTE</p>}
+                                </div>
+                              </button>
+                            </>
+                          )}
+                          {temAcoesSS && <div className="mx-3 my-1 border-t border-[var(--border-soft)]" />}
+                          {confirmDeleteWorkerId === w.id ? (
+                            <div className="mx-2 mb-1 p-2 bg-rose-50 rounded-lg border border-rose-100">
+                              <p className={`${SCALE.text.statLabel} text-rose-500 mb-1.5`}>Confirmar apagar?</p>
+                              <div className="flex gap-1">
+                                <button onClick={() => { handleDelete(w.id); setConfirmDeleteWorkerId(null); setOpenMenuId(null); }} className={`flex-1 py-1 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors ${SCALE.text.meta}`}>Sim</button>
+                                <button onClick={() => setConfirmDeleteWorkerId(null)} className={`flex-1 py-1 bg-white border border-[var(--border)] text-[var(--ink-soft)] rounded-lg hover:bg-[var(--surface)] transition-colors ${SCALE.text.meta}`}>Não</button>
+                              </div>
+                            </div>
+                          ) : (
+                            <button onClick={() => setConfirmDeleteWorkerId(w.id)} className="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-rose-50 group transition-colors">
+                              <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-rose-100 text-rose-500 group-hover:bg-rose-200 transition-colors shrink-0"><Trash2 size={11} /></span>
+                              <span className={`${SCALE.text.body} text-rose-500 group-hover:text-rose-600`}>Apagar</span>
+                            </button>
+                          )}
+                        </div>
+                      </>
+                    )}
                   </div>
-                ) : (
-                  <button onClick={() => setConfirmDeleteWorkerId(w.id)} className="p-1 text-[var(--slate)] hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all border border-[var(--border-soft)]"><Trash2 size={10} /></button>
-                )}
+                </div>
               </div>
-            </div>
             <div className="flex items-center gap-2 mb-2">
-              <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${SCALE.text.meta}`} style={{ backgroundColor: FT.navy, color: FT.orange }}>{getInitials(w.name)}</div>
+              <div
+                className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 border-2 ${SCALE.text.meta}`}
+                style={{ backgroundColor: FT.navy, color: FT.orange, borderColor: vinculoOk ? 'var(--ok)' : 'var(--warn)' }}
+              >
+                {getInitials(w.name)}
+              </div>
               <div className="min-w-0">
                 <h4 className="text-[0.95rem] font-bold leading-[1.15] text-[var(--ink-mid)] truncate" style={{ fontFamily: FONT_TITLE }} title={w.name}>{w.name}</h4>
                 <p className={`${SCALE.text.meta} text-[var(--slate-dim)] truncate`} style={{ fontFamily: FONT_MONO }}>{w.profissao || 'Staff'}</p>
               </div>
             </div>
-            <div className="mb-2">{vinculoBadge(w, apoliceMap, ssComunicacoesMap[w.nis])}</div>
-            <div className={`${SCALE.text.meta} text-[var(--slate-dim)] space-y-0.5 border-t border-[var(--border-soft)] pt-1.5`}>
-              <div className="flex items-center gap-1 truncate">
-                <span>⏱</span> <span className="truncate">{schedules.find(s => s.id === w.defaultScheduleId)?.name || 'N/A'}</span>
+            <div className={`${SCALE.text.meta} text-[var(--slate-dim)] space-y-0.5`}>
+              <div className="flex items-center gap-1.5 truncate">
+                <Clock size={10} className="shrink-0 text-[var(--slate)]" /> <span className="truncate">{schedules.find(s => s.id === w.defaultScheduleId)?.name || 'N/A'}</span>
               </div>
-              <div className="flex items-center gap-1 truncate">
-                <span>💼</span> <span className="truncate">{clients.find(c => c.id === w.defaultClientId)?.name || 'N/A'}</span>
+              <div className="flex items-center gap-1.5 truncate">
+                <Briefcase size={10} className="shrink-0 text-[var(--slate)]" /> <span className="truncate">{clients.find(c => c.id === w.defaultClientId)?.name || 'N/A'}</span>
               </div>
-              {workerApproval && (
-                <div className="flex items-center gap-1 pt-1"><CheckCircle size={9} className="text-emerald-500" /><span className="text-emerald-600">Aprovado</span></div>
+            </div>
+            {/* Estado do vínculo (SS/apólice) + aprovação do mês, consolidados
+                numa só linha — antes eram três sinais espalhados pelo cartão
+                (badge "Ativo" no topo à parte). */}
+            <div className="flex items-center justify-between gap-2 border-t border-[var(--border-soft)] pt-1.5 mt-1.5">
+              {vinculoBadge(w, apoliceMap, ssComunicacoesMap[w.nis])}
+              {workerApproval ? (
+                <span className={`flex items-center gap-1 text-emerald-600 shrink-0 ${SCALE.text.meta}`}><CheckCircle size={9} />Aprovado</span>
+              ) : (
+                <span className={`text-[var(--slate)] shrink-0 ${SCALE.text.meta}`}>Por aprovar</span>
               )}
             </div>
           </Card>

@@ -573,6 +573,13 @@ export const AppProvider = ({ children }) => {
       // Migração silenciosa: se ainda vier `morada` no objecto e não houver `address`, preserva o valor
       if (morada && !payload.address) payload.address = morada;
       // isAdminImpersonating é campo transient de sessão — nunca persistir
+      // vencimento_base/subsidio_alimentacao_dia são `numeric` na BD — um
+      // trabalhador novo que não visite a aba Financeiro chega aqui com ''
+      // (valor de arranque do formulário), e o Postgres rejeita ''::numeric
+      // (22P02). null é válido (coluna aceita NULL) e o upsert passa a
+      // gravar, ficando por preencher em vez de nunca ser criado.
+      if (payload.vencimento_base === '') payload.vencimento_base = null;
+      if (payload.subsidio_alimentacao_dia === '') payload.subsidio_alimentacao_dia = null;
     }
 
     // Para app_notifications: só inicializar os campos de tracking se não vierem no payload
@@ -593,9 +600,13 @@ export const AppProvider = ({ children }) => {
     const { error } = await supabaseInstance.from(tableName).upsert(payload, { onConflict: 'id' });
     if (error) {
       console.error(`Erro ao gravar em ${tableName}:`, error);
-      if (tableName === 'logs') {
-        // Erro visível ao trabalhador — o registo não foi guardado na base de dados
-        window.alert(`Erro ao guardar registo: ${error.message || error.code || 'Erro desconhecido'}. Tenta novamente.`);
+      if (tableName === 'logs' || tableName === 'workers') {
+        // Erro visível ao admin — o registo não foi guardado na base de dados.
+        // 'workers' juntou-se aqui depois de um upsert falhar em silêncio
+        // (''::numeric rejeitado pelo Postgres) sem nunca aparecer no ecrã —
+        // o estado local já tinha sido actualizado de forma optimista antes
+        // desta chamada, por isso o trabalhador parecia gravado até recarregar.
+        window.alert(`Erro ao guardar ${tableName === 'workers' ? 'trabalhador' : 'registo'}: ${error.message || error.code || 'Erro desconhecido'}. Tenta novamente.`);
       }
     }
   };

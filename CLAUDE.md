@@ -900,6 +900,312 @@ sem `signed_pdf_url` ainda → admin aprova → PDF real gerado pela PDF.co, ass
 e carimbo do admin no sítio certo, sem sobreposição — o teste que o Fluxo 2 nunca passava de forma
 fiável. Regressão confirmada: "CONTRATO DE TRABALHO" (docx) continua a funcionar sem alteração.
 
+## Bug corrigido — criar trabalhador novo não gravava no Supabase (2026-08-31)
+
+**Sintoma reportado pelo Diego: um novo colaborador criado desaparecia depois de recarregar a
+página — parecia gravado (aparecia logo na lista), mas nunca chegava à base de dados.**
+
+**Causa raiz, confirmada contra o schema real:** `vencimento_base` e `subsidio_alimentacao_dia`
+são colunas `numeric` em `workers`. `INITIAL_WORKER_FORM` (`TeamContext.jsx:98`) arranca os dois
+como `''`. Um trabalhador NOVO cujo admin não visite a aba "Financeiro" antes de gravar chega ao
+`upsert` com esses campos ainda `''` — e o Postgres rejeita `''::numeric` (`22P02: invalid input
+syntax for type numeric`). Confirmado isoladamente: `select ''::numeric` dá exactamente esse erro.
+Ao EDITAR um trabalhador já existente isto nunca disparava, porque o formulário vem pré-preenchido
+com valores reais — só um registo genuinamente novo arranca com `''`.
+
+**Por que ficava invisível:** `AppContext.jsx`'s `saveToDb` faz um update optimista do estado local
+(`updateState(setWorkers)`) **antes** de chamar o Supabase — por isso o trabalhador aparecia na
+lista de imediato. O erro do `upsert` só ia para `console.error`; o `window.alert()` de erro só
+disparava para `tableName === 'logs'`, nunca para `'workers'`. O registo só "desaparecia" ao
+recarregar, sem nenhum sinal de que a gravação tinha falhado.
+
+**Correcção, em `AppContext.jsx` (`saveToDb`):**
+1. No bloco `tableName === 'workers'`, normalizar `vencimento_base`/`subsidio_alimentacao_dia` de
+   `''` para `null` antes do `upsert` (a coluna aceita `NULL`, só rejeita string vazia) — corrige a
+   causa raiz, o trabalhador passa a gravar mesmo sem a aba Financeiro visitada.
+2. `window.alert()` de erro passou a disparar também para `tableName === 'workers'`, não só
+   `'logs'` — para esta classe de falha (upsert rejeitado, estado local já optimista) nunca mais
+   ficar completamente muda, mesmo que apareça noutro campo no futuro.
+
+Verificado que **não há outro campo com o mesmo risco** neste formulário: as restantes colunas
+`numeric`/`integer` de `workers` (`n_dependentes`, `horas_semanais`, `local_trabalho`) não fazem
+parte de `INITIAL_WORKER_FORM`, por isso nunca chegam ao payload como `''` — ficam omitidas e usam
+o default da coluna. `valorHora` (o outro campo monetário do formulário) é `text` na BD, não
+`numeric` — string vazia é um valor válido, sem o mesmo problema.
+
+**Verificado ao vivo, ponta a ponta:** criado um trabalhador de teste ("Teste Fix Numeric Qa") só
+com o Nome preenchido, aba Financeiro nunca visitada, gravado, **página recarregada por completo**
+— o registo sobreviveu (antes da correcção, teria desaparecido). Apagado a seguir, contagem de
+colaboradores voltou ao valor original (28/23 activos). `npx eslint`/`npx vite build` limpos.
+
+## Preview de templates HTML + zoom-to-fit no preview de documento (2026-08-31)
+
+**Pedido do Diego, dois problemas relacionados no mesmo componente partilhado.**
+
+**1. Templates `formato === 'html'` não tinham "Pré-visualizar" nenhum.**
+`DocumentTemplatesAdmin.jsx` escondia os botões "Pré-visualizar" (Eye) e "Editar" (Edit3) em bloco
+para `t.formato === 'html'` — decisão original fazia sentido para "Editar" (`TemplateEditorModal`
+é específico de calibração de carimbo por coordenadas sobre um `.docx`, não existe equivalente para
+HTML), mas nunca deveria ter apanhado o "Pré-visualizar" também. Agravado por um segundo bug,
+independente: `openTemplatePreview` já tinha código pronto para o caminho HTML, mas lia
+`template.html_content` — campo que **não existe**; a coluna real, confirmada noutros dois
+consumidores (`useDocumentsAdmin.js`, `HtmlDocumentViewer.jsx`), é `template.template_html`. Mesmo
+que o botão não estivesse escondido, este ramo nunca teria funcionado. Corrigidos os dois: o botão
+"Pré-visualizar" passou a aparecer sempre (só "Editar" continua condicionado a `formato !== 'html'`),
+e o campo lido passou a `template_html`. Mostra o template tal como está gravado — tags
+`{worker_name}`/`{worker_nif}`/etc. ainda literais — mesmo espírito do preview docx, que também
+renderiza o `.docx` em bruto sem resolver campos.
+
+**2. Preview HTML reflui a cada largura de contentor, ao contrário do preview docx.**
+`DocxPreviewModal.jsx` é partilhado por dois consumidores — `DocumentTemplatesAdmin.jsx`
+("Pré-visualizar" de um template em branco) e `useDocumentsAdmin.js`'s `openGeneratedPreview`
+("olho" de um documento já gerado, na lista "Documentos") — por isso a correcção cobre os dois de
+uma vez. O ramo docx já tinha exactamente o comportamento pedido ("documento fixo, só muda de
+zoom"): `applyFitToWidth` mede a largura natural da primeira página (`firstPage.offsetWidth ||
+794`), calcula `scale = min(1, larguraDisponível / larguraNatural)` e aplica
+`transform: scale(...)` a um wrapper com `ResizeObserver`. O ramo HTML não tinha nada disto — o
+`<iframe>` só tinha `width: 100% height: 100%`, por isso o conteúdo (HTML normal, sem paginação)
+refluía livremente a cada largura de ecrã diferente, como uma página web comum, não como um
+documento fixo.
+**Achado ao investigar a largura "certa" a fixar:** os templates HTML não têm nenhuma largura fixa
+em CSS — só `@page { size: A4; margin: 0; }`, que é uma regra de impressão sem efeito nenhum no
+ecrã (só importa quando a PDF.co converte para PDF). Confirmado directamente no `template_html`
+gravado dos 2 templates reais (Termo de Responsabilidade EPI, Consentimento RGPD): sem
+`width`/`max-width` em px nem mm em lado nenhum. Decisão: usar **794px** como largura de
+referência — o mesmo valor já usado como fallback no ramo docx (`|| 794`), consistente com A4 a
+96dpi, sem precisar de inventar um segundo valor de referência no mesmo ficheiro.
+**Mecanismo implementado, mesma lógica do docx adaptada a HTML** (que não é paginado, ao contrário
+do docx-preview, por isso a altura não é conhecida à partida): o `<iframe>` fica com largura fixa
+`794px` e altura NATURAL (não escalada) — medida via `iframe.contentDocument.documentElement.
+scrollHeight` depois do `load` do `srcDoc` (com 1123px de fallback, altura A4 a 96dpi, caso a
+medição falhe) — e um `<div>` wrapper à volta é que recebe `transform: scale(...)` +
+`width`/`height` explícitos já escalados, com `ResizeObserver` a reaplicar o fit quando o
+contentor muda de tamanho. Mesma separação já usada no docx: o elemento com o conteúdo real fica
+sempre ao tamanho natural, só a caixa à volta é que encolhe.
+**Verificado ao vivo, três larguras (420px/628px/1400px):** a 1400px o documento mostra a
+`scale(1)` (tamanho real, sem ampliar além do natural); a 628px (largura por omissão do painel)
+`scale(0.7317)`; a 420px `scale(0.4887)` — a proporção/leiaute mantém-se sempre idêntica, só o
+tamanho muda, confirmado visualmente nas três capturas. `npx eslint`/`npx vite build` limpos (os
+2 avisos que aparecem são pré-existentes, confirmados por `git stash` antes de editar).
+
+**Extensão no mesmo dia — pedido do Diego "fazer o mesmo em todos os previews de todos html".**
+Primeiro apliquei a mesma correcção a `HtmlDocumentViewer.jsx` (o visualizador real onde o
+trabalhador assina, `w-full h-full` sem fit nenhum — mesmo sintoma do `DocxPreviewModal.jsx`, só
+que aqui o documento é o legítimo, não uma pré-visualização). Ao ir à terceira ocorrência
+(`WorkerDocuments.jsx`), a lógica já ia na 3ª cópia quase idêntica — extraída para
+**`src/components/common/FitToWidthHtmlFrame.jsx`**, componente partilhado (outer scrollável +
+wrapper com `transform:scale()` + iframe a tamanho natural + `ResizeObserver`), e os dois sítios já
+feitos (`DocxPreviewModal.jsx`, `HtmlDocumentViewer.jsx`) foram refactorizados para o usar em vez
+de manter a lógica duplicada — confirmado ao vivo depois do refactor, sem regressão (mesmos valores
+de `scale`/`width`/`height` medidos antes e depois).
+**Levantamento de TODOS os `srcDoc=` da app antes de decidir onde aplicar** (`grep -rn
+"srcDoc=" src`) — 5 sítios ao todo, só 3 são conteúdo HTML real (sujeito ao problema de refluxo);
+os outros 2 são renderizações de PÁGINAS DE PDF via `renderPdfToSrcDoc` (uma imagem/canvas do PDF
+embrulhada em HTML só para contornar incompatibilidades de motor), que **não refluem** — esticar o
+iframe só corta/escala a vista, não reflui texto nenhum, e os componentes irmãos no mesmo sítio
+(`<img>` com `object-contain`, `<iframe src=...&view=FitH>`) já seguem deliberadamente a filosofia
+"encaixa nesta caixa", não "documento a tamanho real com zoom" — aplicar a largura fixa A4 aqui
+seria incorrecto (nem todos os PDFs digitalizados são A4) e inconsistente com os irmãos. Deixados
+de fora, por decisão, não por esquecimento:
+- `WorkerDocuments.jsx` — `previewSrcDoc` (PDF renderizado, mesmo ficheiro onde a 3ª correcção
+  real foi aplicada, no ramo `generated_html` a seguir).
+- `WorkerDocsFolderView.jsx:275` — `content.type === 'srcDoc'` (mesma origem, `renderPdfToSrcDoc`).
+**3º sítio corrigido de facto:** `WorkerDocuments.jsx`, ramo `selectedDoc.generated_html` (fluxo
+legado de assinatura docx, pré-visualização dentro do modal "Assinar Documento") — usa
+`FitToWidthHtmlFrame` com `sandbox="allow-scripts"` (preservado do original, precisa de correr o
+`injectSignaturePlaceholder`) e `containerClassName` ajustado para caber no `overflow-hidden` já
+existente do cartão pai. **Ficheiro sensível, tratado com cuidado extra**: `WorkerDocuments.jsx` já
+tinha um `canvasRef`/`applyFitToWidth` documentado como frágil (traço de assinatura distorce se o
+layout do pai mudar) — confirmado antes de editar que esse mecanismo vive noutro componente
+(`DocumentViewer.jsx`) e noutra área da árvore, sem overlap com o iframe tocado aqui.
+`npx eslint`/`npx vite build` limpos nos 4 ficheiros (`FitToWidthHtmlFrame.jsx` novo,
+`DocxPreviewModal.jsx`/`HtmlDocumentViewer.jsx` refactorizados, `WorkerDocuments.jsx` editado).
+
+## Carimbo Opção E + validação de assinaturas (2026-08-31)
+
+**Pedido do Diego, em duas partes: primeiro um visual de carimbo/assinatura mais profissional
+(iterado em artefacto, 3+2 opções — A/B/C, depois D/E após feedback), escolhida a Opção E ("Cartão
+Digital"); depois, explicitamente, "planeje uma maneira de validar as assinaturas" — o código de
+verificação do mockup era só decorativo até aqui.**
+
+**Investigação prévia do mecanismo já existente (Fluxo 2, `VerificationPortal.jsx`) encontrou uma
+fraqueza de segurança real, deixada de fora deste trabalho por decisão — não foi pedido mexer no
+Fluxo 2:** a página pública expõe IP, a imagem da assinatura em bruto e um link direto ao PDF sem
+autenticação; `client_approvals.id` é uma string previsível/enumerável (ao contrário do UUID
+aleatório de `worker_documents`); RLS está efectivamente desligado nas duas tabelas envolvidas; sem
+rate-limiting em lado nenhum. Registado como pendência de segurança à parte, não corrigido.
+
+**Decisões do Diego (via `AskUserQuestion`), que moldaram o desenho do mecanismo novo:**
+- Página pública de verificação mostra o **mínimo**: "✓ Documento autêntico" + tipo de documento +
+  nome do trabalhador + data/hora de assinatura + data de aprovação. Nunca IP, nunca a imagem da
+  assinatura, nunca um link directo ao PDF.
+- "Código de verificação" é um **código curto novo** (`<3 iniciais>-<4 caracteres aleatórios>`,
+  alfabeto sem `0/O`/`1/I`), gerado e gravado no momento da aprovação — não um UUID reaproveitado.
+
+**Esquema (migração `add_document_verification_code`):** `worker_documents.verification_code TEXT
+UNIQUE` + função `get_document_verification(p_code)` — `SECURITY DEFINER`, devolve só 4 colunas
+(`document_title`, `worker_name`, `signed_at`, `admin_signed_at`). A fronteira de segurança real é
+esta lista de colunas explicitamente estreita, não RLS (que está efectivamente desligado nas
+tabelas relacionadas, ver acima) — uma coluna nova em `worker_documents` não passa a aparecer aqui
+por engano, é preciso adicioná-la de propósito.
+
+**Geração do código — `src/utils/verificationCode.js`** (`generateUniqueVerificationCode`): iniciais
+do nome (até 3 letras) + 4 caracteres aleatórios de um alfabeto de 32 símbolos sem ambíguos, com
+até 5 tentativas de retry em caso de colisão (checado por `select` real à coluna, não confiado só à
+entropia). Chamada em `useDocumentTemplates.js`'s `handleApproveDocument`, dentro do branch
+`formato === 'html'`, no mesmo ponto onde `{admin_stamp}` já era resolvido — junta-se
+`{verification_code}`/`{verification_qr}` (QR opcional, `QRCode.toDataURL` do pacote `qrcode`, já
+usado por `useSignatureStamp.jsx` no Fluxo 2, apontando para a nova página) na mesma passagem de
+`.replace(...)`, e `verification_code` é gravado no mesmo `update` que já grava `signed_pdf_url`.
+
+**Bloco de assinatura — `.sign-block` antigo (linha simples + legenda) substituído por dois
+cartões lado a lado (Opção E) nos 2 templates HTML já em produção** (Termo de Responsabilidade EPI,
+Consentimento RGPD — `UPDATE` directo ao `template_html`, mesmo mecanismo de layout `display:
+table`/`table-cell` já usado, só o conteúdo de cada célula mudou): aba de cor no topo (laranja
+`#EB8D00` trabalhador, navy `#1B3A57` admin), área de assinatura, nome, "ID verificação:
+{verification_code}" — o MESMO código nos dois cartões, não dois códigos diferentes (é um único
+documento). Cartão do admin leva QR + uma marca de água do logótipo real
+(`public/icon-192x192.png`/`icon-512x512.png` — **confirmado, por hash SHA-256, que os dois
+ficheiros são bit-a-bit idênticos**, apesar dos nomes sugerirem tamanhos diferentes; redimensionado
+com `sharp` para 160×160 antes de embutir, 13,6KB em vez dos ~150KB do PNG original, `opacity:
+0.06`). Cores fixas (não `var(--...)`) — é HTML gerado para PDF via PDF.co, sem tema possível, mesma
+razão já documentada para o resto do template.
+
+**Nova página pública — `src/components/common/DocumentVerificationPortal.jsx`**, montada em
+`app.jsx` num `?view=verify-doc&code=...` novo (distinto do `?view=verify&id=...` do Fluxo 2, para
+não colidir) — RPC `get_document_verification`, sem sessão, render minimalista com os 4 campos
+acordados. Não reaproveita `VerificationPortal.jsx` de propósito (esse expõe dados a mais, ver
+acima).
+
+**Achado de execução, não relacionado com o pedido — reportado, não corrigido:** o `useEffect` de
+`app.jsx:302-309` (`if (location.pathname === '/' || location.pathname === '') { ... else
+navigate('/login', {replace:true}) }`) corre uma vez ao montar e **quebra qualquer rota pública por
+`?view=...` acedida na raiz nua do domínio** (`/?view=verify-doc&code=...` redirecciona para
+`/login`, perdendo a query string por completo, página em branco) — afecta também o `?view=verify`
+do Fluxo 2, não é regressão desta sessão. Não é visível em uso real porque `buildVerifyUrl`/
+`buildVerifyDocUrl` constroem o link a partir de `window.location.pathname` **no momento da
+aprovação** (tipicamente `/admin/documentos`, nunca `/`), por isso o link real gerado nunca pisa
+este caso — só apareceu ao testar manualmente com a raiz nua. Confirmado ao vivo:
+`/admin/documentos?view=verify-doc&code=...` funciona perfeitamente; `/?view=verify&id=...`
+(Fluxo 2, código já existente, não tocado nesta sessão) quebra da mesma forma. Fica registado como
+pendência — não corrigido por ser um efeito partilhado por toda a navegação da app, fora do âmbito
+do pedido.
+
+**Verificado ao vivo, ponta a ponta, com dados reais:** criado um `worker_documents` de teste
+(`status: 'awaiting_admin'`, HTML preenchido via `replaceTemplateFields` a partir do template real)
+para um trabalhador existente (Adriel de Jesus dos Santos) → aprovado através do botão real
+"Aplicar carimbo" em `/admin/documentos` (Por categoria, filtro "Aguarda aprovação") → confirmado
+`verification_code: "ADJ-8KRW"` gerado e gravado, `status: 'signed'`, `signed_pdf_url` real → PDF
+descarregado e inspeccionado: os dois cartões renderizam correctamente com dados reais, mesmo
+código nos dois, QR visível no cartão do admin, assinatura real do admin (Diego Barbosa — Gerente)
+no sítio certo, sem sobreposição de texto (a assinatura do "trabalhador" aparece como ícone
+quebrado só porque a imagem de teste usada era um base64 inválido, não uma falha do mecanismo) →
+página pública em `/admin/documentos?view=verify-doc&code=ADJ-8KRW` mostra exactamente os 4 campos
+acordados, sem IP/assinatura/PDF → código inexistente (`XXX-0000`) mostra "Código não encontrado"
+sem vazar nada → "CONTRATO DE TRABALHO" (Fluxo 2, docx) não tocado, fora do âmbito. Dados de teste
+limpos no fim (registo apagado, PDF removido do storage). `npx eslint`/`npx vite build` limpos.
+
+**Achado à parte, sem relação com este pedido — corrigido no mesmo lote por o utilizador ter
+reportado ao vivo durante os testes:** `OnboardingPendentes.jsx` (o modal "Rever" de
+`/admin/team` → Pendentes) era o único, de 6 consumidores de `ModalShell` no módulo `team`, sem o
+wrapper `p-6` que todos os outros usam à volta do conteúdo do corpo — confirmado por medição real no
+browser (`getBoundingClientRect`): a grelha "Editar campos se necessário" media `left: 0, right:
+375` (colada às duas bordas do modal, viewport mobile 375px), sem respiro nenhum antes do rodapé
+fixo — lia-se como conteúdo cortado/mal dimensionado, exactamente o sintoma reportado. Corrigido
+trocando `className="space-y-5"` por `className="p-6 space-y-5"` no wrapper do corpo (linha ~290) —
+mesma convenção confirmada em `WorkerValorHoraHistoryModal.jsx`/`DocumentScannerModal.jsx`.
+Verificado ao vivo, antes/depois, com o mesmo pedido pendente real: grelha passou a `left: 23, right:
+353`, alinhada com o resto do conteúdo; "Tabela IRS"/"Dependentes" (a última linha, antes colada ao
+rodapé) ficaram com espaço normal acima dos botões. `npx eslint` limpo.
+**Achado à parte, não corrigido — descoberto ao reproduzir o bug acima:** o banner de notificações
+global (`app.jsx:490-514`, `z-[9999]`, fixo no topo) fica **acima** de qualquer modal
+(`ModalShell` usa no máximo `z-300`, ver `Z` em `ModalShell.jsx`) — com notificações pendentes reais,
+o cabeçalho de qualquer modal aberto (incluindo o botão de fechar) fica coberto até serem
+dispensadas. Não é o que o Diego reportou (o screenshot dele não tinha banners visíveis), mas é um
+problema real, à parte, tocando um z-index partilhado por toda a app — fica registado, não corrigido
+de passagem.
+
+## Correções pós-implementação do Carimbo Opção E (2026-08-31)
+
+**Feedback do Diego com screenshots do PDF real gerado** — três bugs concretos + um pedido de novos
+modelos visuais, todos no mesmo lote:
+
+1. **Assinaturas de tamanhos diferentes** — `useDocumentTemplates.js` `handleApproveDocument` (branch
+   `formato === 'html'`) tinha `max-width:220px;max-height:90px` para `{worker_signature}` e
+   `max-width:180px;max-height:80px` para `{admin_stamp}` — limites diferentes, por isso a assinatura
+   do trabalhador podia sair visivelmente maior. Unificados os dois para `max-width:180px;
+   max-height:64px`.
+2. **Botão "Aplicar carimbo" inacessível em mobile** — `docBadges.jsx`'s `CompactDocRow` (partilhado
+   por `CategoryWorkerGrid.jsx` e `WorkerDocsFolderView.jsx`) revelava as ações (categoria/pré-visualizar/
+   aprovar/apagar) só com `hidden group-hover:flex` — sem `:hover` real em touch, ficavam
+   permanentemente escondidas. Corrigido para `flex md:hidden md:group-hover:flex` — sempre visíveis
+   abaixo de `md`, hover-reveal a partir daí. Confirmado ao vivo em 375px.
+3. **"Entidade Patronal" vazia** — o campo usava `{client_name}` (o cliente onde o trabalhador está
+   destacado), que fica vazio sempre que o trabalhador não tem cliente atribuído — e nem seria
+   correcto quando tem: numa cedência de mão-de-obra a entidade patronal legal é a Magnetic Place, não
+   o cliente. Trocado para `{company_name}` no template EPI (via `UPDATE` directo ao `template_html`,
+   mesmo mecanismo já usado para o resto desta migração) — confirmado por grep que o template RGPD não
+   tem este campo, não precisou de alteração.
+4. **Pedido de modelos alternativos** — Diego mostrou o carimbo antigo (`ValidationStamp`, Fluxo 2:
+   um cartão só, miniatura da assinatura + linhas Nome/Data-Hora/IP/ID + rodapé verde "documento
+   validado eletronicamente", indigo) como referência de densidade. Gerados 3 modelos novos (C/D/E')
+   no mesmo artefacto (`stamp_style_comparison.html`, já tinha "hoje"/A/B de uma ronda anterior) —
+   réplica fiel da estrutura do carimbo antigo, mas em navy/laranja (não indigo, que é resíduo de
+   template, não identidade real): C (empilhado), D (lado a lado), E' (um cartão só, as duas partes
+   como sub-linhas, cabeçalho/rodapé partilhados). Nenhum aplicado ainda — Diego ainda não escolheu.
+   `npx eslint`/`npx vite build` limpos nos 2 ficheiros de código (`useDocumentTemplates.js`,
+   `docBadges.jsx`); a correcção do template foi só dados (SQL), sem ficheiro para lint.
+
+## Redesenho do cartão de colaborador — `WorkerList.jsx` (2026-08-31)
+
+Mesmo fluxo de sempre: mockup em artefacto (`equipa_redesign.html`, dados reais dos colaboradores
+visíveis no screenshot do Diego) → aprovado com "implemente" → implementado directamente no
+componente real (ao contrário do Carimbo/Documentos, aqui não houve intermediário de HTML estático a
+copiar — o mockup só serviu para validar a direcção, o código foi escrito de raiz sobre a estrutura
+JSX já existente). Três mudanças, mantendo exactamente os mesmos dados e acções de sempre:
+
+1. **Menu "⋯" para as acções situacionais.** O cartão chegava a mostrar até 6 ícones sempre visíveis
+   (Ver Portal, Editar, Ver Pasta, + até 3 de SS consoante o estado do vínculo, + Eliminar). Ficam 3
+   sempre visíveis (Ver Portal, Ver Pasta, Editar — por esta ordem, a mesma do carimbo/dropdown da
+   vista de lista) e as de SS (Comunicar Admissão/Cessação, Alterar Contrato, Transferir Local) +
+   Eliminar passam para um menu "⋯", reaproveitando **tal e qual** o mesmo padrão de dropdown
+   (`openMenuId`, `fixed inset-0` para fechar ao clicar fora) já usado na vista de lista deste mesmo
+   ficheiro — só copiado para o cartão, não inventado de novo. O estado `openMenuId` já existia
+   declarado no componente mas só era consumido pela vista de lista; a vista de grade agora também o
+   usa.
+2. **Anel colorido no avatar.** Extraída a detecção de estado de `vinculoBadge` para uma função nova,
+   `vinculoState(w, apoliceMap, ssFlag)` (devolve só `{ ssProblema, apoliceProblema }`, sem construir
+   o badge) — `vinculoBadge` passou a chamá-la em vez de duplicar a lógica, e o cartão usa o mesmo
+   resultado para pintar a borda do avatar (`var(--ok)` sem problema, `var(--warn)` com problema),
+   sem repetir a detecção duas vezes. Avatar subiu de `w-7 h-7` para `w-8 h-8` para dar espaço à
+   borda de 2px sem ficar apertado.
+3. **Estado consolidado no rodapé.** `vinculoBadge` (SS/apólice) e "Aprovado"/"Por aprovar" (mês
+   corrente) eram dois sinais em linhas separadas — passaram para uma só linha `justify-between` no
+   rodapé do cartão. O selo "Ativo"/"Inativo" no topo do cartão manteve-se onde estava, de propósito:
+   é sobre a conta em si (perfil activo na empresa), não sobre o mês, categoria diferente do resto.
+   Os emoji `⏱`/`💼` das linhas de horário/cliente foram trocados por `Clock`/`Briefcase` do
+   `lucide-react` (import novo), consistentes com o resto dos ícones do cartão — eram os únicos dois
+   emoji do ficheiro, resíduo de antes deste componente ter sido convertido para lucide.
+
+**Pendência sinalizada, não implementada — conflito com uma decisão já registada.** O mockup também
+propunha comprimir a faixa "29 · 24 · 5 · 1 · Onboarding pendente" (texto com pontos) para chips com
+fundo/borda próprios. Essa faixa não vive em `WorkerList.jsx` — é o prop `stats` de
+`SectionHeaderShell` (`TeamManager.jsx:231-240`), o componente partilhado por 19 secções do admin que
+o Diego já tinha decidido explicitamente não tocar sem revisão dedicada (ver "Design system (em
+migração)" acima). Mudar o visual dos `StatChip` mudaria as 19 secções de uma vez, não só Equipa —
+por isso esta parte do mockup **não foi implementada**, fica reportada aqui como pendência para essa
+revisão dedicada, não escondida nem decidida sozinho.
+
+Verificado ao vivo em `/admin/team` (vista de grade): anel verde em colaboradores sem problema, anel
+laranja em Francisco Wanderlilson Diniz ("Apólice por confirmar" — o mesmo caso já usado como
+exemplo no mockup); menu "⋯" abre com "Alterar Contrato"/"Transferir Local de Trabalho"/"Apagar" para
+um colaborador com admissão já comunicada à SS; ícones Clock/Briefcase a renderizar em vez dos
+emoji. Modo escuro não confirmado ao vivo nesta passagem — forçar `.dark` via JS foi imediatamente
+revertido pelo próprio `useEffect` de tema do `AppContext.jsx` (lê `systemSettings.darkMode`, não a
+classe DOM directamente), e não foi encontrado o toggle real em Definições a tempo; o par
+`var(--ok)`/`var(--warn)` usado na borda do avatar é o mesmo já validado dezenas de vezes ao longo
+desta migração, risco considerado baixo. `npx eslint`/`npx vite build` limpos.
+
 ## Migração de tokens FT — regras de decisão
 
 Aplicam-se a qualquer lote de conversão Tailwind → tokens `FT`/CSS vars (`designTokens.js`,

@@ -158,7 +158,9 @@ export function CompactDocRow({ d, onClick, hideMesAno, children }) {
           </span>
         )}
       </span>
-      {children && <div className="hidden group-hover:flex items-center gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>{children}</div>}
+      {/* Em mobile (sem :hover real) as ações ficam sempre visíveis — só a
+          partir de md: é que o hover-reveal faz sentido (rato disponível). */}
+      {children && <div className="flex md:hidden md:group-hover:flex items-center gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>{children}</div>}
     </div>
   );
 }
