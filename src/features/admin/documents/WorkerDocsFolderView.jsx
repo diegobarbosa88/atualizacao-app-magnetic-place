@@ -5,7 +5,7 @@ import { renderPdfFirstPage, renderPdfToSrcDoc } from '../../../components/commo
 import { FT, SCALE, FONT_TITLE } from '../../../styles/designTokens';
 import {
   FileText, Clock,
-  FolderOpen, Eye, EyeOff, CheckCircle, AlertTriangle, ChevronDown, ChevronUp, ChevronRight,
+  FolderOpen, Eye, EyeOff, CheckCircle, AlertTriangle, ChevronDown, ChevronUp,
   Folder, ArrowLeft, Search, FileSignature, Download, Trash2,
   Layers, Calendar, Plus, ScanSearch,
 } from 'lucide-react';
@@ -14,6 +14,7 @@ import { CATEGORIAS_RH_ACT, getValidadeStatus, getDiasRestantes, getExpiryRelati
 import { getCategoryFields } from '../../../constants/documentFieldsByCategory';
 import { toSentenceCase, toSentenceCaseFilename, getInitials } from '../../../utils/textUtils';
 import UploadManualModal from './UploadManualModal';
+import { CompactDocRow } from './docBadges';
 
 // Icon-button padronizado — mesmo par usado no resto do admin (neutro:
 // hover navy/surface; destrutivo: hover bad/bad-bg).
@@ -480,117 +481,84 @@ function DocCardPair({ pair, onOpenDoc, onDelete, confirmDeleteId, setConfirmDel
   );
 }
 
-function SubPastaCard({ categoria, docs, onOpenDoc, onDelete }) {
-  const [modalOpen, setModalOpen] = useState(false);
-  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+// Agrupa docs de uma categoria em pares Frente/Verso + avulsos — mesma
+// lógica que já existia dentro de SubPastaCard, agora reaproveitada por
+// categoria dentro de WorkerPastaView (uma função pura, não um hook — corre
+// dentro de .map(), não pode chamar useMemo).
+function groupDocItems(docs) {
+  const groups = {};
+  const singles = [];
+  docs.forEach(d => {
+    if (d.grupo_id) {
+      if (!groups[d.grupo_id]) groups[d.grupo_id] = [];
+      groups[d.grupo_id].push(d);
+    } else {
+      singles.push({ type: 'single', doc: d });
+    }
+  });
+  const paired = Object.values(groups).map(g => ({ type: 'pair', docs: g }));
+  return [...paired, ...singles];
+}
+
+// Modelo "linha" a partir de um item (single ou pair), para o CompactDocRow
+// partilhado (docBadges.jsx) — que só olha para tipo/title/state/data_validade.
+function itemToRowModel(item) {
+  if (item.type === 'single') {
+    const d = item.doc;
+    return { tipo: d.tipo, title: d.title, state: d.state, data_validade: d.data_validade };
+  }
+  const [a, b] = item.docs;
+  const frente = item.docs.find(d => d.lado === 'frente') || a;
+  const verso = item.docs.find(d => d.lado === 'verso') || b;
+  const tipoBase = (frente?.tipo || verso?.tipo || '').replace(/ \(Frente\)| \(Verso\)/g, '').trim();
+  return {
+    tipo: `${tipoBase} — Frente & Verso`,
+    title: null,
+    state: frente?.state,
+    data_validade: verso?.data_validade || frente?.data_validade || null,
+  };
+}
+
+// Secção de categoria — cabeçalho com ícone/cor da categoria + linhas
+// compactas (CompactDocRow). Substitui o cartão de subpasta com barra de
+// progresso que abria um modal à parte (SubPastaCard) — clicar numa linha
+// abre directamente a ficha do documento (via onOpenItem), sem esse nível
+// extra. Decisão do Diego, 2026-08-31, depois de comparar com "Por
+// categoria" — ver CLAUDE.md.
+function CategorySection({ categoria, docs, onOpenItem }) {
   const config = CATEGORIA_CONFIG[categoria] || CATEGORIA_CONFIG["Outros"];
   const colors = COLOR_MAP[config.color];
   const Icon = config.icon;
-
-  const renderItems = useMemo(() => {
-    const groups = {};
-    const singles = [];
-    docs.forEach(d => {
-      if (d.grupo_id) {
-        if (!groups[d.grupo_id]) groups[d.grupo_id] = [];
-        groups[d.grupo_id].push(d);
-      } else {
-        singles.push({ type: 'single', doc: d });
-      }
-    });
-    const paired = Object.values(groups).map(g => ({ type: 'pair', docs: g }));
-    return [...paired, ...singles];
-  }, [docs]);
+  const items = useMemo(() => groupDocItems(docs), [docs]);
 
   if (docs.length === 0) return null;
 
-  const temExpirado = docs.some(d => getValidadeStatus(d.data_validade) === 'expirado');
-  const temUrgente  = docs.some(d => getValidadeStatus(d.data_validade) === 'urgente');
-  const alertBorder = temExpirado ? 'border-red-300' : temUrgente ? 'border-amber-300' : 'border-[var(--border)]';
-  const aExpirarCount = docs.filter(d => ['expirado', 'urgente'].includes(getValidadeStatus(d.data_validade))).length;
-  const validosCount = docs.length - aExpirarCount;
-  // Proporção real de documentos válidos — antes a barra era sempre
-  // verde/âmbar fixo, sem refletir o dado (nunca ficava vermelha).
-  const validPct = docs.length ? validosCount / docs.length : 1;
-  const validColor = validPct >= 1 ? 'var(--ok)' : validPct >= 0.5 ? 'var(--warn)' : 'var(--bad)';
-  const validBg = validPct >= 1 ? 'var(--ok-bg)' : validPct >= 0.5 ? 'var(--warn-bg)' : 'var(--bad-bg)';
-
   return (
-    <>
-      <button
-        onClick={() => setModalOpen(true)}
-        className={`w-full flex items-center gap-2.5 px-3 py-3 text-left bg-white border rounded-xl hover:bg-[var(--surface)] hover:shadow-sm transition-all ${alertBorder}`}
-      >
-        <div className={`p-1.5 rounded-lg ${colors.bg} ${colors.text} flex-shrink-0`}>
-          <Icon size={14} />
+    <div>
+      <div className="flex items-center gap-2 mb-1.5 px-0.5">
+        <div className={`p-1 rounded-md ${colors.bg} ${colors.text} flex-shrink-0`}>
+          <Icon size={11} />
         </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-black text-[var(--ink-mid)] truncate">{toSentenceCase(categoria)}</p>
-          <div className="h-1 rounded-full bg-[var(--surface-dim)] overflow-hidden mt-1.5">
-            <div
-              className="h-full rounded-full transition-all"
-              style={{ width: `${validPct * 100}%`, backgroundColor: validColor }}
-            />
-          </div>
-          <div className="flex flex-wrap gap-1 mt-1.5">
-            <span className={`inline-flex items-center px-1.5 py-0.5 rounded ${SCALE.text.meta}`} style={{ color: validColor, backgroundColor: validBg }}>
-              {validosCount} válido{validosCount !== 1 ? 's' : ''}
-            </span>
-            {aExpirarCount > 0 && (
-              <span className={`inline-flex items-center px-1.5 py-0.5 rounded ${SCALE.text.meta}`} style={{ color: 'var(--bad)', backgroundColor: 'var(--bad-bg)' }}>
-                {aExpirarCount} a expirar
-              </span>
-            )}
-          </div>
-        </div>
-        {temExpirado && <AlertTriangle size={12} className="text-red-500 flex-shrink-0" />}
-        {!temExpirado && temUrgente && <AlertTriangle size={12} className="text-amber-500 flex-shrink-0" />}
-        <ChevronRight size={12} className="text-[var(--slate)] flex-shrink-0" />
-      </button>
-
-      {modalOpen && (
-        <ModalShell
-          isOpen
-          onClose={() => setModalOpen(false)}
-          title={toSentenceCase(categoria)}
-          meta={`${docs.length} doc${docs.length !== 1 ? 's' : ''}`}
-          icon={<Icon size={20} />}
-          size="2xl"
-          layer="nested"
-        >
-            {/* Lista de docs completos */}
-            <div className="p-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {renderItems.map((item, i) =>
-                item.type === 'pair' ? (
-                  <DocCardPair
-                    key={item.docs[0]?.id || i}
-                    pair={item.docs}
-                    onOpenDoc={onOpenDoc}
-                    onDelete={onDelete}
-                    confirmDeleteId={confirmDeleteId}
-                    setConfirmDeleteId={setConfirmDeleteId}
-                  />
-                ) : (
-                  <DocCardSingle
-                    key={item.doc.id}
-                    d={item.doc}
-                    onOpenDoc={onOpenDoc}
-                    onDelete={onDelete}
-                    confirmDeleteId={confirmDeleteId}
-                    setConfirmDeleteId={setConfirmDeleteId}
-                  />
-                )
-              )}
-              </div>
-            </div>
-        </ModalShell>
-      )}
-    </>
+        <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>{toSentenceCase(categoria)}</p>
+        <span className={`${SCALE.text.meta} text-[var(--slate-dim)] font-mono`}>{docs.length}</span>
+      </div>
+      <div className="flex flex-col gap-1">
+        {items.map((item, i) => (
+          <CompactDocRow
+            key={item.type === 'pair' ? (item.docs[0]?.id || i) : item.doc.id}
+            d={itemToRowModel(item)}
+            onClick={() => onOpenItem(item)}
+          />
+        ))}
+      </div>
+    </div>
   );
 }
 
-export function WorkerPastaView({ worker, docs, onBack, onOpenDoc, onDelete, onAddDoc, onScan }) {
+export function WorkerPastaView({ worker, docs, onBack, onOpenDoc, onDelete, onAddDoc, onScan, hideHeader }) {
+  const [quickViewItem, setQuickViewItem] = useState(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+
   const byCategoria = useMemo(() => {
     const map = {};
     CATEGORIAS_RH_ACT.forEach(c => { map[c] = []; });
@@ -605,56 +573,96 @@ export function WorkerPastaView({ worker, docs, onBack, onOpenDoc, onDelete, onA
   const expirados = docs.filter(d => ['expirado', 'urgente'].includes(getValidadeStatus(d.data_validade))).length;
   const categoriasComDocs = CATEGORIAS_RH_ACT.filter(c => (byCategoria[c] || []).length > 0);
 
+  const quickViewTitle = quickViewItem
+    ? (quickViewItem.type === 'pair' ? itemToRowModel(quickViewItem).tipo : buildDocTitle(quickViewItem.doc))
+    : '';
+
   return (
     <div className="space-y-4 max-w-4xl">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <button onClick={onBack} className="p-2 rounded-xl bg-[var(--surface-dim)] hover:bg-[var(--border)] text-[var(--ink-soft)] transition-colors">
-          <ArrowLeft size={16} />
-        </button>
-        <div className="relative w-10 h-10 shrink-0">
-          <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-black" style={{ backgroundColor: FT.navy, color: FT.orange }}>{getInitials(worker.workerName)}</div>
-          {expirados > 0 && (
-            <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white" style={{ backgroundColor: 'var(--bad)' }} title={`${expirados} documento${expirados !== 1 ? 's' : ''} a expirar/expirado${expirados !== 1 ? 's' : ''}`} />
+      {/* Header — omitido quando embebido num ModalShell que já mostra
+          nome/contagem no título (ver CategoryWorkerGrid.jsx). */}
+      {!hideHeader && (
+        <div className="flex items-center gap-3">
+          <button onClick={onBack} className="p-2 rounded-xl bg-[var(--surface-dim)] hover:bg-[var(--border)] text-[var(--ink-soft)] transition-colors">
+            <ArrowLeft size={16} />
+          </button>
+          <div className="relative w-10 h-10 shrink-0">
+            <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-black" style={{ backgroundColor: FT.navy, color: FT.orange }}>{getInitials(worker.workerName)}</div>
+            {expirados > 0 && (
+              <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white" style={{ backgroundColor: 'var(--bad)' }} title={`${expirados} documento${expirados !== 1 ? 's' : ''} a expirar/expirado${expirados !== 1 ? 's' : ''}`} />
+            )}
+          </div>
+          <div className="flex-1">
+            <h4 className="font-black text-[var(--ink)] text-base" style={{ fontFamily: FONT_TITLE }}>{toSentenceCase(worker.workerName)}</h4>
+            <p className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>{docs.length} documento{docs.length !== 1 ? 's' : ''}</p>
+          </div>
+          {onScan && (
+            <button
+              onClick={onScan}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border-2 hover:bg-[var(--surface)] text-xs font-black transition-colors"
+              style={{ borderColor: FT.slate, color: 'var(--ink-soft)' }}
+            >
+              <ScanSearch size={13} /> Scanner
+            </button>
+          )}
+          {onAddDoc && (
+            <button
+              onClick={onAddDoc}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-black text-xs transition-colors"
+              style={{ backgroundColor: FT.orange, color: FT.navy }}
+            >
+              <Plus size={13} /> Adicionar
+            </button>
           )}
         </div>
-        <div className="flex-1">
-          <h4 className="font-black text-[var(--ink)] text-base" style={{ fontFamily: FONT_TITLE }}>{toSentenceCase(worker.workerName)}</h4>
-          <p className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>{docs.length} documento{docs.length !== 1 ? 's' : ''}</p>
-        </div>
-        {onScan && (
-          <button
-            onClick={onScan}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border-2 hover:bg-[var(--surface)] text-xs font-black transition-colors"
-            style={{ borderColor: FT.slate, color: 'var(--ink-soft)' }}
-          >
-            <ScanSearch size={13} /> Scanner
-          </button>
-        )}
-        {onAddDoc && (
-          <button
-            onClick={onAddDoc}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-black text-xs transition-colors"
-            style={{ backgroundColor: FT.orange, color: FT.navy }}
-          >
-            <Plus size={13} /> Adicionar
-          </button>
-        )}
-      </div>
+      )}
 
-      {/* Sub-pastas por categoria */}
+      {/* Secções por categoria */}
       {categoriasComDocs.length === 0 ? (
         <div className="py-12 text-center opacity-30">
           <FolderOpen size={32} className="mx-auto mb-2" />
           <p className="text-xs font-black uppercase tracking-widest">Sem documentos</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {CATEGORIAS_RH_ACT.map(cat => (
-            <SubPastaCard key={cat} categoria={cat} docs={byCategoria[cat] || []} onOpenDoc={onOpenDoc} onDelete={onDelete} />
+        <div className="space-y-4">
+          {categoriasComDocs.map(cat => (
+            <CategorySection key={cat} categoria={cat} docs={byCategoria[cat] || []} onOpenItem={setQuickViewItem} />
           ))}
         </div>
       )}
+
+      {/* Ficha rápida do documento — o mesmo DocCardSingle/DocCardPair que
+          antes só vivia dentro do modal de categoria, agora aberto
+          directamente a partir da linha (1 clique, não 2). */}
+      <ModalShell
+        isOpen={!!quickViewItem}
+        onClose={() => setQuickViewItem(null)}
+        title={quickViewTitle}
+        size="sm"
+        layer="nested"
+      >
+        {quickViewItem && (
+          <div className="p-4">
+            {quickViewItem.type === 'pair' ? (
+              <DocCardPair
+                pair={quickViewItem.docs}
+                onOpenDoc={onOpenDoc}
+                onDelete={onDelete}
+                confirmDeleteId={confirmDeleteId}
+                setConfirmDeleteId={setConfirmDeleteId}
+              />
+            ) : (
+              <DocCardSingle
+                d={quickViewItem.doc}
+                onOpenDoc={onOpenDoc}
+                onDelete={onDelete}
+                confirmDeleteId={confirmDeleteId}
+                setConfirmDeleteId={setConfirmDeleteId}
+              />
+            )}
+          </div>
+        )}
+      </ModalShell>
     </div>
   );
 }
@@ -805,6 +813,7 @@ export default function WorkerDocsFolderView({ docs, onPreview, onDeleteManual, 
           {workersFiltrados.map(w => {
             const expirados = w.docs.filter(d => getValidadeStatus(d.data_validade) === 'expirado').length;
             const urgentes  = w.docs.filter(d => getValidadeStatus(d.data_validade) === 'urgente').length;
+            const porResolver = w.docs.filter(d => d.state !== 'signed').length;
             const categorias = [...new Set(w.docs.map(d => d.categoria).filter(Boolean))];
             const alertBorder = expirados > 0 ? 'border-red-200 hover:border-red-400'
               : urgentes > 0 ? 'border-amber-200 hover:border-amber-400'
@@ -822,6 +831,7 @@ export default function WorkerDocsFolderView({ docs, onPreview, onDeleteManual, 
                     <p className="text-sm font-black text-[var(--ink)] truncate" style={{ fontFamily: FONT_TITLE }}>{toSentenceCase(w.workerName)}</p>
                     <p className={`${SCALE.text.meta} text-[var(--slate-dim)] mt-0.5`}>
                       {w.docs.length} doc{w.docs.length !== 1 ? 's' : ''}
+                      {porResolver > 0 && <span style={{ color: 'var(--warn)' }}> · {porResolver} por resolver</span>}
                     </p>
                   </div>
                 </div>

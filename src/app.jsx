@@ -13,6 +13,7 @@ import { useApp } from './context/AppContext';
 import { useAutoUpdate } from './hooks/useAutoUpdate';
 import ClientPortal from './ClientPortal.jsx';
 import { WorkerDashboard } from './features/worker';
+import WorkerOnboardingGate from './features/worker/WorkerOnboardingGate';
 import AdminDashboard from './features/admin/AdminDashboard';
 import FinancialReportOverlay from './features/admin/FinancialReportOverlay';
 import DocumentsAdmin from './features/admin/DocumentsAdmin';
@@ -535,7 +536,19 @@ export default function App() {
           setRejeitarNotif={setRejeitarNotif}
         />
       )}
-      {view === 'worker' && (
+      {view === 'worker' && currentUser?.gate?.pendente && (
+        <WorkerOnboardingGate
+          itensIniciais={currentUser.gate.itens}
+          currentUser={currentUser}
+          onLogout={handleLogout}
+          onCompleto={() => {
+            const userSemGate = { ...currentUser, gate: { pendente: false, itens: [] } };
+            setCurrentUser(userSemGate);
+            localStorage.setItem('magnetic_user', JSON.stringify(userSemGate));
+          }}
+        />
+      )}
+      {view === 'worker' && !currentUser?.gate?.pendente && (
         <WorkerDashboard
           {...{ onLogout: handleLogout, onLogin: handleLogin, currentUser, setCurrentUser, currentMonth, setCurrentMonth, logs, clients, handleSaveEntry, saveToDb, handleDelete, approvals, handleApproveMonth, systemSettings, documents, appNotifications }}
         />

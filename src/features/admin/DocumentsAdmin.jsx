@@ -1,16 +1,16 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { FileText, FileSignature, Users, ScanSearch, Plus } from 'lucide-react';
+import { FileText, FileSignature, Users, ScanSearch, Plus, AlertTriangle } from 'lucide-react';
 import DocumentTemplatesAdmin from '../../components/admin/DocumentTemplatesAdmin';
 import DocxPreviewModal from '../../components/common/DocxPreviewModal';
-import { getValidadeStatus, CATEGORIAS_RH_ACT } from '../../constants/rhCategories';
+import { getValidadeStatus, CATEGORIAS_RH_ACT, isUncategorized, SEM_CATEGORIA } from '../../constants/rhCategories';
 import SectionHeaderShell from '../../components/common/SectionHeaderShell';
 import Card from "../../components/common/Card";
 import { FT, SCALE, FONT_MONO } from '../../styles/designTokens';
 import DocumentScannerModal from './team/DocumentScannerModal';
 
 import DocumentsFilters from './documents/DocumentsFilters';
-import DocumentsTable from './documents/DocumentsTable';
+import CategoryWorkerGrid from './documents/CategoryWorkerGrid';
 import UploadManualModal from './documents/UploadManualModal';
 import WorkerDocsFolderView from './documents/WorkerDocsFolderView';
 import { useDocumentsAdmin } from './documents/useDocumentsAdmin';
@@ -37,16 +37,27 @@ function StatCard({ label, value, tone, active, onClick }) {
 // filtros. Contagens vêm do total de documentos (unifiedDocs), não do
 // resultado já filtrado por outros critérios, para não oscilar consoante o
 // estado/fonte/tipo selecionados.
-function CategoryRail({ categories, counts, total, active, onSelect }) {
-  const itemCls = (isActive) =>
+// "Sem categoria / a rever" fica fixo logo a seguir a "Todas", com destaque
+// de aviso — agrupa tanto documentos sem categoria como os com um valor de
+// categoria que já não existe na lista oficial (ver isUncategorized). Antes
+// destes ficarem invisíveis em qualquer item da rail, só apareciam a rever
+// "Todas" linha a linha (achado real, 2026-08-31 — ver CLAUDE.md).
+function CategoryRail({ categories, counts, total, semCategoriaCount, active, onSelect }) {
+  const itemCls = (isActive, warn) =>
     `w-full flex items-center justify-between gap-2 px-3 py-2.5 text-left border-t border-[var(--border-soft)] first:border-t-0 transition-colors ${SCALE.text.body} ${
-      isActive ? 'bg-[var(--navy-soft)] text-[var(--navy)] font-bold' : 'text-[var(--ink-soft)] hover:bg-[var(--surface)]'
+      isActive
+        ? (warn ? 'bg-[var(--warn-bg)] text-[var(--warn)] font-bold' : 'bg-[var(--navy-soft)] text-[var(--navy)] font-bold')
+        : (warn ? 'text-[var(--warn)] hover:bg-[var(--warn-bg)]' : 'text-[var(--ink-soft)] hover:bg-[var(--surface)]')
     }`;
   return (
     <div className="md:w-56 shrink-0 bg-white rounded-xl border border-[var(--border-soft)] overflow-hidden h-fit">
       <button onClick={() => onSelect('')} className={itemCls(!active)}>
         <span>Todas</span>
         <span className={SCALE.text.meta}>{total}</span>
+      </button>
+      <button onClick={() => onSelect(SEM_CATEGORIA)} className={itemCls(active === SEM_CATEGORIA, true)}>
+        <span className="flex items-center gap-1.5 truncate"><AlertTriangle size={12} /> Sem categoria / a rever</span>
+        <span className={SCALE.text.meta} style={active === SEM_CATEGORIA ? undefined : { backgroundColor: 'var(--warn-bg)' }}>{semCategoriaCount}</span>
       </button>
       {categories.map(cat => (
         <button key={cat} onClick={() => onSelect(cat)} className={itemCls(active === cat)}>
@@ -65,11 +76,20 @@ export default function DocumentsAdmin() {
   const templatesRef = useRef(null);
   const [scannerOpen, setScannerOpen] = useState(false);
 
+  // Contagens por categoria exata — documentos sem categoria (ou com valor
+  // fora da lista oficial) já não caem em "Outros" por omissão, ficam à
+  // parte em semCategoriaCount (achado real, 2026-08-31 — antes o rail
+  // mostrava a contagem de "Outros" inflacionada com estes, mas clicar em
+  // "Outros" não os mostrava, porque o filtro real compara igualdade exata).
   const categoryCounts = useMemo(() => {
     const c = {};
-    a.unifiedDocs.forEach(d => { const cat = d.categoria || 'Outros'; c[cat] = (c[cat] || 0) + 1; });
+    a.unifiedDocs.forEach(d => { if (!isUncategorized(d.categoria)) c[d.categoria] = (c[d.categoria] || 0) + 1; });
     return c;
   }, [a.unifiedDocs]);
+  const semCategoriaCount = useMemo(
+    () => a.unifiedDocs.filter(d => isUncategorized(d.categoria)).length,
+    [a.unifiedDocs]
+  );
 
   const activeSection = useMemo(() => {
     const parts = location.pathname.replace(/^\/admin\/documentos\/?/, '').split('/').filter(Boolean);
@@ -169,6 +189,8 @@ export default function DocumentsAdmin() {
             onUpdateTemplate={a.handleUpdateTemplate}
             onDeleteTemplate={a.handleDeleteTemplate}
             onGenerateDocuments={a.handleGenerateDocuments}
+            gateSlugsAtivos={a.gateSlugsAtivos}
+            onToggleGateRequisito={a.handleToggleGateRequisito}
           />
         </Card>
       )}
@@ -182,6 +204,7 @@ export default function DocumentsAdmin() {
                 categories={CATEGORIAS_RH_ACT}
                 counts={categoryCounts}
                 total={a.unifiedDocs.length}
+                semCategoriaCount={semCategoriaCount}
                 active={a.categoriaFilter}
                 onSelect={a.setCategoriaFilter}
               />
@@ -205,12 +228,10 @@ export default function DocumentsAdmin() {
                   {a.filteredDocs.length} documento{a.filteredDocs.length !== 1 ? 's' : ''}
                 </p>
 
-                <DocumentsTable
-                  filteredDocs={a.filteredDocs}
+                <CategoryWorkerGrid
+                  docs={a.filteredDocs}
+                  allDocs={a.unifiedDocs}
                   loadingDocs={a.loadingDocs}
-                  sortKey={a.sortKey}
-                  sortDir={a.sortDir}
-                  onSort={a.handleSort}
                   onDeleteManual={a.handleDeleteManual}
                   onDeleteGenerated={a.handleDeleteGenerated}
                   onApprove={a.onApprove}
@@ -253,6 +274,7 @@ export default function DocumentsAdmin() {
         <DocxPreviewModal
           title={a.preview.title}
           blob={a.preview.blob}
+          html={a.preview.html}
           loading={a.preview.loading}
           error={a.preview.error}
           onClose={() => a.setPreview(null)}

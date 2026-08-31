@@ -73,3 +73,19 @@ export function autoAtribuirPorProfissao(workerId, profissaoCnp) {
     body: JSON.stringify({ worker_id: workerId, profissao_cnp: profissaoCnp }),
   }).then(json);
 }
+
+export function gateStatus() {
+  return authFetch('/api/formacao/gate-status').then(json);
+}
+
+export function listGateRequisitos() {
+  return authFetch('/api/formacao/gate-requisitos').then(json);
+}
+
+export function setGateRequisito(formacaoId, ativo) {
+  return authFetch('/api/formacao/gate-requisitos-set', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ formacao_id: formacaoId, ativo }),
+  }).then(json);
+}

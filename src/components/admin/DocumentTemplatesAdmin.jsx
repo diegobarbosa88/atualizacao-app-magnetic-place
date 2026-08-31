@@ -1,5 +1,5 @@
 import React, { useState, useMemo, forwardRef, useImperativeHandle } from 'react';
-import { FileText, Trash2, Eye, Edit3, Send, Loader2 } from 'lucide-react';
+import { FileText, Trash2, Eye, Edit3, Send, Loader2, ShieldCheck } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { downloadTemplateBytes } from '../../utils/docxTemplateService';
 import DocxPreviewModal from '../common/DocxPreviewModal';
@@ -18,6 +18,8 @@ const DocumentTemplatesAdmin = forwardRef(function DocumentTemplatesAdmin({
   onUpdateTemplate,
   onDeleteTemplate,
   onGenerateDocuments,
+  gateSlugsAtivos = new Set(),
+  onToggleGateRequisito,
 }, ref) {
   const { supabase, clients } = useApp();
 
@@ -118,14 +120,30 @@ const DocumentTemplatesAdmin = forwardRef(function DocumentTemplatesAdmin({
                 <div className="w-[38px] h-[38px] rounded-xl flex items-center justify-center mb-[0.7rem]" style={{ backgroundColor: '#f4f0fd', color: '#6743c2' }}>
                   <FileText size={17} />
                 </div>
-                <p className="text-[1.05rem] font-bold leading-[1.15] text-[var(--ink-mid)] truncate" style={{ fontFamily: FONT_TITLE }} title={t.name}>{t.name}</p>
+                <p className="text-[1.05rem] font-bold leading-[1.15] text-[var(--ink-mid)] truncate" style={{ fontFamily: FONT_TITLE }} title={t.name}>
+                  {t.name}
+                  {t.formato === 'html' && (
+                    <span className="ml-2 align-middle text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-600">HTML</span>
+                  )}
+                </p>
                 <p className={`${SCALE.text.body} text-[var(--ink-soft)] mt-1 mb-3 line-clamp-3 min-h-[3rem]`}>
                   {t.description || <span className="italic text-[var(--slate-dim)]">Sem descrição</span>}
                 </p>
                 <div className="flex items-center gap-1 pt-[0.7rem] border-t border-[#F1EFE8]">
-                  <button onClick={() => openTemplatePreview(t)} className="p-1.5 rounded-lg transition-all text-[var(--slate)] hover:text-[var(--navy)] hover:bg-[var(--surface)]" title="Pré-visualizar"><Eye className="w-3.5 h-3.5" /></button>
-                  <button onClick={() => openEditModal(t)} className="p-1.5 rounded-lg transition-all text-[var(--slate)] hover:text-[var(--navy)] hover:bg-[var(--surface)]" title="Editar"><Edit3 className="w-3.5 h-3.5" /></button>
+                  {t.formato !== 'html' && (
+                    <>
+                      <button onClick={() => openTemplatePreview(t)} className="p-1.5 rounded-lg transition-all text-[var(--slate)] hover:text-[var(--navy)] hover:bg-[var(--surface)]" title="Pré-visualizar"><Eye className="w-3.5 h-3.5" /></button>
+                      <button onClick={() => openEditModal(t)} className="p-1.5 rounded-lg transition-all text-[var(--slate)] hover:text-[var(--navy)] hover:bg-[var(--surface)]" title="Editar"><Edit3 className="w-3.5 h-3.5" /></button>
+                    </>
+                  )}
                   <button onClick={() => openGenerateModal(t)} className="p-1.5 rounded-lg transition-all text-[var(--slate)] hover:text-[var(--navy)] hover:bg-[var(--surface)]" title="Gerar"><Send className="w-3.5 h-3.5" /></button>
+                  <button
+                    onClick={() => onToggleGateRequisito?.(t)}
+                    className={`p-1.5 rounded-lg transition-all ${t.slug && gateSlugsAtivos.has(t.slug) ? 'text-[var(--ok)] bg-[var(--ok-bg)]' : 'text-[var(--slate)] hover:text-[var(--navy)] hover:bg-[var(--surface)]'}`}
+                    title={t.slug && gateSlugsAtivos.has(t.slug) ? 'Obrigatório no Gate de Onboarding — clicar para desligar' : 'Marcar como obrigatório no Gate de Onboarding'}
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                  </button>
                   <button onClick={() => onDeleteTemplate(t)} className="p-1.5 rounded-lg transition-all text-[var(--slate)] hover:text-[var(--bad)] hover:bg-[var(--bad-bg)] ml-auto" title="Apagar"><Trash2 className="w-3.5 h-3.5" /></button>
                 </div>
               </Card>

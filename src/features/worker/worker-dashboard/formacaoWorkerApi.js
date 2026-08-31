@@ -44,3 +44,7 @@ export function responderQuestionario(participanteId, respostas) {
 export function getConteudoUrl(participanteId) {
   return authFetch(`/api/formacao/conteudo?participante_id=${encodeURIComponent(participanteId)}`).then(json);
 }
+
+export function gateStatus() {
+  return authFetch('/api/formacao/gate-status').then(json);
+}

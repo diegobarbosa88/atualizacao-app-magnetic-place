@@ -4,6 +4,7 @@ import { useApp } from '../../context/AppContext';
 import { formatDocDate } from '../../utils/dateUtils';
 import { isPending, isSigned } from '../../constants/documentStatus';
 import { DocumentViewer } from '../worker/DocumentViewer';
+import { HtmlDocumentViewer } from '../worker/HtmlDocumentViewer';
 import SignDrawModal from '../worker/SignDrawModal';
 import ModalShell from './ModalShell';
 import { useDocumentPreview } from './workerDocuments/useDocumentPreview';
@@ -138,7 +139,7 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb, pendingOnly = false
     try {
       const { data } = await supabase
         .from('worker_documents')
-        .select('*')
+        .select('*, document_templates(formato)')
         .eq('worker_id', currentUser.id)
         .order('created_at', { ascending: false });
       setTemplateDocs(data || []);
@@ -153,6 +154,7 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb, pendingOnly = false
   const [showSigner, setShowSigner] = useState(false);
   const [showSignPad, setShowSignPad] = useState(false);
   const [acroformDoc, setAcroformDoc] = useState(null);
+  const [htmlFormatoDoc, setHtmlFormatoDoc] = useState(null);
   const [hasSignature, setHasSignature] = useState(false);
   const [workerIp, setWorkerIp] = useState('A obter IP...');
   const [signerOpenedAt, setSignerOpenedAt] = useState('');
@@ -160,6 +162,14 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb, pendingOnly = false
   const isDrawing = useRef(false);
 
   const openDoc = useCallback((doc) => {
+    // formato='html' (mecanismo novo, assinatura embutida no fluxo do
+    // documento) é distinto do fluxo legado que também usa generated_html
+    // — por isso este ramo tem de vir antes do isAcroform, que assumia que
+    // "tem generated_html" só podia significar "documento legado".
+    if (doc.document_templates?.formato === 'html') {
+      setHtmlFormatoDoc(doc);
+      return;
+    }
     const isAcroform = !!(doc.template_id || doc.templateId) && !doc.generated_html;
     if (isAcroform) {
       setAcroformDoc(doc);
@@ -477,6 +487,16 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb, pendingOnly = false
             document={acroformDoc}
             onBack={() => { setAcroformDoc(null); loadTemplateDocs(); }}
             onSigned={() => { setAcroformDoc(null); loadTemplateDocs(); alert('Documento assinado com sucesso!'); }}
+          />
+        </div>
+      )}
+
+      {htmlFormatoDoc && (
+        <div className="fixed inset-0 z-[150] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
+          <HtmlDocumentViewer
+            document={htmlFormatoDoc}
+            onBack={() => { setHtmlFormatoDoc(null); loadTemplateDocs(); }}
+            onSigned={() => { setHtmlFormatoDoc(null); loadTemplateDocs(); alert('Documento assinado com sucesso!'); }}
           />
         </div>
       )}

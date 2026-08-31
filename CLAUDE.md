@@ -297,6 +297,136 @@ browser ao vivo), mas cobre lógica de cálculo, APIs e fluxos.
 - `* { text-transform: uppercase !important }` global em `App.css` — usar `className="text-natural"`
   para escapar quando necessário.
 
+## Redesenho — `Documentos › Por categoria` (2026-08-31)
+
+Fluxo completo: mockup interativo (2 opções, artefacto, dados reais do dia) → Diego escolheu
+**Opção B** (cartões por colaborador) → implementado. Ficheiros: `DocumentsAdmin.jsx`
+(`CategoryRail`), `documents/CategoryWorkerGrid.jsx` (novo, substitui `DocumentsTable.jsx` neste
+modo), `documents/docBadges.jsx` (novo — `StateBadge`/`ValidadeBadge`/`CategoriaTag`/
+`CategoriaEditor`/classes de ícone, extraídos de `DocumentsTable.jsx` para serem partilhados sem
+duplicar), `constants/rhCategories.js` (`SEM_CATEGORIA`, `isUncategorized`).
+
+**Achado real que motivou o "Sem categoria / a rever" fixo na rail:** o cálculo de contagens da
+rail (`categoryCounts` em `DocumentsAdmin.jsx`) fazia `d.categoria || 'Outros'` — um documento sem
+categoria contava para "Outros" na rail, mas o filtro real (`filteredDocs` em
+`useDocumentsAdmin.js`) compara igualdade exacta (`d.categoria !== categoriaFilter`), que um
+`null` nunca bate. Resultado: a rail mostrava "Outros" inflacionado, mas clicar nele escondia
+esses documentos — nunca apareciam em lado nenhum a não ser "Todas". Confirmado com dados reais
+em produção: 3 documentos (2 com `categoria=null`, 1 com `categoria="Segurança Social"` — valor
+antigo, já fora da lista oficial de 8, resíduo de antes de existir "Segurança Social e Fiscal").
+`isUncategorized(categoria)` (`!categoria || !CATEGORIAS_RH_ACT.includes(categoria)`) trata os
+dois casos como o mesmo problema — "precisa de decisão humana" — e é a fonte única partilhada
+por `CategoryRail`, `CategoriaTag` (mostra "Categoria não reconhecida: X" em vez de mascarar) e o
+filtro.
+
+**`DocumentsTable.jsx` e `SortableTh.jsx` ficam no repo, sem consumidor.** Era a implementação da
+Opção A (tabela única, ordenável), comparada lado a lado com a B no mockup antes da decisão — não
+é código morto alheio a apagar por rotina, é a alternativa perdida de uma escolha de design feita
+5 minutos antes; mantida por reversibilidade caso a decisão mude. `sortKey`/`sortDir`/`handleSort`
+em `useDocumentsAdmin.js` também ficam (sem consumidor agora, sem custo de manter).
+
+Verificado ao vivo: contagem da rail bate com a query SQL real (`Sem categoria / a rever: 3`,
+`Remuneração: 142`, etc.); `CategoryWorkerGrid` renderiza correctamente com 142 documentos
+(maior categoria); `CategoriaEditor` abre o dropdown; sem scroll horizontal a 375px
+(`document.body.scrollWidth === innerWidth`, antes a tabela precisava de arrastar para ver
+Ações). Ação "Aplicar carimbo" não foi re-testada ponta-a-ponta nesta passagem (zero documentos
+`awaiting_admin` no momento) — reaproveita exactamente o mesmo `onApprove`/branch já testado
+ponta-a-ponta no Fluxo 3 nesta mesma sessão, só mudou o componente que renderiza o botão.
+
+**Revisão de densidade, mesma sessão — Diego comparou o resultado lado a lado com o mockup e
+achou a linha demasiado cheia.** Trocado: bola de estado (cor, sem texto) + `tipo` (não o nome do
+ficheiro) como conteúdo em repouso; nome do ficheiro/data ficam só no `title` (tooltip). Ações
+(categoria/pré-visualizar/aprovar/apagar) escondidas por omissão, reveladas só em hover
+(`group-hover:flex`, mesmo padrão já usado no ícone de lápis do `CategoriaEditor`). O editor de
+categoria ganhou uma variante `compact` (`docBadges.jsx`) — ícone `Tag` sozinho, cor de aviso
+quando `isUncategorized`, em vez da pílula `CategoriaTag` inteira — só usada aqui, a pílula
+completa continua no `DocumentsTable.jsx` (dormente) sem alteração. `MAX_ROWS_PER_CARD` desceu de
+8 para 3, e a grelha passou de 2 para 3 colunas (`xl:grid-cols-3`) para bater com a densidade do
+mockup. Confirmado ao vivo: bola verde + tooltip "Assinado" num documento assinado, ícone de
+categoria em `rgb(217,138,43)` (`--warn`) num documento sem categoria, ações aparecem só ao
+`hover` na linha.
+
+**Segunda revisão, mesma sessão — dimensões do cartão e "+N documentos" viraram botão.** A
+grelha `xl:grid-cols-3` (colunas fixas, cartão esticado a preencher) foi trocada por
+`grid-cols-[repeat(auto-fill,minmax(258px,1fr))]` — o mesmo mecanismo CSS do mockup, cartão com
+largura mínima real (258px) em vez de N colunas fixas a esticar. Padding `p-4`→`p-3.5` (16px→14px,
+bate exactamente com o mockup). `+N documentos` deixou de ser texto solto e passou a botão que
+abre a pasta **completa** do trabalhador (todas as categorias, não só a filtrada) num `ModalShell`
+— reaproveita `WorkerPastaView` (o mesmo componente que "Por colaborador" usa por trás do próprio
+clique no cartão), com uma prop nova `hideHeader` para não duplicar avatar/nome (já vêm do
+`title`/`meta` do `ModalShell`). Precisou de uma segunda prop nova em `CategoryWorkerGrid`
+(`allDocs` — a lista total de `useDocumentsAdmin`, não a já filtrada por categoria/pesquisa) para
+a pasta mostrar tudo do trabalhador, não só o que estava visível no ecrã. Confirmado ao vivo: o
+modal abre com o total certo de documentos, a subpasta por categoria lá dentro abre um segundo
+`ModalShell` (aninhado, mesmo padrão de `Z.viewer` usado no resto da app) com os cartões de
+documento completos (miniatura, Ver/Apagar) — o mesmíssimo fluxo de "Por colaborador", só que sem
+sair de "Por categoria".
+
+**Terceira revisão, mesma sessão — fundo de cada linha tingido pela cor do estado.** `DocRow`
+ganhou `STATE_ROW_BG` (`pending`→`var(--warn-bg)`, `awaiting_admin`→`var(--surface-dim)`,
+`signed`→`var(--ok-bg)`) como `style.backgroundColor`, sempre visível (antes só no hover) —
+reaproveita exactamente as mesmas variáveis já usadas no fundo do `StateBadge` (`docBadges.jsx`),
+não uma paleta nova. **Medição em modo escuro apanhou o mesmo instrumento enganador já
+documentado na "Referência central" do topo deste ficheiro — `rgba()` não composta**: uma
+primeira leitura ingénua (`getComputedStyle` sem contar o alfa) deu 1,69:1 e 3,09:1, parecendo
+falha grave; a composição correcta do alfa sobre o fundo real do cartão (`rgb(30,41,59)`, o
+`--card`/`bg-white` invertido) deu 6,36:1 e 7,25:1, ambos a passar AA com folga. Confirmado com o
+mesmo script de composição já usado noutros pontos desta migração (percorrer `parentElement` até
+encontrar o primeiro fundo opaco, misturar `rgb*alpha + fundo*(1-alpha)`).
+
+**Quarta revisão, mesma sessão — sinalização de expirado/urgente mais visível.** A borda
+esquerda de 2px (`border-red-300`/`border-amber-300`) ficava discreta ao lado do fundo já tingido
+pelo estado (revisão anterior) — trocada por `border-l-4` com tokens (`--bad`/`--warn`, mais
+saturados que os `-300` do Tailwind). Expirado/urgente agora **pisa** o fundo de estado (fica
+`--bad-bg`/`--warn-bg` em vez do fundo do estado normal — um documento expirado importa mais do
+que estar "assinado"), ganha um ícone `AlertTriangle` sempre visível (não só no hover) e o rótulo
+de `getExpiryRelativeLabel` ("expirado há Nd") em texto a negrito, na cor do alerta. Verificado com
+dado real (`Francisco Wanderlilson Diniz`, Título de Residência expirado há 513 dias) e contraste
+medido com composição de alfa correta nos dois modos: 4,76:1 claro, 4,63:1 escuro — ambos a passar
+AA, mas com pouca folga; se um dia se quiser mais margem, escurecer o tom do texto é a via já
+validada noutros pontos desta migração (mesma lógica do `--orange-hover`).
+
+**Implementação real da reorganização "Por colaborador" (2026-08-31)** — depois do mockup
+aprovado (artefacto com 2 correções: ficha com campos reais do documento, depois com miniatura
+reconstruída). `WorkerPastaView` (`WorkerDocsFolderView.jsx`) deixou de renderizar
+`SubPastaCard` (cartão de subpasta com barra de progresso → abre modal com grelha de cartões) —
+agora cada categoria é uma secção com `CompactDocRow` (linha compacta, extraída para
+`docBadges.jsx` a partir de `CategoryWorkerGrid.jsx`, partilhada pelos dois eixos de agrupamento).
+`SubPastaCard` foi removido do ficheiro (ficava sem consumidor, órfão da própria alteração — ao
+contrário do `DocumentsTable.jsx`/Opção A, que ficou guardado por ser uma alternativa recém-
+comparada, aqui não houve escolha entre duas opções, só substituição directa).
+
+Clicar numa linha abre `DocCardSingle`/`DocCardPair` (reaproveitados tal como estavam — miniatura
+real via `ThumbImg`, `getCategoryFields`, acções) dentro de um `ModalShell` próprio, em vez do
+antigo modal por categoria com grelha de vários cartões — 1 clique em vez de 2 até à ficha do
+documento, sem perder nenhuma informação (o próprio Diego pediu para confirmar isto ao ver o
+modal real antes de aceitar a proposta). Pares Frente/Verso continuam agrupados numa só linha
+(`groupDocItems`/`itemToRowModel`, mesma lógica de agrupamento por `grupo_id` que já existia).
+
+Cartão do colaborador (nível 1, grelha de trabalhadores) ganhou "N por resolver" a par da
+contagem total (`w.docs.filter(d => d.state !== 'signed').length`), como pedido — o anel de
+validade (`AvatarRing`) manteve-se sem alteração, é um sinal diferente (validade, não aprovação).
+
+Como `WorkerPastaView` também é reaproveitado dentro do "+N documentos" de `CategoryWorkerGrid.jsx`
+("Por categoria"), esta mudança aplicou-se aos dois sítios de uma vez — mais um ponto a favor da
+partilha via `CompactDocRow`.
+
+**Verificado ao vivo com dados reais**, com uma lacuna a registar: nível 1 (grelha com "N por
+resolver" e ponto vermelho no avatar do Francisco), nível 2 (secções por categoria, incluindo os
+dois documentos genuinamente expirados dele — Título de Residência 513 dias E Documento
+Provisório de Identificação Fiscal 2141 dias, este segundo só descoberto agora), ficha de
+documento singular (Recibo de Vencimento, miniatura real do PDF) e ficha de par Frente/Verso
+(Título de Residência, duas imagens reais lado a lado) — todos confirmados a funcionar
+correctamente, directamente a partir de "Por colaborador". **Pendência fechada (2026-08-31,
+sessão seguinte):** o caso dos 3 `ModalShell` aninhados (Por categoria → "+N documentos" →
+clique numa linha) foi confirmado ao vivo depois de a sessão de admin ser reautenticada —
+`layer="nested"` (z=200) empilha correctamente por cima de `layer="viewer"` (z=300) neste caso
+porque o backdrop do modal exterior tem `backdrop-blur-sm`, que cria o seu próprio contexto de
+empilhamento CSS (`backdrop-filter` isola descendentes, tal como `transform`/`opacity`) — o
+z-index do modal interior só compete dentro desse contexto isolado, não contra o z=300 global.
+Não é preciso subir a camada do modal interior para `viewer`; a hierarquia actual já é segura
+sempre que o modal exterior imediato usar `ModalShell` (todos usam).
+
 ## Design system (em migração)
 
 `src/styles/designTokens.js` (paleta FT, tons TONES, escala SCALE) e `src/components/common/`
@@ -419,6 +549,63 @@ fora da migração de modais.
 
 Código morto: `WorkerDocuments.jsx` tem um `canvasRef` e um `useEffect` que o dimensiona, mas zero
 elementos `<canvas>` — resto de uma refatoração antiga. Não te deixes enganar por ele.
+
+### Fluxo 3 — Assinatura de documentos via HTML → PDF.co (mecanismo novo, só 2 templates)
+
+Ficheiros: `src/components/worker/HtmlDocumentViewer.jsx`, `src/utils/pdfCoService.js`
+(`convertHtmlToPdf`), `src/utils/templateFields.js` (`replaceTemplateFields`, reaproveitado),
+`document_templates.formato`/`template_html` (colunas novas, 2026-08-31).
+
+**Porque existe a par do Fluxo 2 (docx + pdf-lib), em vez de o substituir:** o Fluxo 2 carimba a
+assinatura por **coordenadas fixas (mm)** sobre um PDF já gerado, calibradas contra o template por
+preencher (`{worker_name}` literal) — nunca contra dados reais. Se o texto antes da assinatura for
+mais comprido no documento real do que no template calibrado, a assinatura fica desalinhada. Decisão
+do Diego: só os 2 documentos novos do Gate (Termo de Responsabilidade — EPI, Consentimento RGPD)
+usam o mecanismo novo; o "CONTRATO DE TRABALHO" continua em docx/pdf-lib, sem alteração.
+
+**Mecânica:** a assinatura é um `<img>` normal dentro do próprio fluxo do HTML — se o texto antes
+for mais comprido, ela desce com ele, sempre. Um único PDF é gerado, só depois de o admin aprovar
+(via `POST /v1/pdf/convert/from/html` da PDF.co, mesma conta já usada para docx→PDF) — nunca um PDF
+intermédio órfão como acontecia no Fluxo 2 (Passo 1 gerava um PDF só do trabalhador que ficava
+esquecido no bucket depois do Passo 2 sobrescrever `signed_pdf_url`).
+
+Sequência: `HtmlDocumentViewer.jsx` (trabalhador assina) grava o HTML **pristine** — com
+`{worker_signature}`/`{admin_stamp}` ainda literais — em `worker_documents.generated_html`, e a
+assinatura em bruto em `signature_data` (coluna à parte). `handleApproveDocument`
+(`useDocumentTemplates.js`) resolve as duas tags numa só passagem a partir do HTML pristine, gera o
+PDF, e só aí grava `signed_pdf_url`. Deliberado: evita mutar a mesma string duas vezes em sequência,
+e evita que uma vista intermédia (assinado pelo trabalhador, ainda não aprovado) mostre a tag
+`{admin_stamp}` como texto literal visível.
+
+`document_templates.formato` (`'docx'` default | `'html'`) é o discriminador — qualquer ecrã que
+carregue um `worker_documents` ligado a um template tem de o consultar antes de escolher o
+componente/branch certo. **Já apanhou 2 sítios que assumiam docx incondicionalmente, os dois só
+descobertos ao testar ao vivo, não por build/lint:**
+- `WorkerDocuments.jsx`'s `openDoc` — o discriminador antigo `isAcroform` (`!!template_id &&
+  !generated_html`) classifica mal um documento html-formato ainda não assinado; teve de ganhar um
+  `formato === 'html'` a checar **primeiro**.
+- `useDocumentsAdmin.js`'s `openGeneratedPreview` (o "olho" de pré-visualização na lista
+  "Documentos" do admin) — tinha `if (!tmpl.template_docx_path) throw new Error('Template sem
+  ficheiro .docx')` incondicional, disparando sempre para documentos html-formato. Corrigido com um
+  branch antes desse throw, que reaproveita `generated_html` já gravado (ou preenche na hora com
+  `replaceTemplateFields` se ainda não assinado) e resolve `{worker_signature}` a partir de
+  `signature_data` só para a pré-visualização (sem gravar nada).
+
+**Achado à parte, que custou a maior parte do tempo de depuração:** `DocumentsAdmin.jsx` (o ecrã
+"Documentos" da equipa) nunca passava a prop `html` ao `<DocxPreviewModal>` — só `title`/`blob`/
+`loading`/`error`. `DocumentTemplatesAdmin.jsx` (ecrã "Templates") já passava `html` correctamente;
+os dois consomem o mesmo `DocxPreviewModal.jsx`, que já suportava `html` desde a Fase 3. O sintoma
+era um spinner que nunca resolvia, apesar dos logs confirmarem que `setPreview({loading:false,
+html,...})` corria e completava — só não chegava ao componente. **Lição: quando dois ecrãs
+partilham o mesmo modal mas cada um mantém a lista de props que lhe passa, adicionar uma prop nova
+ao modal não a propaga automaticamente — verificar todos os call sites, não só o primeiro testado.**
+
+Verificado ao vivo, ponta a ponta, com `VITE_PDFCO_API_KEY` real (antes vazia — "Sensitive
+Environment Variable" do Vercel, irrecuperável por `vercel env pull`, confirmada e resolvida nesta
+sessão): trabalhador assina → `generated_html`+`signature_data` gravados, `status=awaiting_admin`,
+sem `signed_pdf_url` ainda → admin aprova → PDF real gerado pela PDF.co, assinatura do trabalhador
+e carimbo do admin no sítio certo, sem sobreposição — o teste que o Fluxo 2 nunca passava de forma
+fiável. Regressão confirmada: "CONTRATO DE TRABALHO" (docx) continua a funcionar sem alteração.
 
 ## Migração de tokens FT — regras de decisão
 

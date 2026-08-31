@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { assinarSessao, requireAuth } from './_authUtils.js';
+import { getGateStatus } from './_gateUtils.js';
 
 const SETE_DIAS_MS = 7 * 24 * 60 * 60 * 1000;
 const TRINTA_DIAS_MS = 30 * 24 * 60 * 60 * 1000;
@@ -138,7 +139,8 @@ async function handleWorker(supabase, req, res) {
   // (escolhe "Painel Admin" ou entrar como trabalhador — ver LoginView.jsx —
   // mas a permissão real já vem confirmada aqui, do registo da BD).
   const token = assinarSessao({ role: 'worker', id: full.id, isAdmin: !!full.isAdmin, exp: Date.now() + SETE_DIAS_MS });
-  return res.status(200).json({ user: mapWorkerRow(full), token });
+  const gate = await getGateStatus(supabase, full.id);
+  return res.status(200).json({ user: { ...mapWorkerRow(full), gate }, token });
 }
 
 // "Ver Portal" no admin — abre o dashboard de um trabalhador específico para
@@ -162,7 +164,8 @@ async function handleImpersonate(supabase, req, res) {
   if (fullErr || !full) return res.status(404).json({ error: 'Trabalhador não encontrado.' });
 
   const token = assinarSessao({ role: 'worker', id: full.id, isAdmin: !!full.isAdmin, exp: Date.now() + SETE_DIAS_MS });
-  return res.status(200).json({ user: mapWorkerRow(full), token });
+  const gate = await getGateStatus(supabase, full.id);
+  return res.status(200).json({ user: { ...mapWorkerRow(full), gate }, token });
 }
 
 async function handleClient(supabase, req, res) {

@@ -1,8 +1,9 @@
 import { useState, useMemo } from 'react';
 import { useApp } from '../../../context/AppContext';
 import { useDocumentTemplates } from '../../../hooks/useDocumentTemplates';
-import { getValidadeStatus } from '../../../constants/rhCategories';
+import { getValidadeStatus, isUncategorized, SEM_CATEGORIA } from '../../../constants/rhCategories';
 import { downloadTemplateBytes, renderDocx, buildRenderData } from '../../../utils/docxTemplateService';
+import { replaceTemplateFields } from '../../../utils/templateFields';
 import { fetchPublicIp } from '../../../utils/deviceUtils';
 import { unifyDocuments } from './unifyDocuments';
 
@@ -22,6 +23,7 @@ export function useDocumentsAdmin() {
   const {
     templates,
     generatedDocs,
+    gateSlugsAtivos,
     loading: loadingTemplates,
     loadingDocs,
     saving,
@@ -31,6 +33,7 @@ export function useDocumentsAdmin() {
     handleGenerateDocuments,
     handleApproveDocument,
     handleDeleteDoc: handleDeleteGenerated,
+    handleToggleGateRequisito,
   } = useDocumentTemplates(clientSupabase);
 
   const workerById = useMemo(() => {
@@ -80,7 +83,9 @@ export function useDocumentsAdmin() {
       if (stateFilter !== 'all' && d.state !== stateFilter) return false;
       if (sourceFilter !== 'all' && d.source !== sourceFilter) return false;
       if (tipoFilter !== 'all' && d.tipo !== tipoFilter) return false;
-      if (categoriaFilter && d.categoria !== categoriaFilter) return false;
+      if (categoriaFilter === SEM_CATEGORIA) {
+        if (!isUncategorized(d.categoria)) return false;
+      } else if (categoriaFilter && d.categoria !== categoriaFilter) return false;
       if (validadeFilter === 'expiring') {
         const vs = getValidadeStatus(d.data_validade);
         if (!['expirado', 'urgente'].includes(vs)) return false;
@@ -88,7 +93,9 @@ export function useDocumentsAdmin() {
       if (q) {
         const t = (d.title || '').toLowerCase();
         const w = (d.workerName || '').toLowerCase();
-        if (!t.includes(q) && !w.includes(q)) return false;
+        const tp = (d.tipo || '').toLowerCase();
+        const c = (d.categoria || '').toLowerCase();
+        if (!t.includes(q) && !w.includes(q) && !tp.includes(q) && !c.includes(q)) return false;
       }
       return true;
     });
@@ -240,6 +247,38 @@ export function useDocumentsAdmin() {
       const { data: tmpl, error: tErr } = await clientSupabase
         .from('document_templates').select('*').eq('id', raw.template_id).single();
       if (tErr) throw tErr;
+
+      if (tmpl.formato === 'html') {
+        if (!tmpl.template_html) throw new Error('Template sem conteúdo HTML associado.');
+        // Se o trabalhador já assinou, o HTML preenchido já está gravado
+        // (worker_documents.generated_html) — reaproveita-o em vez de gerar
+        // de novo. Caso ainda não tenha assinado, preenche na hora só para
+        // pré-visualização.
+        let html = raw.generated_html;
+        if (!html) {
+          const { data: worker, error: wErr } = await clientSupabase
+            .from('workers').select('*').eq('id', raw.worker_id).single();
+          if (wErr) throw wErr;
+          let clientData = null;
+          if (raw.client_id) {
+            const { data: c } = await clientSupabase
+              .from('clients').select('*').eq('id', raw.client_id).maybeSingle();
+            clientData = c || null;
+          }
+          html = replaceTemplateFields(tmpl.template_html, worker || {}, systemSettings || {}, clientData);
+        }
+        // A assinatura do trabalhador fica em signature_data à parte (ver
+        // HtmlDocumentViewer.jsx) — o generated_html gravado ainda tem a tag
+        // literal por resolver. Resolve-a só para a pré-visualização, sem
+        // gravar nada; o carimbo do admin ({admin_stamp}) fica por resolver
+        // até à aprovação real.
+        if (raw.signature_data) {
+          html = html.replace('{worker_signature}', `<img src="${raw.signature_data}" alt="Assinatura do trabalhador" style="max-width:220px;max-height:90px;" />`);
+        }
+        setPreview({ title, loading: false, blob: null, html, error: '' });
+        return;
+      }
+
       if (!tmpl?.template_docx_path) throw new Error('Template sem ficheiro .docx');
 
       const { data: worker, error: wErr } = await clientSupabase
@@ -268,6 +307,7 @@ export function useDocumentsAdmin() {
     templates, loadingTemplates, loadingDocs, saving,
     handleUploadTemplate, handleUpdateTemplate, handleDeleteTemplate, handleGenerateDocuments,
     handleDeleteGenerated,
+    gateSlugsAtivos, handleToggleGateRequisito,
     searchTerm, setSearchTerm,
     stateFilter, setStateFilter,
     sourceFilter, setSourceFilter,

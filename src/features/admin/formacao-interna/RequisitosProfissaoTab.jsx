@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Loader2, ChevronDown, ChevronUp, Check, GraduationCap } from 'lucide-react';
-import { listFormacoes, listRequisitosProfissao, setRequisitoProfissao } from './formacaoApi';
+import { Loader2, ChevronDown, ChevronUp, Check, GraduationCap, ShieldCheck } from 'lucide-react';
+import { listFormacoes, listRequisitosProfissao, setRequisitoProfissao, listGateRequisitos, setGateRequisito } from './formacaoApi';
 import { PROFISSOES_EMPRESA, GRUPOS_PROFISSOES } from '../../../data/profissoesEmpresa';
 import { SCALE } from '../../../styles/designTokens';
 
@@ -12,21 +12,25 @@ import { SCALE } from '../../../styles/designTokens';
 export default function RequisitosProfissaoTab() {
   const [acoesElearning, setAcoesElearning] = useState([]);
   const [requisitos, setRequisitos] = useState([]);
+  const [gateItens, setGateItens] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [expandidoCnp, setExpandidoCnp] = useState(null);
   const [gravandoChave, setGravandoChave] = useState(null);
+  const [gravandoGateId, setGravandoGateId] = useState(null);
 
   const carregar = async () => {
     setLoading(true);
     setError('');
     try {
-      const [{ formacoes }, { requisitos: reqs }] = await Promise.all([
+      const [{ formacoes }, { requisitos: reqs }, { itens }] = await Promise.all([
         listFormacoes({ formato: 'e-learning' }),
         listRequisitosProfissao(),
+        listGateRequisitos(),
       ]);
       setAcoesElearning(formacoes || []);
       setRequisitos(reqs || []);
+      setGateItens(itens || []);
     } catch (e) {
       setError(e.message);
     }
@@ -34,6 +38,28 @@ export default function RequisitosProfissaoTab() {
   };
 
   useEffect(() => { carregar(); }, []);
+
+  const gateSlugsAtivos = useMemo(
+    () => new Set(gateItens.filter(i => i.ativo).map(i => i.slug)),
+    [gateItens]
+  );
+
+  const toggleGateRequisito = async (acao) => {
+    const novoAtivo = !(acao.slug && gateSlugsAtivos.has(acao.slug));
+    setGravandoGateId(acao.id);
+    setError('');
+    try {
+      const { slug } = await setGateRequisito(acao.id, novoAtivo);
+      setGateItens(prev => {
+        const semEsta = prev.filter(i => i.slug !== slug);
+        return [...semEsta, { tipo: 'formacao', slug, label: acao.tipo_formacao, ativo: novoAtivo }];
+      });
+      if (!acao.slug) setAcoesElearning(prev => prev.map(a => a.id === acao.id ? { ...a, slug } : a));
+    } catch (e) {
+      setError(e.message);
+    }
+    setGravandoGateId(null);
+  };
 
   const requisitosPorProfissao = useMemo(() => {
     const mapa = new Map();
@@ -83,6 +109,35 @@ export default function RequisitosProfissaoTab() {
         </p>
       ) : (
         <div className="space-y-5">
+          <div>
+            <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] mb-2 flex items-center gap-1.5`}>
+              <ShieldCheck size={11} /> Obrigatórias para Todos — Gate de Onboarding
+            </p>
+            <p className={`${SCALE.text.meta} text-[var(--slate-dim)] mb-2`}>
+              Bloqueiam o dashboard de um trabalhador novo até serem concluídas, independentemente da profissão.
+            </p>
+            <div className="border border-[var(--border-soft)] rounded-2xl divide-y divide-[var(--border-soft)] overflow-hidden">
+              {acoesElearning.map(acao => {
+                const ativo = !!(acao.slug && gateSlugsAtivos.has(acao.slug));
+                const gravando = gravandoGateId === acao.id;
+                return (
+                  <button
+                    key={acao.id}
+                    type="button"
+                    disabled={gravando}
+                    onClick={() => toggleGateRequisito(acao)}
+                    className="w-full flex items-center gap-2 px-4 py-2.5 hover:bg-[var(--surface)] transition-all disabled:opacity-50 text-left"
+                  >
+                    <span className={`w-5 h-5 rounded-lg flex items-center justify-center shrink-0 ${ativo ? 'bg-indigo-600 text-white' : 'bg-[var(--surface-dim)]'}`}>
+                      {gravando ? <Loader2 size={11} className="animate-spin" /> : (ativo && <Check size={12} />)}
+                    </span>
+                    <span className="text-xs font-bold text-[var(--ink-mid)] truncate">{acao.tipo_formacao || acao.titulo}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {GRUPOS_PROFISSOES.map(grupo => (
             <div key={grupo}>
               <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] mb-2`}>{grupo}</p>

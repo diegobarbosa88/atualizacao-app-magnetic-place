@@ -1,106 +1,11 @@
-import React, { useState, useRef, useEffect } from 'react';
-import {
-  FileText, Eye, Trash2, Loader2, Clock, FileSignature, CheckCircle, AlertTriangle, Pencil,
-} from 'lucide-react';
+import React from 'react';
+import { FileText, Eye, Trash2, Loader2, FileSignature, CheckCircle } from 'lucide-react';
 import { formatDocDate } from '../../../utils/dateUtils';
 import { toSentenceCase, toSentenceCaseFilename } from '../../../utils/textUtils';
 import { SCALE } from '../../../styles/designTokens';
 import SortableTh from './SortableTh';
-import { getValidadeStatus, getDiasRestantes, CATEGORIAS_RH_ACT, CATEGORIA_CONFIG, CATEGORIA_COLOR_MAP } from '../../../constants/rhCategories';
-
-const ACTION_ICON_CLS = "p-1.5 rounded-lg transition-all text-[var(--slate)] hover:text-[var(--navy)] hover:bg-[var(--surface)]";
-const ACTION_ICON_DELETE_CLS = "p-1.5 rounded-lg transition-all text-[var(--bad)] hover:bg-[var(--bad-bg)]";
-
-function StateBadge({ state }) {
-  const map = {
-    signed:          { icon: CheckCircle,   label: 'Assinado',          color: 'var(--ok)',        bg: 'var(--ok-bg)' },
-    awaiting_admin:  { icon: FileSignature, label: 'Aguarda aprovação', color: 'var(--slate-dim)',  bg: 'var(--surface-dim)' },
-  };
-  const cfg = map[state] || { icon: Clock, label: 'Pendente', color: 'var(--warn)', bg: 'var(--warn-bg)' };
-  const Icon = cfg.icon;
-  return (
-    <span title={cfg.label} className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg ${SCALE.text.meta}`} style={{ color: cfg.color, backgroundColor: cfg.bg }}>
-      <Icon size={12} /> {cfg.label}
-    </span>
-  );
-}
-
-function ValidadeBadge({ dataValidade }) {
-  const status = getValidadeStatus(dataValidade);
-  if (!status) return null;
-  const dias = getDiasRestantes(dataValidade);
-  const map = {
-    expirado: { color: 'var(--bad)',  bg: 'var(--bad-bg)',  border: 'var(--bad-border)',  icon: AlertTriangle, label: 'Expirado' },
-    urgente:  { color: 'var(--warn)', bg: 'var(--warn-bg)', border: 'var(--warn-border)', icon: Clock,         label: `${dias}d restantes` },
-    aviso:    { color: 'var(--warn)', bg: 'var(--warn-bg)', border: 'var(--warn-border)', icon: Clock,         label: `${dias}d restantes` },
-    ok:       { color: 'var(--ok)',   bg: 'var(--ok-bg)',   border: 'var(--ok-border)',   icon: CheckCircle,   label: 'Válido' },
-  };
-  const { color, bg, border, icon: Icon, label } = map[status];
-  return (
-    <span className={`inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded-lg border ${SCALE.text.meta}`} style={{ color, backgroundColor: bg, borderColor: border }}>
-      <Icon size={9} /> {label}
-    </span>
-  );
-}
-
-function CategoriaTag({ categoria }) {
-  const semCategoria = !categoria;
-  const colors = semCategoria
-    ? { bg: 'bg-orange-100', text: 'text-orange-700', border: 'border-orange-200' }
-    : CATEGORIA_COLOR_MAP[(CATEGORIA_CONFIG[categoria] || CATEGORIA_CONFIG["Outros"]).color];
-  return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg ${SCALE.text.meta} border ${colors.bg} ${colors.text} ${colors.border}`}>
-      {semCategoria && <AlertTriangle size={8} />}
-      {categoria || 'Sem categoria'}
-    </span>
-  );
-}
-
-function CategoriaEditor({ docId, source, categoria, onSave }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [open]);
-
-  return (
-    <div className="relative inline-block" ref={ref}>
-      <button
-        onClick={() => setOpen(o => !o)}
-        className="group"
-        title={categoria ? 'Editar categoria' : 'Sem categoria — clique para definir'}
-      >
-        <span className="inline-flex items-center gap-1">
-          <CategoriaTag categoria={categoria} />
-          <Pencil size={8} className="opacity-0 group-hover:opacity-60 text-[var(--slate-dim)] transition-opacity" />
-        </span>
-      </button>
-
-      {open && (
-        <div className="absolute left-0 top-full mt-1 z-50 bg-white border border-[var(--border)] rounded-xl shadow-xl overflow-hidden min-w-[220px]">
-          <div className="px-3 py-2 border-b border-[var(--border-soft)]">
-            <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Categoria ACT</p>
-          </div>
-          <div className="py-1 max-h-64 overflow-y-auto">
-            {CATEGORIAS_RH_ACT.map(c => (
-              <button
-                key={c}
-                onClick={() => { onSave(docId, source, c); setOpen(false); }}
-                className={`w-full text-left px-3 py-2 text-xs font-bold hover:bg-[var(--navy-soft)] hover:text-[var(--navy)] transition-colors ${c === categoria ? 'bg-[var(--navy-soft)] text-[var(--navy)]' : 'text-[var(--ink-mid)]'}`}
-              >
-                {c === categoria && <span className="mr-1">✓</span>}{c}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+import { getValidadeStatus } from '../../../constants/rhCategories';
+import { StateBadge, ValidadeBadge, CategoriaTag, CategoriaEditor, ACTION_ICON_CLS, ACTION_ICON_DELETE_CLS } from './docBadges';
 
 export default function DocumentsTable({
   filteredDocs,

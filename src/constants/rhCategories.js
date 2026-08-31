@@ -11,6 +11,16 @@ export const CATEGORIAS_RH_ACT = [
   "Outros",
 ];
 
+// Sentinela do filtro "Sem categoria / a rever" — agrupa tanto documentos
+// sem categoria (null) como os com um valor de categoria que já não existe
+// na lista oficial (ex.: "Segurança Social", resíduo de antes da categoria
+// ter passado a "Segurança Social e Fiscal"). Sem isto esses documentos
+// ficam invisíveis em qualquer item da rail, só aparecendo em "Todas".
+export const SEM_CATEGORIA = '__sem_categoria__';
+
+export const isUncategorized = (categoria) =>
+  !categoria || !CATEGORIAS_RH_ACT.includes(categoria);
+
 export const MAPA_SCANNER_ACT = {
   "Identificação e Legalização":  "Identificação e Legalização",
   "Fiscal e Segurança Social":    "Segurança Social e Fiscal",

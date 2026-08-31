@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import webpush from 'web-push';
 import { requireAuth } from '../_authUtils.js';
+import { getGateStatus } from '../_gateUtils.js';
 import { calculateDuration } from '../../src/utils/formatUtils.js';
 
 // Todos os endpoints de Formação Interna vivem numa única função serverless
@@ -22,6 +23,14 @@ const DIAS_A_EXPIRAR = 60;
 
 function getSupabase() {
   return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+}
+
+function slugify(texto) {
+  return texto
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
 
 function addMeses(dataISO, meses) {
@@ -604,20 +613,52 @@ async function handleAutoAtribuir(req, res) {
   if (!requireAuth(req, res, ['admin'])) return;
 
   const { worker_id, profissao_cnp } = req.body || {};
-  if (!worker_id || !profissao_cnp?.trim()) {
-    return res.status(400).json({ error: 'Campos obrigatórios: worker_id, profissao_cnp.' });
+  if (!worker_id) {
+    return res.status(400).json({ error: 'Campo obrigatório: worker_id.' });
   }
 
   const supabase = getSupabase();
 
-  const { data: requisitos, error: fetchError } = await supabase
-    .from('formacao_requisitos_profissao')
-    .select('formacao_id, formacoes_internas(categoria, data_fim)')
-    .eq('profissao_cnp', profissao_cnp.trim())
-    .eq('ativo', true);
-
+  // Duas fontes de "obrigatório", combinadas: por profissão
+  // (formacao_requisitos_profissao) + universal para todos os trabalhadores
+  // novos, independente de profissão (onboarding_gate_itens, tipo='formacao').
+  const buscas = [
+    profissao_cnp?.trim()
+      ? supabase
+          .from('formacao_requisitos_profissao')
+          .select('formacao_id, formacoes_internas(categoria, data_fim)')
+          .eq('profissao_cnp', profissao_cnp.trim())
+          .eq('ativo', true)
+      : Promise.resolve({ data: [] }),
+    supabase
+      .from('onboarding_gate_itens')
+      .select('slug')
+      .eq('tipo', 'formacao')
+      .eq('ativo', true),
+  ];
+  const [{ data: requisitosProfissao, error: fetchError }, { data: itensGate, error: gateError }] = await Promise.all(buscas);
   if (fetchError) return res.status(500).json({ error: fetchError.message });
-  if (!requisitos?.length) return res.status(200).json({ atribuidas: 0, ignoradas: 0 });
+  if (gateError) return res.status(500).json({ error: gateError.message });
+
+  let requisitosGate = [];
+  if (itensGate?.length) {
+    const { data: formacoesGate, error: formacoesError } = await supabase
+      .from('formacoes_internas')
+      .select('id, categoria, data_fim')
+      .in('slug', itensGate.map(i => i.slug));
+    if (formacoesError) return res.status(500).json({ error: formacoesError.message });
+    requisitosGate = (formacoesGate || []).map(f => ({ formacao_id: f.id, formacoes_internas: f }));
+  }
+
+  // Une os dois conjuntos, sem duplicar formacao_id repetido nos dois.
+  const vistos = new Set();
+  const requisitos = [...(requisitosProfissao || []), ...requisitosGate].filter(r => {
+    if (vistos.has(r.formacao_id)) return false;
+    vistos.add(r.formacao_id);
+    return true;
+  });
+
+  if (!requisitos.length) return res.status(200).json({ atribuidas: 0, ignoradas: 0 });
 
   let atribuidas = 0;
   let ignoradas = 0;
@@ -639,6 +680,70 @@ async function handleAutoAtribuir(req, res) {
   }
 
   return res.status(200).json({ atribuidas, ignoradas });
+}
+
+async function handleGateStatus(req, res) {
+  if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+  const sessao = requireAuth(req, res, ['admin', 'worker']);
+  if (!sessao) return;
+
+  const supabase = getSupabase();
+  const gate = await getGateStatus(supabase, sessao.id);
+  return res.status(200).json(gate);
+}
+
+async function handleGateRequisitos(req, res) {
+  if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+  if (!requireAuth(req, res, ['admin'])) return;
+
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from('onboarding_gate_itens')
+    .select('id, tipo, slug, label, ativo')
+    .eq('tipo', 'formacao')
+    .order('label');
+
+  if (error) return res.status(500).json({ error: error.message });
+  return res.status(200).json({ itens: data || [] });
+}
+
+async function handleGateRequisitosSet(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (!requireAuth(req, res, ['admin'])) return;
+
+  const { formacao_id, ativo } = req.body || {};
+  if (!formacao_id || typeof ativo !== 'boolean') {
+    return res.status(400).json({ error: 'Campos obrigatórios: formacao_id, ativo.' });
+  }
+
+  const supabase = getSupabase();
+
+  const { data: formacao, error: fetchError } = await supabase
+    .from('formacoes_internas')
+    .select('id, slug, tipo_formacao, formato')
+    .eq('id', formacao_id)
+    .single();
+
+  if (fetchError || !formacao) return res.status(404).json({ error: 'Ação não encontrada.' });
+  if (formacao.formato !== 'e-learning') {
+    return res.status(400).json({ error: 'Só ações e-learning podem ser marcadas como obrigatórias no gate.' });
+  }
+
+  // Gera o slug a partir do tipo_formacao na primeira vez que este curso é
+  // marcado como obrigatório no gate — nunca escrito à mão pelo admin.
+  let slug = formacao.slug;
+  if (!slug) {
+    slug = slugify(formacao.tipo_formacao);
+    const { error: slugError } = await supabase.from('formacoes_internas').update({ slug }).eq('id', formacao_id);
+    if (slugError) return res.status(500).json({ error: slugError.message });
+  }
+
+  const { error } = await supabase
+    .from('onboarding_gate_itens')
+    .upsert({ tipo: 'formacao', slug, label: formacao.tipo_formacao, ativo }, { onConflict: 'tipo,slug' });
+
+  if (error) return res.status(500).json({ error: error.message });
+  return res.status(200).json({ ok: true, slug });
 }
 
 async function handleHorasPorTrabalhador(req, res) {
@@ -883,6 +988,9 @@ const ACTIONS = {
   'requisitos': handleRequisitos,
   'requisitos-set': handleRequisitosSet,
   'auto-atribuir': handleAutoAtribuir,
+  'gate-status': handleGateStatus,
+  'gate-requisitos': handleGateRequisitos,
+  'gate-requisitos-set': handleGateRequisitosSet,
   'horas-por-trabalhador': handleHorasPorTrabalhador,
   'push-send': handlePushSend,
   'lembrete-validacao': handleLembreteValidacao,
