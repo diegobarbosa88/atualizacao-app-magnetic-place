@@ -141,7 +141,10 @@ function VinculoTimeline({ workerForm, apoliceSeguro, onAbrirSS, ssFlag }) {
 
   const cessacaoDotStyle = cessacaoFeita ? { backgroundColor: '#10b981', borderColor: '#10b981', color: '#fff' }
     : temFim ? { backgroundColor: FT.navy, borderColor: FT.navy, color: '#fff' }
-    : { backgroundColor: '#fff', borderColor: '#e2e8f0', color: '#cbd5e1' };
+    // #64748b, não #cbd5e1: o ponto "n/a" (contorno sem preenchimento) media
+    // 1,48:1 contra o próprio fundo branco, abaixo até do limiar de 3:1 para
+    // ícones (WCAG 1.4.11); #64748b dá 4,76:1.
+    : { backgroundColor: '#fff', borderColor: '#e2e8f0', color: '#64748b' };
   const cessacaoDotIcon = cessacaoFeita ? <Check size={13} /> : <Circle size={11} fill="currentColor" />;
   const cessacaoStatus = temFim ? (
     cessacaoFeita ? (

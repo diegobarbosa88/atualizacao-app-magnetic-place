@@ -77,7 +77,11 @@ function WorkerCard({ worker, docs, onOpenFolder, ...actions }) {
           <p className="text-sm font-black text-[var(--ink)] truncate" style={{ fontFamily: FONT_TITLE }}>{toSentenceCase(worker.workerName)}</p>
           <p className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>
             {docs.length} documento{docs.length !== 1 ? 's' : ''}
-            {acaoCount > 0 && <span style={{ color: 'var(--warn)' }}> · {acaoCount} por resolver</span>}
+            {/* var(--tone-amber), não var(--warn): --warn sobre bg-white dá
+                só 2,76:1 no claro (--warn foi pensado para fundos --warn-bg,
+                não brancos); --tone-amber já resolve texto de aviso sobre
+                painel claro/escuro, 5,03:1 / 6,85:1. */}
+            {acaoCount > 0 && <span style={{ color: 'var(--tone-amber)' }}> · {acaoCount} por resolver</span>}
           </p>
         </div>
       </div>

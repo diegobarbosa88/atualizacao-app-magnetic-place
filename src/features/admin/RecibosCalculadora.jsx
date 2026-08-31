@@ -2623,8 +2623,10 @@ ${hdrRow}${bodyRows}${totRow}
                     )}
                   </div>
                   <div className="rounded-xl px-4 py-3 mb-4" style={{ background: '#FDF1E0' }}>
-                    <p className={`${SCALE.text.statLabel} mb-0.5`} style={{ color: FT.orange }}>Total A082 (recibo)</p>
-                    <p className="text-xl font-black" style={{ color: FT.orange }}>{eur(mapaLiqLive ?? mapaTotal)}</p>
+                    {/* #8a4a00, não FT.orange: sobre #FDF1E0 dá só 2,26:1;
+                        #8a4a00 dá 6,15:1. */}
+                    <p className={`${SCALE.text.statLabel} mb-0.5`} style={{ color: '#8a4a00' }}>Total A082 (recibo)</p>
+                    <p className="text-xl font-black" style={{ color: '#8a4a00' }}>{eur(mapaLiqLive ?? mapaTotal)}</p>
                   </div>
                 </>
               ) : (
@@ -2970,7 +2972,7 @@ ${hdrRow}${bodyRows}${totRow}
       {/* ── MAPA DE AJUDAS DE CUSTO ── */}
       <div className="bg-white rounded-2xl border border-[var(--border)] p-5" style={{ borderTop: `4px solid ${FT.orange}` }}>
         <div className="flex items-center justify-between mb-5">
-          <p className={SCALE.text.statLabel} style={{ color: FT.orange }}>Mapa de Ajudas de Custo</p>
+          <p className={SCALE.text.statLabel} style={{ color: '#8a4a00' }}>Mapa de Ajudas de Custo</p>
           <div className="flex items-center gap-1">
             <button
               onClick={() => { setMapaRows([]); setAutoFillInfo(null); }}

@@ -609,6 +609,117 @@ Identificados, decidido não tocar:
   passa com folga — não é o mesmo limiar de 4,5:1 do texto. Não alterado, para não arriscar mudar
   o token partilhado `--ok`/`--ok-bg` só por um caso que já cumpre o limiar que lhe compete.
 
+**Segunda ronda do mesmo varrimento, mesmo dia — desta vez por ANCESTRAL (fundo pode estar numa
+linha diferente do texto, não só no mesmo elemento), generalizando a técnica já usada para o
+"par chip".** Script novo (também apagado no fim), mesma base de resolução de tokens, mas percorre
+para trás por indentação (mesma lógica do `fundo-do-ancestral.pl`) em vez de exigir texto+fundo na
+mesma `className`/`style`. Encontrou 180 candidatos — **132 são a mesma família já registada e
+deliberadamente adiada** ("`--slate`/`FT.slate` a colorir texto", requer classificação ícone-vs-
+-texto caso a caso, não converter às cegas — ver secção acima). Dos 48 restantes, **3 grupos
+inteiros eram falsos positivos do próprio script**, todos pela mesma razão: o script só olha para
+trás (linhas anteriores) à procura do fundo, e um botão que declara `style={{ background: ... }}`
+numa linha DEPOIS da que define a cor do texto (comum em JSX multi-linha) engana-o — atribuiu o
+fundo errado (o de um ancestral mais distante) em vez do fundo real do próprio elemento:
+- `var:navy-solid / bridge:bg-white` (4 casos, RecibosCalculadora/ContadorEmailsAdmin/
+  TOConlinePanel) — são todos botões `text-[var(--navy-solid)]` com `style={{ background:
+  FT.orange }}` na linha seguinte; par navy/laranja já sabido seguro.
+- `ft:navy / var:surface-dim` (WorkerValidationPanel.jsx, toggle lista/grade) — já documentado
+  como correcto de propósito (`background:'#fff'` inline por ramo de ternário, não a classe).
+- Ícones dentro de `FT.warn`/`FT.warnBg` a 15% opacidade (`GeoSuggestionCard.jsx`,
+  `PendingAlertsModal.jsx`) — decorativos, mesmo critério de sempre.
+
+**5 bugs reais confirmados e corrigidos**, todos "texto fixo (`FT.*`/`var(--warn)`) sobre fundo que
+inverte (`bg-white` ou `bg-[var(--surface-dim)]`)" — a mesma classe de erro já descrita para
+`--on-navy`, só em ficheiros nunca antes auditados por esta técnica:
+- **`WorkerNavBar.jsx:86`** — nome do trabalhador na barra superior, `FT.navyDeep` sobre `bg-white`
+  → **1,03:1 em modo escuro** (praticamente invisível). `var(--navy)`, 7,22:1.
+- **`ManualTimeEntryCard.jsx:81`** e **`WorkerCalendar.jsx:58`** — mesma classe de bug (data/mês
+  sobre cartão `bg-white`), mesmo fix `var(--navy)`.
+- **`WorkerScheduleTab.jsx:35+38`** — rótulo "Pausa" e horário, `FT.warn`/`FT.orangeDeep` sobre
+  `FT.warnBg`, 2,44:1/3,07:1 → `#8a4a00` (reutilizado, já usado 3x nesta migração para este par
+  exacto), 6,08:1.
+- **`CategoryWorkerGrid.jsx:80`** — "N por resolver" no cartão do colaborador (Por categoria),
+  `var(--warn)` sobre `bg-white`, 2,76:1 no claro → `var(--tone-amber)` (o token já pensado para
+  texto de aviso sobre painel, não `--warn`, que serve fundos `--warn-bg`), 5,03:1/6,85:1.
+  Confirmado ao vivo, 5,03:1.
+
+**Achado, não corrigido — já era pendência conhecida, apanhada de novo por este varrimento:** as
+linhas dentro de `bg-white/70` em `CorrectionsInbox.jsx` (`tone-amber-label` etc.) — o script
+tratou `bg-white/70` como `bg-white` a 100%, mas é translúcido sobre um fundo tingido por baixo;
+resolver isto correctamente exige compor o alpha, exactamente o já registado como "não fazia parte
+do pedido, fica por resolver" na secção da ponte de cor de estado, acima. Não é um achado novo.
+
+`npx eslint`/`npx vite build` limpos nos 5 ficheiros corrigidos. Confirmação ao vivo só foi possível
+para `CategoryWorkerGrid.jsx` (admin, alcançável) — os outros 4 vivem no dashboard do trabalhador,
+atrás do mesmo bloqueio de sessão (403) já registado várias vezes nesta sessão.
+
+**Terceira ronda do mesmo varrimento, mesmo dia — duas frentes novas: hex arbitrário do Tailwind
+(`text-[#hex] bg-[#hex]` na mesma classe, nunca coberto pelas rondas anteriores porque só olhavam
+para `FT.*`/`var(--x)`) e texto em hex cru (`color: '#hex'`) contra fundo ancestral.** 1 falso
+positivo na primeira frente (`DashboardView.jsx`, mesmo problema de ternário já conhecido). Na
+segunda, **3 bugs reais confirmados e corrigidos**, 2 falsos positivos descartados por inspecção:
+- **`WorkerForm.jsx:144`** — o ponto "n/a" (contorno, sem preenchimento) do timeline "Ciclo de Vida
+  do Vínculo", `#cbd5e1` sobre o próprio fundo branco (mesma linha — bug do script: não reconhecia
+  hex de 3 dígitos, `'#fff'`, como definição de fundo válida) → **1,48:1, abaixo até do limiar de
+  3:1 para ícones** (WCAG 1.4.11). Corrigido para `#64748b`, 4,76:1.
+- **`MapaPainelExecutivo.jsx` (53, 62)** — quarto ficheiro do módulo `mapa-salarios` encontrado
+  (os 3 anteriores já tinham sido corrigidos numa ronda anterior no mesmo dia) — "Δ valor"/"a
+  validar" no `ReconBanner`, `#D3572B` sobre `#FFF8EE`, 3,85:1 → `#8a5800` (o mesmo valor que já
+  estava a ser usado correctamente no título do próprio banner, linha 41 — só as duas linhas por
+  trabalhador tinham ficado com o hex antigo). Confirmado ao vivo, 5,73:1.
+- Falsos positivos: `WorkerOnboardingGate.jsx:110` (branco sobre gradiente navy — o script não
+  reconhece `background: \`linear-gradient(...)\`` como fundo, subiu até ao fundo creme da página);
+  `WorkerForm.jsx:142-144` de novo, desta vez o emparelhamento cruzado de ramos de ternário já
+  conhecido (a razão original por trás do bug dos 3 dígitos).
+
+`npx eslint`/`npx vite build` limpos. `MapaPainelExecutivo.jsx` confirmado ao vivo (admin,
+"Painel Executivo"); `WorkerForm.jsx` não confirmado ao vivo (precisa de um contrato sem data de
+fim para mostrar o estado "n/a"), fórmula já validada.
+
+**Quarta ronda, mesmo dia — mudança de método: em vez de ler código estático, varrimento ao vivo
+no DOM renderizado (percorre `body *`, mede `color` computado contra o fundo efectivo real —
+composição de alpha correcta através de toda a cadeia de ancestrais — em várias rotas do admin).**
+Decisão do Diego, depois de as três rondas anteriores começarem a esgotar o que dava para apanhar
+por leitura de código. Apanha o que as rondas estáticas não alcançam por definição — fundo definido
+num componente partilhado, `linear-gradient()`, cores Tailwind v4 em `oklch()` que `getComputedStyle`
+não resolve para `rgb()` em runtime.
+**4 bugs reais corrigidos**, todos a mesma família (`FT.orange`/hex fixo a falhar contra fundo claro,
+já com fórmula estabelecida `#8a4a00`):
+- **`AdminOverview.jsx`** — botão "Ver Tudo →", `FT.orange` sobre branco, 2,52:1 → confirmado ao
+  vivo, 6,86:1.
+- **`RecibosCalculadora.jsx` (2973, 2626-2627)** — duas ocorrências não apanhadas pelas rondas
+  anteriores (a primeira é `FT.orange` sobre `bg-white`, nunca antes vista; a segunda já constava
+  do achado da 3ª ronda mas ainda não tinha sido corrigida) — "Mapa de Ajudas de Custo"/"Total A082".
+- **`TOConlinePanel.jsx`** — tab inactiva "Compras"/"Recibos", `#94A3B8` fixo (não token) sobre
+  `--surface-dim`, 2,19:1 → `var(--ink-soft)`, mesmo padrão já aplicado a `DocumentsFilters.jsx`/
+  `FilaAprovacaoTab.jsx`/`TOConlineRelatorios.jsx` na 1ª ronda.
+- **`FaturasAdmin.jsx`** — dois estados vazios ("Nenhuma fatura importada ainda."/"...corresponde
+  aos filtros"), `--slate-dim` directamente sobre o fundo global (`FT.bg`), 4,36:1 → `--ink-soft`,
+  mesma regra já documentada na secção "Depois" da migração ("texto que assenta DIRECTAMENTE no
+  fundo global precisa de `--ink-soft`, não `--slate-dim`").
+
+**2 casos confirmados, não corrigidos — já são o `SectionHeaderShell.jsx` deliberadamente adiado**
+(componente partilhado por 19 secções, decisão do Diego de não mexer sem revisão dedicada — ver
+secção "Design system" abaixo): o contador de badge (`FT.badgeBad`, 4,06:1) e a tab activa do
+`StatChip` (`var(--orange)`, 2,52:1). Ficam registados como mais dois pontos de dados concretos
+para quando essa revisão acontecer.
+
+**1 falso positivo apanhado ao vivo, confirma um pitfall já documentado.** Botão "Recalcular"
+(`AdminSettings.jsx`) media "branco sobre branco, 1,00:1" — o `getComputedStyle` devolvia o fundo
+como `oklch(0.666 0.179 58.318)` (Tailwind v4 nativo, `bg-amber-600`), que o parser do script (só
+entende `rgb()`/`rgba()`) não reconheceu, caindo para o fundo da página. **É exactamente o mesmo
+pitfall já registado** ("O varredor de contraste tem de entender oklab()/oklch()") — confirma que
+continua activo, desta vez apanhado antes de entrar na lista de "corrigido".
+Outros dois achados de fundo `oklch`/gradiente ficaram por resolver, ambos de baixa prioridade: o
+rótulo "Auditoria técnica..." (`AdminSettings.jsx`) mede 4,43:1 contra um fundo composto (navy a
+8% opacidade sobre branco) — muito perto de passar, sem folga que justifique mexer já; e um texto
+de 6px "Documento autenticado eletronicamente" que pertence a um dos componentes de carimbo já
+documentados como identidade intencional, não tocado pela mesma razão de sempre.
+
+`npx eslint`/`npx vite build` limpos. `AdminOverview.jsx` confirmado ao vivo (6,86:1); os restantes
+3 ficheiros têm fórmula já validada noutros sítios mas não foram remedidos individualmente ao vivo
+nesta ronda por repetirem exactamente um padrão já confirmado antes.
+
 ## Design system (em migração)
 
 `src/styles/designTokens.js` (paleta FT, tons TONES, escala SCALE) e `src/components/common/`

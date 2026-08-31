@@ -83,7 +83,10 @@ export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, act
             {getInitials(currentUser?.name)}
           </div>
           <div className="flex flex-col">
-            <p className="text-sm sm:text-base leading-none tracking-tight" style={{ fontFamily: FONT_TITLE, fontWeight: 800, color: FT.navyDeep }}>{formatShortName(currentUser?.name)}</p>
+            {/* var(--navy), não FT.navyDeep: a barra (bg-white) inverte no
+                escuro, mas FT.navyDeep é fixo — ficava 1,03:1, quase
+                invisível. var(--navy) segue o fundo, 7,22:1 escuro. */}
+            <p className="text-sm sm:text-base leading-none tracking-tight" style={{ fontFamily: FONT_TITLE, fontWeight: 800, color: 'var(--navy)' }}>{formatShortName(currentUser?.name)}</p>
             <p className="text-[9px] sm:text-[10px] uppercase tracking-widest mt-1" style={{ fontFamily: FONT_MONO, fontWeight: 700, color: FT.orangeDeep }}>{currentUser?.profissao || 'Colaborador'}</p>
           </div>
         </button>

@@ -351,7 +351,7 @@ export default function AdminOverview({ currentMonth, setCurrentMonth }) {
               <button
                 onClick={() => setShowAllActivity(!showAllActivity)}
                 className="mt-4 w-full py-3 text-xs font-black uppercase tracking-widest rounded-2xl transition-colors hover:bg-amber-50"
-                style={{ color: FT.orange }}
+                style={{ color: '#8a4a00' }}
               >
                 {showAllActivity ? 'Mostrar Menos' : 'Ver Tudo →'}
               </button>

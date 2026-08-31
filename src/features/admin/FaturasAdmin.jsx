@@ -637,9 +637,9 @@ export default function FaturasAdmin() {
       {loading ? (
         <div className="flex justify-center py-16"><Loader2 size={32} className="animate-spin text-[var(--slate)]" /></div>
       ) : faturas.length === 0 ? (
-        <div className="text-center py-16 text-[var(--slate-dim)] text-sm font-semibold">Nenhuma fatura importada ainda.</div>
+        <div className="text-center py-16 text-[var(--ink-soft)] text-sm font-semibold">Nenhuma fatura importada ainda.</div>
       ) : faturasFiltradas.length === 0 ? (
-        <div className="text-center py-12 text-[var(--slate-dim)] text-sm font-semibold">
+        <div className="text-center py-12 text-[var(--ink-soft)] text-sm font-semibold">
           Nenhuma fatura corresponde aos filtros.
           <button onClick={limparFiltros} className="ml-2 text-indigo-500 hover:underline">Limpar filtros</button>
         </div>

@@ -78,7 +78,9 @@ export default function ManualTimeEntryCard({ clients, currentUser, onSave, onQu
             </div>
             <div className="min-w-0">
               <p className={`${SCALE.text.statLabel} text-slate-400`} style={{ fontFamily: FONT_MONO }}>Registar Horário de Hoje</p>
-              <p className="text-sm font-bold" style={{ color: FT.navyDeep }}>{dateLabel}</p>
+              {/* var(--navy), não FT.navyDeep: o cartão (bg-white) inverte
+                  no escuro, FT.navyDeep não — ficava quase invisível. */}
+              <p className="text-sm font-bold" style={{ color: 'var(--navy)' }}>{dateLabel}</p>
             </div>
             {todayLogs.length > 0 && (
               <span className={`${SCALE.text.badge} bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full border border-emerald-100 shrink-0`}>

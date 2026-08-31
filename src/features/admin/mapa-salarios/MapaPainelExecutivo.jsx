@@ -50,7 +50,7 @@ function ReconBanner({ divWorkers, semNIS }) {
                   Mapa indica {n2(w.totalRecibo)}€, recibo mostra {n2(w.totalRecibo - w.divergencia)}€
                 </div>
               </div>
-              <div style={{ fontFamily: MONO, fontWeight: 600, color: '#D3572B', marginLeft: 16, flexShrink: 0 }}>Δ {n2(Math.abs(w.divergencia))}€</div>
+              <div style={{ fontFamily: MONO, fontWeight: 600, color: '#8a5800', marginLeft: 16, flexShrink: 0 }}>Δ {n2(Math.abs(w.divergencia))}€</div>
             </div>
           ))}
           {semNIS.map(w => (
@@ -59,7 +59,7 @@ function ReconBanner({ divWorkers, semNIS }) {
                 <div className="text-natural" style={{ fontWeight: 600, color: INK }}>{w.nome} · mec. {parseInt(w.mecNum, 10)}</div>
                 <div className="text-natural" style={{ color: INK_SOFT, fontSize: 12.5 }}>Sem NIS registado</div>
               </div>
-              <div style={{ fontFamily: MONO, fontWeight: 600, color: '#D3572B', marginLeft: 16, flexShrink: 0 }}>a validar</div>
+              <div style={{ fontFamily: MONO, fontWeight: 600, color: '#8a5800', marginLeft: 16, flexShrink: 0 }}>a validar</div>
             </div>
           ))}
         </div>

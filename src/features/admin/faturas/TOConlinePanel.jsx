@@ -157,7 +157,7 @@ export default function TOConlinePanel() {
               ].map(({ key, label }) => (
                 <button key={key} onClick={() => setTipoRel(key)}
                   className={`flex-1 sm:flex-none px-3 py-1.5 rounded-xl ${SCALE.text.badge} transition-all whitespace-nowrap`}
-                  style={tipoRel === key ? { backgroundColor: 'rgba(235,141,0,0.15)', color: 'var(--navy)' } : { color: '#94A3B8' }}>
+                  style={tipoRel === key ? { backgroundColor: 'rgba(235,141,0,0.15)', color: 'var(--navy)' } : { color: 'var(--ink-soft)' }}>
                   {label}
                 </button>
               ))}

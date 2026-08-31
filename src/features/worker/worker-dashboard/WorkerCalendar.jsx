@@ -55,7 +55,9 @@ export default function WorkerCalendar({
 
       {/* Calendar grid */}
       <div className="p-4 sm:p-6">
-        <p className="text-base font-bold uppercase tracking-widest mb-2.5 capitalize" style={{ fontFamily: FONT_TITLE, color: FT.navyDeep }}>
+        {/* var(--navy), não FT.navyDeep: o cartão (bg-white) inverte no
+            escuro, FT.navyDeep não — ficava quase invisível. */}
+        <p className="text-base font-bold uppercase tracking-widest mb-2.5 capitalize" style={{ fontFamily: FONT_TITLE, color: 'var(--navy)' }}>
           {new Date(daysList[0] + 'T00:00:00').toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}
         </p>
         {/* Divisor "cordão de solda" — mesmo estilo do módulo de Formação Interna */}

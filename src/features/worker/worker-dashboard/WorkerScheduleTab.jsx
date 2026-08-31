@@ -32,10 +32,13 @@ function TimeRow({ startTime, endTime, breakStart, breakEnd }) {
         <>
           <span className="text-slate-200">·</span>
           <div className="rounded-xl px-3 py-2 text-center" style={{ background: FT.warnBg }}>
-            <p className={`${SCALE.text.badge} mb-0.5 flex items-center justify-center gap-0.5`} style={{ fontFamily: FONT_MONO, color: FT.warn }}>
+            {/* #8a4a00 fixo, não FT.warn/FT.orangeDeep: os dois sobre
+                FT.warnBg falham AA (2,44:1 / 3,07:1); mesmo valor já usado
+                3x nesta migração para este par, 6,08:1. */}
+            <p className={`${SCALE.text.badge} mb-0.5 flex items-center justify-center gap-0.5`} style={{ fontFamily: FONT_MONO, color: '#8a4a00' }}>
               <Coffee size={8} /> Pausa
             </p>
-            <p className="text-xs font-bold tabular-nums leading-none whitespace-nowrap" style={{ fontFamily: FONT_MONO, color: FT.orangeDeep }}>
+            <p className="text-xs font-bold tabular-nums leading-none whitespace-nowrap" style={{ fontFamily: FONT_MONO, color: '#8a4a00' }}>
               {breakStart} – {breakEnd || '--:--'}
             </p>
           </div>
