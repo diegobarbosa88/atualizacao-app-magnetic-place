@@ -102,7 +102,7 @@ export default function PendingAlertsModal({
                 <GraduationCap size={15} style={{ color: FT.orange }} />
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-black text-slate-700 leading-snug">Formações por Assinar</p>
+                <p className="text-xs font-black text-slate-700 leading-snug">Formações por Fazer</p>
                 <p className={`${SCALE.text.meta} text-slate-400 mt-0.5 leading-snug`}>
                   {pendingFormacaoCount} {pendingFormacaoCount === 1 ? 'formação requer' : 'formações requerem'} a tua assinatura digital.
                 </p>
@@ -113,7 +113,7 @@ export default function PendingAlertsModal({
               className={`w-full flex items-center justify-center gap-2 py-2.5 text-white rounded-xl transition-all shadow-sm active:scale-95 ${SCALE.text.badge}`}
               style={{ fontFamily: FONT_MONO, background: FT.orange }}
             >
-              <Edit2 size={13} /> Assinar Agora
+              <Edit2 size={13} /> Fazer Agora
             </button>
           </div>
         )}

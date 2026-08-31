@@ -534,12 +534,16 @@ mínima face ao "Por assinar" anterior. Constante `STATUS_LABEL` (só usada nest
 ficar órfã. Não confirmado ao vivo — o dashboard do trabalhador está atrás do mesmo bloqueio de
 sessão já registado (`403 Sem permissão`, "Ver Portal" em `/admin/team`); `npx eslint`/
 `npx vite build` limpos.
-**Nota separada, não corrigida:** o botão "Assinar Agora" da secção "Formações por Assinar" em
-`PendingAlertsModal.jsx` (o modal "Avisos Pendentes" visível no screenshot) continua com esse texto
-— abre a lista inteira (`FormacaoModal`), não uma formação específica, por isso não faz sentido
-herdar directamente "Iniciar"/"Terminar" aí. Ficou fora do pedido (o Diego confirmou que o problema
-era a semântica Iniciar/Terminar por curso, não este botão de entrada) — registado caso um dia se
-decida renomear também este CTA de entrada.
+**Pendência fechada no mesmo dia:** o botão "Assinar Agora" da secção "Formações por Assinar" em
+`PendingAlertsModal.jsx` — inicialmente deixado fora do pedido, por abrir a lista inteira
+(`FormacaoModal`) e não uma formação específica, sem correspondência directa com "Iniciar"/
+"Terminar" — foi corrigido a pedido do Diego (screenshot novo): título "Formações por Assinar" →
+"Formações por Fazer", botão "Assinar Agora" → "Fazer Agora". O botão irmão da secção
+"Assinaturas Pendentes" (documentos, não formação) manteve "Assinar Agora" — só o de formação
+mudou. **Pendência nova, não corrigida:** a frase de apoio por baixo do título ("N formações
+requerem a tua assinatura digital") continua a falar em "assinatura digital", que já não bate
+com "Fazer"/"Iniciar" para quem ainda nem começou o curso — não foi pedido explicitamente, fica
+registado.
 
 ## Design system (em migração)
 
