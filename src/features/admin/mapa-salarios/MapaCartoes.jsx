@@ -91,6 +91,10 @@ function WorkerCard({ row }) {
             Verificar
           </span>
         )}
+        {/* Cores dos badges — amber/blue/red/green-600 originais falhavam AA
+            contra os próprios fundos claros (2,86–4,24:1); escurecidos para
+            o degrau -800 do mesmo tom (6,37–7,60:1). O badge sólido vermelho
+            "Ambíguo" (branco sobre #dc2626) já passava, não foi tocado. */}
         {row.fonte === 'ambigua' && (
           <span title="Correspondência ambígua com o recibo (nome duplicado/semelhante) — revisão manual necessária"
             style={{ flexShrink: 0, background: '#dc2626', color: '#fff', borderRadius: 5, padding: '3px 7px', fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.3px' }}>
@@ -99,13 +103,13 @@ function WorkerCard({ row }) {
         )}
         {row.fonte === 'recibo-nome' && (
           <span title="Dados do recibo já processado — correspondência por nome, confirmar"
-            style={{ flexShrink: 0, background: '#fef3c7', color: '#d97706', borderRadius: 5, padding: '3px 7px', fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.3px' }}>
+            style={{ flexShrink: 0, background: '#fef3c7', color: '#92400e', borderRadius: 5, padding: '3px 7px', fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.3px' }}>
             Recibo (nome)
           </span>
         )}
         {row.fonte === 'recibo-id' && (
           <span title="Dados do recibo já processado (sem registo de horário no mês)"
-            style={{ flexShrink: 0, background: '#dbeafe', color: '#2563eb', borderRadius: 5, padding: '3px 7px', fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.3px' }}>
+            style={{ flexShrink: 0, background: '#dbeafe', color: '#1e40af', borderRadius: 5, padding: '3px 7px', fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.3px' }}>
             Recibo
           </span>
         )}
@@ -116,7 +120,7 @@ function WorkerCard({ row }) {
           </span>
         )}
         {row.semNIS && !hasVerificar && (
-          <span style={{ flexShrink: 0, background: '#fef3c7', color: '#d97706', borderRadius: 5, padding: '3px 7px', fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.3px' }}>
+          <span style={{ flexShrink: 0, background: '#fef3c7', color: '#92400e', borderRadius: 5, padding: '3px 7px', fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.3px' }}>
             Sem NIS
           </span>
         )}

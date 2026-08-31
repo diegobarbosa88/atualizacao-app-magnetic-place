@@ -71,7 +71,7 @@ export default function MargemTab({ clientMargins }) {
             ))}
             {clientMargins.length > 0 && (
               <tr className="bg-[var(--surface-dim)]">
-                <td className={`px-4 py-3 rounded-l-2xl ${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Total</td>
+                <td className={`px-4 py-3 rounded-l-2xl ${SCALE.text.statLabel} text-[var(--ink-soft)]`}>Total</td>
                 <td className="px-4 py-3 text-sm font-black text-[var(--ink-mid)]">{totalHours.toFixed(1)}h</td>
                 <td className="px-4 py-3 text-sm font-black text-[var(--navy)]">{formatCurrency(totalFaturation)}</td>
                 <td className="px-4 py-3 text-sm font-black text-rose-600">{formatCurrency(totalCost)}</td>

@@ -148,7 +148,7 @@ export default function ValidacaoMensalPanel() {
                 )}
                 {row.status === 'dispensado' && (
                   <>
-                    <span className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--surface-dim)] text-[var(--slate-dim)] ${SCALE.text.badge}`}>
+                    <span className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--surface-dim)] text-[var(--ink-soft)] ${SCALE.text.badge}`}>
                       <BellOff size={13} /> Dispensado
                     </span>
                     <button

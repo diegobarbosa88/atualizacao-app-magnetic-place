@@ -70,7 +70,7 @@ export default function TOConlineRelatorios({ onDesligado }) {
                 { key: 'recibos', label: 'Recibos' },
               ].map(({ key, label }) => (
                 <button key={key} onClick={() => { setTipo(key); }}
-                  className={`px-3 py-1.5 rounded-lg ${SCALE.text.badge} transition-all ${tipo === key ? '' : 'text-[var(--slate-dim)] hover:text-[var(--ink-soft)]'}`}
+                  className={`px-3 py-1.5 rounded-lg ${SCALE.text.badge} transition-all ${tipo === key ? '' : 'text-[var(--ink-soft)] hover:text-[var(--ink)]'}`}
                   style={tipo === key ? { backgroundColor: 'rgba(235,141,0,0.15)', color: 'var(--navy)' } : {}}>
                   {label}
                 </button>

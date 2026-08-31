@@ -58,7 +58,10 @@ export default function GeoSuggestionCard({ geoSuggestion, geoSuggestionDismisse
             <div className="flex items-start gap-2 rounded-xl px-3 py-2.5" style={{ background: FT.warnBg }}>
               <AlertTriangle size={14} className="shrink-0 mt-0.5" style={{ color: FT.warn }} />
               <div className="min-w-0">
-                <p className="text-xs font-black leading-snug" style={{ color: FT.orangeDeep }}>
+                {/* #8a4a00 fixo, não FT.orangeDeep: FT.orangeDeep sobre FT.warnBg
+                    dá só 3,07:1 (falha AA) — #8a4a00 dá 6,08:1, mesmo valor já
+                    usado noutros badges sobre este fundo (ver CLAUDE.md). */}
+                <p className="text-xs font-black leading-snug" style={{ color: '#8a4a00' }}>
                   Tens um registo sem saída de {new Date(blockedLog.date + 'T00:00:00').toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' })}
                 </p>
                 <p className={`${SCALE.text.meta} mt-0.5`} style={{ color: FT.inkSoft }}>

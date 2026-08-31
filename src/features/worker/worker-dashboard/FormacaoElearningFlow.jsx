@@ -430,7 +430,10 @@ export default function FormacaoElearningFlow({ participacao, currentUser, onFin
 
       {step === 'assinatura' && (
         assinado ? (
-          <div className="flex items-center gap-2 justify-center rounded-[10px] py-4 font-bold text-[15px]" style={{ background: FT.okBg, color: FT.ok }}>
+          // #1f6b47 fixo, não FT.ok: FT.ok sobre FT.okBg dá só 4,42:1 (falha
+          // AA); mesmo valor já usado no WorkerValidationPanel.jsx para o
+          // mesmo par, 5,66:1.
+          <div className="flex items-center gap-2 justify-center rounded-[10px] py-4 font-bold text-[15px]" style={{ background: FT.okBg, color: '#1f6b47' }}>
             <CheckCircle2 size={18} /> Formação concluída e assinada
           </div>
         ) : (

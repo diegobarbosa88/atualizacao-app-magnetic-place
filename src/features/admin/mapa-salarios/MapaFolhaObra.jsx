@@ -42,7 +42,7 @@ function StatusCell({ row }) {
   if (row.fonte === 'ambigua') {
     return (
       <span title="Correspondência ambígua com o recibo (nome duplicado/semelhante) — revisão manual necessária"
-        style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: '#fee2e2', color: '#dc2626', borderRadius: 6, padding: '2px 7px', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em' }}>
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: '#fee2e2', color: '#991b1b', borderRadius: 6, padding: '2px 7px', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em' }}>
         <AlertTriangle size={9} />Ambíguo
       </span>
     );
@@ -50,7 +50,7 @@ function StatusCell({ row }) {
   if (row.fonte === 'recibo-nome') {
     return (
       <span title="Dados do recibo já processado — correspondência por nome, confirmar"
-        style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: '#fef3c7', color: '#d97706', borderRadius: 6, padding: '2px 7px', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em' }}>
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: '#fef3c7', color: '#92400e', borderRadius: 6, padding: '2px 7px', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em' }}>
         <AlertTriangle size={9} />Recibo (nome)
       </span>
     );
@@ -58,7 +58,7 @@ function StatusCell({ row }) {
   if (row.fonte === 'recibo-id') {
     return (
       <span title="Dados do recibo já processado (sem registo de horário no mês)"
-        style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: '#dbeafe', color: '#2563eb', borderRadius: 6, padding: '2px 7px', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em' }}>
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: '#dbeafe', color: '#1e40af', borderRadius: 6, padding: '2px 7px', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em' }}>
         <Info size={9} />Recibo
       </span>
     );
@@ -73,7 +73,7 @@ function StatusCell({ row }) {
   }
   if (row.isCompleto && row.divergencia == null) {
     return (
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: '#dcfce7', color: '#16a34a', borderRadius: 6, padding: '2px 7px', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em' }}>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: '#dcfce7', color: '#166534', borderRadius: 6, padding: '2px 7px', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em' }}>
         <CheckCircle size={9} />OK
       </span>
     );
@@ -81,7 +81,7 @@ function StatusCell({ row }) {
   if (row.divergencia != null) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: '#fee2e2', color: '#dc2626', borderRadius: 6, padding: '2px 7px', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em' }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: '#fee2e2', color: '#991b1b', borderRadius: 6, padding: '2px 7px', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em' }}>
           <AlertTriangle size={9} />Div.
         </span>
         <span style={{ fontSize: 9, color: '#dc2626', fontWeight: 600, fontFamily: MONO }}>
@@ -92,7 +92,7 @@ function StatusCell({ row }) {
   }
   if (row.semNIS) {
     return (
-      <span style={{ fontSize: 8, background: '#fef3c7', color: '#d97706', borderRadius: 5, padding: '2px 6px', fontWeight: 700, textTransform: 'uppercase' }}>
+      <span style={{ fontSize: 8, background: '#fef3c7', color: '#92400e', borderRadius: 5, padding: '2px 6px', fontWeight: 700, textTransform: 'uppercase' }}>
         Sem NIS
       </span>
     );
@@ -230,7 +230,9 @@ export default function MapaFolhaObra({ rows, totals }) {
             </span>
           )}
           {totals.nSemNIS > 0 && (
-            <span style={{ fontSize: 10, color: '#d97706', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
+            // #92400e, não #d97706: sozinho (sem fundo próprio) sobre o
+            // painel branco dá só 3,19:1; #92400e dá 7,09:1.
+            <span style={{ fontSize: 10, color: '#92400e', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
               <AlertTriangle size={11} />{totals.nSemNIS} sem NIS
             </span>
           )}

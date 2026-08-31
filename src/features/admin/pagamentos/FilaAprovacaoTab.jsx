@@ -321,13 +321,13 @@ export default function FilaAprovacaoTab() {
               key={key}
               onClick={() => { setTab(key); setSelecionados(new Set()); }}
               className={`flex items-center gap-1.5 px-4 py-2 rounded-xl ${SCALE.text.badge} transition-all ${
-                tab === key ? '' : 'text-[var(--slate-dim)] hover:text-[var(--ink-soft)]'
+                tab === key ? '' : 'text-[var(--ink-soft)] hover:text-[var(--ink)]'
               }`}
               style={tab === key ? { backgroundColor: 'rgba(235,141,0,0.15)', color: 'var(--navy)' } : {}}
             >
               {label}
               {count > 0 && (
-                <span className={`${SCALE.text.badge} px-1.5 py-0.5 rounded-full ${tab === key ? 'bg-white text-[var(--navy)]' : 'bg-[var(--border)] text-[var(--slate-dim)]'}`}>
+                <span className={`${SCALE.text.badge} px-1.5 py-0.5 rounded-full ${tab === key ? 'bg-white text-[var(--navy)]' : 'bg-[var(--border)] text-[var(--ink-soft)]'}`}>
                   {count}
                 </span>
               )}

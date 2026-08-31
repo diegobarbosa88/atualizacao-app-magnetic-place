@@ -335,7 +335,7 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
                     em linha, a seguir à morada. */}
                 {c.triggers_limited_mode && (
                   <div className="flex items-center gap-1 mt-1.5">
-                    <span className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 ${SCALE.text.meta}`} style={{ background: '#FBF0DE', color: '#B8791F' }}>
+                    <span className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 ${SCALE.text.meta}`} style={{ background: '#FBF0DE', color: '#8a4a00' }}>
                       <ShieldOff size={9} /> Modo limitado
                     </span>
                   </div>

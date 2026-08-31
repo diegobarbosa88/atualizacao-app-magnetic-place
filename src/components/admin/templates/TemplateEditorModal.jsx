@@ -237,7 +237,7 @@ export default function TemplateEditorModal({ template, supabase, onClose, onSav
           <div className="bg-[var(--surface-dim)] rounded-xl p-2 mx-auto" style={{ aspectRatio: '210 / 297', maxWidth: '420px' }}>
             <div className="relative w-full h-full">
               {loadingPreview ? (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-[var(--slate-dim)]">
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-[var(--ink-soft)]">
                   <Loader2 className="w-8 h-8 animate-spin" />
                   <span className="text-xs">A gerar preview...</span>
                 </div>
@@ -256,7 +256,7 @@ export default function TemplateEditorModal({ template, supabase, onClose, onSav
                   </div>
                 </>
               ) : (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-[var(--slate-dim)]">
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-[var(--ink-soft)]">
                   <FileText className="w-12 h-12" />
                   <span className="text-xs text-center px-4">
                     {isEditing ? 'A carregar preview...' : 'Seleciona um ficheiro .docx para ver o preview'}

@@ -135,7 +135,7 @@ export default function DespesasTab({
             ))}
             {allExpensesSorted.length > 0 && (
               <tr className="bg-[var(--surface-dim)]">
-                <td colSpan="3" className={`px-4 py-3 rounded-l-2xl ${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Total</td>
+                <td colSpan="3" className={`px-4 py-3 rounded-l-2xl ${SCALE.text.statLabel} text-[var(--ink-soft)]`}>Total</td>
                 <td className="px-4 py-3 font-black text-rose-600 text-right">-{formatCurrency(totalAllExpenses)}</td>
                 <td className="px-4 py-3 rounded-r-2xl"></td>
               </tr>

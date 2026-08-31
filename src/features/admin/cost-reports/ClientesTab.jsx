@@ -148,7 +148,7 @@ export default function ClientesTab({ clientCosts, supabase, selectedMonth }) {
             })}
             {clientCosts.length > 0 && (
               <tr className="bg-[var(--surface-dim)]">
-                <td className={`px-4 py-3 rounded-l-2xl ${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Total</td>
+                <td className={`px-4 py-3 rounded-l-2xl ${SCALE.text.statLabel} text-[var(--ink-soft)]`}>Total</td>
                 <td className="px-4 py-3 text-sm font-black text-[var(--ink-mid)]">{clientCosts.reduce((a, i) => a + i.totalHours, 0).toFixed(1)}h</td>
                 <td className="px-4 py-3 text-sm font-black text-[var(--navy)]">{formatCurrency(clientCosts.reduce((a, i) => a + i.cost, 0))}</td>
                 <td className="px-4 py-3 text-sm font-black text-emerald-700">{formatCurrency(pagamentos.reduce((s, p) => s + Number(p.valor_pago || 0), 0))}</td>

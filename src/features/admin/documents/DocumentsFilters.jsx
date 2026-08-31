@@ -63,7 +63,7 @@ export default function DocumentsFilters({
                 key={opt.v}
                 onClick={() => setSourceFilter(opt.v)}
                 className={`px-3 py-1.5 rounded-md transition-all ${SCALE.text.badge} ${
-                  sourceFilter === opt.v ? 'bg-white text-[var(--navy)] shadow-sm' : 'text-[var(--slate-dim)] hover:text-[var(--ink-soft)]'
+                  sourceFilter === opt.v ? 'bg-white text-[var(--navy)] shadow-sm' : 'text-[var(--ink-soft)] hover:text-[var(--ink)]'
                 }`}
               >
                 {opt.l}

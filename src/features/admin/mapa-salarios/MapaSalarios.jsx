@@ -204,7 +204,7 @@ export default function MapaSalarios() {
                 <div className="text-natural" style={{
                   display: 'flex', alignItems: 'center', gap: 6,
                   borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600,
-                  border: '1px solid #86efac', color: '#16a34a', background: '#f0fdf4',
+                  border: '1px solid #86efac', color: '#166534', background: '#f0fdf4',
                 }}>
                   {totals.nCompletos} completos
                 </div>
@@ -226,7 +226,7 @@ export default function MapaSalarios() {
                 <div className="text-natural" style={{
                   display: 'flex', alignItems: 'center', gap: 6,
                   borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600,
-                  border: '1px solid #fcd34d', background: '#fffbeb', color: '#d97706',
+                  border: '1px solid #fcd34d', background: '#fffbeb', color: '#8a5800',
                 }}>
                   {totals.nSemNIS} sem NIS
                 </div>
@@ -302,7 +302,7 @@ export default function MapaSalarios() {
         )}
 
         {!loading && error && (
-          <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: '16px 20px', color: '#dc2626', fontSize: 13, fontWeight: 700 }}>
+          <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: '16px 20px', color: '#991b1b', fontSize: 13, fontWeight: 700 }}>
             <AlertTriangle size={14} style={{ display: 'inline', marginRight: 6 }} />
             Erro ao carregar dados: {error}
           </div>

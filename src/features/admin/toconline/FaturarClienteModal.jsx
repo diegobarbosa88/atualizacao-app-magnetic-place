@@ -968,7 +968,7 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
                           onChange={e => setMoedaTaxa(e.target.value)}
                           placeholder="1.0000"
                           disabled={moedaIso.toUpperCase() === 'EUR'}
-                          className="w-full px-2 py-1.5 rounded-lg border border-[var(--border)] text-xs text-center focus:outline-none focus:ring-1 focus:ring-[#1B3A57]/30 disabled:bg-[var(--surface)] disabled:text-[var(--slate)]" />
+                          className="w-full px-2 py-1.5 rounded-lg border border-[var(--border)] text-xs text-center focus:outline-none focus:ring-1 focus:ring-[#1B3A57]/30 disabled:bg-[var(--surface)] disabled:text-[var(--ink-soft)]" />
                       </div>
                     </div>
                   </div>

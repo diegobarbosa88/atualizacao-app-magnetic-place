@@ -91,7 +91,7 @@ export default function TOConlineAdmin() {
                   </p>
                 </div>
                 {saldoContas && (
-                  <span className={`${SCALE.text.meta} text-[var(--slate-dim)] self-end pb-0.5`}>
+                  <span className={`${SCALE.text.meta} text-[var(--ink-soft)] self-end pb-0.5`}>
                     {saldoContas.n} conta{saldoContas.n !== 1 ? 's' : ''}
                   </span>
                 )}

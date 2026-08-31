@@ -121,9 +121,14 @@ browser ao vivo), mas cobre lógica de cálculo, APIs e fluxos.
   `orangeDeep` isolado, 130 é um span à parte com `FT.warn`/`FT.warnBg`, esse ainda pior, 2,44:1) —
   e **`GeoSuggestionCard.jsx:58+61`**, esse sim o par exato (`background: FT.warnBg` no `<div>`,
   `color: FT.orangeDeep` no `<p>` lá dentro), **sempre visível quando a condição dispara** (aviso de
-  registo sem saída no dashboard do trabalhador), não hover — candidato mais forte a corrigir a
-  seguir. Nenhum destes foi tocado — fica registado, não corrigido, por estar fora do âmbito da
-  mudança que o encontrou.
+  registo sem saída no dashboard do trabalhador), não hover.
+  **`GeoSuggestionCard.jsx` corrigido em 2026-08-31** — `#8a4a00` em vez de `FT.orangeDeep`,
+  6,08:1 contra `FT.warnBg` (calculado, não medido ao vivo: o dashboard do trabalhador continua
+  atrás do bloqueio de sessão 403 já registado — `npx eslint`/`npx vite build` limpos, mas sem
+  confirmação visual). `WorkerProfile.jsx:129-130` continua por corrigir, fora do âmbito.
+  **`ItemRow.jsx` (corrections) — achado ao reabrir esta pendência: já não é `bg-emerald-600`,
+  alguém já o tinha corrigido para `bg-emerald-700` (5,48:1, passa AA) nalgum lote posterior sem
+  a nota aqui ter sido actualizada.** Pendência fechada, nada para implementar.
   Correção aplicada só no sítio novo (`WorkerList.jsx`, `vinculoBadge`): `#8a4a00` em vez de
   `FT.orangeDeep` — 6,08:1, mais escuro só o suficiente para passar AA com folga, mesma família
   visual (mesma lógica já usada para o `--orange-hover`: valor mínimo suficiente, não o mais
@@ -544,6 +549,65 @@ mudou. **Pendência nova, não corrigida:** a frase de apoio por baixo do títul
 requerem a tua assinatura digital") continua a falar em "assinatura digital", que já não bate
 com "Fazer"/"Iniciar" para quem ainda nem começou o curso — não foi pedido explicitamente, fica
 registado.
+
+**Varrimento sistemático de pares texto+fundo no mesmo elemento, 2026-08-31 — 358 pares únicos
+verificados em todo o `src/`, 5 falhas reais corrigidas, um módulo novo (`mapa-salarios/`) trazido
+para dentro dos padrões de contraste, e 2 áreas identificadas e deixadas de propósito.**
+Metodologia: script Node ad-hoc (apagado no fim, uso único) que resolve `FT.*`/`var(--x)` para hex
+a partir de `designTokens.js`/`index.css` (claro+escuro) e procura, no MESMO elemento — mesma
+`className`/mesmo `style={{}}` — um par `text-*`+`bg-*`, calculando o contraste WCAG dos dois lados.
+**Dois falsos positivos apanhados e corrigidos a meio do próprio varrimento, antes de reportar
+seja o que for:** (1) o primeiro regex emparelhava cor de um ramo de ternário com a do outro
+(`cond ? 'bg-x text-y' : 'bg-a text-b'` dava `bg-x`+`text-b`, uma combinação que nunca renderiza
+junta) — `WorkerNavBar.jsx`, `RecibosCalculadora.jsx:3735`, `ImportarContratosSSDModal.jsx:376`
+eram todos isto, não bugs reais; (2) tentar separar ramos de ternário fazendo `.split(/[?:]/)`
+partia `hover:` ao meio (o `:` de `hover:bg-x` não é o mesmo `:` de um ternário) — corrigido para só
+fazer essa divisão em template literals (onde um ternário É possível), nunca em strings simples
+(onde `:` só pode ser um modificador Tailwind). Cada resultado do varrimento final foi confirmado
+por leitura do código antes de entrar nesta lista — nenhum foi corrigido às cegas a partir do script.
+
+Corrigidos, todos com `#8a4a00`/`#92400e`/`#1e40af`/`#991b1b`/`#166534`/`#1f6b47` (mesma lógica do
+`--orange-hover` em toda a migração: escurecer o mínimo suficiente para passar AA, não o extremo) —
+confirmados ao vivo onde havia caminho sem bloqueio de sessão:
+- **`ValidacaoMensalPanel.jsx:151`** — era um dos ~48 casos do "par chip" (`--slate-dim`/
+  `--surface-dim`) que a triagem anterior não tinha alcançado por vir de fundo definido no MESMO
+  ficheiro mas fora do alcance do primeiro script (esse só via `--surface-dim`; este varrimento por
+  par-no-mesmo-elemento apanhou-o de outro ângulo). `--ink-soft`, 4,98:1 escuro.
+- **`ClientManager.jsx:338`** — badge "Modo limitado", `#B8791F`/`FT.warnBg`, mesma família
+  laranja+warnBg já conhecida (3,21:1 → `#8a4a00`, 6,08:1). Sem confirmação ao vivo (nenhum
+  cliente com `triggers_limited_mode` visível na sessão de teste), fórmula já validada noutros
+  sítios.
+- **`FaturarClienteModal.jsx:971`** — texto de input **desativado** (`disabled:text-*`), 2,68:1 no
+  claro → `--ink-soft`, 5,68:1. Sem confirmação ao vivo (TOConline não ligado nesta sessão, mesmo
+  bloqueio já registado).
+- **`FormacaoElearningFlow.jsx:433`** — banner "Formação concluída e assinada", `FT.ok`/`FT.okBg`
+  4,42:1 → `#1f6b47` (mesmo valor já usado no `WorkerValidationPanel.jsx` para este par), 5,66:1.
+  Sem confirmação ao vivo (dashboard do trabalhador bloqueado).
+- **`mapa-salarios/MapaCartoes.jsx`, `MapaFolhaObra.jsx`, `MapaSalarios.jsx`** — módulo nunca antes
+  mencionado nesta migração, confirmado por `git log` que uma "fase 5" anterior o tinha convertido
+  de Tailwind para tokens, mas estes badges de proveniência de dados ("Ambíguo", "Recibo (nome)",
+  "Sem NIS", "Div.", "OK") ficaram de fora — hex cru, repetido identicamente nos 3 ficheiros
+  (mesmo quarteto amber/blue/red/green-600 do Tailwind, sempre sobre o próprio -100), sinal de
+  resíduo (copiado, nunca medido), não de identidade deliberada — ao contrário do
+  `reconciliacao-mockup.css` ou do `WhatsAppInbox.jsx` (ver abaixo), que têm razão documentada para
+  não convergir. Correcção: escurecer cada cor para o degrau -800 do mesmo tom Tailwind
+  (`d97706`→`92400e`, `2563eb`→`1e40af`, `dc2626`→`991b1b`, `16a34a`→`166534`), 6,37–7,60:1 contra
+  os respectivos fundos claros. `MapaSalarios.jsx` já tinha resolvido o mesmo problema para o par
+  âmbar num sítio (`#8a5800`, linha 217) sem o aplicar aos outros dois usos do ficheiro — reutilizado
+  esse valor em vez do `92400e` genérico, por já ser o precedente local. Um badge vermelho sólido
+  (fundo `#dc2626`, texto branco) e um texto `#dc2626` solto sobre painel branco (4,83:1) já
+  passavam — não tocados. Confirmado ao vivo, nas 3 vistas (Folha de Obra, Cartões, Painel
+  Executivo não testado): "1 divergência a validar" 5,73:1, "1 sem NIS" 5,82:1/6,37:1, "Div." 6,80:1.
+
+Identificados, decidido não tocar:
+- **`WhatsAppInbox.jsx` (6 pares, `#00a884` e variantes)** — cor oficial da marca WhatsApp (o teal
+  `#00a884` é literalmente a cor de marca do WhatsApp), usada de forma consistente em toda a
+  integração. Mesmo critério já usado para o `VerificationPortal.jsx`: identidade própria e
+  deliberada, não converge para os tokens da app sem decisão explícita.
+- **`DocumentTemplatesAdmin.jsx:142`** — `var(--ok)`/`var(--ok-bg)` num botão-ícone (não texto
+  corrido), 4,42:1 no claro. Ícones só precisam de 3:1 (WCAG 1.4.11, non-text contrast), que já
+  passa com folga — não é o mesmo limiar de 4,5:1 do texto. Não alterado, para não arriscar mudar
+  o token partilhado `--ok`/`--ok-bg` só por um caso que já cumpre o limiar que lhe compete.
 
 ## Design system (em migração)
 
@@ -1226,6 +1290,32 @@ para quem um dia a tomar não ter de as redescobrir:
   calibre do `--orange-hover`: muda o aspecto de todos os chips do admin.
   Os varrimentos por lote não o apanharam porque nunca estiveram os 60 visíveis no mesmo ecrã; só
   apareceu ao procurar o padrão no código, não no que estava renderizado.
+  **Lote parcial feito, 2026-08-31 — 11 dos ~60, o resto fica por localizar.** O `RecibosCalculadora`
+  já estava fechado, então o lote foi desbloqueado. Construído `scripts/par-chip-scan.pl` (reaproveita
+  a lógica de `fundo-do-ancestral.pl`, corrido sobre os 1215 usos de `text-[var(--slate-dim)]` em todo
+  o `src/`, filtrado só para os casos cujo ancestral NO MESMO FICHEIRO resolve a
+  `bg-[var(--surface-dim)]`) — devolveu **12 candidatos** (não 60). Corrigidos 11: 2×
+  `TemplateEditorModal.jsx` (placeholder de preview), `TOConlineAdmin.jsx` (contador de contas),
+  `ClientesTab.jsx`/`DespesasTab.jsx`/`EquipaTab.jsx`/`MargemTab.jsx` (linha "Total" de tabela, mesmo
+  padrão repetido nos 4), `DocumentsFilters.jsx` + `FilaAprovacaoTab.jsx` + `TOConlineRelatorios.jsx`
+  (tabs inactivas de segmented control — hover também subiu de `--ink-soft` para `--ink`, já que
+  `--ink-soft` passou a ser o estado de repouso). `FilaAprovacaoTab.jsx` teve um segundo achado no
+  mesmo local: o contador (badge) dentro da tab inactiva tinha o MESMO texto sobre um fundo diferente
+  (`bg-[var(--border)]`, não `--surface-dim` — o script atribuiu-o ao ancestral errado por só ver o
+  fundo mais próximo, não o da própria badge) — medido à parte (3,90/3,99:1, falha nos dois modos) e
+  corrigido com o mesmo `--ink-soft` (4,95/4,90:1 contra `--border`, também resolve).
+  **1 candidato excluído deliberadamente:** `TOConlineBankAccounts.jsx:306` é um ícone (`Landmark`)
+  dentro de uma caixa colorida, não texto a ler — mesma classificação já usada no resto da migração
+  (ícone/decorativo não precisa do mesmo contraste que texto). Confirmado ao vivo (`DocumentsFilters`,
+  claro 5,52:1 / escuro 6,12:1), `npx eslint`/`npx vite build` limpos.
+  **Os ~48 restantes ficam por encontrar — o método usado só vê o fundo definido no MESMO ficheiro.**
+  A discrepância 60→12 é exactamente a limitação já documentada da "proximidade no código" — muitos
+  dos 60 originais devem vir de composição entre ficheiros (um `<Card>`/wrapper partilhado que define
+  `--surface-dim` num ficheiro, consumido por um filho que só declara o texto), que este script não
+  alcança por construção. Encontrá-los precisa do mesmo processo já usado para o `--on-navy`
+  (varrimento por FUNDO EFECTIVO no DOM ao vivo, não por classe no código-fonte) — fica registado
+  como o próximo passo, não feito nesta passagem. `scripts/par-chip-scan.pl` foi apagado no fim (uso
+  único, já superado por esta descoberta).
 - **Família por tratar: o `--slate` a colorir texto.** O `--slate` foi reservado para ícone e
   decorativo, onde os seus 2,89:1 sobre branco chegam. Mas acabou também em texto, e aí falha. O
   varrimento de 16 rotas encontrou ~70 travessões no `faturacao`, 14 números de dia no
