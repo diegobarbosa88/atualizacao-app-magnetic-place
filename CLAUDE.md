@@ -1206,6 +1206,66 @@ classe DOM directamente), e não foi encontrado o toggle real em Definições a 
 `var(--ok)`/`var(--warn)` usado na borda do avatar é o mesmo já validado dezenas de vezes ao longo
 desta migração, risco considerado baixo. `npx eslint`/`npx vite build` limpos.
 
+## Redesenho da aba Clientes — `ClientManager.jsx` + subtabs (2026-09-01)
+
+Mesmo fluxo já usado na Equipa: mockup em artefacto (`clientes_redesign.html`), iterado em 3 rondas
+com o Diego (cartão → "inclua o modal + cartão inteiro clicável" → "inclua as outras subabas
+também") antes de "implemente". O cartão de cliente já era mais enxuto que o de colaborador (só 3
+ações, nunca teve o problema dos 6 ícones), por isso as mudanças no `ClientManager.jsx` são mais
+discretas do que as do `WorkerList.jsx`:
+
+1. **Avatar com iniciais de empresa** (`companyInitials`, novo helper local — **não** o `getInitials`
+   partilhado de `textUtils.js`, que é primeira+última palavra, pensado para nomes de pessoa; numa
+   empresa a última palavra é quase sempre um sufixo legal tipo "S.L."/"S.A.", que não distingue
+   nada — "A&G Steel Building S.L." e "Astilleros Zamakona S.A." dariam as duas "AS" com
+   primeira+última. `companyInitials` usa as duas primeiras palavras) substitui o ícone genérico de
+   maleta (igual em todos os cartões). Anel `var(--warn)` quando falta NIF/morada ou o modo limitado
+   está ativo — mesmo critério e mesma implementação (`border-2`, cor condicional) já usada no anel
+   do avatar da Equipa.
+2. **"Sem NIF"/"Sem morada"** passam de texto cinzento para `#8a4a00` (o mesmo valor já usado 4+
+   vezes nesta migração para texto de aviso, incluindo o "Modo limitado" já existente neste mesmo
+   cartão) — os três avisos do cartão ficam visualmente consistentes entre si.
+3. **Ícone de histórico** trocado do emoji 📊 para `History` (lucide) — no cartão da grade E no item
+   do menu "⋯" da vista de lista (duas ocorrências do mesmo emoji, ambas corrigidas).
+4. **O cartão inteiro abre a ficha** (`onClick={() => openEditClient(c)}` no `<Card>`) — antes só o
+   lápis "Editar" funcionava, clicar no resto do cartão não fazia nada. A coluna de ações
+   (histórico/editar/apagar) ganhou `onClick={(e) => e.stopPropagation()}` para não abrir a ficha
+   por engano ao clicar num ícone.
+5. **Mesmo avatar acrescentado à vista em Lista** (coluna "Cliente", antes só texto) e às **duas
+   outras views que mostram clientes em cartão/linha** — `ClientEnviosPanel.jsx` (grid; a vista de
+   lista/tabela dessa aba não mudou, o mockup só propôs a grid) e `ValidacaoMensalPanel.jsx` (linhas)
+   — mesmo `companyInitials` copiado localmente para os dois (mesma convenção já usada no projeto:
+   `WorkerList.jsx` também tem a sua própria cópia de `getInitials` em vez de importar a partilhada).
+   `CorrectionsInbox.jsx` (aba Correções) **não foi tocado** — já tinha sido redesenhado numa sessão
+   anterior, já usa o mesmo sistema de tons/avatar; o mockup trazia só uma nota a dizer isso, não uma
+   réplica.
+
+**Achado de ferramenta, não do código — os mockups de artefacto com `onclick="..."` inline ficam
+mudos, sem erro nenhum.** Ao testar o clique-no-cartão-abre-modal do mockup antes de pedir aprovação,
+várias tentativas de clique (via `computer`, coordenadas, `find`+ref) não tinham efeito nenhum,
+apesar de o HTML/CSS/JS parecerem corretos. Causa: o artefacto corre num iframe sandboxed com CSP
+que bloqueia atributos de evento inline (`onclick="..."`) em silêncio — nem a consola do browser
+acusa nada, porque tecnicamente não há erro de JS, o atributo é que nunca é interpretado como
+handler. Confirmado copiando o mesmo ficheiro para `public/_scratch_test.html` (servido pelo `vite
+dev` local, sem iframe nem CSP do artefacto) — aí os `onclick=` inline funcionavam perfeitamente,
+provando que o JS em si estava certo. Corrigido reescrevendo os 5 handlers inline
+(`.ccard`/`.qa-btn.edit`/`.modal-box`/`.close`/`.btn.cancel`) para `addEventListener` com delegação
+de eventos — **regra a aplicar em qualquer mockup futuro com interatividade real (não só
+`innerHTML` estático): nunca usar `onclick=""` inline em HTML gerado para um artefacto, usar sempre
+`addEventListener`.**
+
+Verificado ao vivo em `/admin/clients`, com dados reais de produção (13 clientes): anel âmbar em
+Astilleros Zamakona (sem NIF/morada) e Caldereria Burdin SLL (idem, achado ao vivo — não estava nos
+6 clientes de exemplo do mockup) — confirmado por `getComputedStyle` que Ferrocal Steel Solutions
+(modo limitado) também tem `border-color: rgb(217,138,43)` (`--warn`), mesmo não sendo visualmente
+óbvio a olho nu num avatar pequeno; clicar em qualquer parte do cartão abre a ficha real com os
+dados certos (testado com A&G Steel Building S.L.); clicar no lápis/histórico/apagar não abre a
+ficha (stopPropagation confirmado); vista de Lista, Envios (grade) e Validação Mensal — todas com
+avatar e dados reais a bater com o que já se sabia do ecrã real. Um quirk pré-existente, não
+introduzido por este lote, ficou à vista durante o teste: o indicador de tab ativa do
+`SectionHeaderShell` não atualiza ao mudar de "Envios" para "Validação" por navegação
+programática — fora de âmbito, não corrigido. `npx eslint`/`npx vite build` limpos nos 3 ficheiros.
+
 ## Migração de tokens FT — regras de decisão
 
 Aplicam-se a qualquer lote de conversão Tailwind → tokens `FT`/CSS vars (`designTokens.js`,

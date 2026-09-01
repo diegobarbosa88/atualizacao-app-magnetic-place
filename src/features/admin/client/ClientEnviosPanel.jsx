@@ -10,6 +10,15 @@ import { FT, SCALE } from '../../../styles/designTokens';
 import { sendValidationEmail } from '../../../utils/emailUtils';
 import { shouldSendNotification } from '../../../config';
 
+// Mesmas iniciais de empresa usadas em ClientManager.jsx (primeiras 2
+// palavras, não a última — que é quase sempre um sufixo legal tipo "S.L.").
+function companyInitials(name) {
+  if (!name) return '?';
+  const clean = name.replace(/[,.&]/g, ' ').trim().split(/\s+/).filter(Boolean);
+  if (!clean.length) return '?';
+  return (clean[0][0] + (clean[1] ? clean[1][0] : clean[0][1] || '')).toUpperCase();
+}
+
 export default function ClientEnviosPanel({
   portalMonth,
   setPortalMonth,
@@ -160,8 +169,15 @@ export default function ClientEnviosPanel({
                   </div>
                   <span className="text-lg font-black" style={{ color: 'var(--navy)' }}>{formatHours(c.totalHoras)}h</span>
                 </div>
-                <h4 className="font-black text-[var(--ink)] text-sm truncate mb-0.5">{c.name}</h4>
-                <p className={`${SCALE.text.meta} text-[var(--slate-dim)] truncate mb-3`}>{c.email || 'Sem email'}</p>
+                <div className="flex items-center gap-2.5 mb-3">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-[10px] font-black" style={{ backgroundColor: FT.navy, color: FT.orange }}>
+                    {companyInitials(c.name)}
+                  </div>
+                  <div className="min-w-0">
+                    <h4 className="font-black text-[var(--ink)] text-sm truncate">{c.name}</h4>
+                    <p className={`${SCALE.text.meta} text-[var(--slate-dim)] truncate`}>{c.email || 'Sem email'}</p>
+                  </div>
+                </div>
                 <div className="flex items-center gap-1.5 mb-3 bg-[var(--surface)] rounded-xl p-2 border border-[var(--border-soft)]">
                   <span className={`${SCALE.text.meta} font-mono text-[var(--slate-dim)] truncate flex-1`}>{linkUnico ? linkUnico.replace(/.*\?/, '?') : 'Sem share_token'}</span>
                   <button disabled={!linkUnico} onClick={() => linkUnico && navigator.clipboard.writeText(linkUnico)} className="text-[var(--slate)] hover:text-[var(--slate)] transition-colors shrink-0 disabled:opacity-30"><Copy size={12} /></button>

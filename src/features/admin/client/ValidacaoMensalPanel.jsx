@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { CheckCircle2, Clock, BellOff, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
-import { SCALE } from '../../../styles/designTokens';
+import { FT, SCALE } from '../../../styles/designTokens';
 import { calculateDuration } from '../../../utils/formatUtils';
 
 function shiftMonth(monthStr, delta) {
@@ -13,6 +13,15 @@ function shiftMonth(monthStr, delta) {
 function monthLabel(monthStr) {
   const [y, m] = monthStr.split('-').map(Number);
   return new Date(y, m - 1, 1).toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' });
+}
+
+// Mesmas iniciais de empresa usadas em ClientManager.jsx (primeiras 2
+// palavras, não a última — que é quase sempre um sufixo legal tipo "S.L.").
+function companyInitials(name) {
+  if (!name) return '?';
+  const clean = name.replace(/[,.&]/g, ' ').trim().split(/\s+/).filter(Boolean);
+  if (!clean.length) return '?';
+  return (clean[0][0] + (clean[1] ? clean[1][0] : clean[0][1] || '')).toUpperCase();
 }
 
 export default function ValidacaoMensalPanel() {
@@ -136,6 +145,9 @@ export default function ValidacaoMensalPanel() {
           <div className="divide-y divide-[var(--border-soft)]">
             {rows.map(row => (
               <div key={row.clientId} className="flex items-center gap-3 px-4 py-3">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-[10px] font-black" style={{ backgroundColor: FT.navy, color: FT.orange }}>
+                  {companyInitials(row.clientName)}
+                </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-black text-[var(--ink)] truncate">{row.clientName}</p>
                   <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>{row.totalHoras.toFixed(1)}h registadas</p>

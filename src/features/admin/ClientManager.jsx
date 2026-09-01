@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { useClient, ClientProvider } from './contexts/ClientContext';
 import {
-  Briefcase, LayoutGrid, List, Edit2, Trash2, MapPin, Euro, ShieldOff, Send, AlertTriangle, Shield, Search, MoreVertical, Check, X, Building2, Save, Clock, ClipboardCheck
+  Briefcase, LayoutGrid, List, Edit2, Trash2, MapPin, Euro, ShieldOff, Send, AlertTriangle, Shield, Search, MoreVertical, Check, X, Building2, Save, Clock, ClipboardCheck, History
 } from 'lucide-react';
 import Card, { CardGrid } from '../../components/common/Card';
 import { FT, FONT_TITLE, FONT_MONO, SCALE } from '../../styles/designTokens';
@@ -14,6 +14,19 @@ import ClientPortalAuditPanel from './client/ClientPortalAuditPanel';
 import ValidacaoMensalPanel from './client/ValidacaoMensalPanel';
 import ModalShell from '../../components/common/ModalShell';
 import SectionHeaderShell from '../../components/common/SectionHeaderShell';
+
+// Iniciais para o avatar do cliente — primeiras 2 palavras (não a última),
+// ao contrário de getInitials (textUtils.js, pensado para nomes de pessoa,
+// primeira+última). Num nome de empresa a última palavra é quase sempre um
+// sufixo legal (S.L., S.A., Lda) que não distingue nada — "A&G Steel
+// Building S.L." e "Astilleros Zamakona S.A." dariam as duas "AS" com
+// primeira+última.
+function companyInitials(name) {
+  if (!name) return '?';
+  const clean = name.replace(/[,.&]/g, ' ').trim().split(/\s+/).filter(Boolean);
+  if (!clean.length) return '?';
+  return (clean[0][0] + (clean[1] ? clean[1][0] : clean[0][1] || '')).toUpperCase();
+}
 
 const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setPrintingReport, portalMonth, setPortalMonth }) => {
   const { clients, supabase, corrections } = useApp();
@@ -233,11 +246,23 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
               </tr>
             </thead>
             <tbody>
-              {sortedClients.map(c => (
+              {sortedClients.map(c => {
+                const precisaAtencao = !c.nif || !c.morada || c.triggers_limited_mode;
+                return (
                 <tr key={c.id} className="border-b border-[var(--border-soft)] hover:bg-[var(--surface)] transition-colors">
                   <td className="px-4 py-3">
-                    <p className="font-black text-[var(--ink)] text-sm uppercase truncate">{c.name}</p>
-                    <p className="text-xs text-[var(--slate-dim)] truncate">NIF: {c.nif || 'N/A'}</p>
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div
+                        className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border-2 text-[10px] font-black"
+                        style={{ backgroundColor: FT.navy, color: FT.orange, borderColor: precisaAtencao ? 'var(--warn)' : 'transparent' }}
+                      >
+                        {companyInitials(c.name)}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-black text-[var(--ink)] text-sm uppercase truncate">{c.name}</p>
+                        <p className="text-xs text-[var(--slate-dim)] truncate">NIF: {c.nif || 'N/A'}</p>
+                      </div>
+                    </div>
                   </td>
                   <td className="hidden sm:table-cell px-4 py-3 text-sm font-bold text-[var(--slate-dim)] truncate">{c.morada || 'N/A'}</td>
                   <td className="px-4 py-3 text-right text-sm font-bold whitespace-nowrap" style={{ color: 'var(--navy)' }}>{c.valorHora ? `${c.valorHora}€` : 'N/A'}</td>
@@ -265,7 +290,7 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
                               onClick={() => { loadClientValorHoraHistory(c.id, c.name); setOpenMenuId(null); }}
                               className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-[var(--surface)] group transition-colors"
                             >
-                              <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-[var(--surface-dim)] group-hover:bg-[var(--border)] transition-colors shrink-0 text-base leading-none">📊</span>
+                              <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-[var(--surface-dim)] group-hover:bg-[var(--border)] transition-colors shrink-0" style={{ color: FT.slate }}><History size={13} /></span>
                               <span className="text-xs font-semibold text-[var(--ink-mid)]">Histórico de Valor</span>
                             </button>
                             <div className="mx-3 my-1 border-t border-[var(--border-soft)]" />
@@ -292,7 +317,8 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
                     </div>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -300,14 +326,23 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
         <CardGrid>
           {sortedClients.map(c => {
             const nHorarios = (c.assignedSchedules || []).length;
+            // Mesmo critério do anel de estado já usado na Equipa (WorkerList.jsx):
+            // âmbar quando falta dado a rever ou o modo limitado está ativo.
+            const semDados = !c.nif || !c.morada;
+            const precisaAtencao = semDados || c.triggers_limited_mode;
             return (
-              <Card key={c.id} variant="item" interactive>
+              <Card key={c.id} variant="item" interactive onClick={() => openEditClient(c)}>
                 <div className="flex items-start justify-between mb-[0.7rem]">
-                  <div className="w-[38px] h-[38px] rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: FT.slate }}>
-                    <Briefcase size={17} />
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div
+                      className="w-[38px] h-[38px] rounded-xl flex items-center justify-center shrink-0 border-2 text-xs font-black"
+                      style={{ backgroundColor: FT.navy, color: FT.orange, borderColor: precisaAtencao ? 'var(--warn)' : 'transparent' }}
+                    >
+                      {companyInitials(c.name)}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <button onClick={() => loadClientValorHoraHistory(c.id, c.name)} className={`w-[26px] h-[26px] rounded-lg border border-[#E5E1D6] bg-white text-[var(--slate)] hover:text-[var(--ink-soft)] flex items-center justify-center transition-all ${SCALE.text.body}`} title="Histórico de valor">📊</button>
+                  <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                    <button onClick={() => loadClientValorHoraHistory(c.id, c.name)} className="w-[26px] h-[26px] rounded-lg border border-[#E5E1D6] bg-white text-[var(--slate)] hover:text-[var(--ink-soft)] flex items-center justify-center transition-all" title="Histórico de valor"><History size={12} /></button>
                     <button onClick={() => openEditClient(c)} className="w-[26px] h-[26px] rounded-lg border border-[#E5E1D6] bg-white text-[var(--slate)] hover:text-[var(--navy)] flex items-center justify-center transition-all" title="Editar"><Edit2 size={12} /></button>
                     {confirmDeleteClientId === c.id ? (
                       <>
@@ -321,12 +356,12 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
                 </div>
 
                 <p className="text-[1.05rem] font-bold leading-[1.15] text-[var(--ink-mid)] truncate" style={{ fontFamily: FONT_TITLE }} title={c.name}>{c.name}</p>
-                <p className={`${SCALE.text.meta} text-[var(--slate-dim)]`} style={{ fontFamily: FONT_MONO }}>
+                <p className={`${SCALE.text.meta} ${!c.nif ? '' : 'text-[var(--slate-dim)]'}`} style={{ fontFamily: FONT_MONO, color: !c.nif ? '#8a4a00' : undefined }}>
                   {c.nif ? `NIF ${c.nif}` : 'Sem NIF'}
                 </p>
 
-                <div className={`flex items-center gap-1.5 mt-[0.55rem] text-[var(--ink-soft)] ${SCALE.text.body}`}>
-                  <MapPin size={12} className="shrink-0" style={{ color: FT.slate }} />
+                <div className={`flex items-center gap-1.5 mt-[0.55rem] ${SCALE.text.body}`} style={{ color: c.morada ? 'var(--ink-soft)' : '#8a4a00' }}>
+                  <MapPin size={12} className="shrink-0" style={{ color: c.morada ? FT.slate : '#8a4a00' }} />
                   <span className="truncate" title={c.morada || undefined}>{c.morada || 'Sem morada registada'}</span>
                 </div>
 
