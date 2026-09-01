@@ -43,9 +43,12 @@ const SIZE_MAP = {
   '5xl': 'sm:max-w-5xl',
   '6xl': 'sm:max-w-6xl',
   clientWide: 'sm:max-w-[1180px]',
-  // Para pré-visualizar documentos: ocupa quase o ecrã todo. Era isto que
-  // levava o DocxPreviewModal e os overlays de relatório a não usarem o shell.
-  viewer: 'sm:max-w-[92vw]',
+  // Só usado por DocxPreviewModal (docx-preview e FitToWidthHtmlFrame
+  // escalam sempre o documento para ~794px de largura natural — A4 a
+  // 96dpi — por isso a caixa do modal só precisa de acompanhar isso, não
+  // de ocupar quase o ecrã todo. Era 92vw antes, deixava uma faixa enorme
+  // de vazio ao lado da página em ecrãs largos.
+  viewer: 'sm:max-w-[880px]',
 };
 
 export default function ModalShell({

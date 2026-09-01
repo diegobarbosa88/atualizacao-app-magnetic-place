@@ -1255,6 +1255,62 @@ lotes anteriores desta sessão: scripts Node locais com `@supabase/supabase-js` 
 evita tanto transcrever à mão dezenas de KB de HTML como o risco de truncagem a mover ficheiros deste
 tamanho pela sessão.
 
+**Investigação de uma "distorção" no carimbo real — achado: a caixa não estava distorcida, a imagem
+lá dentro é que não enchia o espaço.** Diego reportou que a proporção da caixa de assinatura no PDF
+real parecia mais quadrada do que nos testes locais (screenshots comparando os dois). Antes de mexer
+às cegas, medi a caixa real: baixei o PDF assinado que o Diego anexou e extraí as coordenadas
+vectoriais dos rectângulos desenhados (`pdfjs-dist`, `page.getOperatorList()`, filtrando
+`OPS.constructPath` e lendo `args[2]`, a bounding box já calculada) — sem precisar de `poppler`/
+`canvas` para rasterizar, que não estavam disponíveis. **Resultado: a caixa mede 159×79pt na página
+real (ratio 2,013), praticamente os 160×80 exactos do CSS — não há distorção nenhuma na caixa.**
+Confirmado também que a página inteira é renderizada pelo PDF.co a 794×1123px (96dpi, A4) e só depois
+escalada uniformemente para os 595,9×842,9pt do PDF final (factor ~0,75 nos dois eixos, idêntico) —
+descartada a hipótese de "fit to page" a esticar um eixo mais do que o outro.
+**A causa real era outra:** o `<img>` da assinatura só tinha `max-width`/`max-height` — sem
+`object-fit`, o browser preserva sempre a proporção NATIVA da imagem (do `<canvas>` onde a pessoa
+assinou), não a da caixa. Uma assinatura alta/emaranhada (traço real de punho, ao contrário do SVG de
+teste, sempre uma onda larga e baixa) ficava limitada pela altura, sem nunca preencher a largura —
+dava a ILUSÃO de caixa mais quadrada, mas a caixa em si media sempre 160×80. Corrigido para
+`width:100%;height:100%;object-fit:contain` — a imagem passa a "dar zoom" para preencher o máximo da
+caixa fixa, mantendo a sua proporção própria sem distorcer (exactamente o pedido do Diego: "mudando
+somente o zoom se for necessário"). Verificado com duas assinaturas de teste de proporção oposta
+(uma larga/baixa, uma alta/emaranhada) — cada uma passou a preencher o eixo que a limita, sem
+esticar. Aplicado aos 3 templates (`.stamp-swatch img`) e ao código (`useDocumentTemplates.js`, os
+dois `.replace` de `{worker_signature}`/`{admin_stamp}`).
+
+**Pedido relacionado, mesmo lote — pré-visualizações dos templates HTML (`FitToWidthHtmlFrame.jsx`,
+partilhado por `DocxPreviewModal.jsx`/`HtmlDocumentViewer.jsx`/`WorkerDocuments.jsx`) também sem
+proporção A4 fixa.** Media a altura do iframe a partir do `scrollHeight` real do conteúdo — um EPI
+curto e um Contrato mais longo davam alturas de "página" diferentes na pré-visualização, proporção
+que nunca bate com o PDF real (sempre páginas A4 inteiras, 794×1123px a 96dpi). Corrigido para altura
+fixa (`A4_HEIGHT_PX = 1123`, ao lado do já existente `A4_WIDTH_PX = 794`) — a lógica de
+`scrollHeight`/evento `load` do iframe deixou de ser necessária, removida por inteiro; conteúdo mais
+alto que uma página ganha scroll próprio dentro do iframe (comportamento nativo, sem código extra),
+em vez de esticar a proporção da "folha". Verificado com uma réplica isolada da mesma lógica (dois
+contentores de larguras diferentes, um documento curto e um longo simulado por repetição de texto) —
+proporção 0,7070–0,7071 (A4 exacta, 1/√2) nos dois casos, confirmado por medição real do DOM, não só
+visual. Não foi possível verificar dentro da própria app (sessão de admin sem credenciais disponíveis
+nesta sessão) — a réplica isolada usa exactamente o mesmo algoritmo (`ResizeObserver` + `transform:
+scale()` sobre um wrapper de tamanho fixo), não uma aproximação.
+`npx eslint`/`npx vite build` limpos nos 2 ficheiros de código.
+
+**Pedido a seguir, mesmo dia — o cartão do carimbo ainda não tinha proporção fixa, só a caixa da
+assinatura tinha.** `.stamp-card` usava `flex:1` para a largura (já efectivamente fixa, dado que a
+página em si já está fixa em 794px) mas a ALTURA vinha do conteúdo — um nome mais comprido
+("MAGNETIC PLACE UNIPESSOAL LDA", ou um nome de trabalhador longo) envolvia o campo "Nome" para 2
+linhas, esticando o cartão; um nome curto dava um cartão mais baixo. Confirmado ao vivo, à largura
+real de 794px (não a 900-1000px como as rondas anteriores desta sessão — daí "perdeu as medidas
+boas", a proporção nunca tinha sido validada à largura verdadeira da página) antes de mexer.
+Corrigido: `.stamp-card` ganhou `height: 128px` fixo (`box-sizing:border-box`, `align-items:center`
+em vez de `stretch`, já que a altura deixou de vir do conteúdo) e o valor de cada campo
+(`.stamp-field .v`) ganhou `white-space:nowrap;overflow:hidden;text-overflow:ellipsis` — um nome
+demasiado comprido para uma linha trunca com "…" em vez de esticar o cartão. Decisão aceite como
+trade-off: o carimbo é um selo, não a fonte primária do nome — esse já consta por extenso no corpo
+do documento (tabela de campos no topo, no caso do EPI/RGPD; parágrafo de identificação, no
+Contrato). Verificado com um nome de teste deliberadamente longo ("Maria Alexandra Ferreira dos
+Santos Oliveira") — trunca para "Maria Alexandra Fer…", cartão mede exactamente 326,5×128px
+(ratio 2,551) nos dois cartões, idêntico independentemente do conteúdo. Aplicado aos 3 templates.
+
 ## Redesenho do cartão de colaborador — `WorkerList.jsx` (2026-08-31)
 
 Mesmo fluxo de sempre: mockup em artefacto (`equipa_redesign.html`, dados reais dos colaboradores
