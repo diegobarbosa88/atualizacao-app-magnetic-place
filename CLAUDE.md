@@ -1156,6 +1156,105 @@ modelos visuais, todos no mesmo lote:
    `npx eslint`/`npx vite build` limpos nos 2 ficheiros de código (`useDocumentTemplates.js`,
    `docBadges.jsx`); a correcção do template foi só dados (SQL), sem ficheiro para lint.
 
+## Carimbo Opção D aplicado aos 3 templates reais (2026-09-01/02)
+
+**Diego escolheu a Opção D** (réplica do carimbo antigo, cartões lado a lado) do
+`stamp_style_comparison.html` — iterada extensivamente via comentários no artefacto antes de "implementa
+nos 2 templates reais": proporção "4x2" dos campos (grelha 2x2 → depois "Nome" a ocupar a linha toda),
+caixa da assinatura ("swatch") aumentada progressivamente 96×48 → 128×64 → 160×80 (sempre 2:1), marca de
+água (logo+carimbo, técnica de duas camadas desalinhadas já usada na aba WhatsApp) movida do `.doc-frame`
+(onde ficava invisível, tapada pelo fundo opaco dos cartões) para dentro do próprio fundo de cada cartão,
+e por fim título do cartão do admin trocado de "MAGNETIC PLACE" para "EMPRESA". Cada uma destas mudanças
+foi pedida via comentário no artefacto e verificada ao vivo (screenshot + medição real do DOM) antes da
+seguinte — nenhuma foi aplicada às cegas.
+
+**Migração do bloco de carimbo em produção — `document_templates.template_html` dos 2 templates HTML
+(Termo de Responsabilidade EPI `0d31f4e0-...`, Consentimento RGPD `6d74447e-...`).** O bloco antigo
+(`.sign-block-e`/`.sign-card-*`: aba de cor + assinatura + nome + código, cartão único por pessoa, sem
+grelha de campos, marca de água só no cartão do admin como imagem única no canto) foi substituído pelo
+novo (`.stamp-row`/`.stamp-card-*`: cabeçalho com check+título, swatch 160×80, grelha Nome(linha
+inteira)/Data-Hora/ID, rodapé com QR no cartão do admin, marca de água de duas camadas em ambos os
+cartões). Método usado, não SQL manual: script Node local (`@supabase/supabase-js`, credenciais do
+`.env` do próprio repo) que buscou o `template_html` completo (~165KB, insere real do PDF.co com
+letterhead/rodapé embutidos em base64) para ficheiro local, aplicou a substituição por âncoras de texto
+exactas (`.sign-block-e {` → `.footer {` para o CSS; `<div class="sign-block-e">` → `<div
+class="footer">` para o HTML) e gravou de volta — evita transcrever à mão os ~16KB de base64 da marca de
+água (extraídos do próprio `stamp_style_comparison.html`, mesmas imagens já verificadas no artefacto) ou
+arriscar truncagem ao mover um ficheiro deste tamanho pela conversa.
+
+**Placeholders novos, resolvidos só na aprovação do admin (`handleApproveDocument`, mesmo ponto onde
+`{admin_stamp}`/`{verification_code}` já eram resolvidos) — não existiam campos de data/hora no
+carimbo antigo:** `{signed_datetime}` (a partir de `doc.signed_at`, gravado quando o trabalhador assina)
+e `{admin_signed_datetime}` (a partir de `adminSignedAt`, calculado no momento da aprovação) — novo
+`formatDateTimePT()` local em `useDocumentTemplates.js`, formato `DD/MM/AAAA HH:MM`, sem biblioteca de
+datas. Ficam por resolver enquanto o documento está só assinado pelo trabalhador (`generated_html`
+grava os placeholders ainda literais — `HtmlDocumentViewer.jsx` não precisou de alteração, resolve tudo
+de uma vez na aprovação, mesmo padrão já usado para `{verification_code}`).
+
+**Simplificação decidida no mesmo lote:** a Opção D já mostra "MAGNETIC PLACE UNIPESSOAL LDA" fixo como
+Nome do cartão do admin — o parágrafo com `companySignature.responsibleName` (quem assinou de facto, ex.
+"Diego Barbosa — Gerente") que o código antigo injetava dentro da área de assinatura deixou de ser
+impresso. Não é perda acidental: é a mesma decisão já tomada e confirmada no artefacto (thread
+`bfe5bfd2`, "Feito — o cartão do admin... mostra 'MAGNETIC PLACE UNIPESSOAL LDA'"), agora aplicada em
+produção. Dimensão das imagens de assinatura (`{worker_signature}`/`{admin_stamp}`) ajustada de
+`max-width:180px;max-height:64px` para `126×65` (cabe no novo swatch de 160×80 com a margem que a Opção
+D usa). Classe do QR trocada de `sign-qr` para `stamp-qr`, a acompanhar o resto da renomeação de classes.
+
+**Verificado, não verificado — para o registo, não é o mesmo nível de confirmação dos lotes anteriores
+do Fluxo 3.** Confirmado ao vivo: os 2 templates renderizam corretamente com dados de teste (ficheiro
+local, não pelo fluxo real), a 900px de largura (aproxima a página A4 real que o PDF.co usa — a
+`FitToWidthHtmlFrame`/preview do browser normal é mais estreita e dá falso alarme de quebra de layout,
+como aconteceu na primeira tentativa a ~600px) — marca de água visível nos dois cartões, campos
+Nome/Data-Hora/ID legíveis, QR (placeholder) no rodapé do admin, título "EMPRESA" a substituir "MAGNETIC
+PLACE". **Não foi feito o teste ponta-a-ponta real desta vez** (assinar como trabalhador → aprovar como
+admin → confirmar `{signed_datetime}`/`{admin_signed_datetime}` resolvidos correctamente no PDF real
+gerado pela PDF.co) — os lotes anteriores desta funcionalidade sempre fecharam com esse teste real;
+fica como pendência explícita antes de confiar cegamente no próximo documento real assinado. `npx
+eslint` limpo em `useDocumentTemplates.js`; `npx vite build` completo do projeto também limpo (só os
+avisos de chunk grande, pré-existentes, sem relação).
+
+**Extensão no mesmo dia — "CONTRATO DE TRABALHO" (Fluxo 2, docx/pdf-lib) convertido para o mecanismo
+novo, revertendo a decisão registada acima de o deixar de fora.** Pedido explícito do Diego ("converter
+todos os templates em html"). Levantamento antes de mexer: 4 templates ao todo — os 2 já feitos (EPI,
+RGPD), o Contrato (docx real, `template_docx_path` preenchido, `template_fields` com os 10 campos já
+usados), e um quarto, "Registo de Informações sobre Riscos no Local de Trabalho" — sem `.docx` nenhum,
+guarda conteúdo numa coluna diferente (`html_content`, não `template_html`) e a descrição menciona
+"Trabalhador Virtual" (o agente de WhatsApp, repo `CONSELHEIRO-ESTRATEGICO`, separado). **Deixado de
+fora, por decisão do Diego** — não encaixa no mecanismo Fluxo 2/3 desta app, parece pertencer a outro
+sistema; não investigado a fundo.
+
+Conteúdo do Contrato extraído do `.docx` real via `mammoth` (`convertToHtml`/`extractRawText`, já uma
+dependência do projeto) — não reescrito à mão, para não arriscar alterar cláusulas de um documento
+legal. **Achado real da extração, não hipotético:** a Cláusula 4.ª usava uma lista numerada nativa do
+Word (`<ol>`) cujo texto capturado vinha como "º – ..." em vez de "1º – ...", porque o número em si é
+formatação automática do Word, não texto — só visível ao comparar `extractRawText` (perdia o número)
+com `convertToHtml` (preservava a estrutura `<ol><li>`). Reconstruído como `<ol class="declara">` real
+(a mesma classe já usada para a lista de declarações do EPI) — os números voltam a aparecer certos.
+Resto do texto (9 cláusulas, todos os campos) mantido literal, só reformatado com o mesmo CSS/letterhead
+já estabelecido para EPI/RGPD (reutilizado tal e qual, incluindo o logótipo em base64 — confirmado que é
+a mesma imagem que já vinha embutida no próprio `.docx` original) e o mesmo bloco de carimbo Opção D no
+fim. **Confirmado com o Diego antes de gravar** — mostrado o HTML preenchido com dados de teste (ficheiro
+enviado + screenshots) antes de qualquer escrita em produção, ele confirmou fidelidade do texto e da
+correção da Cláusula 4.ª antes do "pode gravar". `document_templates.formato` mudou de `'docx'` para
+`'html'`; `template_docx_path`/`stamp_x`/`stamp_y`/`stamp_admin_x`/`stamp_admin_y` (coordenadas do
+Fluxo 2 antigo) ficaram na BD, não apagados — inofensivos e não lidos por nada assim que `formato` muda
+(confirmado no código: `useDocumentTemplates.js` só entra no ramo docx/pdf-lib quando
+`formato !== 'html'`), mantidos por reversibilidade.
+
+**Ajuste de layout, pedido logo a seguir (com screenshots do documento gerado):** o rótulo "Assinatura
+validada eletronicamente"/"Aprovação validada eletronicamente" vivia dentro de cada cartão (um por
+pessoa) — Diego pediu para passar a **uma linha só, por baixo dos dois cartões, incluindo por baixo da
+própria área de assinatura**. Removidos os dois rótulos individuais (e o `<div class="stamp-foot">` do
+admin, que os envolvia junto com o QR), acrescentada `.stamp-note` nova — uma faixa de largura toda,
+fora de `.stamp-row`, com o texto único "Documento assinado e aprovado eletronicamente" + o QR (que
+manteve a mesma posição relativa, só mudou de contentor). Aplicado aos **3** templates de uma vez (EPI,
+RGPD, Contrato) já que os três partilhavam o bloco de carimbo idêntico — script Node fez a mesma
+transformação de string nos três, verificado ao vivo antes de gravar. Método de execução, igual ao dos
+lotes anteriores desta sessão: scripts Node locais com `@supabase/supabase-js` (credenciais do próprio
+`.env`) para buscar/gravar o `template_html`, nunca SQL manual com o HTML/base64 colado na conversa —
+evita tanto transcrever à mão dezenas de KB de HTML como o risco de truncagem a mover ficheiros deste
+tamanho pela sessão.
+
 ## Redesenho do cartão de colaborador — `WorkerList.jsx` (2026-08-31)
 
 Mesmo fluxo de sempre: mockup em artefacto (`equipa_redesign.html`, dados reais dos colaboradores
