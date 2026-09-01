@@ -1311,6 +1311,33 @@ Contrato). Verificado com um nome de teste deliberadamente longo ("Maria Alexand
 Santos Oliveira") — trunca para "Maria Alexandra Fer…", cartão mede exactamente 326,5×128px
 (ratio 2,551) nos dois cartões, idêntico independentemente do conteúdo. Aplicado aos 3 templates.
 
+**Duas correcções finais, mesmo dia — "ainda está ruim" do Diego, depois de reduzir a caixa da
+assinatura para 128×64.** Nenhuma das duas era bug de código a sério, mas o resultado visual real
+era mesmo inconsistente:
+1. **`.stamp-swatch` não tinha `overflow:hidden`.** Isto só se via a olho na pré-visualização de um
+   template ainda por preencher (`{worker_signature}`, 19 caracteres, vs `{admin_stamp}`, 13) — sem
+   dados reais, é texto literal dentro da caixa, e sem `overflow:hidden` esse texto ultrapassava os
+   limites da caixa de forma diferente consoante o comprimento, dando a ilusão de caixas de tamanhos
+   diferentes mesmo com CSS idêntico (confirmado, medido: as duas caixas mediam sempre 128×64,
+   mesmo nesse estado — o problema era só visual/overflow, não a medida real). Corrigido:
+   `overflow:hidden` + `font-size:8px; color:#94A3B8;` no placeholder (texto pequeno e discreto
+   quando não há assinatura real, nunca ultrapassa a caixa).
+2. **`.page` nunca teve `width` próprio — só `padding`.** Funcionava por acaso sempre que via
+   `FitToWidthHtmlFrame` (que força o iframe a 794px), mas fora desse contexto (documento aberto
+   directamente, sem o wrapper) a página esticava para preencher o que estivesse à volta, tornando a
+   proporção de todo o carimbo dependente de quem o mostra, não do documento em si — exactamente o
+   pedido do Diego ("quero todos os templates fixos na largura do a4"). Corrigido: `.page` ganhou
+   `width:794px; margin:0 auto; box-sizing:border-box` — confirmado ao vivo que a 1200px de janela
+   (bem mais larga que o normal) a página continua a medir exactos 794px, centrada, sem esticar.
+   Sem efeito no PDF real: já estava confirmado por extracção vectorial (ver acima) que o PDF.co
+   renderiza a exactos 794×1123px, por isso este `width` não muda nada aí — só passa a proteger
+   todos os outros contextos (abrir o HTML em bruto, por exemplo) da mesma forma.
+Aplicado aos 3 templates, verificado ao vivo nos dois estados (por preencher e preenchido).
+
+**Tamanho final da caixa da assinatura, pedido directo do Diego: 107×77px** (`.stamp-swatch`),
+substituindo a progressão anterior (96×48 → 128×64 → 160×80 → 128×64). Confirmado por medição real
+no DOM nos 3 templates, idêntico nos dois cartões.
+
 ## Redesenho do cartão de colaborador — `WorkerList.jsx` (2026-08-31)
 
 Mesmo fluxo de sempre: mockup em artefacto (`equipa_redesign.html`, dados reais dos colaboradores
