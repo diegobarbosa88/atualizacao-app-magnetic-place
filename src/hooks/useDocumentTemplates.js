@@ -30,6 +30,20 @@ function buildVerifyDocUrl(code) {
   return `${origin}?view=verify-doc&code=${encodeURIComponent(code)}`;
 }
 
+// Data/hora para os campos {signed_datetime}/{admin_signed_datetime} do
+// carimbo Opção D (ver stamp_style_comparison.html) — formato curto
+// DD/MM/AAAA HH:MM, sem depender de bibliotecas de datas.
+function formatDateTimePT(isoString) {
+  if (!isoString) return '';
+  const d = new Date(isoString);
+  if (Number.isNaN(d.getTime())) return '';
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const hh = String(d.getHours()).padStart(2, '0');
+  const min = String(d.getMinutes()).padStart(2, '0');
+  return `${dd}/${mm}/${d.getFullYear()} ${hh}:${min}`;
+}
+
 // Mesma lógica de src/data/... não existe utilitário partilhado — versão
 // mínima, igual à do servidor (api/formacao/index.js slugify), só para
 // gerar o slug de um template na primeira vez que é marcado como
@@ -482,20 +496,23 @@ export function useDocumentTemplates(supabase, { onError } = {}) {
         let qrImgTag = '';
         try {
           const qrDataUrl = await QRCode.toDataURL(buildVerifyDocUrl(verificationCode), { errorCorrectionLevel: 'M', margin: 0, width: 120 });
-          qrImgTag = `<img class="sign-qr" src="${qrDataUrl}" alt="QR de verificação" />`;
+          qrImgTag = `<img class="stamp-qr" src="${qrDataUrl}" alt="QR de verificação" />`;
         } catch (qrErr) {
           console.warn('Falha a gerar QR de verificação (não bloqueia aprovação):', qrErr);
         }
 
+        // Nota: o cartão do admin (carimbo Opção D) já mostra "MAGNETIC PLACE
+        // UNIPESSOAL LDA" como Nome, fixo no template — companySignature.
+        // responsibleName (quem assinou de facto) já não é impresso à parte
+        // como no desenho anterior, decisão confirmada via comentário no
+        // artefacto do carimbo.
         const finalHtml = doc.generated_html
-          .replace('{worker_signature}', `<img src="${doc.signature_data}" alt="Assinatura do trabalhador" style="max-width:180px;max-height:64px;" />`)
-          .replace(
-            '{admin_stamp}',
-            `<img src="${companySignature.signatureDataUrl}" alt="Assinatura da empresa" style="max-width:180px;max-height:64px;" />` +
-            (companySignature.responsibleName ? `<p style="margin:4px 0 0;font-size:11px;">${companySignature.responsibleName}${companySignature.responsibleRole ? ' — ' + companySignature.responsibleRole : ''}</p>` : '')
-          )
+          .replace('{worker_signature}', `<img src="${doc.signature_data}" alt="Assinatura do trabalhador" style="max-width:126px;max-height:65px;" />`)
+          .replace('{admin_stamp}', `<img src="${companySignature.signatureDataUrl}" alt="Assinatura da empresa" style="max-width:126px;max-height:65px;" />`)
           .replaceAll('{verification_code}', verificationCode)
-          .replaceAll('{verification_qr}', qrImgTag);
+          .replaceAll('{verification_qr}', qrImgTag)
+          .replaceAll('{signed_datetime}', formatDateTimePT(doc.signed_at))
+          .replaceAll('{admin_signed_datetime}', formatDateTimePT(adminSignedAt));
 
         const pdfBlob = await convertHtmlToPdf(finalHtml);
         const finalPath = `signed/${doc.id}_${Date.now()}.pdf`;
