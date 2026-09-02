@@ -11,6 +11,7 @@ import { toISODateLocal, isSameMonth } from '../../utils/dateUtils';
 import { formatHours } from '../../utils/formatUtils';
 import { newId as newAbsenceId, notifyClientOfAbsence, deleteAbsenceRequest, buildAbsenceNotificationMessage } from '../../utils/absenceRequestsApi';
 import { notifyEvent, TARGET } from '../../utils/notifyEvent';
+import { createEpiRequest } from '../../utils/epiRequestsApi';
 import { SCALE } from '../../styles/designTokens';
 
 import WorkerProfile from './WorkerProfile';
@@ -23,6 +24,7 @@ import DeleteConfirmModal from './worker-dashboard/DeleteConfirmModal';
 import TimeEntryModal from './worker-dashboard/TimeEntryModal';
 import PendingAlertsModal from './worker-dashboard/PendingAlertsModal';
 import AbsenceRequestModal from './worker-dashboard/AbsenceRequestModal';
+import EpiRequestModal from './worker-dashboard/EpiRequestModal';
 import WorkerNavBar from './worker-dashboard/WorkerNavBar';
 import WorkerHeroStats from './worker-dashboard/WorkerHeroStats';
 import InServiceCard from './worker-dashboard/InServiceCard';
@@ -102,6 +104,31 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
   useEffect(() => {
     if (!formacaoModalOpen) loadPendingFormacao();
   }, [formacaoModalOpen, loadPendingFormacao]);
+
+  // Lançamento oculto — só currentUser.epi_enabled === true busca dados e
+  // vê o cartão "EPI" (ver adminNavConfig.js/EpiAdmin.jsx para o lado
+  // admin, sempre visível). Sem essa coluna a app não pede nada às tabelas
+  // epi_types/epi_requests.
+  const [epiModalOpen, setEpiModalOpen] = useState(false);
+  const [epiTypes, setEpiTypes] = useState([]);
+  const [epiRequests, setEpiRequests] = useState([]);
+  const loadEpiData = useCallback(async () => {
+    if (!supabase || !currentUser?.epi_enabled) return;
+    const [{ data: typesData }, { data: reqData }] = await Promise.all([
+      supabase.from('epi_types').select('*').order('created_at'),
+      supabase.from('epi_requests').select('*').eq('worker_id', currentUser.id).order('created_at', { ascending: false }),
+    ]);
+    setEpiTypes(typesData || []);
+    setEpiRequests(reqData || []);
+  }, [supabase, currentUser?.epi_enabled, currentUser?.id]);
+  useEffect(() => { loadEpiData(); }, [loadEpiData]);
+
+  const handleEpiSubmit = async ({ typeId, typeLabel, qty, size, motivo, notes }) => {
+    await createEpiRequest(supabase, { worker: currentUser, typeId, typeLabel, qty, size, motivo, notes });
+    await loadEpiData();
+    setSuccessMsg('Pedido de EPI enviado com sucesso!');
+    setTimeout(() => setSuccessMsg(''), 6000);
+  };
 
   const isLimitedWorker = useMemo(() => {
     if (!currentUser) return false;
@@ -272,6 +299,8 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
         onOpenProfileModal={() => setProfileModalOpen(true)}
         onOpenDocumentsModal={() => setDocumentsModalOpen(true)}
         onOpenFormacaoModal={() => setFormacaoModalOpen(true)}
+        onOpenEpiModal={() => setEpiModalOpen(true)}
+        epiEnabled={!!currentUser?.epi_enabled}
         isCurrentMonth={currentMonth.getFullYear() === new Date().getFullYear() && currentMonth.getMonth() === new Date().getMonth()}
         absencePendingCount={(absenceRequests || []).filter(r => r.worker_id === currentUser?.id && (r.status === 'pending' || r.status === 'seen')).length}
         documentsPendingCount={pendingSignaturesCount}
@@ -467,6 +496,17 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
             onSubmit={handleAbsenceSubmit}
             onDelete={handleDeleteAbsence}
           />
+
+          {currentUser?.epi_enabled && (
+            <EpiRequestModal
+              isOpen={epiModalOpen}
+              onClose={() => setEpiModalOpen(false)}
+              currentUser={currentUser}
+              types={epiTypes}
+              requests={epiRequests}
+              onSubmit={handleEpiSubmit}
+            />
+          )}
         </>)}
       </main>
 

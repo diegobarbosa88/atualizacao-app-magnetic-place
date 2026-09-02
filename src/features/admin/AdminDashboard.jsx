@@ -44,6 +44,7 @@ import WhatsAppInbox from './WhatsAppInbox';
 import ClientManager from './ClientManager';
 import FornecedorManager from './FornecedorManager';
 import ScheduleManager from './ScheduleManager';
+import EpiAdmin from './epi/EpiAdmin';
 import CostReports from './CostReports';
 import DocumentsAdmin from './DocumentsAdmin';
 import FaturacaoAdmin from './FaturacaoAdmin';
@@ -538,6 +539,8 @@ function AdminDashboard(props) {
       {!auditWorkerId && activeTab === 'fornecedores' && <FornecedorManager />}
 
       {!auditWorkerId && activeTab === 'schedules' && <ScheduleManager />}
+
+      {!auditWorkerId && activeTab === 'epi' && <EpiAdmin />}
 
       {!auditWorkerId && activeTab === 'costs' && <CostReports />}
 
