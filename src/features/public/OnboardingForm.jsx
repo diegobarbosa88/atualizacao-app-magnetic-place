@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import {
   CheckCircle, ChevronLeft, ChevronRight, Loader2, AlertCircle, Check,
   User, Briefcase, Phone, Mail, CreditCard, MapPin, FileText, Users,
-  Building2, Shield, Lock, Calendar, PenLine,
+  Building2, Shield, Lock, Calendar, PenLine, X,
 } from 'lucide-react';
 import { sendOnboardingNotifAdmin } from '../../utils/emailUtils';
 import { formatPersonName } from '../../utils/textUtils';
@@ -63,6 +63,27 @@ const ESTADO_CIVIL_OPTIONS = [
   { value: 'divorciado',     label: 'Divorciado(a)' },
   { value: 'viuvo',          label: 'Viúvo(a)' },
 ];
+
+// Indicativos dos países de onde vêm os trabalhadores da empresa (destacados
+// em PT e ES) — mantém-se pequena, com "Outro" para escrever um DDI livre.
+const DDI_OPTIONS = [
+  { code: '+351', label: '🇵🇹 +351' },
+  { code: '+34',  label: '🇪🇸 +34' },
+  { code: '+55',  label: '🇧🇷 +55' },
+  { code: '+33',  label: '🇫🇷 +33' },
+  { code: '+44',  label: '🇬🇧 +44' },
+  { code: 'outro', label: 'Outro' },
+];
+
+// Separa um "tel" completo (ex.: guardado no draft_data do WhatsApp Flow) em
+// indicativo + número local, para pré-preencher os dois campos.
+function parseTel(full) {
+  const trimmed = (full || '').trim();
+  if (!trimmed) return { ddi: '+351', local: '' };
+  const found = DDI_OPTIONS.find(o => o.code !== 'outro' && trimmed.startsWith(o.code));
+  if (found) return { ddi: found.code, local: trimmed.slice(found.code.length).trim() };
+  return { ddi: 'outro', local: trimmed };
+}
 
 const EMPTY_FORM = {
   nome: '', profissao: '', profissao_cnp: '', data_nascimento: '', tel: '', email: '', dni: '', documento_validade: '', estado_civil: '', address: '',
@@ -249,6 +270,17 @@ export default function OnboardingForm({ token }) {
   const [commitmentReady, setCommitmentReady] = useState(false);
   const commitmentStepRef = useRef(null);
 
+  // Indicativo + número local, mantidos à parte de form.tel (que é o valor
+  // completo gravado na BD) só para o seletor de país ter estado próprio.
+  const [telDDI, setTelDDI] = useState('+351');
+  const [telOutroDDI, setTelOutroDDI] = useState('');
+  const [telLocal, setTelLocal] = useState('');
+
+  useEffect(() => {
+    const ddi = telDDI === 'outro' ? telOutroDDI : telDDI;
+    setForm(prev => ({ ...prev, tel: telLocal ? `${ddi} ${telLocal}`.trim() : '' }));
+  }, [telDDI, telOutroDDI, telLocal]);
+
   useEffect(() => {
     if (!token) { setPageState('invalid'); return; }
     supabase
@@ -261,10 +293,16 @@ export default function OnboardingForm({ token }) {
           setPageState('invalid');
         } else {
           setInvite(data);
-          // Nome já preenchido pelo admin ao gerar o convite — pré-preenche o
-          // passo 1, mas o trabalhador continua livre para corrigir.
+          // Nome/telemóvel já preenchidos pelo admin ao gerar o convite —
+          // pré-preenche o passo 1, mas o trabalhador continua livre para
+          // corrigir.
           if (data.nome) {
             setForm(prev => ({ ...prev, nome: data.nome }));
+          }
+          if (data.tel) {
+            const { ddi, local } = parseTel(data.tel);
+            setTelDDI(ddi);
+            setTelLocal(local);
           }
           // Rascunho preenchido pelo trabalhador no WhatsApp (Flow): hidrata os
           // passos 1-3 e abre já na Revisão. Não saltamos direto ao Compromisso
@@ -273,6 +311,11 @@ export default function OnboardingForm({ token }) {
           // validação campo a campo como o formulário web mostra.
           if (data.draft_data && typeof data.draft_data === 'object') {
             setForm(prev => ({ ...prev, ...data.draft_data }));
+            if (data.draft_data.tel) {
+              const { ddi, local } = parseTel(data.draft_data.tel);
+              setTelDDI(ddi);
+              setTelLocal(local);
+            }
             setStep(3);
           }
           setPageState('form');
@@ -285,6 +328,21 @@ export default function OnboardingForm({ token }) {
     setErrors(prev => ({ ...prev, [key]: undefined }));
   };
 
+  // Mensagens partilhadas entre a validação ao avançar de passo e a
+  // validação ao sair do campo (onBlur), para não divergirem.
+  function validarCampoFinanceiro(key, value) {
+    if (!value) return undefined;
+    if (key === 'nif' && !validarNIF(value)) return 'NIF inválido — verifique os 9 dígitos e o dígito de controlo.';
+    if (key === 'nis' && !validarNIS(value)) return 'NIS inválido — deve ter exatamente 11 dígitos.';
+    if (key === 'iban' && !validarIBAN(value)) return 'IBAN inválido — verifique o formato e o checksum.';
+    return undefined;
+  }
+
+  const validateFieldOnBlur = (key, value) => {
+    const msg = validarCampoFinanceiro(key, value);
+    setErrors(prev => ({ ...prev, [key]: msg }));
+  };
+
   function validateStep(s) {
     const errs = {};
     if (s === 0) {
@@ -292,9 +350,12 @@ export default function OnboardingForm({ token }) {
       if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errs.email = 'Email inválido.';
     }
     if (s === 2) {
-      if (form.nif && !validarNIF(form.nif)) errs.nif = 'NIF inválido — verifique os 9 dígitos e o dígito de controlo.';
-      if (form.nis && !validarNIS(form.nis)) errs.nis = 'NIS inválido — deve ter exatamente 11 dígitos.';
-      if (form.iban && !validarIBAN(form.iban)) errs.iban = 'IBAN inválido — verifique o formato e o checksum.';
+      const nifErr = validarCampoFinanceiro('nif', form.nif);
+      if (nifErr) errs.nif = nifErr;
+      const nisErr = validarCampoFinanceiro('nis', form.nis);
+      if (nisErr) errs.nis = nisErr;
+      const ibanErr = validarCampoFinanceiro('iban', form.iban);
+      if (ibanErr) errs.iban = ibanErr;
     }
     if (s === 3) {
       if (!rgpd) errs.rgpd = 'É necessário aceitar os termos para continuar.';
@@ -452,7 +513,15 @@ export default function OnboardingForm({ token }) {
           <img src="/MAGNETIC (3).png" alt="Logo" className="h-12 w-12 mx-auto mb-4 object-contain"
             onError={e => { e.target.src = 'https://ui-avatars.com/api/?name=MP&background=4f46e5&color=fff'; }} />
         </div>
-        <div className="bg-white rounded-2xl p-8 text-center shadow-2xl">
+        <div className="relative bg-white rounded-2xl p-8 text-center shadow-2xl">
+          <button
+            type="button"
+            onClick={() => window.close()}
+            aria-label="Fechar"
+            className="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all"
+          >
+            <X size={18} />
+          </button>
           <div className="w-16 h-16 bg-emerald-100 rounded-2xl flex items-center justify-center mx-auto mb-5">
             <CheckCircle className="text-emerald-500" size={32} />
           </div>
@@ -550,7 +619,27 @@ export default function OnboardingForm({ token }) {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <InputField label="Telemóvel" icon={Phone} error={errors.tel}>
-                  <Inp inputMode="tel" value={form.tel} onChange={e => set('tel', e.target.value)} placeholder="+351 9XX XXX XXX" />
+                  <div className="flex gap-2">
+                    <select
+                      value={telDDI}
+                      onChange={e => setTelDDI(e.target.value)}
+                      className="rounded-xl border border-slate-200 bg-white pl-2 pr-1 py-3 text-sm font-semibold text-slate-900 outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 appearance-none w-[86px] shrink-0"
+                    >
+                      {DDI_OPTIONS.map(o => <option key={o.code} value={o.code}>{o.label}</option>)}
+                    </select>
+                    {telDDI === 'outro' && (
+                      <div className="w-16 shrink-0">
+                        <Inp
+                          value={telOutroDDI}
+                          onChange={e => setTelOutroDDI(e.target.value.replace(/[^\d+]/g, ''))}
+                          placeholder="+000"
+                        />
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <Inp inputMode="tel" value={telLocal} onChange={e => setTelLocal(e.target.value)} placeholder="9XX XXX XXX" />
+                    </div>
+                  </div>
                 </InputField>
                 <InputField label="Email" icon={Mail} error={errors.email}>
                   <Inp error={errors.email} type="email" value={form.email} onChange={e => set('email', e.target.value)} placeholder="email@exemplo.pt" />
@@ -596,18 +685,21 @@ export default function OnboardingForm({ token }) {
                 <Inp error={errors.nif} inputMode="numeric" maxLength={9}
                   value={form.nif}
                   onChange={e => set('nif', e.target.value.replace(/\D/g, '').slice(0, 9))}
+                  onBlur={() => validateFieldOnBlur('nif', form.nif)}
                   placeholder="9 dígitos" />
               </InputField>
               <InputField label="NIS — Número de Identificação na Segurança Social" error={errors.nis}>
                 <Inp error={errors.nis} inputMode="numeric" maxLength={11}
                   value={form.nis}
                   onChange={e => set('nis', e.target.value.replace(/\D/g, '').slice(0, 11))}
+                  onBlur={() => validateFieldOnBlur('nis', form.nis)}
                   placeholder="11 dígitos" />
               </InputField>
               <InputField label="IBAN" error={errors.iban}>
                 <Inp error={errors.iban}
                   value={form.iban}
                   onChange={e => set('iban', e.target.value.toUpperCase().replace(/[^A-Z0-9\s]/g, ''))}
+                  onBlur={() => validateFieldOnBlur('iban', form.iban)}
                   placeholder="PT50 0000 0000 0000 0000 0000 0" />
               </InputField>
               <InfoBox color="amber">
