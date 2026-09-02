@@ -1,6 +1,38 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, CheckCircle } from 'lucide-react';
 
+const getTrimmedDataURL = (canvas) => {
+  const ctx = canvas.getContext('2d');
+  const { width, height } = canvas;
+  const data = ctx.getImageData(0, 0, width, height).data;
+
+  let minX = width, minY = height, maxX = 0, maxY = 0;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (data[(y * width + x) * 4 + 3] > 0) {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+
+  if (minX > maxX || minY > maxY) return canvas.toDataURL('image/png');
+
+  const pad = Math.round(12 * (window.devicePixelRatio || 1));
+  const cx = Math.max(0, minX - pad);
+  const cy = Math.max(0, minY - pad);
+  const cw = Math.min(width, maxX + pad) - cx;
+  const ch = Math.min(height, maxY + pad) - cy;
+
+  const tmp = document.createElement('canvas');
+  tmp.width = cw;
+  tmp.height = ch;
+  tmp.getContext('2d').drawImage(canvas, cx, cy, cw, ch, 0, 0, cw, ch);
+  return tmp.toDataURL('image/png');
+};
+
 export default function AdminSignDrawModal({ onClose, onSign, userName }) {
   const canvasRef = useRef(null);
   const drawing = useRef(false);
@@ -77,7 +109,7 @@ export default function AdminSignDrawModal({ onClose, onSign, userName }) {
   const submit = () => {
     if (!hasInk) { setError('Por favor, assine antes de confirmar.'); return; }
     setError('');
-    onSign(canvasRef.current.toDataURL('image/png'));
+    onSign(getTrimmedDataURL(canvasRef.current));
   };
 
   return (
@@ -94,7 +126,7 @@ export default function AdminSignDrawModal({ onClose, onSign, userName }) {
             <span className="font-bold text-slate-700">{userName}</span> — desenhe a assinatura digital abaixo.
           </p>
         )}
-        <div className="mb-3 bg-white border-2 border-slate-200 rounded-2xl flex-1 sm:flex-none relative" style={{ minHeight: '200px', height: 'auto', touchAction: 'none' }}>
+        <div className="mb-3 bg-white border-2 border-slate-200 rounded-2xl flex-shrink-0 relative" style={{ height: '170px', touchAction: 'none' }}>
           <canvas ref={canvasRef} className="w-full h-full cursor-crosshair block rounded-2xl" style={{ touchAction: 'none', height: '100%' }} onMouseDown={start} onMouseMove={move} onMouseUp={stop} onMouseLeave={stop} onTouchStart={start} onTouchMove={move} onTouchEnd={stop} onTouchCancel={stop} />
           {!hasInk && <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-slate-300 font-bold text-xs uppercase tracking-widest">Assine aqui</div>}
         </div>

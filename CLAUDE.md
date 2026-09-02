@@ -3198,3 +3198,32 @@ invisível em documentos longos como o Contrato (2 páginas, a segunda quase che
 padding continua em exactos 2 páginas, mesma repartição de texto por página já confirmada
 anteriormente — reduzir a margem não introduziu quebra nova nem reabriu o bug da 3.ª página
 quase vazia já corrigido hoje. Gravado nos 3 templates, confirmado por SQL.
+
+## Padronização do canvas de assinatura da empresa — `AdminSignDrawModal.jsx` (2026-09-02)
+
+Pedido do Diego: "coloque o campo da assinatura igual o que tem no DB do worker para padronizar o
+tamanho das assinaturas", a partir de um screenshot de Configurações → Identidade da Empresa →
+"IMAGEM DA ASSINATURA". `AdminSignDrawModal.jsx` (assinatura da empresa/gerente, consumido só por
+`CompanySignatureSettings.jsx`) tinha o mesmo canvas de altura elástica já corrigido em
+`SignDrawModal.jsx` (worker) numa passagem anterior desta sessão — `flex-1 sm:flex-none` +
+`style={{minHeight:'200px', height:'auto'}}`, ocupando quase o ecrã inteiro em mobile — e faltava-lhe
+também a função `getTrimmedDataURL` que o `SignDrawModal.jsx` já tinha: `submit()` chamava
+`canvasRef.current.toDataURL('image/png')` directamente sobre o canvas completo, sem recortar ao
+traço, ao contrário do trabalhador (cujo PNG já sai só com o traço + 12px de margem).
+
+Corrigido, portando exactamente os dois mecanismos já validados no `SignDrawModal.jsx`: (1) o
+wrapper do canvas passou a `flex-shrink-0` + `style={{height:'170px'}}` (2) `getTrimmedDataURL`
+(scan do canal alfa, bounding box do traço + padding) copiado tal e qual, `submit()` passou a
+`onSign(getTrimmedDataURL(canvasRef.current))` em vez do `toDataURL` cru sobre o canvas inteiro.
+Nenhuma das duas mudanças toca no `useEffect` que dimensiona o canvas a partir de
+`parent.clientWidth/clientHeight` — mesma zona sensível já documentada (Fluxo 2): fixar a altura do
+wrapper corre ANTES desse `useEffect`, sem risco de distorcer um traço já desenhado (é sempre um
+canvas novo a cada abertura do modal).
+
+**Verificado ao vivo em `/admin/settings`:** wrapper mede exactos 170px (igual ao worker); um traço
+de teste desenhado via eventos de rato simulados confirmou `hasInk`/`Confirmar` a funcionar, e a
+imagem devolvida por `getTrimmedDataURL` saiu a 187×67px (recortada ao traço + margem), não os
+431×166px do canvas inteiro que saía antes — prova de que o recorte está a funcionar, não só o
+tamanho da caixa de desenho. Não gravado no Supabase (não cliquei em "Guardar", só em "Confirmar" —
+a assinatura real da empresa não foi tocada); página recarregada a seguir para descartar o estado
+local de teste. `npx eslint` limpo no ficheiro.
