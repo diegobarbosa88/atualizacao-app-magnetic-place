@@ -104,6 +104,14 @@ export function HtmlDocumentViewer({ document: docRecord, onBack, onSigned }) {
 
   const canSign = !loading && !saving && !error && !!filledHtml;
 
+  // O cartão de assinaturas ({worker_signature}/{admin_stamp}/QR/código)
+  // não tem nada de útil para mostrar aqui — ninguém assinou ainda, fica só
+  // com texto placeholder. Escondido só nesta pré-visualização (display-only,
+  // não mexe no HTML gravado nem no que o admin resolve na aprovação).
+  const previewHtml = filledHtml
+    ? filledHtml.replace('</body>', '<style>.stamp-block{display:none!important}</style></body>')
+    : '';
+
   return (
     <div
       className="w-[90vw] h-[90vh] max-w-5xl bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden"
@@ -136,7 +144,7 @@ export function HtmlDocumentViewer({ document: docRecord, onBack, onSigned }) {
             <Loader2 className="w-8 h-8 animate-spin" />
           </div>
         ) : (
-          <FitToWidthHtmlFrame html={filledHtml} title={docRecord.title} />
+          <FitToWidthHtmlFrame html={previewHtml} title={docRecord.title} />
         )}
 
         {saving && (

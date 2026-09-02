@@ -3199,6 +3199,61 @@ padding continua em exactos 2 páginas, mesma repartição de texto por página 
 anteriormente — reduzir a margem não introduziu quebra nova nem reabriu o bug da 3.ª página
 quase vazia já corrigido hoje. Gravado nos 3 templates, confirmado por SQL.
 
+## Página física encolhida ao conteúdo real + cartão de assinaturas escondido no preview do worker (2026-09-02)
+
+**Pedido do Diego, com screenshot de um PDF real (EPI, `verification_code=DRB-52CX`) aberto num
+leitor de PDF no telemóvel, com um rabisco a marcar todo o espaço vazio entre o rodapé e o fim
+físico da folha:** "quero que eliminei todo esse espaço" + "no preview do DB do worker não é
+necessário aparecer esse card das assinaturas".
+
+**Parte 1 — espaço vazio no fim da página.** Reabre, por pedido explícito, a decisão anterior desta
+sessão ("não há mecanismo nenhum, nem deve haver, dado o compromisso com A4 fixo, que estique o
+conteúdo para preencher a folha") — o compromisso passou a ser o inverso: encolher a página física
+ao conteúdo, não o contrário. Confirmado com a documentação real da PDF.co
+(`/pdf/convert/from/html`) que o `paperSize` aceita dimensões custom, mas a via escolhida foi mais
+simples e já validada nesta sessão: o próprio `@page { size: A4; margin: 0; }` embutido no HTML já
+é o mecanismo comprovado a controlar o tamanho físico real da página (confirmado por extração
+vetorial em rondas anteriores) — só é preciso trocar o valor `A4` por um tamanho custom
+`794px {H}px`, sem tocar em `pdfCoService.js` nem introduzir nenhum parâmetro novo na chamada à API.
+
+**`measurePageHeightPx(html)` nova, em `useDocumentTemplates.js`:** renderiza o `finalHtml` (já com
+todos os placeholders resolvidos) num iframe escondido (`position:fixed;left:-9999px`, nunca
+`display:none` — isso zeraria as dimensões) e lê `getBoundingClientRect().height` do `.page` depois
+do `onload`. Só documentos de 1 página só (medida < 1123px, o orçamento de uma A4 a 96dpi) recebem
+`@page` customizado (`Math.ceil(medida) + 6px` de margem de segurança); documentos mais longos
+(Contrato) mantêm `@page:A4` inalterado — o mecanismo de paginação em várias páginas já testado
+nesta sessão não é tocado. `finalHtml` passou de `const` para `let` só para permitir esta segunda
+passagem de `.replace(...)`, sem mudar mais nada no resto da função.
+
+**Verificado com o motor real (Playwright/Chromium, mesma técnica já validada nesta sessão para o
+bug de paginação), não só por leitura de código:**
+- **EPI real** (template `0d31f4e0-...`, dados de teste): `.page` mede 1025,4px → `@page` customizado
+  para `794px 1032px` → PDF real gerado com página física de **595,92×774,00pt** (não os 842pt
+  cheios de A4) — texto mais baixo a **9,75pt** do fim da página (antes ~78pt de vazio). Redução de
+  ~90% do espaço vazio, sem cortar nada.
+- **Contrato real** (template `0ddaca40-...`, o caso mais sensível, já teve bug de paginação
+  corrigido nesta sessão): `.page` mede 2153px — **acima** do orçamento de 1123px, confirma que o
+  `if (measuredHeight < A4_HEIGHT_PX)` não dispara, `@page:A4` fica intocado, sem risco de reabrir o
+  bug das 3 páginas já corrigido.
+
+**Parte 2 — cartão de assinaturas escondido no preview do worker.** `HtmlDocumentViewer.jsx` (onde o
+trabalhador vê/assina o documento, Fluxo 3) mostrava sempre `.stamp-block` com os placeholders
+`{worker_signature}`/`{admin_stamp}`/etc. ainda literais — o trabalhador ainda não assinou nesse
+ponto, o cartão de duas colunas com texto placeholder cinzento não tem nada de útil para mostrar
+(a assinatura em si é capturada à parte, no `SignDrawModal`). Corrigido só na apresentação: `const
+previewHtml = filledHtml.replace('</body>', '<style>.stamp-block{display:none!important}</style>
+</body>')`, passado ao `FitToWidthHtmlFrame` em vez de `filledHtml` — o `filledHtml` original
+continua intocado e é o que é gravado em `generated_html` ao assinar (o admin, na aprovação, resolve
+o `.stamp-block` a partir dele, exactamente como antes). Verificado com uma réplica isolada do
+mecanismo real (mesmo HTML do EPI, mesma substituição): `.stamp-block` presente no DOM mas
+`display:none` computado, resto do documento (incluindo o rodapé) renderiza normalmente, sem gap
+nem quebra de layout onde o cartão estaria.
+
+`npx eslint` limpo nos 2 ficheiros. Não confirmado ao vivo dentro da app real (worker dashboard
+atrás do mesmo bloqueio de sessão 403 já registado várias vezes nesta sessão) — confiança apoiada
+na verificação com o motor real (Playwright) para a Parte 1, que é exactamente o mesmo Chromium
+subjacente à PDF.co, e na réplica isolada fiel para a Parte 2.
+
 ## Padronização do canvas de assinatura da empresa — `AdminSignDrawModal.jsx` (2026-09-02)
 
 Pedido do Diego: "coloque o campo da assinatura igual o que tem no DB do worker para padronizar o

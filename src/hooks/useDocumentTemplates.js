@@ -44,6 +44,42 @@ function formatDateTimePT(isoString) {
   return `${dd}/${mm}/${d.getFullYear()} ${hh}:${min}`;
 }
 
+// Altura real de uma página A4 a 96dpi (mesmo valor já usado em
+// FitToWidthHtmlFrame.jsx) — orçamento de 1 página física.
+const A4_HEIGHT_PX = 1123;
+
+// Mede a altura real do `.page` renderizado, num iframe escondido, para
+// documentos de 1 página só (EPI/RGPD): sem isto, `@page{size:A4}` força
+// sempre a página física inteira, mesmo quando o conteúdo é bem mais curto
+// — sobra espaço vazio visível no PDF real (achado do Diego, 2026-09-02).
+// Não mexe em documentos de várias páginas (Contrato): aí o `@page:A4`
+// continua a ser o que já dá a paginação correta, testada nesta sessão.
+function measurePageHeightPx(html) {
+  return new Promise((resolve) => {
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.left = '-9999px';
+    iframe.style.top = '0';
+    iframe.style.width = '900px';
+    iframe.style.height = '2000px';
+    iframe.style.border = '0';
+    iframe.setAttribute('aria-hidden', 'true');
+    iframe.onload = () => {
+      let height = null;
+      try {
+        const pageEl = iframe.contentDocument?.querySelector('.page');
+        height = pageEl ? pageEl.getBoundingClientRect().height : null;
+      } catch {
+        height = null;
+      }
+      iframe.remove();
+      resolve(height);
+    };
+    iframe.srcdoc = html;
+    document.body.appendChild(iframe);
+  });
+}
+
 // Mesma lógica de src/data/... não existe utilitário partilhado — versão
 // mínima, igual à do servidor (api/formacao/index.js slugify), só para
 // gerar o slug de um template na primeira vez que é marcado como
@@ -506,13 +542,24 @@ export function useDocumentTemplates(supabase, { onError } = {}) {
         // responsibleName (quem assinou de facto) já não é impresso à parte
         // como no desenho anterior, decisão confirmada via comentário no
         // artefacto do carimbo.
-        const finalHtml = doc.generated_html
+        let finalHtml = doc.generated_html
           .replace('{worker_signature}', `<img src="${doc.signature_data}" alt="Assinatura do trabalhador" style="width:100%;height:100%;object-fit:contain;object-position:center;" />`)
           .replace('{admin_stamp}', `<img src="${companySignature.signatureDataUrl}" alt="Assinatura da empresa" style="width:100%;height:100%;object-fit:contain;object-position:center;" />`)
           .replaceAll('{verification_code}', verificationCode)
           .replaceAll('{verification_qr}', qrImgTag)
           .replaceAll('{signed_datetime}', formatDateTimePT(doc.signed_at))
           .replaceAll('{admin_signed_datetime}', formatDateTimePT(adminSignedAt));
+
+        // Documento de 1 página só (EPI/RGPD): encolher a página física ao
+        // tamanho real do conteúdo, para não sobrar espaço vazio no PDF.
+        const measuredHeight = await measurePageHeightPx(finalHtml);
+        if (measuredHeight && measuredHeight < A4_HEIGHT_PX) {
+          const customHeight = Math.ceil(measuredHeight) + 6;
+          finalHtml = finalHtml.replace(
+            '@page { size: A4; margin: 0; }',
+            `@page { size: 794px ${customHeight}px; margin: 0; }`
+          );
+        }
 
         const pdfBlob = await convertHtmlToPdf(finalHtml);
         const finalPath = `signed/${doc.id}_${Date.now()}.pdf`;
