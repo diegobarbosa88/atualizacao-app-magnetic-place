@@ -4,6 +4,7 @@ import { useDocumentTemplates } from '../../../hooks/useDocumentTemplates';
 import { getValidadeStatus, isUncategorized, SEM_CATEGORIA } from '../../../constants/rhCategories';
 import { downloadTemplateBytes, renderDocx, buildRenderData } from '../../../utils/docxTemplateService';
 import { replaceTemplateFields } from '../../../utils/templateFields';
+import { applyLayoutOverride } from '../../../utils/templateLayoutSettings';
 import { fetchPublicIp } from '../../../utils/deviceUtils';
 import { unifyDocuments } from './unifyDocuments';
 
@@ -265,7 +266,10 @@ export function useDocumentsAdmin() {
               .from('clients').select('*').eq('id', raw.client_id).maybeSingle();
             clientData = c || null;
           }
-          html = replaceTemplateFields(tmpl.template_html, worker || {}, systemSettings || {}, clientData);
+          html = applyLayoutOverride(
+            replaceTemplateFields(tmpl.template_html, worker || {}, systemSettings || {}, clientData),
+            tmpl.layout_settings
+          );
         }
         // A assinatura do trabalhador fica em signature_data à parte (ver
         // HtmlDocumentViewer.jsx) — o generated_html gravado ainda tem a tag

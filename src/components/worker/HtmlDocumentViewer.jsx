@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Loader2, AlertCircle, FileSignature, X, RefreshCw } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { replaceTemplateFields } from '../../utils/templateFields';
+import { applyLayoutOverride } from '../../utils/templateLayoutSettings';
 import { DOC_STATUS } from '../../constants/documentStatus';
 import SignDrawModal from './SignDrawModal';
 import FitToWidthHtmlFrame from '../common/FitToWidthHtmlFrame';
@@ -57,7 +58,10 @@ export function HtmlDocumentViewer({ document: docRecord, onBack, onSigned }) {
 
         if (cancelled) return;
         setWorkerData(workerRow || {});
-        const filled = replaceTemplateFields(tmplRow.template_html, workerRow || {}, systemSettings || {}, clientRow);
+        const filled = applyLayoutOverride(
+          replaceTemplateFields(tmplRow.template_html, workerRow || {}, systemSettings || {}, clientRow),
+          tmplRow.layout_settings
+        );
         setFilledHtml(filled);
       } catch (err) {
         console.error('Erro ao carregar documento HTML:', err);

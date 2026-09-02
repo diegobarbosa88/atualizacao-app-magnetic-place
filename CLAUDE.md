@@ -3375,6 +3375,92 @@ futuro: qualquer conteúdo destinado a `header`/`footer` da PDF.co deve ser deli
 (dezenas de KB, não centenas) — nunca reaproveitar blocos grandes (imagens de alta resolução,
 `<style>` inteiros) só porque "já lá estão" no documento principal.**
 
+## Painel "Ajustar Layout" — margens/espaçamentos por template (2026-09-02)
+
+**Pedido do Diego, depois de discutir o Jodit Editor como possível ferramenta e confirmar que o
+que queria era controlo sobre números (margens/espaçamentos), não um editor de texto rico:** um
+painel na UI para ajustar margens e espaçamentos de cada template HTML, com preview.
+
+**Esquema:** `document_templates.layout_settings JSONB` novo (nullable — `null` = usa os valores
+por omissão de sempre, comportamento idêntico ao actual, sem risco de regressão para os templates
+que nunca forem tocados). **`src/utils/templateLayoutSettings.js`** novo: `DEFAULT_LAYOUT_SETTINGS`
+(os valores já em uso hoje nos 3 templates — `paragraphSpacing:14`, `listItemSpacing:8`,
+`pagePaddingBottom:4`, `stampBlockMarginTop:14`, `stampBlockPaddingTop:10`,
+`stampSwatchWidth:107`, `stampSwatchHeight:77`, `headerMarginPx:76`, `footerMarginPx:34`),
+`LAYOUT_SETTING_FIELDS` (metadados para a UI), `resolveLayoutSettings` (funde gravado+omissão),
+`applyLayoutOverride` (injecta um `<style>` aditivo com `!important` antes de `</head>` — nunca
+edita o `template_html` gravado, por isso é seguro e reversível por construção).
+
+**Onde se aplica — três sítios, sempre a jusante de `replaceTemplateFields`:**
+`HtmlDocumentViewer.jsx` (preview do worker antes de assinar), `useDocumentsAdmin.js`'s
+`openGeneratedPreview` (preview do admin de um documento ainda pendente), e dentro de
+`generateHtmlDocumentPdf` (ver secção seguinte, para o PDF final). Uma vez assinado,
+`generated_html` já leva o override embutido — não precisa de reaplicação nos sítios que só o
+leêm depois (admin a rever um documento já assinado, por exemplo).
+
+**UI — `DocumentTemplatesAdmin.jsx` ganhou um botão novo ("Sliders", só nos templates
+`formato==='html'`) que abre `TemplateLayoutSettingsModal.jsx`** — grava directamente via
+`supabase.update({layout_settings})` (sem passar pelo `onUpdateTemplate` genérico, que é
+específico do fluxo docx) — a subscrição realtime já existente em `useDocumentTemplates.js`
+apanha a alteração sozinha, sem precisar de recarregar nada à mão.
+
+Verificado ao vivo: painel abre com os 3 templates HTML, valores por omissão correctos, alterar um
+campo reflectia-se de imediato num preview (nessa primeira versão, ainda por `FitToWidthHtmlFrame`
+— ver secção seguinte para a versão com PDF real). Testado sem gravar (Cancelar) para não alterar
+os 3 templates reais de propósito. `npx eslint` limpo.
+
+## Painel "Ajustar Layout" — PDF real da PDF.co + correção sobre testar localmente (2026-09-02)
+
+**Achado que corrige, de raiz, uma afirmação repetida várias vezes nesta sessão ("a
+`VITE_PDFCO_API_KEY` só existe em produção/Vercel, irrecuperável localmente") — estava ERRADA.**
+A chave está em `.env.local` (não em `.env`), e o `vite dev` carrega os dois automaticamente — só
+os scripts Node ad-hoc desta sessão (`dotenv.config()`, que por omissão só lê `.env`) é que nunca a
+viam. **A app real, no browser, sempre teve acesso à PDF.co real durante todo o desenvolvimento
+local desta sessão** — todas as vezes que se registou "não testado contra a API real" para o
+mecanismo `formato==='html'` eram evitáveis. Só descoberto ao testar o painel novo abaixo, quando
+um pedido real à PDF.co teve sucesso e apareceu um PDF genuíno no ecrã, sem eu esperar isso.
+**Lição prática: antes de assumir que uma env var "só existe em produção", confirmar directamente
+com `grep` em TODOS os `.env*` do projeto (`.env`, `.env.local`, `.env.test`, ...) — nunca só
+`.env`.**
+
+**Pedido do Diego, na sequência do painel "Ajustar Layout" (secção anterior): trocar o preview
+aproximado (HTML normal num iframe, via `FitToWidthHtmlFrame`) por um preview do PDF real,
+gerado pela PDF.co, em duas colunas — controlos à esquerda com um botão de atualização explícito,
+`<iframe>` com o PDF à direita.** Fazia sentido por dois motivos: (1) o preview aproximado nunca
+reflectia os dois ajustes que só afectam o PDF final (`headerMarginPx`/`footerMarginPx`, que não
+têm efeito nenhum no HTML normal do browser — só entram na chamada à PDF.co); (2) é literalmente
+o mesmo motor que gera o documento real, zero risco de "parece bem no preview, sai diferente no
+PDF" — a categoria de bug que já apareceu 2 vezes nesta sessão (a régua/marca de água, e agora o
+cabeçalho/rodapé).
+
+**Refactor que tornou isto possível sem duplicar lógica:** toda a lógica de gerar o PDF de um
+documento `formato==='html'` (extrair timbre/rodapé para `header`/`footer`, medir e encolher a
+página para documentos de 1 página, montar os parâmetros da PDF.co) foi extraída de
+`useDocumentTemplates.js` para um novo utilitário partilhado, **`src/utils/htmlDocumentPdf.js`**
+(`generateHtmlDocumentPdf(finalHtml, layoutSettings)`, devolve um `Blob`) — usado tanto por
+`handleApproveDocument` (aprovação real) como pelo botão "Atualizar Preview" do painel (dados
+fictícios). Os dois caminhos NUNCA podem divergir no que fazem à PDF.co, porque é literalmente a
+mesma função. `useDocumentTemplates.js` ficou bastante mais simples só com este refactor.
+
+**`TemplateLayoutSettingsModal.jsx` reestruturado**: coluna esquerda (280px) com os campos
+numéricos + botão "Atualizar Preview" (chama `generateHtmlDocumentPdf` com dados fictícios +
+valores por gravar, ainda não guardados) + área de erro; coluna direita a `flex-1` com um
+`<iframe src={pdfUrl}>`, `pdfUrl` sendo um `URL.createObjectURL(blob)` do PDF real, revogado antes
+de cada nova geração e no unmount (evita fugas de memória). Deliberadamente SEM geração automática
+ao abrir o modal — cada clique em "Atualizar" é um pedido real à PDF.co, não é grátis, fica ao
+critério de quem está a ajustar.
+
+**Verificado ao vivo com o PDF real, não simulado — primeira vez que este mecanismo é confirmado
+contra a API de verdade nesta sessão:** aberto o painel para "CONTRATO DE TRABALHO", clicado
+"Atualizar Preview" — PDF real de 2 páginas renderizado no iframe (visor nativo do Chrome), timbre
+"MAGNETIC PLACE — Unipessoal, Lda." presente e correcto nas DUAS páginas, carimbo com assinatura
+de amostra na página 2, sem sobreposição, sem página extra órfã. **Confirma definitivamente que a
+correção do "Argument list too long" (secção anterior) resolveu o problema em produção** — deixa
+de ser "alta confiança baseada em Playwright", passa a ser confirmado com o motor real.
+
+`npx eslint` limpo em todos os ficheiros tocados (`htmlDocumentPdf.js` novo,
+`useDocumentTemplates.js` simplificado, `TemplateLayoutSettingsModal.jsx` reescrito).
+
 ## Padronização do canvas de assinatura da empresa — `AdminSignDrawModal.jsx` (2026-09-02)
 
 Pedido do Diego: "coloque o campo da assinatura igual o que tem no DB do worker para padronizar o

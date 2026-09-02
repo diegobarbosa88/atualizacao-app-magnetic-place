@@ -1,5 +1,5 @@
 import React, { useState, useMemo, forwardRef, useImperativeHandle } from 'react';
-import { FileText, Trash2, Eye, Edit3, Send, Loader2, ShieldCheck } from 'lucide-react';
+import { FileText, Trash2, Eye, Edit3, Send, Loader2, ShieldCheck, Sliders } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { downloadTemplateBytes } from '../../utils/docxTemplateService';
 import DocxPreviewModal from '../common/DocxPreviewModal';
@@ -8,6 +8,7 @@ import TemplateEditorModal from './templates/TemplateEditorModal';
 import Card, { CardGrid } from '../common/Card';
 import { FONT_TITLE } from '../../styles/designTokens';
 import TemplateGenerateModal from './templates/TemplateGenerateModal';
+import TemplateLayoutSettingsModal from './templates/TemplateLayoutSettingsModal';
 
 const DocumentTemplatesAdmin = forwardRef(function DocumentTemplatesAdmin({
   workers = [],
@@ -21,7 +22,7 @@ const DocumentTemplatesAdmin = forwardRef(function DocumentTemplatesAdmin({
   gateSlugsAtivos = new Set(),
   onToggleGateRequisito,
 }, ref) {
-  const { supabase, clients } = useApp();
+  const { supabase, clients, systemSettings } = useApp();
 
   const [showEditorModal, setShowEditorModal] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState(null);
@@ -32,6 +33,8 @@ const DocumentTemplatesAdmin = forwardRef(function DocumentTemplatesAdmin({
   const [generating, setGenerating] = useState(false);
   const [genProgress, setGenProgress] = useState(null);
   const [preview, setPreview] = useState(null);
+  const [layoutTemplate, setLayoutTemplate] = useState(null);
+  const [savingLayout, setSavingLayout] = useState(false);
 
   const workerById = useMemo(() => {
     const m = {};
@@ -69,6 +72,23 @@ const DocumentTemplatesAdmin = forwardRef(function DocumentTemplatesAdmin({
     } catch (err) {
       console.error('Falha a abrir preview de template:', err);
       setPreview({ title: template.name, loading: false, blob: null, error: err.message || 'Erro a carregar template.' });
+    }
+  };
+
+  const saveLayoutSettings = async (values) => {
+    setSavingLayout(true);
+    try {
+      const { error } = await supabase
+        .from('document_templates')
+        .update({ layout_settings: values })
+        .eq('id', layoutTemplate.id);
+      if (error) throw error;
+      setLayoutTemplate(null);
+    } catch (err) {
+      console.error('Erro a gravar ajustes de layout:', err);
+      alert('Erro: ' + err.message);
+    } finally {
+      setSavingLayout(false);
     }
   };
 
@@ -144,6 +164,9 @@ const DocumentTemplatesAdmin = forwardRef(function DocumentTemplatesAdmin({
                   {t.formato !== 'html' && (
                     <button onClick={() => openEditModal(t)} className="p-1.5 rounded-lg transition-all text-[var(--slate)] hover:text-[var(--navy)] hover:bg-[var(--surface)]" title="Editar"><Edit3 className="w-3.5 h-3.5" /></button>
                   )}
+                  {t.formato === 'html' && (
+                    <button onClick={() => setLayoutTemplate(t)} className="p-1.5 rounded-lg transition-all text-[var(--slate)] hover:text-[var(--navy)] hover:bg-[var(--surface)]" title="Ajustar Layout"><Sliders className="w-3.5 h-3.5" /></button>
+                  )}
                   <button onClick={() => openGenerateModal(t)} className="p-1.5 rounded-lg transition-all text-[var(--slate)] hover:text-[var(--navy)] hover:bg-[var(--surface)]" title="Gerar"><Send className="w-3.5 h-3.5" /></button>
                   <button
                     onClick={() => onToggleGateRequisito?.(t)}
@@ -192,6 +215,16 @@ const DocumentTemplatesAdmin = forwardRef(function DocumentTemplatesAdmin({
           genProgress={genProgress}
           onClose={() => { setShowGenerateModal(false); setSelectedTemplate(null); setSelectedWorkers([]); }}
           onSubmit={submitGenerate}
+        />
+      )}
+
+      {layoutTemplate && (
+        <TemplateLayoutSettingsModal
+          template={layoutTemplate}
+          systemSettings={systemSettings}
+          saving={savingLayout}
+          onClose={() => setLayoutTemplate(null)}
+          onSave={saveLayoutSettings}
         />
       )}
 
