@@ -25,6 +25,9 @@
     },
     "api/seguranca-social/index.js": {
       "maxDuration": 30
+    },
+    "api/gerar-pdf-teste.js": {
+      "maxDuration": 60
     }
   },
   "crons": [
