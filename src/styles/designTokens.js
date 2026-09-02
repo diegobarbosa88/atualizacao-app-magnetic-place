@@ -134,20 +134,20 @@ export const SCALE = {
   },
   text: {
     // Barlow Condensed — nomes de entidade e valores
-    entityName: 'text-[1.05rem] font-bold leading-[1.15]',
-    price:      'text-[1.15rem] font-bold leading-none',
-    statValue:  'text-[1.35rem] font-bold leading-none',
-    sectionTitle: 'text-[1.3rem] font-bold leading-none',
+    // "Proposta B" (2026-09-02, pedido do Diego — "fontes muito pequenas"):
+    // +0.1rem nos 4 tamanhos grandes, mantendo as proporções relativas entre
+    // eles. Comparação visual aprovada em artefacto antes desta mudança.
+    entityName: 'text-[1.15rem] font-bold leading-[1.15]',
+    price:      'text-[1.25rem] font-bold leading-none',
+    statValue:  'text-[1.45rem] font-bold leading-none',
+    sectionTitle: 'text-[1.4rem] font-bold leading-none',
     // IBM Plex Mono — metadados e rótulos
-    meta:       'text-[10px] font-semibold',
-    // Eram 9.5px/8.5px — nunca correspondiam a nenhum uso real. Corrigidos
-    // para os valores que a app já usa em centenas de sítios (9px/8px,
-    // confirmado por censo): a escala converge para a app, não o inverso —
-    // mesma lógica já aplicada aos raios órfãos.
-    badge:      'text-[9px] font-bold uppercase tracking-[0.04em]',
-    statLabel:  'text-[8px] font-extrabold uppercase tracking-[0.11em]',
-    // Inter — texto corrido
-    body:       'text-[11px] font-semibold',
+    meta:       'text-[13px] font-semibold',
+    badge:      'text-[11px] font-bold uppercase tracking-[0.04em]',
+    statLabel:  'text-[10px] font-extrabold uppercase tracking-[0.11em]',
+    // Inter — texto corrido. 14px = text-sm do Tailwind, o mesmo valor já
+    // usado como base "confortável" no resto da app.
+    body:       'text-[14px] font-semibold',
   },
   // Grelha de cartões: 230px é o ponto onde um cartão de colaborador ainda
   // mostra nome + profissão + estado sem truncar. Antes era lg:grid-cols-3,
