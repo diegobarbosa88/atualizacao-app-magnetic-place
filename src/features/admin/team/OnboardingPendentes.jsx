@@ -11,12 +11,17 @@ const TABELA_IRS_LABELS = {
   tabelaIII: 'Tabela III',
 };
 
+// Valores por omissão pedidos pelo Diego (2026-09-02) — o caso mais comum de
+// onboarding hoje. Servem sobretudo submissões sem convite associado ou
+// convites antigos sem estes campos gravados — quando há convite com estes
+// campos preenchidos, openModal() sobrepõe-nos com o que foi definido lá.
+// Mudar aqui exige mudar também os defaults de invite* em TeamManager.jsx.
 const ADMIN_FIELDS_VAZIO = {
-  data_inicio: '', vencimento_base: '', valorHora: '',
-  tipo_contrato: 'sem_termo', regime: 'tempo_inteiro', horas_semanais: 40,
+  data_inicio: '', vencimento_base: '1000', valorHora: '18',
+  tipo_contrato: 'termo_incerto', regime: 'tempo_inteiro', horas_semanais: 40,
   modo_trabalho: 'presencial', enquadramento: 'REGE',
-  subsidio_alimentacao_dia: '', subsidio_alimentacao_tipo: 'cartao',
-  local_trabalho: '', defaultClientId: '', defaultScheduleId: '',
+  subsidio_alimentacao_dia: '8', subsidio_alimentacao_tipo: 'dinheiro',
+  local_trabalho: '1', defaultClientId: 'c1775487391067', defaultScheduleId: 's1776008063149',
   comunicar_ss: false, solicitar_seguro: false,
 };
 
@@ -72,7 +77,7 @@ export default function OnboardingPendentes() {
     if (sub.invite_id && supabase) {
       const { data: invite } = await supabase
         .from('worker_onboarding_invites')
-        .select('vencimento_base, data_inicio_prevista, subsidio_alimentacao_dia, subsidio_alimentacao_tipo, tipo_contrato, regime, horas_semanais, local_trabalho_ss')
+        .select('vencimento_base, data_inicio_prevista, subsidio_alimentacao_dia, subsidio_alimentacao_tipo, tipo_contrato, regime, horas_semanais, local_trabalho_ss, valor_hora, default_client_id, default_schedule_id')
         .eq('id', sub.invite_id)
         .maybeSingle();
       if (invite) {
@@ -80,12 +85,15 @@ export default function OnboardingPendentes() {
           ...prev,
           data_inicio: invite.data_inicio_prevista || prev.data_inicio,
           vencimento_base: invite.vencimento_base != null ? String(invite.vencimento_base) : prev.vencimento_base,
+          valorHora: invite.valor_hora || prev.valorHora,
           subsidio_alimentacao_dia: invite.subsidio_alimentacao_dia != null ? String(invite.subsidio_alimentacao_dia) : prev.subsidio_alimentacao_dia,
           subsidio_alimentacao_tipo: invite.subsidio_alimentacao_tipo || prev.subsidio_alimentacao_tipo,
           tipo_contrato: invite.tipo_contrato || prev.tipo_contrato,
           regime: invite.regime || prev.regime,
           horas_semanais: invite.horas_semanais != null ? invite.horas_semanais : prev.horas_semanais,
           local_trabalho: invite.local_trabalho_ss != null ? String(invite.local_trabalho_ss) : prev.local_trabalho,
+          defaultClientId: invite.default_client_id || prev.defaultClientId,
+          defaultScheduleId: invite.default_schedule_id || prev.defaultScheduleId,
         }));
       }
     }

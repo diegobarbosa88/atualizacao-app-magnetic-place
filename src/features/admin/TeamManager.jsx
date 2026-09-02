@@ -38,7 +38,12 @@ const TeamManagerContent = ({ onLogin }) => {
   const [inviteEmailSent, setInviteEmailSent] = useState(false);
   const [inviteLoading, setInviteLoading] = useState(false);
   const [inviteError, setInviteError] = useState('');
-  const [inviteVencimentoBase, setInviteVencimentoBase] = useState('');
+  // Valores por omissão pedidos pelo Diego (2026-09-02) — o caso mais comum
+  // de onboarding hoje, para não ter de os reescrever a cada convite. Continuam
+  // editáveis por convite; mudar aqui também exigiria mudar ADMIN_FIELDS_VAZIO
+  // em OnboardingPendentes.jsx, que usa os mesmos valores como default próprio
+  // (para convites antigos, sem estes campos gravados).
+  const [inviteVencimentoBase, setInviteVencimentoBase] = useState('1000');
   const [inviteDataInicio, setInviteDataInicio] = useState('');
   const [inviteLocalTrabalho, setInviteLocalTrabalho] = useState('');
   // "Local de trabalho" arranca como seletor dos clientes existentes — só
@@ -49,12 +54,15 @@ const TeamManagerContent = ({ onLogin }) => {
   // Campos de contrato que o admin costuma preencher logo ao aprovar
   // (OnboardingPendentes.jsx → "Completar registo") — definidos aqui também,
   // para pré-preencherem esse ecrã em vez de serem escritos duas vezes.
-  const [inviteSubsidioAlimentacaoDia, setInviteSubsidioAlimentacaoDia] = useState('');
-  const [inviteSubsidioAlimentacaoTipo, setInviteSubsidioAlimentacaoTipo] = useState('cartao');
-  const [inviteTipoContrato, setInviteTipoContrato] = useState('sem_termo');
+  const [inviteValorHora, setInviteValorHora] = useState('18');
+  const [inviteSubsidioAlimentacaoDia, setInviteSubsidioAlimentacaoDia] = useState('8');
+  const [inviteSubsidioAlimentacaoTipo, setInviteSubsidioAlimentacaoTipo] = useState('dinheiro');
+  const [inviteTipoContrato, setInviteTipoContrato] = useState('termo_incerto');
   const [inviteRegime, setInviteRegime] = useState('tempo_inteiro');
   const [inviteHorasSemanais, setInviteHorasSemanais] = useState(40);
-  const [inviteLocalTrabalhoSS, setInviteLocalTrabalhoSS] = useState('');
+  const [inviteLocalTrabalhoSS, setInviteLocalTrabalhoSS] = useState('1');
+  const [inviteDefaultClientId, setInviteDefaultClientId] = useState('c1775487391067');
+  const [inviteDefaultScheduleId, setInviteDefaultScheduleId] = useState('s1776008063149');
   // Convite "a empresa escreve primeiro" -- só possível com telefone
   // preenchido, manda logo o template aprovado pela Meta (ver
   // scripts/criar-template-onboarding.js) em vez de depender do
@@ -121,6 +129,9 @@ const TeamManagerContent = ({ onLogin }) => {
         regime: inviteRegime,
         horas_semanais: inviteHorasSemanais ? Number(inviteHorasSemanais) : null,
         local_trabalho_ss: inviteLocalTrabalhoSS ? Number(inviteLocalTrabalhoSS) : null,
+        valor_hora: inviteValorHora || null,
+        default_client_id: inviteDefaultClientId || null,
+        default_schedule_id: inviteDefaultScheduleId || null,
       });
       if (error) throw error;
       const link = `${window.location.origin}/onboarding/${token}`;
@@ -343,7 +354,7 @@ const TeamManagerContent = ({ onLogin }) => {
       {/* Modal de convite de onboarding */}
       <ModalShell
         isOpen={inviteModal}
-        onClose={() => { setInviteModal(false); setGeneratedLink(''); setGeneratedWaLink(''); setGeneratedToken(''); setInviteEmail(''); setInviteNome(''); setInviteTel(''); setInviteError(''); setInviteVencimentoBase(''); setInviteDataInicio(''); setInviteLocalTrabalho(''); setInviteLocalCustom(false); setInviteSubsidioAlimentacaoDia(''); setInviteSubsidioAlimentacaoTipo('cartao'); setInviteTipoContrato('sem_termo'); setInviteRegime('tempo_inteiro'); setInviteHorasSemanais(40); setInviteLocalTrabalhoSS(''); setConviteWaEnviado(false); setConviteWaErro(''); }}
+        onClose={() => { setInviteModal(false); setGeneratedLink(''); setGeneratedWaLink(''); setGeneratedToken(''); setInviteEmail(''); setInviteNome(''); setInviteTel(''); setInviteError(''); setInviteVencimentoBase('1000'); setInviteDataInicio(''); setInviteLocalTrabalho(''); setInviteLocalCustom(false); setInviteValorHora('18'); setInviteSubsidioAlimentacaoDia('8'); setInviteSubsidioAlimentacaoTipo('dinheiro'); setInviteTipoContrato('termo_incerto'); setInviteRegime('tempo_inteiro'); setInviteHorasSemanais(40); setInviteLocalTrabalhoSS('1'); setInviteDefaultClientId('c1775487391067'); setInviteDefaultScheduleId('s1776008063149'); setConviteWaEnviado(false); setConviteWaErro(''); }}
         title="Convidar novo colaborador"
         subtitle="Link único de preenchimento de dados"
         icon={<UserPlus size={16} />}
@@ -480,6 +491,17 @@ const TeamManagerContent = ({ onLogin }) => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className={`block ${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1`}>
+                    Valor Hora (€/h)
+                  </label>
+                  <input
+                    className="w-full bg-white border border-[var(--border)] rounded-lg py-2 px-3 text-sm font-semibold text-[var(--ink)] outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 transition-all"
+                    type="number" min="0" step="0.01" placeholder="0.00"
+                    value={inviteValorHora}
+                    onChange={e => setInviteValorHora(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className={`block ${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1`}>
                     Subsídio Alimentação/Dia (€)
                   </label>
                   <input
@@ -551,6 +573,38 @@ const TeamManagerContent = ({ onLogin }) => {
                     value={inviteLocalTrabalhoSS}
                     onChange={e => setInviteLocalTrabalhoSS(e.target.value)}
                   />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={`block ${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1`}>
+                    Cliente Padrão
+                  </label>
+                  <select
+                    className="w-full bg-white border border-[var(--border)] rounded-lg py-2 px-3 text-sm font-semibold text-[var(--ink)] outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 transition-all"
+                    value={inviteDefaultClientId}
+                    onChange={e => setInviteDefaultClientId(e.target.value)}
+                  >
+                    <option value="">— Sem cliente —</option>
+                    {[...clients].sort((a, b) => a.name.localeCompare(b.name)).map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className={`block ${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1`}>
+                    Horário Padrão
+                  </label>
+                  <select
+                    className="w-full bg-white border border-[var(--border)] rounded-lg py-2 px-3 text-sm font-semibold text-[var(--ink)] outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 transition-all"
+                    value={inviteDefaultScheduleId}
+                    onChange={e => setInviteDefaultScheduleId(e.target.value)}
+                  >
+                    <option value="">— Sem horário —</option>
+                    {[...schedules].sort((a, b) => a.name.localeCompare(b.name)).map(s => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
             </div>
@@ -634,7 +688,7 @@ const TeamManagerContent = ({ onLogin }) => {
               </div>
             )}
             <button
-              onClick={() => { setGeneratedLink(''); setGeneratedWaLink(''); setGeneratedToken(''); setInviteEmail(''); setInviteNome(''); setInviteTel(''); setInviteError(''); setInviteVencimentoBase(''); setInviteDataInicio(''); setInviteLocalTrabalho(''); setInviteLocalCustom(false); setInviteSubsidioAlimentacaoDia(''); setInviteSubsidioAlimentacaoTipo('cartao'); setInviteTipoContrato('sem_termo'); setInviteRegime('tempo_inteiro'); setInviteHorasSemanais(40); setInviteLocalTrabalhoSS(''); setConviteWaEnviado(false); setConviteWaErro(''); }}
+              onClick={() => { setGeneratedLink(''); setGeneratedWaLink(''); setGeneratedToken(''); setInviteEmail(''); setInviteNome(''); setInviteTel(''); setInviteError(''); setInviteVencimentoBase('1000'); setInviteDataInicio(''); setInviteLocalTrabalho(''); setInviteLocalCustom(false); setInviteValorHora('18'); setInviteSubsidioAlimentacaoDia('8'); setInviteSubsidioAlimentacaoTipo('dinheiro'); setInviteTipoContrato('termo_incerto'); setInviteRegime('tempo_inteiro'); setInviteHorasSemanais(40); setInviteLocalTrabalhoSS('1'); setInviteDefaultClientId('c1775487391067'); setInviteDefaultScheduleId('s1776008063149'); setConviteWaEnviado(false); setConviteWaErro(''); }}
               className="w-full text-xs text-[var(--slate-dim)] hover:text-[var(--ink-soft)] font-bold py-1 transition-colors"
             >
               Gerar novo link
