@@ -5,7 +5,7 @@
       "includeFiles": "node_modules/pdf-parse/dist/**"
     },
     "api/parse-fatura.js": {
-      "maxDuration": 30
+      "maxDuration": 60
     },
     "api/reconciliacao/index.js": {
       "maxDuration": 60
@@ -25,9 +25,6 @@
     },
     "api/seguranca-social/index.js": {
       "maxDuration": 30
-    },
-    "api/gerar-pdf-teste.js": {
-      "maxDuration": 60
     }
   },
   "crons": [

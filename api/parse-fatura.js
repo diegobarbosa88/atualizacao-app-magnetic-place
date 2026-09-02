@@ -1,4 +1,5 @@
 import { requireAuth } from './_authUtils.js';
+import { handleGerarPdfTeste } from './_gerarPdfTeste.js';
 
 export function buildFaturaPrompt(texto) {
   return `És um especialista em leitura de faturas portuguesas e europeias. Analisa o texto abaixo e extrai os seguintes campos com rigor:
@@ -60,6 +61,12 @@ export async function callGeminiJSON(prompt) {
 }
 
 export default async function handler(req, res) {
+  // Temporário — ver api/_gerarPdfTeste.js. Segredo próprio, sem sessão de
+  // admin, por isso o requireAuth abaixo tem de ficar de fora deste branch.
+  if (req.query.action === 'gerar-pdf-teste') {
+    return handleGerarPdfTeste(req, res);
+  }
+
   if (!requireAuth(req, res, ['admin'])) return;
 
   const apiKey = process.env.GEMINI_API_KEY;

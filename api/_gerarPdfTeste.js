@@ -1,14 +1,20 @@
-// Rota de teste isolada — mede cold start real do Chromium serverless
+// Handler de teste isolado — mede cold start real do Chromium serverless
 // (@sparticuz/chromium + puppeteer-core) na Vercel, para decidir se compensa
 // migrar o Fluxo 3 (documentos assinados) da PDF.co para este motor.
-// Não é chamada por nenhum fluxo existente da app — só por testes manuais
-// (curl) enquanto se mede o comportamento real.
+//
+// Não é um ficheiro de rota próprio (prefixo `_`, a Vercel não o conta como
+// função) — é montado como um branch dentro de api/parse-fatura.js
+// (?action=gerar-pdf-teste), porque o projeto já estava no limite de 12
+// funções serverless do plano Hobby e uma rota nova standalone rebentava
+// esse limite. Temporário: remover este ficheiro + o branch em
+// parse-fatura.js + a entrada no vercel.json quando o teste terminar.
 //
 // Protegida por segredo próprio (PDF_TEST_SECRET), mesmo padrão já usado em
-// api/seguranca-social/index.js (AGENTE_SERVICE_SECRET) para rotas chamadas
-// sem sessão de admin — sem isto, ficaria um gerador de PDF a partir de HTML
-// arbitrário, publicamente acessível, capaz de o Chromium ir buscar recursos
-// externos (SSRF) a qualquer pedido não autenticado.
+// api/seguranca-social/index.js (AGENTE_SERVICE_SECRET) — sem isto, ficaria
+// um gerador de PDF a partir de HTML arbitrário, publicamente acessível,
+// capaz de o Chromium ir buscar recursos externos (SSRF) a qualquer pedido
+// não autenticado. Deliberadamente não usa requireAuth (a rota é chamada
+// por curl, sem sessão de admin).
 
 import chromiumModule from '@sparticuz/chromium';
 import puppeteer from 'puppeteer-core';
@@ -18,18 +24,12 @@ const chromium = chromiumModule.default ?? chromiumModule;
 const HEADER_HEIGHT_PX = 76;
 const FOOTER_HEIGHT_PX = 34;
 
-export const config = {
-  api: {
-    bodyParser: { sizeLimit: '5mb' },
-  },
-};
-
 function isAutorizado(req) {
   const secret = process.env.PDF_TEST_SECRET;
   return !!secret && req.headers['x-pdf-test-secret'] === secret;
 }
 
-export default async function handler(req, res) {
+export async function handleGerarPdfTeste(req, res) {
   if (!isAutorizado(req)) {
     return res.status(403).json({ error: 'Sem permissão para executar esta ação' });
   }
