@@ -3177,3 +3177,24 @@ DRB-ED5C`): visualmente, a régua fica limpa, sem sobreposição da marca de ág
 continua visível (discreta, atrás da assinatura da Entidade Patronal), só deixou de ultrapassar os
 limites da própria coluna; o espaço antes da assinatura ficou mais compacto sem parecer apertado.
 Gravado nos 3 templates, confirmado por SQL.
+
+**Fecho do dia — margem inferior da página e espaço antes do rodapé, a partir de um PDF real
+circulado pelo Diego.** Dois pedidos: "margem inferior quase 0" (o vazio entre o fim do conteúdo
+e o fim físico da folha A4) e reduzir bastante a distância entre "Documento assinado
+eletronicamente"/QR e o rodapé ("Magnetic Place — Unipessoal, Lda." / "EPI-01").
+Correção: `.page` padding-bottom `16px`→`4px`; `.footer` `margin-top` `32px`→`10px`,
+`padding-top` `12px`→`8px`.
+**Achado ao medir o PDF real (não assumido) — o espaço vazio no fundo de um documento curto
+(EPI) não vem só do padding controlável.** Medido com a mesma técnica de extração vetorial já
+usada nesta sessão (`pdfjs-dist`, posição Y do último texto real): mesmo com o padding-bottom
+já em `4px`, sobravam ~78pt (≈27mm) de vazio antes do fim físico da página A4 — porque o
+conteúdo do EPI (documento curto) simplesmente não preenche uma folha A4 inteira, e não há
+mecanismo nenhum (nem deve haver, dado o compromisso desta sessão com A4 fixo) que estique o
+conteúdo para preencher a folha. **O padding controlável está agora em `4px`, o mínimo razoável
+sem colar literalmente ao bordo** — o vazio remanescente para documentos curtos é inerente ao
+documento ter menos conteúdo do que uma página A4, não uma margem por afinar. Só é totalmente
+invisível em documentos longos como o Contrato (2 páginas, a segunda quase cheia).
+**Verificado sem regressão no caso sensível (Contrato, 9 cláusulas):** PDF real gerado com o novo
+padding continua em exactos 2 páginas, mesma repartição de texto por página já confirmada
+anteriormente — reduzir a margem não introduziu quebra nova nem reabriu o bug da 3.ª página
+quase vazia já corrigido hoje. Gravado nos 3 templates, confirmado por SQL.
