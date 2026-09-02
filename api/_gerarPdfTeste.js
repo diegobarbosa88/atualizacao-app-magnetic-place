@@ -77,10 +77,15 @@ export async function handleGerarPdfTeste(req, res) {
       };
     }
 
-    const pdfBuffer = await page.pdf(pdfOptions);
+    // page.pdf() pode devolver Uint8Array em vez de Buffer nativo do Node
+    // consoante a versão do puppeteer-core — res.send() da Vercel só escreve
+    // bytes crus quando reconhece um Buffer real (Buffer.isBuffer()); com um
+    // Uint8Array simples cai no branch de JSON e serializa byte a byte.
+    const pdfBuffer = Buffer.from(await page.pdf(pdfOptions));
     const tPdfDone = Date.now();
 
     res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Length', String(pdfBuffer.length));
     res.setHeader('X-Timing-Launch-Ms', String(tLaunched - tLaunchStart));
     res.setHeader('X-Timing-SetContent-Ms', String(tContentSet - tLaunched));
     res.setHeader('X-Timing-Pdf-Ms', String(tPdfDone - tContentSet));
