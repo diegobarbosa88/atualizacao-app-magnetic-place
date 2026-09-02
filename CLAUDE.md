@@ -1338,6 +1338,23 @@ Aplicado aos 3 templates, verificado ao vivo nos dois estados (por preencher e p
 substituindo a progressão anterior (96×48 → 128×64 → 160×80 → 128×64). Confirmado por medição real
 no DOM nos 3 templates, idêntico nos dois cartões.
 
+**Marca de água trocada de "duas camadas desalinhadas" (técnica WhatsApp) para tabuleiro de xadrez
+real, a pedido explícito do Diego ("que fique como um tabuleiro de xadrez, xoxoxoxoxo /
+oxoxoxoxox").** A técnica anterior (`::before`/`::after`, cada um com o seu próprio tile/offset,
+propositadamente desalinhados para os dois padrões "derivarem um do outro") deixou de bater com o
+pedido — ele queria alternância verdadeira, não sobreposição. Como CSS não tem primitivo para
+alternar duas imagens *diferentes* num tabuleiro (o truque habitual com `linear-gradient` só serve
+para cores sólidas), gerada uma única imagem composta com `sharp` (`.composite()`), fora do browser:
+canvas 64×64 transparente, cada imagem redimensionada para 32×32 (metade do tile anterior — "as
+imagens que estão a metade do tamanho que estão", outro pedido explícito no mesmo comentário) com
+`fit:'contain'` sobre fundo transparente, coladas nas 4 posições em xadrez (logo/carimbo/carimbo/
+logo — cantos opostos iguais). O resultado é UMA imagem só, aplicada como `background-image` num
+único `::before` com `background-size:64px 64px; background-repeat:repeat` — mais simples que os
+dois layers antigos (menos CSS, ficheiro ~5% mais leve) e visualmente correto: confirmado com uma
+réplica isolada a opacidade alta (0.4, depois a opacidade real de produção 0.07) que o padrão
+alterna mesmo em xadrez, não em grelha simples. Aplicado aos 3 templates, mesma imagem partilhada
+entre os três (sem precisar de gerar uma por template).
+
 ## Redesenho do cartão de colaborador — `WorkerList.jsx` (2026-08-31)
 
 Mesmo fluxo de sempre: mockup em artefacto (`equipa_redesign.html`, dados reais dos colaboradores
@@ -2839,3 +2856,91 @@ verdade de cor**, pela mesma razão que qualquer valor deste ficheiro é medido,
    abertos); icon-buttons com hover neutro, vermelho só em ações destrutivas.
 5. Cada mockup aprovado vem acompanhado de um prompt de implementação em PT, colado pelo Diego
    nesta sessão. Confirmar os ficheiros reais citados no prompt contra este
+
+## Carimbo redesenhado (2026-09-02) — substitui a Opção D nos 3 templates reais
+
+**Ronda de exploração longa em artefactos** (`Artifact`, não ficheiro estático copiado como nas
+rondas anteriores): partiu de 4 modelos iniciais (rejeitados: "não gostei"), depois 4 modelos numa
+direção DocuSign/nota-oficial (Modelo 4 "Verificação Moderna" e Modelo 7 "Nota Oficial" ficaram
+"mais ou menos"), depois 4 variações do Modelo 7 ("Aviso com Selo" escolhido), depois testes de
+marca de água (mosaico repetido → logo único; tamanho A/B/C → A escolhido), depois 4 variações do
+selo final (V3 "QR no canto" escolhido), depois confirmação explícita do Diego de manter a imagem
+real da assinatura (não só o selo de confirmação — pergunta feita via `AskUserQuestion` antes de
+avançar, por ser mudança grande para documento legal), depois a integração da assinatura dentro do
+V3 (4 variações — "D: assinatura solta, sem caixa" escolhida), depois mais campos de verificação
+("N.º do documento" + "Aprovado em" — E3 escolhida), depois 4 correções via comentário no artefacto
+(remover título repetido/consolidar selo+QR+ID numa linha; bola verde+"Documento assinado
+eletronicamente" sem "nos termos da lei"; marca de água só atrás da assinatura da Entidade
+Patronal, não do carimbo inteiro; marca de água maior + ID antes do QR; por fim ID por baixo do QR,
+os dois só no lado direito).
+
+**Achado real, descoberto antes de implementar, não assumido:** o mockup final tinha dois campos
+que pareciam dois códigos diferentes — "N.º do documento" (ex. `WD-240831-1147`) e o "ID" junto ao
+QR (ex. `ADJ-8KRW`) — mas no código só existe **um** identificador real
+(`verification_code`, gerado em `handleApproveDocument`). Não havia nenhum sistema de "número de
+documento" sequencial por trás do valor do mockup — era só um exemplo ilustrativo inventado para a
+maquete. Confirmado com o Diego antes de implementar (`AskUserQuestion`): os dois campos mostram o
+**mesmo** `{verification_code}`, só com rótulos diferentes — nenhum sistema novo construído.
+
+**Substitui por completo o bloco anterior (Opção D, dois cartões lado a lado com grelha de
+campos)** — `.stamp-row`/`.stamp-card-*`/`.stamp-swatch` (com moldura)/`.stamp-rows`/
+`.stamp-field`/`.stamp-foot`/`.stamp-note` saem; entram `.stamp-block`/`.stamp-parties`/
+`.stamp-party`/`.stamp-swatch` (sem moldura, "assinatura solta")/`.stamp-role`/`.stamp-name`/
+`.stamp-time`/`.stamp-meta`/`.stamp-final`. Estrutura final, de cima para baixo:
+
+1. Filete laranja (`.stamp-rule`, 2px).
+2. Duas colunas lado a lado (`.stamp-parties`), Trabalhador | Entidade Patronal — cada uma com a
+   imagem real da assinatura **sem caixa/moldura** (`.stamp-swatch`, `height:50px`,
+   `object-fit:contain`, mesma técnica já validada no carimbo anterior), depois cargo (uppercase
+   via CSS, não no HTML), nome, data/hora. Marca de água do logótipo real (`icon-512x512.png`,
+   150×150px, opacidade 0.11) fica **só atrás da coluna Entidade Patronal** (`.stamp-party-admin
+   .stamp-wm`), não atrás do carimbo inteiro — decisão explícita do Diego via comentário no
+   artefacto, ao contrário do checkerboard de duas camadas que cobria o carimbo todo na versão
+   anterior (Opção D).
+3. Linha "N.º do documento" / "Aprovado em" (`.stamp-meta`, `justify-content:space-between`) — os
+   dois valores reais já existentes (`{verification_code}`, `{admin_signed_datetime}`), sem campo
+   novo nenhum.
+4. Filete cinzento fino (`.stamp-final-rule`).
+5. Linha final (`.stamp-final`, `justify-content:space-between`): selo verde com check branco
+   (`#1f6b47`, o mesmo valor já validado no projeto para "aprovado", não o laranja/navy do selo
+   antigo) + "Documento assinado eletronicamente" à esquerda; QR (`{verification_qr}`) com o
+   `{verification_code}` por baixo, os dois juntos e alinhados à direita.
+
+**Nome da Entidade Patronal corrigido depois da primeira gravação** — a primeira versão manteve o
+literal "MAGNETIC PLACE UNIPESSOAL LDA" (tudo maiúsculas) herdado da Opção D; o Diego pediu o nome
+em capitalização normal ("Magnetic Place Unipessoal LDA"), corrigido nos 3 templates com uma
+segunda gravação, confirmada por SQL (`template_html like '%Magnetic Place Unipessoal LDA%'`).
+
+**Método de execução, mesmo já usado nesta sessão para a Opção D — sem SQL colado na conversa:**
+scripts Node locais (`@supabase/supabase-js`, credenciais do `.env`) fazem
+fetch→transformar-por-âncora→gravar. A transformação desta vez localizou as âncoras
+(`.stamp-row {` → `.footer {` para o CSS; `<div class="stamp-row">` → `<div class="footer">` para o
+HTML) **programaticamente via `indexOf`/`slice`**, não por `Edit` com o texto old_string/new_string
+colado à mão — o bloco antigo inclui uma imagem checkerboard em base64 de ~30KB numa única linha,
+impraticável de citar literalmente numa chamada de ferramenta. Confirmado, antes de gravar, que os
+3 templates tinham exactamente o mesmo bloco CSS e HTML byte-a-byte (`grep`/`Read` comparados lado a
+lado) — a mesma transformação por âncora aplicou-se aos 3 sem adaptação por ficheiro.
+
+**Verificado ao vivo, à largura real da página (794px, não a largura menor do painel de
+pré-visualização — lição já registada noutra secção deste ficheiro sobre medir "à largura
+verdadeira"):** os 3 templates, com dados de teste (assinaturas SVG inline, QR fake, nome/datas
+reais) copiados para `public/_scratch_test.html` — carimbo renderiza correctamente nos 3
+(EPI/RGPD/Contrato), marca de água visível só atrás da assinatura da Entidade Patronal, filetes e
+espaçamento correctos. Testado também o estado **por preencher** (template em bruto, sem
+substituição de placeholders) — os `{worker_signature}`/`{admin_stamp}`/etc. ficam legíveis como
+texto placeholder discreto dentro da caixa da assinatura (`font-size:9px;color:#94A3B8`, herdado da
+Opção D), sem quebrar layout. Confirmado por SQL (`execute_sql`, projeto `ccvxnrnlbipsojbbrzaw`) que
+os 3 `template_html` gravados contêm `stamp-block` e já não contêm `stamp-row`.
+**Não testado ainda** o fluxo real ponta-a-ponta (trabalhador assina → admin aprova → PDF real
+gerado pela PDF.co) com este bloco novo — os lotes anteriores desta sessão sempre fecharam com esse
+teste real antes de dar como definitivamente resolvido; fica como pendência explícita antes do
+próximo documento real assinado com este carimbo.
+
+**Decisão registada, não implementada — Diego perguntou, opinião dada, sem mudança de código:**
+colocar o IP do trabalhador visível no próprio carimbo (documento/PDF), não só na página de
+verificação pública. Recomendação: não pôr — o IP já fica em trilha de auditoria server-side
+(`worker_documents.signed_ip`, Fluxo 2) para o caso raro de disputa, mas imprimi-lo no documento
+tem baixo valor probatório (redes móveis/partilhadas/VPN tornam o IP pouco fiável como prova) e
+expõe um dado pessoal desnecessário num documento que pode circular indefinidamente — mesmo
+princípio já decidido para a página pública de verificação ("nunca IP", ver secção "Carimbo Opção E
++ validação de assinaturas" acima). Diego não pediu para reabrir esta decisão, só pediu opinião.

@@ -41,6 +41,11 @@ const TeamManagerContent = ({ onLogin }) => {
   const [inviteVencimentoBase, setInviteVencimentoBase] = useState('');
   const [inviteDataInicio, setInviteDataInicio] = useState('');
   const [inviteLocalTrabalho, setInviteLocalTrabalho] = useState('');
+  // "Local de trabalho" arranca como seletor dos clientes existentes — só
+  // cai para texto livre se o admin escolher "Outro" (cliente novo, obra
+  // ainda sem ficha, etc.), que é o único caso em que o valor não vem de
+  // um cliente real da lista.
+  const [inviteLocalCustom, setInviteLocalCustom] = useState(false);
   // Convite "a empresa escreve primeiro" -- só possível com telefone
   // preenchido, manda logo o template aprovado pela Meta (ver
   // scripts/criar-template-onboarding.js) em vez de depender do
@@ -323,7 +328,7 @@ const TeamManagerContent = ({ onLogin }) => {
       {/* Modal de convite de onboarding */}
       <ModalShell
         isOpen={inviteModal}
-        onClose={() => { setInviteModal(false); setGeneratedLink(''); setGeneratedWaLink(''); setGeneratedToken(''); setInviteEmail(''); setInviteNome(''); setInviteTel(''); setInviteError(''); setInviteVencimentoBase(''); setInviteDataInicio(''); setInviteLocalTrabalho(''); setConviteWaEnviado(false); setConviteWaErro(''); }}
+        onClose={() => { setInviteModal(false); setGeneratedLink(''); setGeneratedWaLink(''); setGeneratedToken(''); setInviteEmail(''); setInviteNome(''); setInviteTel(''); setInviteError(''); setInviteVencimentoBase(''); setInviteDataInicio(''); setInviteLocalTrabalho(''); setInviteLocalCustom(false); setConviteWaEnviado(false); setConviteWaErro(''); }}
         title="Convidar novo colaborador"
         subtitle="Link único de preenchimento de dados"
         icon={<UserPlus size={16} />}
@@ -413,13 +418,41 @@ const TeamManagerContent = ({ onLogin }) => {
                 <label className={`block ${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1`}>
                   Local de trabalho
                 </label>
-                <input
-                  className="w-full bg-white border border-[var(--border)] rounded-lg py-2 px-3 text-sm font-semibold text-[var(--ink)] outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 transition-all placeholder:font-normal placeholder:text-[var(--slate-dim)]"
-                  type="text"
-                  placeholder="Ex: instalações do cliente Acme Lda, Porto"
-                  value={inviteLocalTrabalho}
-                  onChange={e => setInviteLocalTrabalho(e.target.value)}
-                />
+                {inviteLocalCustom ? (
+                  <div className="flex items-center gap-2">
+                    <input
+                      className="flex-1 bg-white border border-[var(--border)] rounded-lg py-2 px-3 text-sm font-semibold text-[var(--ink)] outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 transition-all placeholder:font-normal placeholder:text-[var(--slate-dim)]"
+                      type="text"
+                      placeholder="Ex: instalações do cliente Acme Lda, Porto"
+                      value={inviteLocalTrabalho}
+                      onChange={e => setInviteLocalTrabalho(e.target.value)}
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      onClick={() => { setInviteLocalCustom(false); setInviteLocalTrabalho(''); }}
+                      className="shrink-0 text-xs font-bold text-[var(--slate-dim)] hover:text-[var(--ink-soft)] transition-colors"
+                    >
+                      Voltar à lista
+                    </button>
+                  </div>
+                ) : (
+                  <select
+                    className="w-full bg-white border border-[var(--border)] rounded-lg py-2 px-3 text-sm font-semibold text-[var(--ink)] outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 transition-all"
+                    value={clients.find(c => inviteLocalTrabalho === `instalações do cliente ${c.name}${c.morada ? ', ' + c.morada : ''}`)?.id || ''}
+                    onChange={e => {
+                      if (e.target.value === '__custom__') { setInviteLocalCustom(true); setInviteLocalTrabalho(''); return; }
+                      const client = clients.find(c => c.id === e.target.value);
+                      setInviteLocalTrabalho(client ? `instalações do cliente ${client.name}${client.morada ? ', ' + client.morada : ''}` : '');
+                    }}
+                  >
+                    <option value="">— Selecionar cliente (opcional) —</option>
+                    {[...clients].sort((a, b) => a.name.localeCompare(b.name)).map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                    <option value="__custom__">Outro (escrever manualmente)</option>
+                  </select>
+                )}
               </div>
               <p className={`text-[var(--slate-dim)] ${SCALE.text.body}`}>
                 Opcional — se deixares em branco, o compromisso mostra "[a definir]" nesses pontos.
@@ -505,7 +538,7 @@ const TeamManagerContent = ({ onLogin }) => {
               </div>
             )}
             <button
-              onClick={() => { setGeneratedLink(''); setGeneratedWaLink(''); setGeneratedToken(''); setInviteEmail(''); setInviteNome(''); setInviteTel(''); setInviteError(''); setInviteVencimentoBase(''); setInviteDataInicio(''); setInviteLocalTrabalho(''); setConviteWaEnviado(false); setConviteWaErro(''); }}
+              onClick={() => { setGeneratedLink(''); setGeneratedWaLink(''); setGeneratedToken(''); setInviteEmail(''); setInviteNome(''); setInviteTel(''); setInviteError(''); setInviteVencimentoBase(''); setInviteDataInicio(''); setInviteLocalTrabalho(''); setInviteLocalCustom(false); setConviteWaEnviado(false); setConviteWaErro(''); }}
               className="w-full text-xs text-[var(--slate-dim)] hover:text-[var(--ink-soft)] font-bold py-1 transition-colors"
             >
               Gerar novo link
