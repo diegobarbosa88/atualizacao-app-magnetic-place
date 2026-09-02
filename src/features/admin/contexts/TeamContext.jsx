@@ -2,44 +2,9 @@ import React, { createContext, useContext, useState, useCallback } from 'react';
 import { useApp } from '../../../context/AppContext';
 import { formatPersonName } from '../../../utils/textUtils';
 import { autoAtribuirPorProfissao } from '../formacao-interna/formacaoApi';
-import { inferirCategoria } from '../../../constants/rhCategories';
+import { autoGerarDocumentosGate } from '../team/autoGerarDocumentosGate';
 
 const TeamContext = createContext();
-
-// Documentos obrigatórios do Gate de Onboarding (onboarding_gate_itens,
-// tipo='documento') — mesmo insert que handleGenerateDocuments faz quando o
-// admin clica "Gerar" manualmente (src/hooks/useDocumentTemplates.js), só
-// que disparado automaticamente na criação do trabalhador. Gerar aqui é só
-// criar o registo 'pending' — o preenchimento do .docx acontece depois, ao
-// assinar/descarregar, não há nada pesado a replicar.
-const autoGerarDocumentosGate = async (workerId) => {
-  const supabase = window.supabaseInstance;
-  if (!supabase) return;
-
-  const { data: itens } = await supabase
-    .from('onboarding_gate_itens')
-    .select('slug')
-    .eq('tipo', 'documento')
-    .eq('ativo', true);
-  if (!itens?.length) return;
-
-  const { data: templates } = await supabase
-    .from('document_templates')
-    .select('id, name, slug')
-    .in('slug', itens.map(i => i.slug));
-  if (!templates?.length) return;
-
-  await supabase.from('worker_documents').insert(
-    templates.map(t => ({
-      template_id: t.id,
-      worker_id: workerId,
-      title: t.name,
-      status: 'pending',
-      created_at: new Date().toISOString(),
-      categoria: inferirCategoria(t.name) || null,
-    }))
-  );
-};
 
 // D-05/11-05: Salvar histórico de emprego (períodos entrada/saída)
 const saveEmploymentHistory = async (saveToDb, workerId, dataInicio, dataFim) => {

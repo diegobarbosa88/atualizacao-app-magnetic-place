@@ -4,6 +4,8 @@ import { FT, SCALE, FONT_TITLE } from '../../../styles/designTokens';
 import { Users, Eye, CheckCircle, XCircle, Loader2, RefreshCw, Clock, AlertCircle, ShieldCheck } from 'lucide-react';
 import ModalShell from '../../../components/common/ModalShell';
 import SelectProfissaoEmpresa from '../../../components/SelectProfissaoEmpresa';
+import { autoAtribuirPorProfissao } from '../formacao-interna/formacaoApi';
+import { autoGerarDocumentosGate } from './autoGerarDocumentosGate';
 
 const TABELA_IRS_LABELS = {
   tabelaI:   'Tabela I',
@@ -131,6 +133,24 @@ export default function OnboardingPendentes() {
         },
       });
       if (error) throw error;
+
+      // Atribuição de formação e geração de documentos são efeitos
+      // secundários — nunca devem bloquear nem falhar visivelmente a
+      // aprovação, que já foi gravada. Mesmo par de chamadas que
+      // TeamContext.jsx faz ao criar um trabalhador pelo formulário normal
+      // ("Novo Colaborador") — sem isto, um trabalhador aprovado por
+      // onboarding nunca teria os itens do Gate gerados, e ficava preso
+      // (worker_document_id/participante_id sempre null).
+      try {
+        await autoAtribuirPorProfissao(newWorkerId, selected.profissao_cnp || null);
+      } catch (e) {
+        console.warn('Falha ao atribuir formações automáticas:', e.message);
+      }
+      try {
+        await autoGerarDocumentosGate(newWorkerId);
+      } catch (e) {
+        console.warn('Falha ao gerar documentos automáticos do gate de onboarding:', e.message);
+      }
 
       // Se pediram para comunicar SS e/ou solicitar seguro, agenda para o
       // dia anterior à data de início — o Trabalhador Virtual pede
