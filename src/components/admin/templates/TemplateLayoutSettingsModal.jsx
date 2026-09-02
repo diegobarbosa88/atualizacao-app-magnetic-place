@@ -2,9 +2,17 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Sliders, Save, Loader2, RotateCcw, RefreshCw, AlertCircle, FileText } from 'lucide-react';
 import ModalShell from '../../common/ModalShell';
 import FitToWidthHtmlFrame from '../../common/FitToWidthHtmlFrame';
+import { useApp } from '../../../context/AppContext';
 import { FT } from '../../../styles/designTokens';
+import { TEMPLATES_BUCKET } from '../../../utils/docxTemplateService';
 import { replaceTemplateFields } from '../../../utils/templateFields';
-import { generateHtmlDocumentPdf } from '../../../utils/htmlDocumentPdf';
+import {
+  generateHtmlDocumentPdf,
+  buildPdfHeaderFooter,
+  fetchLogoDataUrl,
+  measurePageHeightPx,
+  A4_HEIGHT_PX,
+} from '../../../utils/htmlDocumentPdf';
 import {
   DEFAULT_LAYOUT_SETTINGS,
   LAYOUT_SETTING_FIELDS,
@@ -107,6 +115,107 @@ function PdfCanvasPreview({ pdfUrl }) {
   return <div ref={containerRef} className="w-full h-full overflow-auto p-4" />;
 }
 
+// Pedido do Diego: "quero quebra de página no simulado... ajuste o simulado
+// para o real" — a Simulação mostrava o documento como um scroll contínuo,
+// sem indicar onde o PDF real vai cortar a página. Reaproveita a MESMA
+// extração de timbre/rodapé (`buildPdfHeaderFooter`) usada no PDF real, para
+// desenhar N "folhas" A4 empilhadas — cada uma com o timbre/rodapé no
+// sítio certo e uma janela do conteúdo total, deslocada para mostrar só o
+// troço dessa página (técnica de "iframe deslocado + recortado", a única
+// forma de mostrar a mesma árvore de HTML em duas posições de scroll
+// diferentes ao mesmo tempo). É uma APROXIMAÇÃO por altura (não sabe evitar
+// cortar um item de lista a meio, ao contrário do motor real da PDF.co) —
+// por isso mantém-se o aviso e o separador "PDF Oficial" como fonte da
+// verdade, esta vista é só para ganhar intuição rápida e grátis.
+function PaginatedSimulation({ finalHtml, values }) {
+  const outerRef = useRef(null);
+  const [scale, setScale] = useState(1);
+  const [pages, setPages] = useState(null);
+
+  useEffect(() => {
+    const el = outerRef.current;
+    if (!el) return undefined;
+    const applyScale = () => {
+      const available = Math.max(200, el.clientWidth - 32);
+      setScale(Math.min(1, available / 794));
+    };
+    applyScale();
+    const ro = new ResizeObserver(applyScale);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!finalHtml) { setPages(null); return undefined; }
+    let cancelled = false;
+    // Pequeno debounce — evita recalcular (mede num iframe escondido) a
+    // cada tecla enquanto se digita um valor.
+    const t = setTimeout(async () => {
+      try {
+        const logoDataUrl = await fetchLogoDataUrl();
+        if (cancelled) return;
+        const { html: contentHtml, header, footer } = buildPdfHeaderFooter(finalHtml, logoDataUrl);
+        if (!header) {
+          if (!cancelled) setPages({ header: null, contentHtml: finalHtml });
+          return;
+        }
+        const usableHeightPerPage = A4_HEIGHT_PX - values.headerMarginPx - values.footerMarginPx;
+        const measured = await measurePageHeightPx(contentHtml);
+        if (cancelled) return;
+        const numPages = Math.max(1, Math.ceil((measured || 0) / usableHeightPerPage));
+        setPages({ header, footer, contentHtml, numPages, usableHeightPerPage, contentHeight: measured || usableHeightPerPage });
+      } catch (err) {
+        console.error('Erro a paginar a simulação:', err);
+      }
+    }, 250);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [finalHtml, values.headerMarginPx, values.footerMarginPx]);
+
+  return (
+    <div ref={outerRef} className="absolute inset-0 overflow-auto p-4">
+      {!pages ? (
+        <div className="w-full h-full flex items-center justify-center">
+          <Loader2 className="w-6 h-6 animate-spin text-[var(--slate-dim)]" />
+        </div>
+      ) : !pages.header ? (
+        <FitToWidthHtmlFrame html={pages.contentHtml} title="Simulação" containerClassName="w-full h-full" />
+      ) : (
+        <div className="flex flex-col items-center">
+          {Array.from({ length: pages.numPages }).map((_, i) => (
+            <div key={i} style={{ marginBottom: i < pages.numPages - 1 ? Math.round(40 * scale) : 0 }}>
+              {i > 0 && (
+                <p
+                  className="text-center font-black uppercase tracking-widest"
+                  style={{ fontSize: Math.max(9, Math.round(10 * scale)), color: 'var(--slate-dim)', marginBottom: Math.round(8 * scale) }}
+                >
+                  — Quebra de página — Página {i + 1} —
+                </p>
+              )}
+              <div
+                className="relative bg-white shadow-lg flex-shrink-0"
+                style={{ width: 794, height: A4_HEIGHT_PX, overflow: 'hidden', zoom: scale, outline: '1px solid var(--border)' }}
+              >
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: values.headerMarginPx }} dangerouslySetInnerHTML={{ __html: pages.header }} />
+                <div style={{ position: 'absolute', top: values.headerMarginPx, left: 0, right: 0, height: pages.usableHeightPerPage, overflow: 'hidden' }}>
+                  <iframe
+                    title={`Página ${i + 1}`}
+                    srcDoc={pages.contentHtml}
+                    style={{ width: 794, height: pages.contentHeight, border: 0, marginTop: -i * pages.usableHeightPerPage, display: 'block' }}
+                  />
+                </div>
+                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: values.footerMarginPx }} dangerouslySetInnerHTML={{ __html: pages.footer }} />
+              </div>
+            </div>
+          ))}
+          <p className="text-[10px] text-[var(--slate-dim)] text-center px-4 pb-2">
+            Simulação aproximada ({pages.numPages} página{pages.numPages === 1 ? '' : 's'}) — confirma sempre em "PDF Oficial" antes de gravar.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function TemplateLayoutSettingsModal({ template, systemSettings, onClose, onSave, saving }) {
   const [values, setValues] = useState(() => resolveLayoutSettings(template.layout_settings));
   // Duas vistas, pedido do Diego: "Simulação" (HTML normal, grátis, atualiza-
@@ -114,9 +223,16 @@ export default function TemplateLayoutSettingsModal({ template, systemSettings, 
   // real à PDF.co, só quando pedido) para confirmar o resultado que vai
   // mesmo para o documento assinado. A margem do cabeçalho/rodapé só existe
   // no PDF real (não tem equivalente em CSS de ecrã), por isso a Simulação
-  // não a reflecte — aviso já dado nesses dois campos.
+  // não a reflecte diretamente no espaçamento — mas já entra no cálculo de
+  // quantas páginas a Simulação mostra (ver PaginatedSimulation).
+  const { supabase } = useApp();
   const [tab, setTab] = useState('sim');
-  const [pdfUrl, setPdfUrl] = useState(null);
+  // Pedido do Diego: "quero que o real fique salvo sempre a última
+  // importação" — inicializa já com o último PDF Oficial gravado (se
+  // existir), para não ter de gerar de novo (e gastar créditos da PDF.co)
+  // só para ver o que já tinha sido confirmado da última vez.
+  const [pdfUrl, setPdfUrl] = useState(template.layout_preview_pdf_url || null);
+  const [pdfIsStale, setPdfIsStale] = useState(!!template.layout_preview_pdf_url);
   const [generating, setGenerating] = useState(false);
   const [genError, setGenError] = useState('');
   const pdfUrlRef = useRef(null);
@@ -130,12 +246,45 @@ export default function TemplateLayoutSettingsModal({ template, systemSettings, 
     if (pdfUrlRef.current) URL.revokeObjectURL(pdfUrlRef.current);
   }, []);
 
+  // Um valor mudado depois de gerar (ou depois de carregar a última versão
+  // gravada) torna o PDF Oficial visível desatualizado — volta a marcar
+  // como "por confirmar" em vez de deixar a mensagem antiga a parecer válida.
+  const firstRun = useRef(true);
+  useEffect(() => {
+    if (firstRun.current) { firstRun.current = false; return; }
+    if (pdfUrl) setPdfIsStale(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [values]);
+
   const setField = (key, raw) => {
     const n = Number(raw);
     setValues(prev => ({ ...prev, [key]: Number.isFinite(n) ? n : prev[key] }));
   };
 
   const resetDefaults = () => setValues({ ...DEFAULT_LAYOUT_SETTINGS });
+
+  // Grava o PDF Oficial mais recente no Storage (mesmo bucket dos templates,
+  // caminho fixo por template — cada geração substitui a anterior, é sempre
+  // "a última") e aponta `document_templates.layout_preview_pdf_url` para
+  // lá, para a próxima vez que o painel abrir já ter algo para mostrar sem
+  // gastar outro pedido à PDF.co. Corre em segundo plano — se falhar, o
+  // preview local (já visível via blob) não é afetado, só fica por gravar.
+  const persistLastPreview = async (pdfBlob) => {
+    const path = `layout-preview/${template.id}.pdf`;
+    const { error: upErr } = await supabase.storage
+      .from(TEMPLATES_BUCKET)
+      .upload(path, pdfBlob, { contentType: 'application/pdf', upsert: true });
+    if (upErr) throw upErr;
+    const { data: pub } = supabase.storage.from(TEMPLATES_BUCKET).getPublicUrl(path);
+    if (!pub?.publicUrl) return;
+    // `?t=` evita que o browser/CDN sirva a versão em cache da geração
+    // anterior, gravada no mesmo caminho.
+    const { error: dbErr } = await supabase
+      .from('document_templates')
+      .update({ layout_preview_pdf_url: `${pub.publicUrl}?t=${Date.now()}` })
+      .eq('id', template.id);
+    if (dbErr) throw dbErr;
+  };
 
   const gerarPreviewReal = async () => {
     if (!template.template_html) return;
@@ -148,6 +297,8 @@ export default function TemplateLayoutSettingsModal({ template, systemSettings, 
       if (pdfUrlRef.current) URL.revokeObjectURL(pdfUrlRef.current);
       pdfUrlRef.current = url;
       setPdfUrl(url);
+      setPdfIsStale(false);
+      persistLastPreview(pdfBlob).catch((err) => console.error('Falha a gravar o último PDF Oficial:', err));
     } catch (err) {
       console.error('Erro a gerar preview real do PDF:', err);
       setGenError(err.message || 'Erro a gerar o PDF.');
@@ -259,14 +410,22 @@ export default function TemplateLayoutSettingsModal({ template, systemSettings, 
           <div className="flex-1 relative bg-[var(--surface-dim)]">
             {tab === 'sim' ? (
               simulationHtml ? (
-                <FitToWidthHtmlFrame html={simulationHtml} title="Simulação" />
+                <PaginatedSimulation finalHtml={simulationHtml} values={values} />
               ) : (
                 <div className="h-full flex items-center justify-center text-sm text-[var(--slate-dim)]">
                   Este template não tem conteúdo HTML.
                 </div>
               )
             ) : pdfUrl ? (
-              <PdfCanvasPreview pdfUrl={pdfUrl} />
+              <>
+                {pdfIsStale && (
+                  <div className="absolute top-2 left-2 right-2 z-10 flex items-start gap-2 p-2 bg-[var(--tone-amber-bg)] border border-[var(--tone-amber-border)] rounded-lg text-[11px] text-[var(--tone-amber)]">
+                    <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                    <span>Última versão gravada — pode não refletir ajustes ainda por confirmar. Clica em "Gerar PDF Oficial" para atualizar.</span>
+                  </div>
+                )}
+                <PdfCanvasPreview pdfUrl={pdfUrl} />
+              </>
             ) : (
               <div className="h-full flex flex-col items-center justify-center gap-2 text-sm text-[var(--slate-dim)] text-center px-6">
                 {generating ? (

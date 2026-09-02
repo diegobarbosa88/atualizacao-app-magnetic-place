@@ -3543,6 +3543,60 @@ sugestão de mm/pt em vez de px fica registada como preferência de unidade sem 
 **Ficheiros de teste todos apagados no fim** (`_scratch_posfixed.mjs`, `test_position_fixed.*`,
 `public/_scratch_*`) — nada deste teste ficou no repositório além desta nota.
 
+## Quebra de página na Simulação + persistência do último PDF Oficial (2026-09-02)
+
+**Dois pedidos do Diego sobre o painel "Ajustar Layout", depois de o testar no telemóvel com
+sucesso:** (1) "quero quebra de página no simulado e veja a diferença e ajuste o simulado para o
+real" — a Simulação mostrava o documento como um scroll contínuo, sem indicar onde o PDF real corta
+a página; (2) "quero que o real fique salvo sempre a última importação" — o PDF Oficial gerado
+perdia-se ao fechar o modal, obrigando a gastar outro pedido à PDF.co só para voltar a ver o que já
+tinha sido confirmado.
+
+**Parte 1 — `PaginatedSimulation`, nova, substitui o `FitToWidthHtmlFrame` simples na aba
+"Simulação".** Reaproveita a MESMA extração de timbre/rodapé (`buildPdfHeaderFooter`, agora
+exportada de `htmlDocumentPdf.js` junto com `fetchLogoDataUrl`/`measurePageHeightPx`/
+`A4_HEIGHT_PX`) já usada para o PDF real — desenha N "folhas" A4 empilhadas, cada uma com o
+timbre/rodapé no sítio certo e uma janela do conteúdo total deslocada para mostrar só o troço dessa
+página (técnica de "iframe deslocado + recortado": N iframes com o MESMO `srcDoc` completo, cada um
+com `margin-top: -i×alturaÚtil` dentro de um contentor `overflow:hidden` — a única forma de mostrar
+a mesma árvore de HTML em duas posições de scroll diferentes ao mesmo tempo, já que um iframe só
+tem um estado de scroll próprio). `numPages` calculado com a MESMA fórmula usada no PDF real
+(`Math.ceil(alturaMedida / (1123 - headerMarginPx - footerMarginPx))`), com debounce de 250ms para
+não recalcular a cada tecla. Escala à largura do contentor via `zoom` (CSS, não `transform`, para a
+altura do layout acompanhar sem precisar de wrapper adicional) + `ResizeObserver`.
+**Achado ao verificar — o espaço entre folhas era pequeno demais para se notar** (só o `gap-3` do
+flex, ~12px, sem contraste): acrescentado um separador visível "— QUEBRA DE PÁGINA — PÁGINA N —"
+entre folhas (escalado com o `zoom` para não desaparecer em documentos pequenos) e mais espaço
+(40px × escala). **É uma aproximação por altura, avisada explicitamente na própria vista** ("...
+pode diferir ligeiramente. Confirma sempre em 'PDF Oficial'") — não sabe evitar cortar um item de
+lista a meio como o motor real da PDF.co (`page-break-inside:avoid`); serve para ganhar intuição
+rápida e grátis sobre quantas páginas o documento vai ocupar, não para confirmar o corte exacto.
+Verificado ao vivo no Contrato (2 páginas): timbre repetido corretamente na página 2, quebra a meio
+da Cláusula 4.ª (mesma zona da quebra real, dado que a Simulação não evita cortes a meio de item —
+diferença já esperada e avisada), confirmado por medição real (`getBoundingClientRect` dos 2 nós
+`.height:1123px`, offsets `marginTop: 0px`/`-1013px` corretos).
+
+**Parte 2 — `document_templates.layout_preview_pdf_url` novo (coluna TEXT), gravado
+automaticamente a cada "Gerar PDF Oficial" bem sucedido.** Upload do PDF para o mesmo bucket dos
+templates (`document_templates` storage, caminho fixo `layout-preview/{template.id}.pdf`,
+`upsert:true` — cada geração substitui a anterior, é sempre "a última", como pedido) + URL pública
+gravada com um `?t={timestamp}` para nunca servir a versão em cache de uma geração anterior no
+mesmo caminho. Corre em segundo plano, sem bloquear a UI (o preview local via blob já está visível
+de imediato) — se falhar, só fica por gravar, não quebra o preview da sessão actual. O painel
+inicializa `pdfUrl` já a partir de `template.layout_preview_pdf_url` se existir — não é preciso
+gerar de novo só para ver o que já lá estava. **Aviso de "pode estar desatualizado"** (`pdfIsStale`)
+sempre que o PDF visível não é uma geração fresca desta sessão — verdadeiro por omissão quando vem
+da BD (não há como saber se os `values` actuais do painel batem com os que geraram esse PDF), e
+volta a `true` sempre que um campo é editado depois de gerar/carregar, para nunca mostrar "resultado
+actual" quando não é.
+
+**Verificado ao vivo, ponta a ponta, com a API real:** gerado o PDF Oficial do Contrato → confirmado
+por SQL que `layout_preview_pdf_url` gravou (`layout_settings` continua `null`, intocado — a
+persistência do preview é independente de "Guardar") → modal fechado e reaberto → PDF anterior
+apareceu de imediato, sem nova chamada à PDF.co, com o aviso âmbar "Última versão gravada..." visível.
+
+`npx eslint`/`npx vite build` limpos.
+
 ## Padronização do canvas de assinatura da empresa — `AdminSignDrawModal.jsx` (2026-09-02)
 
 Pedido do Diego: "coloque o campo da assinatura igual o que tem no DB do worker para padronizar o

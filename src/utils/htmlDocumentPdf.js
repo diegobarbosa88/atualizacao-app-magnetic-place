@@ -2,8 +2,10 @@ import { convertHtmlToPdf } from './pdfCoService';
 import { resolveLayoutSettings } from './templateLayoutSettings';
 
 // Altura real de uma página A4 a 96dpi (mesmo valor já usado em
-// FitToWidthHtmlFrame.jsx) — orçamento de 1 página física.
-const A4_HEIGHT_PX = 1123;
+// FitToWidthHtmlFrame.jsx) — orçamento de 1 página física. Exportado — a
+// simulação paginada do painel "Ajustar Layout" precisa do mesmo valor para
+// calcular quantas páginas o conteúdo vai ocupar.
+export const A4_HEIGHT_PX = 1123;
 
 // Mede a altura real do `.page` renderizado, num iframe escondido, para
 // documentos de 1 página só (EPI/RGPD): sem isto, a página física força
@@ -12,7 +14,7 @@ const A4_HEIGHT_PX = 1123;
 // 2026-09-02). Não mexe em documentos de várias páginas (Contrato): aí a
 // paginação normal (repetindo timbre/rodapé por página) é o que já dá o
 // resultado correto, testado nesta sessão.
-function measurePageHeightPx(html) {
+export function measurePageHeightPx(html) {
   return new Promise((resolve) => {
     const iframe = document.createElement('iframe');
     iframe.style.position = 'fixed';
@@ -47,19 +49,27 @@ const TRANSPARENT_PIXEL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAA
 // template, mas esse vem a 138KB (pensado para o corpo do documento, nunca
 // para ir 1x por cada geração a um endpoint separado). Buscado fresco em
 // vez de extraído do template para não repetir o custo do original.
-async function fetchLogoDataUrl() {
-  try {
-    const res = await fetch('/logo-header-small.png');
-    const blob = await res.blob();
-    return await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
-  } catch {
-    return TRANSPARENT_PIXEL;
+// Cache em memória — a simulação paginada chama isto a cada mudança de
+// valor no painel, não faz sentido voltar a pedir o mesmo ficheiro estático.
+let logoDataUrlPromise = null;
+export function fetchLogoDataUrl() {
+  if (!logoDataUrlPromise) {
+    logoDataUrlPromise = (async () => {
+      try {
+        const res = await fetch('/logo-header-small.png');
+        const blob = await res.blob();
+        return await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      } catch {
+        return TRANSPARENT_PIXEL;
+      }
+    })();
   }
+  return logoDataUrlPromise;
 }
 
 // Separa o timbre (`.letterhead`+`.rule`) e o rodapé (`.footer`) do fluxo do
@@ -81,7 +91,7 @@ async function fetchLogoDataUrl() {
 // via). Corrigido: só os campos de texto reais (referência do documento,
 // as duas linhas do rodapé) saem do template via regex; o resto — logo,
 // tipografia, cores — é markup fixo e pequeno, igual nos 3 templates.
-function buildPdfHeaderFooter(finalHtml, logoDataUrl) {
+export function buildPdfHeaderFooter(finalHtml, logoDataUrl) {
   const letterheadMatch = finalHtml.match(/<div class="letterhead">[\s\S]*?<\/div>\s*<div class="rule"><\/div>/);
   const footerMatch = finalHtml.match(/<div class="footer">[\s\S]*?<\/div>/);
   const docRefMatch = finalHtml.match(/<div class="doc-ref">([\s\S]*?)<\/div>/);
