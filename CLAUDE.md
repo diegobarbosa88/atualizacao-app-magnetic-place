@@ -3597,6 +3597,95 @@ apareceu de imediato, sem nova chamada à PDF.co, com o aviso âmbar "Última ve
 
 `npx eslint`/`npx vite build` limpos.
 
+## Migração para Handlebars (`{{tag}}`) nos 3 templates reais (2026-09-02)
+
+**Diego mostrou um template de exemplo da própria PDF.co** (editor `app.pdf.co/html-templates-
+tool`) com sintaxe Handlebars (`{{tag}}`, `{{#if}}`, `{{#each}}`, funções JS customizadas via
+`Handlebars.registerHelper`) e uma macro `[[barcode: QRCode ...]]` que gera código de barras/QR
+directamente no HTML, sem precisar de o gerar à parte (como fazemos hoje com o pacote `qrcode`).
+Testei o `.pdf` gerado por ele no editor deles — funciona bem, incluindo o QR real e um total
+calculado correctamente por uma função JS custom (`$1.254,83`, confirmado a bater com o cálculo
+manual: `(1300×0,9)×1,0725`).
+
+**Achado adicional, confirmado com um teste directo à API (não só o editor da PDF.co):** o
+parâmetro `templateData` (uma string JSON) funciona no MESMO endpoint que já usamos,
+`/pdf/convert/from/html` — não é preciso guardar o template na conta da PDF.co. Testado com um
+HTML mínimo enviado com `templateData` — texto interpolado correctamente e QR real gerado via
+`[[barcode: ...]]`. Confirmado também que `[[barcode: ...]]` **não** funciona sem `templateData`
+(motor de template da PDF.co só activa com esse parâmetro presente).
+
+Diego confirmou que vai mesmo precisar de condicionais/loops reais (lista de EPI dinâmica por
+posto de trabalho, cláusula condicional do Contrato para trabalhador destacado no estrangeiro) e
+escolheu migrar já os 3 templates existentes (EPI, RGPD, Contrato) para `{{tag}}`, em vez de
+esperar pela primeira feature que precise disso.
+
+**Decisão de arquitectura, exposta e confirmada com o Diego antes de implementar — diverge da
+opção `templateData`+`[[barcode:]]` originalmente cogitada:** usar Handlebars.js **só no
+browser**, sempre — tanto no preview (worker/admin, "Ajustar Layout") como no HTML final enviado
+à PDF.co (que sai já 100% resolvido, sem `{{tag}}` nenhum). Nunca se usa `templateData`/`[[barcode:
+]]` do lado da PDF.co. Razão: `[[barcode:]]` só é interpretado pelo motor server-side da PDF.co
+quando `templateData` está presente — usá-lo obrigaria a ter DOIS motores Handlebars distintos
+(Handlebars.js no browser para o preview, motor da PDF.co no servidor para o PDF final) a
+processar o mesmo template e a terem de ficar sincronizados — exactamente a categoria de risco
+("dois mecanismos têm de bater um com o outro") já corrigida esta sessão para timbre/rodapé e
+já rejeitada para `position:fixed`. Com um único motor (Handlebars.js, sempre client-side), o
+preview e o PDF final usam literalmente a mesma chamada — zero risco de divergência, ao custo de
+abrir mão do `[[barcode:]]` nativo. Sem perda real: o QR actual (pacote `qrcode`, `useSignatureStamp.jsx`
+padrão, já testado e em produção) continua a funcionar exactamente como está — não foi tocado.
+
+**Implementação:**
+- `handlebars` (pacote npm real, bundlado normalmente — não CDN, ao contrário do `pdf.js`; é
+  usado em TODO documento renderizado, não é uma ferramenta pesada de uso raro como o `pdf.js` no
+  painel "Ajustar Layout") adicionado a `package.json`.
+- `src/utils/templateFields.js`'s `replaceTemplateFields` reescrita: em vez de
+  `.split(tag).join(value)` por campo, monta um objecto `data` a partir de `TEMPLATE_FIELDS`
+  (chave = tag sem chavetas, ex. `worker_name`) e faz `Handlebars.compile(html, { noEscape: true
+  })(data)`. `noEscape: true` preserva o comportamento exacto de antes (sem HTML-escaping) — mudar
+  isso seria alteração de comportamento não pedida (um nome com "&" passaria a `&amp;`), fora do
+  âmbito desta migração. Mesma assinatura de função, todos os call sites (`HtmlDocumentViewer.jsx`,
+  `useDocumentsAdmin.js`, `useDocumentTemplates.js`, `fillSample` do
+  `TemplateLayoutSettingsModal.jsx`) inalterados.
+- **Separação decisiva, confirmada por grep contra os 3 templates reais antes de mexer:** só as
+  12 tags de `TEMPLATE_FIELDS` realmente usadas (`worker_name`, `worker_nif`, `client_name`,
+  `current_date`, etc. — "conhecidas no preenchimento") passaram a `{{tag}}`. As **6 tags de
+  assinatura/aprovação** (`worker_signature`, `admin_stamp`, `verification_code`,
+  `verification_qr`, `signed_datetime`, `admin_signed_datetime` — "conhecidas só depois", resolvidas
+  à parte em `handleApproveDocument`/`HtmlDocumentViewer.jsx` via `.replace()` simples, já existente,
+  não tocado) **ficaram propositadamente em `{tag}` single-brace** — Handlebars só reconhece `{{`
+  dupla como delimitador, por isso essas tags passam intactas através do `Handlebars.compile`, tal
+  como antes passavam intactas através do `.split().join()` (nenhuma das duas fazia parte de
+  `TEMPLATE_FIELDS`). Confirmado programaticamente (não assumido): compilei os 3 `template_html`
+  reais com dados de teste e verifiquei que as 6 tags single-brace sobrevivem literalmente no
+  output.
+- Templates actualizados via `UPDATE ... SET template_html = replace(replace(...))` directo em SQL
+  (Supabase MCP `execute_sql`), um `replace()` por tag, aplicado aos 3 templates
+  (`0d31f4e0-...` EPI, `6d74447e-...` RGPD, `0ddaca40-...` Contrato) — mais simples que um script
+  Node aqui, por ser substituição de string literal, sem precisar de buscar/tratar os ~245KB de
+  HTML na conversa. Confirmado por SQL antes/depois: as tags certas (12 por template, variando
+  conforme o que cada um usa) passaram a `{{tag}}`, as 6 sign-time continuam `{tag}`.
+
+**Risco real verificado antes de confiar — CSS embutido no `<style>` do documento tem muitas
+chaves simples (`.page { width: 794px; }` etc.), que poderiam em teoria confundir um parser de
+template.** Não confundem: o delimitador do Handlebars é sempre `{{`, nunca `{` sozinho — chave
+simples de CSS é texto literal inofensivo para ele. Confirmado empiricamente, não só por
+raciocínio: compilei os 3 `template_html` reais (245-249KB cada, com todo o CSS/media
+queries/etc.) com `Handlebars.compile` — sem erro de parse nos 3, interpolação correcta.
+
+**Verificado:** `npx eslint`/`npx vite build` limpos. Ao vivo em `/admin/documentos` → Templates →
+"Ajustar Layout" do EPI → aba Simulação: renderiza correctamente com os dados de exemplo
+("Diego Rocha Barbosa", NIF, NISS, função, data), confirmando o pipeline completo (fetch do
+template já migrado → `applyLayoutOverride` → `replaceTemplateFields`/Handlebars →
+`PaginatedSimulation`) a funcionar sem regressão. Não repetido individualmente para RGPD/Contrato
+no browser — o teste directo com `Handlebars.compile` contra os 3 `template_html` reais já
+confirmou os 3 sem erro, e os 3 partilham a mesma função de resolução.
+
+**Pendência, mesma já registada noutras mudanças desta sessão que tocam o Fluxo 3:** teste real
+ponta-a-ponta (trabalhador assina → admin aprova → PDF real da PDF.co) ainda não repetido depois
+desta migração especificamente — o mecanismo de geração de PDF em si (`generateHtmlDocumentPdf`,
+`buildPdfHeaderFooter`) não foi tocado (continua a receber HTML já 100% resolvido, sem `{{tag}}`
+nenhum, exactamente como recebia HTML já 100% resolvido antes), por isso o risco de regressão aí é
+baixo — mas o próximo documento real assinado é que fecha a verificação de facto.
+
 ## Padronização do canvas de assinatura da empresa — `AdminSignDrawModal.jsx` (2026-09-02)
 
 Pedido do Diego: "coloque o campo da assinatura igual o que tem no DB do worker para padronizar o

@@ -1,3 +1,5 @@
+import Handlebars from 'handlebars';
+
 export const TEMPLATE_FIELDS = [
   { tag: '{worker_name}', label: 'Nome do Trabalhador', source: 'workers.name' },
   { tag: '{worker_email}', label: 'Email do Trabalhador', source: 'workers.email' },
@@ -49,14 +51,14 @@ function formatDateShortPT(value) {
 }
 
 export function replaceTemplateFields(html, workerData, systemData = {}, clientData = null) {
-  let result = html;
-
+  const data = {};
   TEMPLATE_FIELDS.forEach(field => {
-    const value = getFieldValue(field.tag, workerData, systemData, clientData);
-    result = result.split(field.tag).join(value || '');
+    const key = field.tag.slice(1, -1); // '{worker_name}' -> 'worker_name'
+    data[key] = getFieldValue(field.tag, workerData, systemData, clientData);
   });
 
-  return result;
+  const template = Handlebars.compile(html, { noEscape: true });
+  return template(data);
 }
 
 function getFieldValue(tag, workerData, systemData, clientData) {
