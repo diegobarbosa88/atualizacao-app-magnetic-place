@@ -261,6 +261,11 @@ export default function OnboardingForm({ token }) {
           setPageState('invalid');
         } else {
           setInvite(data);
+          // Nome já preenchido pelo admin ao gerar o convite — pré-preenche o
+          // passo 1, mas o trabalhador continua livre para corrigir.
+          if (data.nome) {
+            setForm(prev => ({ ...prev, nome: data.nome }));
+          }
           // Rascunho preenchido pelo trabalhador no WhatsApp (Flow): hidrata os
           // passos 1-3 e abre já na Revisão. Não saltamos direto ao Compromisso
           // de propósito — é na Revisão que se aceita o RGPD e que se corrige um
