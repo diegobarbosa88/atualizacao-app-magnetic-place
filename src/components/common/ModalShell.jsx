@@ -12,6 +12,11 @@ import { FT, SCALE } from '../../styles/designTokens';
  */
 export const Z = {
   dropdown: 40,   // menus de contexto ancorados a um botão
+  // Faixa de notificações persistentes (fixed top-4, app.jsx). Abaixo de
+  // QUALQUER modal — os feitos à mão em z-50 incluídos, não só os que usam
+  // este shell — para nunca tapar o cabeçalho/botão de fechar de um modal
+  // aberto por cima. Acima de barras fixas normais (sticky nav, z-40).
+  banner: 45,
   modal: 100,     // modal normal
   nested: 200,    // modal aberto a partir de outro modal
   viewer: 300,    // pré-visualização de documento em ecrã quase inteiro

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Megaphone, Bell, BellRing, BellOff, Loader2, Plus, Trash2 } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Megaphone, Bell, BellRing, BellOff, Loader2, Plus, Trash2, Inbox, Search, CheckCircle, AlertTriangle, XCircle, X } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { usePushSubscription } from '../../hooks/usePushSubscription';
 import Card from '../../components/common/Card';
@@ -17,8 +17,52 @@ const SYSTEM_PATTERNS = [
   'Reporte de Divergência',
 ];
 
+// Ícone + tom por tipo — mesmo mapeamento do banner in-app (app.jsx NOTIF_TONE).
+// Cores por `style` (var() resolve em runtime) em vez de className — uma
+// classe Tailwind construída com template literal (`bg-[var(--tone-${tone}-bg)]`)
+// nunca é gerada pelo JIT, que só vê classes literais no código-fonte.
+const TYPE_TONE = {
+  success: { icon: CheckCircle, accent: 'var(--tone-emerald)', bg: 'var(--tone-emerald-bg)' },
+  warning: { icon: AlertTriangle, accent: 'var(--tone-amber)', bg: 'var(--tone-amber-bg)' },
+  error:   { icon: XCircle, accent: 'var(--tone-rose)', bg: 'var(--tone-rose-bg)' },
+  info:    { icon: Megaphone, accent: 'var(--tone-indigo)', bg: 'var(--tone-indigo-bg)' },
+};
+
+const TARGET_LABEL = { admin: 'Admin', specific: 'Trabalhador', client: 'Cliente', all: 'Difusão' };
+
+function dayBucket(dateStr) {
+  const d = new Date(dateStr);
+  const startOfDay = (dt) => new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()).getTime();
+  const diffDays = Math.round((startOfDay(new Date()) - startOfDay(d)) / 86400000);
+  if (diffDays <= 0) return 'Hoje';
+  if (diffDays === 1) return 'Ontem';
+  if (diffDays <= 7) return 'Esta semana';
+  return 'Mais antigas';
+}
+
+function formatWhen(dateStr, bucket) {
+  const d = new Date(dateStr);
+  const time = d.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
+  if (bucket === 'Hoje' || bucket === 'Ontem') return time;
+  return d.toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' }) + ' · ' + time;
+}
+
+// Uma notificação conta como "por resolver" enquanto quem a devia tratar
+// ainda não a dispensou — o admin em si para target_type='admin', quem a
+// recebeu para 'specific'/'client'/'all'. Não tenta perceber se TODOS os
+// admins/trabalhadores já trataram — é uma vista de trabalho, não a mesma
+// lógica exacta do banner de cada utilizador.
+function isResolved(n, currentUserId) {
+  const dismissed = n.dismissed_by_ids || [];
+  if (n.target_type === 'admin') return dismissed.includes(currentUserId);
+  if (n.target_type === 'specific') return (n.target_worker_ids || []).some(id => dismissed.includes(String(id)));
+  if (n.target_type === 'client') return n.target_client_id && dismissed.includes(String(n.target_client_id));
+  return dismissed.length > 0;
+}
+
 const NotificationsAdmin = ({ workers, appNotifications, saveToDb, handleDelete, supabase }) => {
-  const { currentUser } = useApp();
+  const { currentUser, clients } = useApp();
+  const [screen, setScreen] = useState('inbox'); // 'inbox' | 'manage'
   const { permission, isSubscribed, subscribing, subscribe, supported } = usePushSubscription({ supabase, role: 'admin' });
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
@@ -53,10 +97,13 @@ const NotificationsAdmin = ({ workers, appNotifications, saveToDb, handleDelete,
     if (!supabase) return;
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - 30);
+    // Só apaga o que já foi dispensado por alguém — uma notificação nunca vista
+    // (dismissed_by_ids ainda vazio) fica, por mais antiga que seja, até ser tratada.
     supabase
       .from('app_notifications')
       .delete()
       .lt('created_at', cutoff.toISOString())
+      .neq('dismissed_by_ids', '[]')
       .then(({ error }) => { if (error) console.warn('Cleanup notifs:', error); });
   }, [supabase]);
 
@@ -99,13 +146,67 @@ const NotificationsAdmin = ({ workers, appNotifications, saveToDb, handleDelete,
     await saveToDb('app_notifications', notif.id, updated);
   };
 
+  // ---------- Caixa de Entrada ----------
+  const [inboxTab, setInboxTab] = useState('pending'); // 'pending' | 'resolved' | 'all'
+  const [inboxTarget, setInboxTarget] = useState('all'); // 'all' | 'admin' | 'specific' | 'client'
+  const [inboxSearch, setInboxSearch] = useState('');
+
+  const resolveName = (id) => {
+    if (id === 'admin_system') return 'Admin';
+    const w = workers?.find(w => String(w.id) === String(id));
+    if (w) return w.name;
+    const c = clients?.find(c => String(c.id) === String(id));
+    if (c) return c.name;
+    return id;
+  };
+
+  const inboxGroups = useMemo(() => {
+    const term = inboxSearch.trim().toLowerCase();
+    const filtered = (appNotifications || []).filter(n => {
+      if (!n.is_active) return false;
+      const resolved = isResolved(n, currentUser?.id);
+      if (inboxTab === 'pending' && resolved) return false;
+      if (inboxTab === 'resolved' && !resolved) return false;
+      if (inboxTarget !== 'all') {
+        if (inboxTarget === 'specific' && n.target_type !== 'specific' && n.target_type !== 'all') return false;
+        if (inboxTarget !== 'specific' && n.target_type !== inboxTarget) return false;
+      }
+      if (term) {
+        const haystack = `${n.title || ''} ${n.message || ''}`.toLowerCase();
+        if (!haystack.includes(term)) return false;
+      }
+      return true;
+    }).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+    const order = ['Hoje', 'Ontem', 'Esta semana', 'Mais antigas'];
+    const buckets = {};
+    filtered.forEach(n => {
+      const b = dayBucket(n.created_at);
+      (buckets[b] ||= []).push(n);
+    });
+    return order.filter(b => buckets[b]?.length).map(b => ({ label: b, items: buckets[b] }));
+  }, [appNotifications, inboxTab, inboxTarget, inboxSearch, currentUser?.id]);
+
+  const inboxCounts = useMemo(() => {
+    const active = (appNotifications || []).filter(n => n.is_active);
+    const pending = active.filter(n => !isResolved(n, currentUser?.id)).length;
+    return { pending, resolved: active.length - pending, all: active.length };
+  }, [appNotifications, currentUser?.id]);
+
+  const handleDismissFromInbox = async (n) => {
+    if (!supabase || !currentUser) return;
+    const dismissed = n.dismissed_by_ids || [];
+    if (dismissed.includes(currentUser.id)) return;
+    await supabase.from('app_notifications').update({ dismissed_by_ids: [...dismissed, currentUser.id] }).eq('id', n.id);
+  };
+
   return (
     <Card className="animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex items-center gap-3 mb-5 border-b border-[var(--border-soft)] pb-4">
         <div className="bg-amber-50 p-2 rounded-xl text-amber-600">
-          <Megaphone size={20} />
+          {screen === 'inbox' ? <Inbox size={20} /> : <Megaphone size={20} />}
         </div>
-        <h3 className="font-black text-base sm:text-xl text-[var(--ink)] uppercase tracking-tight flex-1">Gestão de Banners de Aviso</h3>
+        <h3 className="font-black text-base sm:text-xl text-[var(--ink)] uppercase tracking-tight flex-1">Notificações</h3>
         {supported && (
           <button
             onClick={subscribe}
@@ -119,6 +220,121 @@ const NotificationsAdmin = ({ workers, appNotifications, saveToDb, handleDelete,
           </button>
         )}
       </div>
+
+      <div className="flex gap-1 p-1 mb-5 bg-[var(--surface-dim)] border border-[var(--border-soft)] rounded-2xl w-fit">
+        {[{ id: 'inbox', label: 'Caixa de Entrada' }, { id: 'manage', label: 'Criar Aviso' }].map(t => (
+          <button
+            key={t.id}
+            onClick={() => setScreen(t.id)}
+            className={`px-4 py-2 rounded-xl transition-all ${SCALE.text.badge} ${screen === t.id ? 'bg-[var(--panel)] shadow-sm text-[var(--navy)]' : 'text-[var(--ink-soft)] hover:text-[var(--navy)]'}`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {screen === 'inbox' && (
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center gap-3 justify-between">
+            <div className="flex gap-1 p-1 bg-[var(--surface-dim)] border border-[var(--border-soft)] rounded-2xl">
+              {[
+                { id: 'pending', label: 'Por resolver', count: inboxCounts.pending },
+                { id: 'resolved', label: 'Dispensadas', count: inboxCounts.resolved },
+                { id: 'all', label: 'Todas', count: inboxCounts.all },
+              ].map(t => (
+                <button
+                  key={t.id}
+                  onClick={() => setInboxTab(t.id)}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-xl transition-all ${SCALE.text.badge} ${inboxTab === t.id ? 'bg-[var(--panel)] shadow-sm text-[var(--navy)]' : 'text-[var(--ink-soft)] hover:text-[var(--navy)]'}`}
+                >
+                  {t.label}
+                  <span className={`px-1.5 rounded-full ${inboxTab === t.id ? 'bg-[var(--orange)] text-[var(--navy)]' : 'bg-[var(--panel)] text-[var(--slate-dim)]'}`}>{t.count}</span>
+                </button>
+              ))}
+            </div>
+            <div className="relative">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--slate)]" />
+              <input
+                value={inboxSearch}
+                onChange={e => setInboxSearch(e.target.value)}
+                placeholder="Procurar…"
+                className="pl-9 pr-3 py-2 rounded-xl border border-[var(--border)] bg-white text-xs font-medium outline-none w-52"
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {[{ id: 'all', label: 'Todos os alvos' }, { id: 'admin', label: 'Admin' }, { id: 'specific', label: 'Trabalhador' }, { id: 'client', label: 'Cliente' }].map(c => (
+              <button
+                key={c.id}
+                onClick={() => setInboxTarget(c.id)}
+                className={`px-3 py-1.5 rounded-full border ${SCALE.text.badge} transition-all ${inboxTarget === c.id ? 'text-white border-transparent' : 'bg-white text-[var(--ink-soft)] border-[var(--border)] hover:border-[var(--slate)]'}`}
+                style={inboxTarget === c.id ? { backgroundColor: FT.navy } : {}}
+              >
+                {c.label}
+              </button>
+            ))}
+          </div>
+
+          {inboxGroups.length === 0 ? (
+            <p className="text-center py-10 text-[var(--slate-dim)] text-xs font-bold">Nada por aqui.</p>
+          ) : (
+            inboxGroups.map(group => (
+              <div key={group.label}>
+                <div className="flex items-center gap-2 py-2">
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: FT.orange }} />
+                  <span className={`${SCALE.text.statLabel} text-[var(--navy)]`}>{group.label}</span>
+                  <span className="flex-1 h-px bg-[var(--border-soft)]" />
+                  <span className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>{group.items.length}</span>
+                </div>
+                <div className="bg-white rounded-2xl border border-[var(--border-soft)] overflow-hidden">
+                  {group.items.map(n => {
+                    const cfg = TYPE_TONE[n.type] || TYPE_TONE.info;
+                    const Icon = cfg.icon;
+                    const resolved = isResolved(n, currentUser?.id);
+                    const dismissedCount = (n.dismissed_by_ids || []).length;
+                    return (
+                      <div
+                        key={n.id}
+                        onClick={() => { setShowViewDetails(n.id); setViewDetailsTab('viewed'); }}
+                        className="flex items-start gap-3 px-4 py-3 border-b border-[var(--border-soft)] last:border-b-0 hover:bg-[var(--surface)] cursor-pointer transition-colors"
+                      >
+                        <div className="p-2 rounded-xl shrink-0 mt-0.5" style={{ background: cfg.bg, color: cfg.accent }}><Icon size={16} /></div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-baseline gap-2">
+                            <p className="text-sm font-black text-[var(--ink)] truncate flex-1">{n.title}</p>
+                            <span className={`${SCALE.text.meta} text-[var(--slate-dim)] shrink-0`}>{formatWhen(n.created_at, group.label)}</span>
+                          </div>
+                          <p className={`${SCALE.text.meta} text-[var(--slate-dim)] truncate mt-0.5`}>{n.message}</p>
+                          <div className="flex items-center gap-2 mt-1.5">
+                            <span className={`${SCALE.text.badge} px-2 py-0.5 rounded-full bg-[var(--surface-dim)] text-[var(--ink-soft)]`}>{TARGET_LABEL[n.target_type] || n.target_type}</span>
+                            {resolved ? (
+                              <span className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>{dismissedCount} dispensou{dismissedCount === 1 ? '' : 'aram'}</span>
+                            ) : (
+                              <span className="w-1.5 h-1.5 rounded-full bg-[var(--tone-rose)]" title="Ainda por resolver" />
+                            )}
+                          </div>
+                        </div>
+                        {n.target_type === 'admin' && !resolved && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDismissFromInbox(n); }}
+                            className="p-1.5 rounded-lg text-[var(--slate)] hover:text-[var(--ink-soft)] hover:bg-[var(--surface-dim)] shrink-0"
+                            title="Dispensar"
+                          >
+                            <X size={14} />
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {screen === 'manage' && (<>
 
       {pushCounts && (
         <div className="flex flex-wrap items-center gap-2 mb-5">
@@ -290,6 +506,8 @@ const NotificationsAdmin = ({ workers, appNotifications, saveToDb, handleDelete,
         )}
       </div>
 
+      </>)}
+
       {/* Modal de Detalhes de Visualização */}
       {showViewDetails && (
         <ModalShell
@@ -332,15 +550,16 @@ const NotificationsAdmin = ({ workers, appNotifications, saveToDb, handleDelete,
             <div className="space-y-3 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
               {(appNotifications.find(n => n.id === showViewDetails)?.[viewDetailsTab === 'viewed' ? 'viewed_by_ids' : 'dismissed_by_ids'] || []).length > 0 ? (
                 (appNotifications.find(n => n.id === showViewDetails)?.[viewDetailsTab === 'viewed' ? 'viewed_by_ids' : 'dismissed_by_ids'] || []).map(vId => {
-                  const worker = workers.find(w => w.id === vId);
+                  const worker = workers.find(w => String(w.id) === String(vId));
+                  const name = resolveName(vId);
                   return (
                     <div key={vId} className="flex items-center gap-3 p-3 bg-[var(--surface)] rounded-2xl border border-[var(--border-soft)]">
                       <div className="w-8 h-8 rounded-full flex items-center justify-center font-black text-xs uppercase" style={{ backgroundColor: FT.navy, color: FT.orange }}>
-                        {worker?.name?.[0] || '?'}
+                        {name?.[0] || '?'}
                       </div>
                       <div>
-                        <p className="text-xs font-bold text-[var(--ink)]">{worker?.name || 'Desconhecido'}</p>
-                        <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>{worker?.profissao || 'Colaborador'}</p>
+                        <p className="text-xs font-bold text-[var(--ink)]">{name || 'Desconhecido'}</p>
+                        <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>{worker?.profissao || (vId === 'admin_system' ? 'Admin' : 'Colaborador')}</p>
                       </div>
                     </div>
                   );
