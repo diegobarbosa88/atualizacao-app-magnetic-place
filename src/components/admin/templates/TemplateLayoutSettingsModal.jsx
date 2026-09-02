@@ -32,8 +32,8 @@ const SAMPLE_STAMP_TAGS = {
   '{admin_signed_datetime}': '02/09/2026 09:05',
 };
 
-function fillSample(templateHtml, systemSettings) {
-  let html = replaceTemplateFields(templateHtml, SAMPLE_WORKER, systemSettings || {}, null);
+function fillSample(templateHtml, systemSettings, epiCatalogo) {
+  let html = replaceTemplateFields(templateHtml, SAMPLE_WORKER, systemSettings || {}, null, epiCatalogo || []);
   Object.entries(SAMPLE_STAMP_TAGS).forEach(([tag, value]) => {
     html = html.split(tag).join(value);
   });
@@ -190,6 +190,11 @@ export default function TemplateLayoutSettingsModal({ template, systemSettings, 
   // divergir uma da outra por definição.
   const { supabase } = useApp();
   const [tab, setTab] = useState('sim');
+  const [epiCatalogo, setEpiCatalogo] = useState([]);
+  useEffect(() => {
+    if (!supabase) return;
+    supabase.from('epi_catalogo_documento').select('*').then(({ data }) => setEpiCatalogo(data || []));
+  }, [supabase]);
   // Pedido do Diego: "quero que o real fique salvo sempre a última
   // importação" — inicializa já com o último PDF Oficial gravado (se
   // existir), para não ter de gerar de novo só para ver o que já tinha
@@ -202,8 +207,8 @@ export default function TemplateLayoutSettingsModal({ template, systemSettings, 
 
   const simulationHtml = useMemo(() => {
     if (!template.template_html) return '';
-    return applyLayoutOverride(fillSample(template.template_html, systemSettings), values);
-  }, [template.template_html, systemSettings, values]);
+    return applyLayoutOverride(fillSample(template.template_html, systemSettings, epiCatalogo), values);
+  }, [template.template_html, systemSettings, values, epiCatalogo]);
 
   useEffect(() => () => {
     if (pdfUrlRef.current) URL.revokeObjectURL(pdfUrlRef.current);

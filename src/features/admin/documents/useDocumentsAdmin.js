@@ -266,8 +266,9 @@ export function useDocumentsAdmin() {
               .from('clients').select('*').eq('id', raw.client_id).maybeSingle();
             clientData = c || null;
           }
+          const { data: epiCatalogo } = await clientSupabase.from('epi_catalogo_documento').select('*');
           html = applyLayoutOverride(
-            replaceTemplateFields(tmpl.template_html, worker || {}, systemSettings || {}, clientData),
+            replaceTemplateFields(tmpl.template_html, worker || {}, systemSettings || {}, clientData, epiCatalogo || []),
             tmpl.layout_settings
           );
         }

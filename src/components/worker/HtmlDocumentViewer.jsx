@@ -56,10 +56,12 @@ export function HtmlDocumentViewer({ document: docRecord, onBack, onSigned }) {
           clientRow = c || null;
         }
 
+        const { data: epiCatalogo } = await supabase.from('epi_catalogo_documento').select('*');
+
         if (cancelled) return;
         setWorkerData(workerRow || {});
         const filled = applyLayoutOverride(
-          replaceTemplateFields(tmplRow.template_html, workerRow || {}, systemSettings || {}, clientRow),
+          replaceTemplateFields(tmplRow.template_html, workerRow || {}, systemSettings || {}, clientRow, epiCatalogo || []),
           tmplRow.layout_settings
         );
         setFilledHtml(filled);

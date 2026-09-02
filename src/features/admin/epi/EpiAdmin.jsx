@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { HardHat, ListChecks, Boxes, Users } from 'lucide-react';
+import { HardHat, ListChecks, Boxes, Users, FileCheck } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
 import SectionHeaderShell from '../../../components/common/SectionHeaderShell';
 import EpiRequestsTab from './EpiRequestsTab';
 import EpiCatalogTab from './EpiCatalogTab';
 import EpiWorkerSettingsTab from './EpiWorkerSettingsTab';
+import EpiDocumentoTab from './EpiDocumentoTab';
 import { lowStockEntries } from '../../../utils/epiHelpers';
 
 // Secção nova, lançada oculta do lado do trabalhador (só workers.epi_enabled
@@ -25,18 +26,22 @@ export default function EpiAdmin() {
 
   const [types, setTypes] = useState([]);
   const [requests, setRequests] = useState([]);
+  const [catalogoDocumento, setCatalogoDocumento] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const reload = useCallback(async () => {
     if (!supabase) return;
-    const [{ data: typesData, error: typesErr }, { data: reqData, error: reqErr }] = await Promise.all([
+    const [{ data: typesData, error: typesErr }, { data: reqData, error: reqErr }, { data: docData, error: docErr }] = await Promise.all([
       supabase.from('epi_types').select('*').order('created_at'),
       supabase.from('epi_requests').select('*').order('created_at', { ascending: false }),
+      supabase.from('epi_catalogo_documento').select('*').order('nome'),
     ]);
     if (typesErr) console.error('Erro ao carregar epi_types:', typesErr);
     if (reqErr) console.error('Erro ao carregar epi_requests:', reqErr);
+    if (docErr) console.error('Erro ao carregar epi_catalogo_documento:', docErr);
     setTypes(typesData || []);
     setRequests(reqData || []);
+    setCatalogoDocumento(docData || []);
     setLoading(false);
   }, [supabase]);
 
@@ -61,6 +66,7 @@ export default function EpiAdmin() {
           { id: 'pedidos', label: 'Pedidos', icon: ListChecks, badge: pendingCount || null },
           { id: 'catalogo', label: 'Catálogo', icon: Boxes },
           { id: 'trabalhadores', label: 'Por Trabalhador', icon: Users },
+          { id: 'documento', label: 'Ficha EPI (Documento)', icon: FileCheck },
         ]}
         activeTab={tab}
         onTabChange={setTab}
@@ -83,6 +89,9 @@ export default function EpiAdmin() {
       )}
       {tab === 'trabalhadores' && (
         <EpiWorkerSettingsTab types={types} workers={workers} supabase={supabase} />
+      )}
+      {tab === 'documento' && (
+        <EpiDocumentoTab catalogo={catalogoDocumento} supabase={supabase} onChange={reload} />
       )}
     </div>
   );

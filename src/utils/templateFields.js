@@ -1,6 +1,4 @@
 import Handlebars from 'handlebars';
-import { EPI_CATALOGO } from '../data/epiCatalogo';
-import { getEpiItemsForProfissao } from '../data/epiPerfis';
 
 export const TEMPLATE_FIELDS = [
   { tag: '{worker_name}', label: 'Nome do Trabalhador', source: 'workers.name' },
@@ -52,7 +50,12 @@ function formatDateShortPT(value) {
   return `${day}/${month}/${year}`;
 }
 
-export function replaceTemplateFields(html, workerData, systemData = {}, clientData = null) {
+// `epiCatalogo` vem da tabela `epi_catalogo_documento` (fetched pelo
+// chamador) — cada linha tem {key, nome, risco, manutencao, icon_svg,
+// profissoes}. Substitui os antigos ficheiros estáticos epiCatalogo.js/
+// epiPerfis.js/epiIcones.js como fonte de verdade: a atribuição por
+// profissão passa a ser editável pelo admin em vez de código fixo.
+export function replaceTemplateFields(html, workerData, systemData = {}, clientData = null, epiCatalogo = []) {
   const data = {};
   TEMPLATE_FIELDS.forEach(field => {
     const key = field.tag.slice(1, -1); // '{worker_name}' -> 'worker_name'
@@ -62,7 +65,11 @@ export function replaceTemplateFields(html, workerData, systemData = {}, clientD
   // sempre este array, mesmo para os outros templates, é inofensivo (o
   // Handlebars ignora chaves de dados que o template não referencia) e
   // evita ter de detetar "que template é este" antes de resolver campos.
-  data.epiItems = getEpiItemsForProfissao(workerData?.profissao, EPI_CATALOGO);
+  // Profissão sem nenhuma linha marcada (ainda por configurar no admin)
+  // dá lista vazia — mais seguro do que inventar EPIs.
+  data.epiItems = (epiCatalogo || [])
+    .filter((item) => (item.profissoes || []).includes(workerData?.profissao))
+    .map((item) => ({ nome: item.nome, risco: item.risco, manutencao: item.manutencao, icon: item.icon_svg || '' }));
 
   const template = Handlebars.compile(html, { noEscape: true });
   return template(data);
