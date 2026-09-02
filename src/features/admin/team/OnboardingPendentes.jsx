@@ -66,12 +66,13 @@ export default function OnboardingPendentes() {
     setModalTab('dados');
 
     // Pré-preenche com o que o admin já definiu ao gerar o convite —
-    // vencimento_base/data_inicio_prevista/local_trabalho_texto (ver
-    // TeamManager.jsx e o Trabalhador Virtual, que também os podem definir).
+    // vencimento_base/data_inicio_prevista/subsídio/tipo de contrato/regime/
+    // horas semanais/código de local de trabalho (ver TeamManager.jsx e o
+    // Trabalhador Virtual, que também os podem definir).
     if (sub.invite_id && supabase) {
       const { data: invite } = await supabase
         .from('worker_onboarding_invites')
-        .select('vencimento_base, data_inicio_prevista')
+        .select('vencimento_base, data_inicio_prevista, subsidio_alimentacao_dia, subsidio_alimentacao_tipo, tipo_contrato, regime, horas_semanais, local_trabalho_ss')
         .eq('id', sub.invite_id)
         .maybeSingle();
       if (invite) {
@@ -79,6 +80,12 @@ export default function OnboardingPendentes() {
           ...prev,
           data_inicio: invite.data_inicio_prevista || prev.data_inicio,
           vencimento_base: invite.vencimento_base != null ? String(invite.vencimento_base) : prev.vencimento_base,
+          subsidio_alimentacao_dia: invite.subsidio_alimentacao_dia != null ? String(invite.subsidio_alimentacao_dia) : prev.subsidio_alimentacao_dia,
+          subsidio_alimentacao_tipo: invite.subsidio_alimentacao_tipo || prev.subsidio_alimentacao_tipo,
+          tipo_contrato: invite.tipo_contrato || prev.tipo_contrato,
+          regime: invite.regime || prev.regime,
+          horas_semanais: invite.horas_semanais != null ? invite.horas_semanais : prev.horas_semanais,
+          local_trabalho: invite.local_trabalho_ss != null ? String(invite.local_trabalho_ss) : prev.local_trabalho,
         }));
       }
     }

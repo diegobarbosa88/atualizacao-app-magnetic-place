@@ -46,6 +46,15 @@ const TeamManagerContent = ({ onLogin }) => {
   // ainda sem ficha, etc.), que é o único caso em que o valor não vem de
   // um cliente real da lista.
   const [inviteLocalCustom, setInviteLocalCustom] = useState(false);
+  // Campos de contrato que o admin costuma preencher logo ao aprovar
+  // (OnboardingPendentes.jsx → "Completar registo") — definidos aqui também,
+  // para pré-preencherem esse ecrã em vez de serem escritos duas vezes.
+  const [inviteSubsidioAlimentacaoDia, setInviteSubsidioAlimentacaoDia] = useState('');
+  const [inviteSubsidioAlimentacaoTipo, setInviteSubsidioAlimentacaoTipo] = useState('cartao');
+  const [inviteTipoContrato, setInviteTipoContrato] = useState('sem_termo');
+  const [inviteRegime, setInviteRegime] = useState('tempo_inteiro');
+  const [inviteHorasSemanais, setInviteHorasSemanais] = useState(40);
+  const [inviteLocalTrabalhoSS, setInviteLocalTrabalhoSS] = useState('');
   // Convite "a empresa escreve primeiro" -- só possível com telefone
   // preenchido, manda logo o template aprovado pela Meta (ver
   // scripts/criar-template-onboarding.js) em vez de depender do
@@ -106,6 +115,12 @@ const TeamManagerContent = ({ onLogin }) => {
         vencimento_base: inviteVencimentoBase ? Number(inviteVencimentoBase) : null,
         data_inicio_prevista: inviteDataInicio || null,
         local_trabalho_texto: inviteLocalTrabalho || null,
+        subsidio_alimentacao_dia: inviteSubsidioAlimentacaoDia ? Number(inviteSubsidioAlimentacaoDia) : null,
+        subsidio_alimentacao_tipo: inviteSubsidioAlimentacaoTipo,
+        tipo_contrato: inviteTipoContrato,
+        regime: inviteRegime,
+        horas_semanais: inviteHorasSemanais ? Number(inviteHorasSemanais) : null,
+        local_trabalho_ss: inviteLocalTrabalhoSS ? Number(inviteLocalTrabalhoSS) : null,
       });
       if (error) throw error;
       const link = `${window.location.origin}/onboarding/${token}`;
@@ -328,7 +343,7 @@ const TeamManagerContent = ({ onLogin }) => {
       {/* Modal de convite de onboarding */}
       <ModalShell
         isOpen={inviteModal}
-        onClose={() => { setInviteModal(false); setGeneratedLink(''); setGeneratedWaLink(''); setGeneratedToken(''); setInviteEmail(''); setInviteNome(''); setInviteTel(''); setInviteError(''); setInviteVencimentoBase(''); setInviteDataInicio(''); setInviteLocalTrabalho(''); setInviteLocalCustom(false); setConviteWaEnviado(false); setConviteWaErro(''); }}
+        onClose={() => { setInviteModal(false); setGeneratedLink(''); setGeneratedWaLink(''); setGeneratedToken(''); setInviteEmail(''); setInviteNome(''); setInviteTel(''); setInviteError(''); setInviteVencimentoBase(''); setInviteDataInicio(''); setInviteLocalTrabalho(''); setInviteLocalCustom(false); setInviteSubsidioAlimentacaoDia(''); setInviteSubsidioAlimentacaoTipo('cartao'); setInviteTipoContrato('sem_termo'); setInviteRegime('tempo_inteiro'); setInviteHorasSemanais(40); setInviteLocalTrabalhoSS(''); setConviteWaEnviado(false); setConviteWaErro(''); }}
         title="Convidar novo colaborador"
         subtitle="Link único de preenchimento de dados"
         icon={<UserPlus size={16} />}
@@ -458,6 +473,87 @@ const TeamManagerContent = ({ onLogin }) => {
                 Opcional — se deixares em branco, o compromisso mostra "[a definir]" nesses pontos.
               </p>
             </div>
+            <div className="bg-[var(--surface)] rounded-xl p-3 border border-[var(--border)] space-y-3">
+              <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>
+                Contrato — pré-preenche o ecrã de aprovação
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={`block ${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1`}>
+                    Subsídio Alimentação/Dia (€)
+                  </label>
+                  <input
+                    className="w-full bg-white border border-[var(--border)] rounded-lg py-2 px-3 text-sm font-semibold text-[var(--ink)] outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 transition-all"
+                    type="number" min="0" step="0.01" placeholder="9.60"
+                    value={inviteSubsidioAlimentacaoDia}
+                    onChange={e => setInviteSubsidioAlimentacaoDia(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className={`block ${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1`}>
+                    Tipo de Subsídio
+                  </label>
+                  <select
+                    className="w-full bg-white border border-[var(--border)] rounded-lg py-2 px-3 text-sm font-semibold text-[var(--ink)] outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 transition-all"
+                    value={inviteSubsidioAlimentacaoTipo}
+                    onChange={e => setInviteSubsidioAlimentacaoTipo(e.target.value)}
+                  >
+                    <option value="cartao">Cartão</option>
+                    <option value="dinheiro">Dinheiro</option>
+                  </select>
+                </div>
+                <div>
+                  <label className={`block ${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1`}>
+                    Tipo de Contrato
+                  </label>
+                  <select
+                    className="w-full bg-white border border-[var(--border)] rounded-lg py-2 px-3 text-sm font-semibold text-[var(--ink)] outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 transition-all"
+                    value={inviteTipoContrato}
+                    onChange={e => setInviteTipoContrato(e.target.value)}
+                  >
+                    <option value="sem_termo">Sem Termo</option>
+                    <option value="termo_certo">A Termo Certo</option>
+                    <option value="termo_incerto">A Termo Incerto</option>
+                    <option value="muito_curta_duracao">Muito Curta Duração</option>
+                  </select>
+                </div>
+                <div>
+                  <label className={`block ${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1`}>
+                    Regime
+                  </label>
+                  <select
+                    className="w-full bg-white border border-[var(--border)] rounded-lg py-2 px-3 text-sm font-semibold text-[var(--ink)] outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 transition-all"
+                    value={inviteRegime}
+                    onChange={e => setInviteRegime(e.target.value)}
+                  >
+                    <option value="tempo_inteiro">Tempo Inteiro</option>
+                    <option value="tempo_parcial">Tempo Parcial</option>
+                  </select>
+                </div>
+                <div>
+                  <label className={`block ${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1`}>
+                    Horas / Semana
+                  </label>
+                  <input
+                    className="w-full bg-white border border-[var(--border)] rounded-lg py-2 px-3 text-sm font-semibold text-[var(--ink)] outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 transition-all"
+                    type="number" min="1" max="48" step="0.5"
+                    value={inviteHorasSemanais}
+                    onChange={e => setInviteHorasSemanais(parseFloat(e.target.value) || 40)}
+                  />
+                </div>
+                <div>
+                  <label className={`block ${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1`}>
+                    Cód. Local de Trabalho (SS)
+                  </label>
+                  <input
+                    className="w-full bg-white border border-[var(--border)] rounded-lg py-2 px-3 text-sm font-semibold text-[var(--ink)] outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 transition-all"
+                    type="number" min="1" placeholder="ex: 1"
+                    value={inviteLocalTrabalhoSS}
+                    onChange={e => setInviteLocalTrabalhoSS(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
             {inviteError && (
               <div className="bg-rose-50 border border-rose-200 rounded-xl px-3 py-2.5">
                 <p className="text-xs font-bold text-rose-700">{inviteError}</p>
@@ -538,7 +634,7 @@ const TeamManagerContent = ({ onLogin }) => {
               </div>
             )}
             <button
-              onClick={() => { setGeneratedLink(''); setGeneratedWaLink(''); setGeneratedToken(''); setInviteEmail(''); setInviteNome(''); setInviteTel(''); setInviteError(''); setInviteVencimentoBase(''); setInviteDataInicio(''); setInviteLocalTrabalho(''); setInviteLocalCustom(false); setConviteWaEnviado(false); setConviteWaErro(''); }}
+              onClick={() => { setGeneratedLink(''); setGeneratedWaLink(''); setGeneratedToken(''); setInviteEmail(''); setInviteNome(''); setInviteTel(''); setInviteError(''); setInviteVencimentoBase(''); setInviteDataInicio(''); setInviteLocalTrabalho(''); setInviteLocalCustom(false); setInviteSubsidioAlimentacaoDia(''); setInviteSubsidioAlimentacaoTipo('cartao'); setInviteTipoContrato('sem_termo'); setInviteRegime('tempo_inteiro'); setInviteHorasSemanais(40); setInviteLocalTrabalhoSS(''); setConviteWaEnviado(false); setConviteWaErro(''); }}
               className="w-full text-xs text-[var(--slate-dim)] hover:text-[var(--ink-soft)] font-bold py-1 transition-colors"
             >
               Gerar novo link
