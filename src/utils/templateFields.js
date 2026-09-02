@@ -1,4 +1,6 @@
 import Handlebars from 'handlebars';
+import { EPI_CATALOGO } from '../data/epiCatalogo';
+import { getEpiItemsForProfissao } from '../data/epiPerfis';
 
 export const TEMPLATE_FIELDS = [
   { tag: '{worker_name}', label: 'Nome do Trabalhador', source: 'workers.name' },
@@ -56,6 +58,11 @@ export function replaceTemplateFields(html, workerData, systemData = {}, clientD
     const key = field.tag.slice(1, -1); // '{worker_name}' -> 'worker_name'
     data[key] = getFieldValue(field.tag, workerData, systemData, clientData);
   });
+  // Só a checklist de EPI (formato='html') usa {{#each epiItems}} — passar
+  // sempre este array, mesmo para os outros templates, é inofensivo (o
+  // Handlebars ignora chaves de dados que o template não referencia) e
+  // evita ter de detetar "que template é este" antes de resolver campos.
+  data.epiItems = getEpiItemsForProfissao(workerData?.profissao, EPI_CATALOGO);
 
   const template = Handlebars.compile(html, { noEscape: true });
   return template(data);
