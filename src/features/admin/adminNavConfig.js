@@ -3,7 +3,7 @@ import {
   Wallet, Settings, Users, CalendarX, ShieldCheck,
   AlertTriangle, Send, FolderOpen, Mail, ReceiptText, Coins, Receipt,
   FileSignature, BarChart2, BookOpen, ArrowRightLeft, Landmark, ListChecks,
-  Truck, Shield, Table2, ShieldAlert, MessageSquareText, GraduationCap,
+  Truck, Shield, Table2, ShieldAlert, MessageSquareText, GraduationCap, Bell,
 } from 'lucide-react';
 
 export const ADMIN_SECTIONS = [
@@ -82,13 +82,13 @@ export const ADMIN_SECTIONS = [
   },
   { id: 'formacao', label: 'Formação Interna', icon: GraduationCap, badgeType: null },
   { id: 'alertas', label: 'Gestão de Alertas', icon: ShieldAlert, badgeType: null },
+  { id: 'notificacoes', label: 'Notificações', icon: Bell, badgeType: null },
   { id: 'settings', label: 'Configurações', icon: Settings, badgeType: null },
 ];
 
-export const SECTION_LABELS = Object.fromEntries([
-  ...ADMIN_SECTIONS.map(s => [s.id, s.label]),
-  ['notificacoes', 'Notificações'],
-]);
+export const SECTION_LABELS = Object.fromEntries(
+  ADMIN_SECTIONS.map(s => [s.id, s.label])
+);
 
 export function resolveBadge(badgeType, counts) {
   if (!badgeType || !counts) return 0;

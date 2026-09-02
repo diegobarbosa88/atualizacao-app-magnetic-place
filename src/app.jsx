@@ -20,7 +20,7 @@ import DocumentsAdmin from './features/admin/DocumentsAdmin';
 import NotificationsAdmin from './features/admin/NotificationsAdmin';
 import LoginView from './features/auth/LoginView';
 import CompanyLogo from './components/common/CompanyLogo';
-import ModalShell from './components/common/ModalShell';
+import ModalShell, { Z } from './components/common/ModalShell';
 import EntryForm from './components/common/EntryForm';
 import ClientTimesheetReport from './components/common/ClientTimesheetReport';
 import WorkerDocuments from './components/common/WorkerDocuments';
@@ -488,7 +488,7 @@ export default function App() {
         </div>
       )}
       {(location.pathname.startsWith('/admin') || location.pathname.startsWith('/worker')) && currentUser && myNotifications.length > 0 && (
-        <div className="fixed top-4 left-4 right-4 z-[9999] pointer-events-none space-y-3 max-w-xl mx-auto">
+        <div className="fixed top-4 left-4 right-4 pointer-events-none space-y-3 max-w-xl mx-auto" style={{ zIndex: Z.banner }}>
           {myNotifications.map(notif => {
             const tone = NOTIF_TONE[notif.type] || NOTIF_TONE.info;
             const Icon = tone.icon;
