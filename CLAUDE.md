@@ -3461,6 +3461,88 @@ de ser "alta confiança baseada em Playwright", passa a ser confirmado com o mot
 `npx eslint` limpo em todos os ficheiros tocados (`htmlDocumentPdf.js` novo,
 `useDocumentTemplates.js` simplificado, `TemplateLayoutSettingsModal.jsx` reescrito).
 
+**Dois ajustes a seguir, ainda no mesmo dia, com o Diego a testar no telemóvel:**
+
+1. **`<iframe src="blob:...">` não mostra o PDF no Chrome Android — só um ícone genérico + botão
+   "Abrir".** O Chrome de ambiente de trabalho tem visualizador de PDF nativo embutido em
+   `<iframe>`; o Chrome Android não (achado do Diego, com screenshot do telemóvel). Corrigido
+   substituindo o `<iframe>` por um `<canvas>` desenhado com **pdf.js**, carregado da CDN em runtime
+   (`import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.mjs')`, mesmo padrão já
+   usado em `AppContext.jsx` para o `supabase-js` — não é dependência do bundle) — funciona
+   identicamente em qualquer browser/dispositivo, porque desenhar pixels num canvas não depende de
+   nenhum plugin nativo do browser. **Achado secundário na mesma correção:** a primeira versão usava
+   uma escala fixa (`scale:1.3`), mais larga do que a coluna de preview — dava scroll horizontal.
+   Corrigido para medir a largura real do contentor (`container.clientWidth`) e escalar o PDF para
+   caber, mesma lógica de "fit to width" já usada em `FitToWidthHtmlFrame.jsx`. Confirmado por
+   medição real (`scrollWidth === clientWidth`), não só visual.
+
+2. **Pedido do Diego: "simulação visual sem gastar créditos" — separar a simulação rápida (CSS,
+   grátis) da versão oficial (PDF.co, só quando pedido).** O painel ganhou duas vistas em separador:
+   **"Simulação"** (HTML normal com o `applyLayoutOverride` de sempre, via `FitToWidthHtmlFrame` —
+   grátis, atualiza-se sozinha a cada mudança de valor, é a vista por omissão) e **"PDF Oficial"**
+   (o `<canvas>`/pdf.js do ponto 1, só gerado ao clicar em "Gerar PDF Oficial", chamada real à
+   PDF.co). Os dois campos que só afetam o PDF final (`headerMarginPx`/`footerMarginPx` — não têm
+   equivalente em CSS de ecrã, só entram na chamada à PDF.co) ganharam uma nota "Só no PDF Oficial —
+   sem efeito na Simulação" por baixo do campo, para não parecer que não estão a funcionar quando se
+   está na vista de Simulação. **Sugestão do Diego de trancar tudo em milímetros (tanto no CSS do
+   ecrã como no enviado à API) para bater 100% — avaliada e não aplicada**: o sistema já usa px a
+   96dpi de forma consistente nos dois lados (`.page{width:794px}` no ecrã, `paperSize:"794px
+   ...px"` na API), e isso já foi confirmado a bater certo com o motor real da PDF.co (extração
+   vetorial de sessões anteriores, e a verificação com PDF real deste mesmo dia) — mudar para mm não
+   corrigia nada que estivesse partido, só trocava a unidade; mantido px por não ser uma reescrita
+   sem ganho real.
+
+Verificado ao vivo, nos dois separadores: "Simulação" reflecte uma mudança de espaçamento
+instantaneamente (testado com "Espaço entre itens de lista" a 50px — gaps visivelmente maiores
+entre os 4 itens da lista de declarações do EPI, sem nenhuma chamada de rede); "PDF Oficial" mostra
+o estado vazio correto antes de gerar, e o canvas sem scroll horizontal depois de gerado (medido:
+583px = 583px). `npx eslint`/`npx vite build` limpos.
+
+## `position:fixed` testado a sério contra a API real — pior do que o mecanismo já em produção (2026-09-02)
+
+**Diego propôs, com argumentação técnica detalhada, substituir o `header`/`footer` nativo da PDF.co
+(secção anterior) por `position:fixed` dentro do próprio HTML + `@page{margin}`, com
+`margins:"0px"` na API para "desativar" a margem nativa — alegando que é assim que o motor
+Chromium por trás da PDF.co repete corretamente elementos fixos em todas as páginas, que fica mais
+flexível para o rodapé (`display:flex`, rubricas), e que travar tudo em mm/pt é mais seguro para
+impressão do que px.** Antes de reescrever uma solução já validada contra a API real horas antes,
+testei a proposta dele DIRETAMENTE contra a API real (agora que se sabe que `.env.local` tem a
+chave — ver secção anterior), com um script Node isolado, sem tocar em código de produção.
+
+**Resultado: a proposta falha, de forma pior do que o problema original.** HTML de teste com
+3 páginas de conteúdo, `.cabecalho`/`.rodape` em `position:fixed` dentro de `@media print`, `@page
+{margin:30mm 20mm 25mm 20mm}`, chamada real com `margins:"0px"`:
+- **Página 1: cabeçalho presente, rodapé AUSENTE.**
+- **Página 3: cabeçalho AUSENTE, rodapé presente.**
+- **Só a página 2 teve os dois.**
+- Pior — **texto genuinamente sobreposto** ("Cláusula 13.ª" a atravessar a linha do rodapé,
+  "Cláusula 15.ª" a atravessar o cabeçalho da página seguinte), confirmado visualmente com
+  screenshot real do PDF gerado, não só por extração de texto.
+- A margem de `@page` (30mm/20mm/25mm/20mm) também não foi respeitada de forma fiável com
+  `margins:"0px"` na API — o conteúdo começava praticamente colado ao topo físico da página, ao
+  contrário do previsto.
+
+**Diagnóstico, não especulado — o motor da PDF.co não implementa de forma fiável a repetição de
+`position:fixed` através de quebras de página forçadas por conteúdo longo** (é uma limitação
+conhecida em vários motores de renderização para PDF baseados em Chromium headless — funciona bem
+em casos sintéticos simples, mas degrada com documentos reais de várias páginas). O mecanismo
+nativo `header`/`footer` da PDF.co (já em produção, secção anterior) não tem este problema — foi
+verificado hoje, duas vezes, com documentos reais (EPI 1 página, Contrato 2 páginas), timbre/rodapé
+sempre presentes e corretos em todas as páginas, sem excepção.
+
+**Decisão: mantido o mecanismo `header`/`footer` nativo, `position:fixed` NÃO adoptado.** Não é
+uma questão de opinião — é uma comparação directa, com o mesmo documento, contra a mesma API real,
+e um dos dois métodos produz um documento legal com texto ilegível/sobreposto. Reportado ao Diego
+com a evidência (achado real, screenshot do PDF de teste) antes de decidir, não decidido em
+silêncio. Sobre os outros dois pontos da proposta: a alegação de que o `header`/`footer` da API é
+"limitado" para layouts como `display:flex` com rubricas distribuídas não se confirma — já usado
+com sucesso nesta sessão (o rodapé actual já tem `display:flex;justify-content:space-between`); a
+sugestão de mm/pt em vez de px fica registada como preferência de unidade sem urgência técnica
+(794px e 210mm são fisicamente o mesmo valor a 96dpi, já confirmado a bater com o motor real).
+
+**Ficheiros de teste todos apagados no fim** (`_scratch_posfixed.mjs`, `test_position_fixed.*`,
+`public/_scratch_*`) — nada deste teste ficou no repositório além desta nota.
+
 ## Padronização do canvas de assinatura da empresa — `AdminSignDrawModal.jsx` (2026-09-02)
 
 Pedido do Diego: "coloque o campo da assinatura igual o que tem no DB do worker para padronizar o
