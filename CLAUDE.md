@@ -3254,6 +3254,89 @@ atrás do mesmo bloqueio de sessão 403 já registado várias vezes nesta sessã
 na verificação com o motor real (Playwright) para a Parte 1, que é exactamente o mesmo Chromium
 subjacente à PDF.co, e na réplica isolada fiel para a Parte 2.
 
+## Timbre/rodapé fixos em todas as páginas via header/footer da PDF.co (2026-09-02)
+
+**Regressão real, apanhada pelo Diego num documento assinado a sério** (`verification_code=
+DRB-H5MY`, EPI): o rodapé ("Magnetic Place — Unipessoal, Lda." / "EPI-01") apareceu sozinho numa
+2.ª página, órfão — exactamente a classe de bug já corrigida antes nesta sessão para o Contrato,
+agora reaberta pela mudança anterior (encolher a página ao conteúdo medido no browser do admin).
+**Causa raiz confirmada, não suposta:** a margem de segurança da medição anterior (+6px) era
+insuficiente para a diferença real entre o motor de medição (browser do admin) e o motor de
+geração (servidor da PDF.co) — a mesma família de risco já registada nesta sessão para
+`getBoundingClientRect()` vs. paginação real, mas agora entre DOIS MOTORES DIFERENTES (não só
+dois métodos de medição no mesmo motor), o que pode divergir bem mais (ex. por substituição de
+fonte no lado do servidor, se "Arial"/"Helvetica" não estiverem instaladas lá).
+
+**No mesmo momento, pedido do Diego que resolve isto de forma estrutural, não só com mais folga
+de segurança:** "o ideal é ter o cabeçalho e rodapé fixo em todas as páginas e documentos HTML,
+com placeholder onde for necessário." Investigação confirmou que a PDF.co (`/pdf/convert/from/
+html`) suporta exactamente isto nativamente — parâmetros `header`/`footer` (HTML repetido em
+todas as páginas, dentro da margem física reservada por `margins`), com classes especiais
+`pageNumber`/`totalPages`/`date`/`title`/`url` — o mesmo mecanismo do `headerTemplate`/
+`footerTemplate` do Puppeteer/Playwright (nomes de classe idênticos, forte indício de que a PDF.co
+é construída sobre o mesmo motor Chromium), o que permitiu **validar o mecanismo inteiro
+localmente com Playwright antes de tocar em produção** — a mesma disciplina já estabelecida nesta
+sessão para o bug de paginação do Contrato.
+
+**Antes disto, o timbre só aparecia na 1.ª página e o rodapé só na última** (ambos viviam dentro
+do fluxo único e contínuo do `.page`, nunca repetidos) — não é só um bug a corrigir, é uma
+limitação real do mecanismo antigo que o pedido do Diego resolve ao mesmo tempo.
+
+**Achado não-óbvio, só descoberto por tentativa e erro com Playwright (não estava documentado em
+lado nenhum):** `@page { size: A4; margin: 0; }`, presente no `<style>` de todos os templates,
+**entra em conflito com o parâmetro `margin`/`margins` passado à API** — com essa regra CSS
+presente, o corpo do documento ignora por completo a margem reservada para o header/footer e
+começa a fluir a partir do topo físico da página, sobrepondo-se ao header renderizado (confirmado
+visualmente: título e timbre sobrepostos). Removendo a linha `@page{...}` do HTML enviado à API
+(mantendo o resto do `<style>` intacto), o problema desaparece por completo — a API assume o
+controlo total do tamanho/margens da página, sem qualquer CSS a competir com ela.
+
+**Implementação, cirúrgica de propósito — sem tocar em nenhum template gravado no Supabase:**
+`buildPdfHeaderFooter(finalHtml)`, nova em `useDocumentTemplates.js`, extrai por regex o bloco
+`<div class="letterhead">...<div class="rule"></div>` e o bloco `<div class="footer">...</div>`
+do `finalHtml` já resolvido (assinaturas, código de verificação, datas — tudo por regex sobre uma
+STRING, não sobre o template original), remove-os do corpo + remove o `@page{...}` + reduz o
+padding-top do `.page` de 48px para 16px (o timbre deixou de precisar desse espaço inline) — tudo
+numa CÓPIA (`pdfHtml`), só para a chamada `convertHtmlToPdf`. `generated_html` (gravado na BD)
+continua a guardar o `finalHtml` COMPLETO, com timbre/rodapé inline como sempre — é o que
+`openGeneratedPreview` (o "olho" do admin, HTML normal num iframe, não passa pela PDF.co) continua
+a mostrar, sem qualquer alteração de comportamento aí.
+**O `header`/`footer` da PDF.co correm num contexto isolado, sem acesso ao `<style>` da página
+principal** — por isso cada fragmento extraído leva consigo uma CÓPIA do bloco `<style>` inteiro
+do documento (confirmado com Playwright: um `<style>` com seletores de classe funciona
+perfeitamente dentro do header/footer, não foi preciso reescrever nada em `style=` inline). Custo:
+o pedido à API fica maior (o `<style>` — incluindo a imagem da marca de água em base64 — é
+duplicado 2x, uma vez por header/footer) — aceite, é só tráfego de rede, não afecta o resultado.
+
+**Margens calibradas ao vivo com Playwright, não adivinhadas:** medi a altura NATURAL do timbre
+(~55px) e do rodapé (~18px) isoladamente, mas usar esses valores exactos como margem reservada
+reabriu o MESMO bug (página extra órfã no Contrato, 3 em vez de 2) — a margem tem de cobrir
+o timbre/rodapé A MAIS a folga de segurança entre motores. `HEADER_MARGIN_PX=76`/
+`FOOTER_MARGIN_PX=34` (76+34=110px de overhead por página, contra os ~140px do mecanismo antigo,
+mas agora pago em TODAS as páginas, não só na 1.ª/última) foram encontrados por tentativa
+sistemática: 108/55 (margem generosa a mais) → Contrato voltou a 3 páginas (a mesma "página quase
+vazia" já vista antes) → 76/34 → Contrato de volta a exactamente 2 páginas, mesmo ponto de quebra
+já validado antes (Cláusula 4.ª, quebra limpa entre itens da lista numerada, não a meio de frase).
+
+**Verificado com o motor real (Playwright, réplica byte-a-byte do `buildPdfHeaderFooter` real,
+não uma versão simplificada) nos 3 templates reais buscados do Supabase:**
+- **EPI**: 1 página, encolhida a 981px (era 1123px) — rodapé logo a seguir ao carimbo, sem sobra.
+- **RGPD**: 1 página, encolhida a 986px — timbre/conteúdo/rodapé correctos, confirmado ao vivo.
+- **Contrato**: exactamente 2 páginas (mantém `paperSize:A4` completo — mede 1992px de conteúdo,
+  acima do orçamento de 1 página, não entra no ramo de encolhimento) — timbre E rodapé repetem-se
+  correctamente nas DUAS páginas (antes só apareciam numa cada), com "Página 1 de 2"/"Página 2 de
+  2" a funcionar via `pageNumber`/`totalPages` (**não usado no rodapé real ainda** — mantive o
+  rodapé com o conteúdo EXACTO de sempre, "Magnetic Place — Unipessoal, Lda." + código do doc, sem
+  acrescentar números de página que ninguém pediu; fica confirmado como opção disponível, não
+  activado).
+
+**Pendência explícita, a fechar com o próximo documento real:** tal como o resto do mecanismo
+`formato==='html'` desta sessão, isto não foi testado contra a API real da PDF.co (chave
+`VITE_PDFCO_API_KEY` só existe no Vercel) — a confiança vem de replicar o mecanismo subjacente
+(Chromium print header/footer template, mesmos nomes de classe especiais documentados pela PDF.co)
+via Playwright, não de uma chamada real. Pedir ao Diego para testar com um documento real (worker
+assina → admin aprova) antes de considerar isto definitivamente fechado.
+
 ## Padronização do canvas de assinatura da empresa — `AdminSignDrawModal.jsx` (2026-09-02)
 
 Pedido do Diego: "coloque o campo da assinatura igual o que tem no DB do worker para padronizar o

@@ -48,12 +48,25 @@ function formatDateTimePT(isoString) {
 // FitToWidthHtmlFrame.jsx) — orçamento de 1 página física.
 const A4_HEIGHT_PX = 1123;
 
+// Espaço reservado no topo/fundo de CADA página física para o timbre/rodapé
+// via `header`/`footer` da PDF.co (mecanismo nativo do Chromium — o mesmo
+// header/footer repete-se automaticamente em todas as páginas, ao contrário
+// de antes, em que viviam dentro do fluxo do `.page` e só apareciam uma vez).
+// Valores medidos com Playwright: o timbre real mede ~55px, o rodapé ~18px
+// — a folga extra (76/34, não 55/18) é margem de segurança para variação de
+// fontes entre motores (o browser local não é garantidamente o mesmo da
+// PDF.co), calibrada ao vivo até deixar de reabrir o bug de "rodapé
+// órfão numa 3.ª página" que uma folga demasiado apertada (+6px) causou.
+const HEADER_MARGIN_PX = 76;
+const FOOTER_MARGIN_PX = 34;
+
 // Mede a altura real do `.page` renderizado, num iframe escondido, para
-// documentos de 1 página só (EPI/RGPD): sem isto, `@page{size:A4}` força
-// sempre a página física inteira, mesmo quando o conteúdo é bem mais curto
-// — sobra espaço vazio visível no PDF real (achado do Diego, 2026-09-02).
-// Não mexe em documentos de várias páginas (Contrato): aí o `@page:A4`
-// continua a ser o que já dá a paginação correta, testada nesta sessão.
+// documentos de 1 página só (EPI/RGPD): sem isto, a página física força
+// sempre o orçamento inteiro de 1 página, mesmo quando o conteúdo é bem mais
+// curto — sobra espaço vazio visível no PDF real (achado do Diego,
+// 2026-09-02). Não mexe em documentos de várias páginas (Contrato): aí a
+// paginação normal (repetindo timbre/rodapé por página) é o que já dá o
+// resultado correto, testado nesta sessão.
 function measurePageHeightPx(html) {
   return new Promise((resolve) => {
     const iframe = document.createElement('iframe');
@@ -78,6 +91,41 @@ function measurePageHeightPx(html) {
     iframe.srcdoc = html;
     document.body.appendChild(iframe);
   });
+}
+
+// Separa o timbre (`.letterhead`+`.rule`) e o rodapé (`.footer`) do fluxo do
+// `.page` para os passar como `header`/`footer` da PDF.co — repetem-se
+// automaticamente em TODAS as páginas físicas (timbre só aparecia na 1.ª
+// página, rodapé só na última, no mecanismo antigo de conteúdo único
+// contínuo). Sem alteração ao `template_html` gravado — a extração corre
+// sobre uma CÓPIA do `finalHtml` já resolvido, só para a chamada à PDF.co;
+// `generated_html` continua a gravar a versão completa (timbre/rodapé
+// inline), para a pré-visualização em `openGeneratedPreview` continuar
+// correta (essa não passa pela PDF.co, é só HTML normal num iframe).
+// O `header`/`footer` da PDF.co corre num contexto isolado, sem acesso ao
+// `<style>` da página principal — por isso levam consigo uma cópia do
+// próprio bloco `<style>` extraído do documento (confirmado com Playwright:
+// um `<style>` com seletores de classe funciona dentro do header/footer,
+// não é preciso reescrever tudo em `style=` inline).
+function buildPdfHeaderFooter(finalHtml) {
+  const styleMatch = finalHtml.match(/<style>[\s\S]*?<\/style>/);
+  const letterheadMatch = finalHtml.match(/<div class="letterhead">[\s\S]*?<\/div>\s*<div class="rule"><\/div>/);
+  const footerMatch = finalHtml.match(/<div class="footer">[\s\S]*?<\/div>/);
+  if (!styleMatch || !letterheadMatch || !footerMatch) {
+    return { html: finalHtml, header: null, footer: null };
+  }
+
+  const html = finalHtml
+    .replace(letterheadMatch[0], '')
+    .replace(footerMatch[0], '')
+    .replace('@page { size: A4; margin: 0; }', '')
+    .replace('padding: 48px 56px 4px;', 'padding: 16px 56px 4px;');
+
+  return {
+    html,
+    header: `${styleMatch[0]}<div style="width:100%;">${letterheadMatch[0]}</div>`,
+    footer: `${styleMatch[0]}<div style="width:100%;">${footerMatch[0]}</div>`,
+  };
 }
 
 // Mesma lógica de src/data/... não existe utilitário partilhado — versão
@@ -542,7 +590,7 @@ export function useDocumentTemplates(supabase, { onError } = {}) {
         // responsibleName (quem assinou de facto) já não é impresso à parte
         // como no desenho anterior, decisão confirmada via comentário no
         // artefacto do carimbo.
-        let finalHtml = doc.generated_html
+        const finalHtml = doc.generated_html
           .replace('{worker_signature}', `<img src="${doc.signature_data}" alt="Assinatura do trabalhador" style="width:100%;height:100%;object-fit:contain;object-position:center;" />`)
           .replace('{admin_stamp}', `<img src="${companySignature.signatureDataUrl}" alt="Assinatura da empresa" style="width:100%;height:100%;object-fit:contain;object-position:center;" />`)
           .replaceAll('{verification_code}', verificationCode)
@@ -550,18 +598,31 @@ export function useDocumentTemplates(supabase, { onError } = {}) {
           .replaceAll('{signed_datetime}', formatDateTimePT(doc.signed_at))
           .replaceAll('{admin_signed_datetime}', formatDateTimePT(adminSignedAt));
 
+        // Timbre/rodapé passam a repetir-se em todas as páginas físicas via
+        // header/footer da PDF.co, em vez de viverem dentro do fluxo do
+        // `.page` (onde só apareciam uma vez — timbre na 1.ª página, rodapé
+        // na última). `pdfHtml` é só para esta chamada; `generated_html`
+        // continua a gravar `finalHtml` completo (timbre/rodapé inline),
+        // que é o que `openGeneratedPreview` mostra depois.
+        const { html: pdfHtml, header: pdfHeader, footer: pdfFooter } = buildPdfHeaderFooter(finalHtml);
+
         // Documento de 1 página só (EPI/RGPD): encolher a página física ao
         // tamanho real do conteúdo, para não sobrar espaço vazio no PDF.
-        const measuredHeight = await measurePageHeightPx(finalHtml);
-        if (measuredHeight && measuredHeight < A4_HEIGHT_PX) {
-          const customHeight = Math.ceil(measuredHeight) + 6;
-          finalHtml = finalHtml.replace(
-            '@page { size: A4; margin: 0; }',
-            `@page { size: 794px ${customHeight}px; margin: 0; }`
-          );
+        let pdfPageHeight = A4_HEIGHT_PX;
+        if (pdfHeader) {
+          const usableHeight = A4_HEIGHT_PX - HEADER_MARGIN_PX - FOOTER_MARGIN_PX;
+          const measuredHeight = await measurePageHeightPx(pdfHtml);
+          if (measuredHeight && measuredHeight < usableHeight) {
+            pdfPageHeight = Math.ceil(measuredHeight) + HEADER_MARGIN_PX + FOOTER_MARGIN_PX + 6;
+          }
         }
 
-        const pdfBlob = await convertHtmlToPdf(finalHtml);
+        const pdfBlob = await convertHtmlToPdf(pdfHtml, pdfHeader ? {
+          header: pdfHeader,
+          footer: pdfFooter,
+          margins: `${HEADER_MARGIN_PX}px 0px ${FOOTER_MARGIN_PX}px 0px`,
+          paperSize: `794px ${pdfPageHeight}px`,
+        } : {});
         const finalPath = `signed/${doc.id}_${Date.now()}.pdf`;
         const { error: upErr } = await supabase.storage
           .from(TEMPLATES_BUCKET)

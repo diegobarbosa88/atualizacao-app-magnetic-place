@@ -125,9 +125,13 @@ export async function convertDocxToPdf(docxBlob, { onProgress } = {}) {
  * @param {string} html - HTML completo do documento, já com os campos preenchidos
  * @param {Object} options
  * @param {Function} options.onProgress - Callback de progresso
+ * @param {string} [options.header] - HTML do cabeçalho, repetido em todas as páginas
+ * @param {string} [options.footer] - HTML do rodapé, repetido em todas as páginas
+ * @param {string} [options.margins] - "{top} {right} {bottom} {left}" com unidades — espaço reservado para header/footer
+ * @param {string} [options.paperSize] - "{largura} {altura}" com unidades, tamanho físico custom da página
  * @returns {Promise<Blob>} - O PDF gerado como Blob
  */
-export async function convertHtmlToPdf(html, { onProgress } = {}) {
+export async function convertHtmlToPdf(html, { onProgress, header, footer, margins, paperSize } = {}) {
   if (!html) throw new Error('html obrigatório');
 
   onProgress?.('A converter HTML → PDF...');
@@ -137,6 +141,10 @@ export async function convertHtmlToPdf(html, { onProgress } = {}) {
       html,
       name: 'documento.pdf',
       async: false,
+      ...(header ? { header } : {}),
+      ...(footer ? { footer } : {}),
+      ...(margins ? { margins } : {}),
+      ...(paperSize ? { paperSize } : {}),
     }),
   });
 
