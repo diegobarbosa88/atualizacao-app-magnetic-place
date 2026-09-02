@@ -47,7 +47,7 @@ function buildLayoutOverrideStyle(saved) {
   .body-text p { margin-bottom: ${s.paragraphSpacing}px !important; }
   ol.declara li { margin-bottom: ${s.listItemSpacing}px !important; }
   .stamp-block { margin-top: ${s.stampBlockMarginTop}px !important; padding-top: ${s.stampBlockPaddingTop}px !important; }
-  .stamp-swatch { width: ${s.stampSwatchWidth}px !important; height: ${s.stampSwatchHeight}px !important; }
+  .stamp-swatch { width: ${s.stampSwatchWidth}px !important; height: ${s.stampSwatchHeight}px !important; margin-left: auto !important; margin-right: auto !important; }
 </style>`;
 }
 
