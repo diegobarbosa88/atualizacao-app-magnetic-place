@@ -123,10 +123,14 @@ function Inp({ error, ...props }) {
   );
 }
 
-function Sel({ children, ...props }) {
+function Sel({ children, error, ...props }) {
   return (
     <select
-      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 appearance-none normal-case"
+      className={`w-full rounded-xl border px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition-all appearance-none normal-case
+        ${error
+          ? 'border-rose-300 bg-rose-50 focus:border-rose-400 focus:ring-2 focus:ring-rose-100'
+          : 'border-slate-200 bg-white focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50'
+        }`}
       {...props}
     >
       {children}
@@ -329,12 +333,21 @@ export default function OnboardingForm({ token }) {
   };
 
   // Mensagens partilhadas entre a validação ao avançar de passo e a
-  // validação ao sair do campo (onBlur), para não divergirem.
+  // validação ao sair do campo (onBlur), para não divergirem. Todos os três
+  // são obrigatórios — vazio já conta como erro, não só formato inválido.
   function validarCampoFinanceiro(key, value) {
-    if (!value) return undefined;
-    if (key === 'nif' && !validarNIF(value)) return 'NIF inválido — verifique os 9 dígitos e o dígito de controlo.';
-    if (key === 'nis' && !validarNIS(value)) return 'NIS inválido — deve ter exatamente 11 dígitos.';
-    if (key === 'iban' && !validarIBAN(value)) return 'IBAN inválido — verifique o formato e o checksum.';
+    if (key === 'nif') {
+      if (!value) return 'NIF é obrigatório.';
+      if (!validarNIF(value)) return 'NIF inválido — verifique os 9 dígitos e o dígito de controlo.';
+    }
+    if (key === 'nis') {
+      if (!value) return 'NIS é obrigatório.';
+      if (!validarNIS(value)) return 'NIS inválido — deve ter exatamente 11 dígitos.';
+    }
+    if (key === 'iban') {
+      if (!value) return 'IBAN é obrigatório.';
+      if (!validarIBAN(value)) return 'IBAN inválido — verifique o formato e o checksum.';
+    }
     return undefined;
   }
 
@@ -347,7 +360,15 @@ export default function OnboardingForm({ token }) {
     const errs = {};
     if (s === 0) {
       if (!form.nome.trim()) errs.nome = 'Nome é obrigatório.';
-      if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errs.email = 'Email inválido.';
+      if (!form.profissao_cnp) errs.profissao = 'Profissão é obrigatória.';
+      if (!form.data_nascimento) errs.data_nascimento = 'Data de nascimento é obrigatória.';
+      if (!form.estado_civil) errs.estado_civil = 'Estado civil é obrigatório.';
+      if (!telLocal.trim()) errs.tel = 'Telemóvel é obrigatório.';
+      if (!form.email.trim()) errs.email = 'Email é obrigatório.';
+      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errs.email = 'Email inválido.';
+      if (!form.dni.trim()) errs.dni = 'Documento de identificação é obrigatório.';
+      if (!form.documento_validade) errs.documento_validade = 'Validade do documento é obrigatória.';
+      if (!form.address.trim()) errs.address = 'Morada é obrigatória.';
     }
     if (s === 2) {
       const nifErr = validarCampoFinanceiro('nif', form.nif);
@@ -589,10 +610,14 @@ export default function OnboardingForm({ token }) {
               <InputField label="Nome completo" icon={User} error={errors.nome}>
                 <Inp error={errors.nome} value={form.nome} onChange={e => set('nome', e.target.value)} placeholder="Nome e apelido completos" />
               </InputField>
-              <InputField label="Profissão / Cargo" icon={Briefcase}>
+              <InputField label="Profissão / Cargo" icon={Briefcase} error={errors.profissao}>
                 <SelectProfissaoEmpresa
                   value={form.profissao_cnp}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 appearance-none normal-case"
+                  className={`w-full rounded-xl border px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition-all appearance-none normal-case
+                    ${errors.profissao
+                      ? 'border-rose-300 bg-rose-50 focus:border-rose-400 focus:ring-2 focus:ring-rose-100'
+                      : 'border-slate-200 bg-white focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50'
+                    }`}
                   onChange={(codigo, rotulo) => {
                     set('profissao_cnp', codigo);
                     set('profissao', rotulo);
@@ -600,16 +625,17 @@ export default function OnboardingForm({ token }) {
                 />
               </InputField>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <InputField label="Data de Nascimento" icon={Calendar}>
+                <InputField label="Data de Nascimento" icon={Calendar} error={errors.data_nascimento}>
                   <Inp
+                    error={errors.data_nascimento}
                     type="date"
                     value={form.data_nascimento}
                     onChange={e => set('data_nascimento', e.target.value)}
                   />
                 </InputField>
-                <InputField label="Estado civil" icon={User}>
+                <InputField label="Estado civil" icon={User} error={errors.estado_civil}>
                   <div className="relative">
-                    <Sel value={form.estado_civil} onChange={e => set('estado_civil', e.target.value)}>
+                    <Sel error={errors.estado_civil} value={form.estado_civil} onChange={e => set('estado_civil', e.target.value)}>
                       <option value="">Selecionar…</option>
                       {ESTADO_CIVIL_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                     </Sel>
@@ -637,7 +663,13 @@ export default function OnboardingForm({ token }) {
                       </div>
                     )}
                     <div className="flex-1">
-                      <Inp inputMode="tel" value={telLocal} onChange={e => setTelLocal(e.target.value)} placeholder="9XX XXX XXX" />
+                      <Inp
+                        error={errors.tel}
+                        inputMode="tel"
+                        value={telLocal}
+                        onChange={e => { setTelLocal(e.target.value); setErrors(prev => ({ ...prev, tel: undefined })); }}
+                        placeholder="9XX XXX XXX"
+                      />
                     </div>
                   </div>
                 </InputField>
@@ -646,15 +678,15 @@ export default function OnboardingForm({ token }) {
                 </InputField>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <InputField label="Documento de identificação" icon={CreditCard}>
-                  <Inp value={form.dni} onChange={e => set('dni', e.target.value)} placeholder="Nº CC / DNI / Passaporte" />
+                <InputField label="Documento de identificação" icon={CreditCard} error={errors.dni}>
+                  <Inp error={errors.dni} value={form.dni} onChange={e => set('dni', e.target.value)} placeholder="Nº CC / DNI / Passaporte" />
                 </InputField>
-                <InputField label="Válido até" icon={Calendar}>
-                  <Inp type="date" value={form.documento_validade} onChange={e => set('documento_validade', e.target.value)} />
+                <InputField label="Válido até" icon={Calendar} error={errors.documento_validade}>
+                  <Inp error={errors.documento_validade} type="date" value={form.documento_validade} onChange={e => set('documento_validade', e.target.value)} />
                 </InputField>
               </div>
-              <InputField label="Morada completa" icon={MapPin}>
-                <Inp value={form.address} onChange={e => set('address', e.target.value)} placeholder="Rua, nº, localidade, código postal" />
+              <InputField label="Morada completa" icon={MapPin} error={errors.address}>
+                <Inp error={errors.address} value={form.address} onChange={e => set('address', e.target.value)} placeholder="Rua, nº, localidade, código postal" />
               </InputField>
             </>)}
 
