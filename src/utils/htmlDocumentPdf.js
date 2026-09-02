@@ -1,4 +1,4 @@
-import { convertHtmlToPdf } from './pdfCoService';
+import { authFetch } from './authFetch';
 import { resolveLayoutSettings } from './templateLayoutSettings';
 
 // Altura real de uma página A4 a 96dpi (mesmo valor já usado em
@@ -151,10 +151,39 @@ export async function generateHtmlDocumentPdf(finalHtml, layoutSettings) {
     }
   }
 
-  return convertHtmlToPdf(pdfHtml, header ? {
+  return convertHtmlToPdfServerless(pdfHtml, header ? {
     header,
     footer,
-    margins: `${s.headerMarginPx}px 0px ${s.footerMarginPx}px 0px`,
-    paperSize: `794px ${pdfPageHeight}px`,
+    headerMarginPx: s.headerMarginPx,
+    footerMarginPx: s.footerMarginPx,
+    width: '794px',
+    height: `${pdfPageHeight}px`,
   } : {});
+}
+
+// Chama a nossa própria rota serverless (Chromium via @sparticuz/chromium +
+// puppeteer-core, api/_gerarPdfHtml.js) em vez da PDF.co — mesma extração de
+// header/footer e cálculo de página acima, só muda quem converte o HTML em
+// PDF. Testado contra a Vercel real (cold start ~5s, bem dentro do
+// maxDuration de 60s) antes de substituir a PDF.co.
+async function convertHtmlToPdfServerless(html, { header, footer, headerMarginPx, footerMarginPx, width, height } = {}) {
+  const res = await authFetch('/api/parse-fatura?action=gerar-pdf-html', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      html,
+      useHeaderFooter: !!header,
+      headerHtml: header || '',
+      footerHtml: footer || '',
+      headerMarginPx,
+      footerMarginPx,
+      width: width || null,
+      height: height || null,
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `Erro ao gerar PDF (${res.status}).`);
+  }
+  return res.blob();
 }

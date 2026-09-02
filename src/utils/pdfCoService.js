@@ -116,52 +116,6 @@ export async function convertDocxToPdf(docxBlob, { onProgress } = {}) {
 }
 
 /**
- * Converte uma string HTML (já preenchida, com CSS e imagens embutidas em
- * base64) diretamente para PDF, num só passo — sem etapa de upload de
- * ficheiro, o HTML vai no corpo do pedido. Usado pelo mecanismo de
- * assinatura dos templates com formato='html' (a assinatura fica embutida
- * como <img> normal no fluxo do documento, nunca sobreposta por
- * coordenadas fixas).
- * @param {string} html - HTML completo do documento, já com os campos preenchidos
- * @param {Object} options
- * @param {Function} options.onProgress - Callback de progresso
- * @param {string} [options.header] - HTML do cabeçalho, repetido em todas as páginas
- * @param {string} [options.footer] - HTML do rodapé, repetido em todas as páginas
- * @param {string} [options.margins] - "{top} {right} {bottom} {left}" com unidades — espaço reservado para header/footer
- * @param {string} [options.paperSize] - "{largura} {altura}" com unidades, tamanho físico custom da página
- * @returns {Promise<Blob>} - O PDF gerado como Blob
- */
-export async function convertHtmlToPdf(html, { onProgress, header, footer, margins, paperSize } = {}) {
-  if (!html) throw new Error('html obrigatório');
-
-  onProgress?.('A converter HTML → PDF...');
-  const conversionResult = await apiFetch('/pdf/convert/from/html', {
-    method: 'POST',
-    body: JSON.stringify({
-      html,
-      name: 'documento.pdf',
-      async: false,
-      ...(header ? { header } : {}),
-      ...(footer ? { footer } : {}),
-      ...(margins ? { margins } : {}),
-      ...(paperSize ? { paperSize } : {}),
-    }),
-  });
-
-  if (!conversionResult.url) {
-    throw new Error('PDF.co: Conversão falhou - URL do PDF não disponível.');
-  }
-
-  onProgress?.('A descarregar PDF gerado...');
-  const pdfRes = await fetch(conversionResult.url);
-  if (!pdfRes.ok) {
-    throw new Error(`PDF.co download falhou (${pdfRes.status}).`);
-  }
-
-  return pdfRes.blob();
-}
-
-/**
  * Testa a autenticação com a API do PDF.co
  */
 export async function testPdfCoAuth() {

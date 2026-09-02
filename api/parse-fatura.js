@@ -1,5 +1,5 @@
 import { requireAuth } from './_authUtils.js';
-import { handleGerarPdfTeste } from './_gerarPdfTeste.js';
+import { handleGerarPdfHtml } from './_gerarPdfHtml.js';
 
 export function buildFaturaPrompt(texto) {
   return `És um especialista em leitura de faturas portuguesas e europeias. Analisa o texto abaixo e extrai os seguintes campos com rigor:
@@ -61,10 +61,11 @@ export async function callGeminiJSON(prompt) {
 }
 
 export default async function handler(req, res) {
-  // Temporário — ver api/_gerarPdfTeste.js. Segredo próprio, sem sessão de
-  // admin, por isso o requireAuth abaixo tem de ficar de fora deste branch.
-  if (req.query.action === 'gerar-pdf-teste') {
-    return handleGerarPdfTeste(req, res);
+  // Fluxo 3 (documentos HTML assinados) — ver api/_gerarPdfHtml.js. Faz a
+  // sua própria verificação de sessão de admin, por isso fica antes do
+  // requireAuth abaixo (early return, sem duplicar a verificação).
+  if (req.query.action === 'gerar-pdf-html') {
+    return handleGerarPdfHtml(req, res);
   }
 
   if (!requireAuth(req, res, ['admin'])) return;
