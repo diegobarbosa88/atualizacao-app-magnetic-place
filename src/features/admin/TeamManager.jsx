@@ -61,8 +61,8 @@ const TeamManagerContent = ({ onLogin }) => {
   const [inviteRegime, setInviteRegime] = useState('tempo_inteiro');
   const [inviteHorasSemanais, setInviteHorasSemanais] = useState(40);
   const [inviteLocalTrabalhoSS, setInviteLocalTrabalhoSS] = useState('1');
-  const [inviteDefaultClientId, setInviteDefaultClientId] = useState('c1775487391067');
-  const [inviteDefaultScheduleId, setInviteDefaultScheduleId] = useState('s1776008063149');
+  const [inviteDefaultClientId, setInviteDefaultClientId] = useState('');
+  const [inviteDefaultScheduleId, setInviteDefaultScheduleId] = useState('');
   // Convite "a empresa escreve primeiro" -- só possível com telefone
   // preenchido, manda logo o template aprovado pela Meta (ver
   // scripts/criar-template-onboarding.js) em vez de depender do
@@ -354,7 +354,7 @@ const TeamManagerContent = ({ onLogin }) => {
       {/* Modal de convite de onboarding */}
       <ModalShell
         isOpen={inviteModal}
-        onClose={() => { setInviteModal(false); setGeneratedLink(''); setGeneratedWaLink(''); setGeneratedToken(''); setInviteEmail(''); setInviteNome(''); setInviteTel(''); setInviteError(''); setInviteVencimentoBase('1000'); setInviteDataInicio(''); setInviteLocalTrabalho(''); setInviteLocalCustom(false); setInviteValorHora('18'); setInviteSubsidioAlimentacaoDia('8'); setInviteSubsidioAlimentacaoTipo('dinheiro'); setInviteTipoContrato('termo_incerto'); setInviteRegime('tempo_inteiro'); setInviteHorasSemanais(40); setInviteLocalTrabalhoSS('1'); setInviteDefaultClientId('c1775487391067'); setInviteDefaultScheduleId('s1776008063149'); setConviteWaEnviado(false); setConviteWaErro(''); }}
+        onClose={() => { setInviteModal(false); setGeneratedLink(''); setGeneratedWaLink(''); setGeneratedToken(''); setInviteEmail(''); setInviteNome(''); setInviteTel(''); setInviteError(''); setInviteVencimentoBase('1000'); setInviteDataInicio(''); setInviteLocalTrabalho(''); setInviteLocalCustom(false); setInviteValorHora('18'); setInviteSubsidioAlimentacaoDia('8'); setInviteSubsidioAlimentacaoTipo('dinheiro'); setInviteTipoContrato('termo_incerto'); setInviteRegime('tempo_inteiro'); setInviteHorasSemanais(40); setInviteLocalTrabalhoSS('1'); setInviteDefaultClientId(''); setInviteDefaultScheduleId(''); setConviteWaEnviado(false); setConviteWaErro(''); }}
         title="Convidar novo colaborador"
         subtitle="Link único de preenchimento de dados"
         icon={<UserPlus size={16} />}
@@ -688,7 +688,7 @@ const TeamManagerContent = ({ onLogin }) => {
               </div>
             )}
             <button
-              onClick={() => { setGeneratedLink(''); setGeneratedWaLink(''); setGeneratedToken(''); setInviteEmail(''); setInviteNome(''); setInviteTel(''); setInviteError(''); setInviteVencimentoBase('1000'); setInviteDataInicio(''); setInviteLocalTrabalho(''); setInviteLocalCustom(false); setInviteValorHora('18'); setInviteSubsidioAlimentacaoDia('8'); setInviteSubsidioAlimentacaoTipo('dinheiro'); setInviteTipoContrato('termo_incerto'); setInviteRegime('tempo_inteiro'); setInviteHorasSemanais(40); setInviteLocalTrabalhoSS('1'); setInviteDefaultClientId('c1775487391067'); setInviteDefaultScheduleId('s1776008063149'); setConviteWaEnviado(false); setConviteWaErro(''); }}
+              onClick={() => { setGeneratedLink(''); setGeneratedWaLink(''); setGeneratedToken(''); setInviteEmail(''); setInviteNome(''); setInviteTel(''); setInviteError(''); setInviteVencimentoBase('1000'); setInviteDataInicio(''); setInviteLocalTrabalho(''); setInviteLocalCustom(false); setInviteValorHora('18'); setInviteSubsidioAlimentacaoDia('8'); setInviteSubsidioAlimentacaoTipo('dinheiro'); setInviteTipoContrato('termo_incerto'); setInviteRegime('tempo_inteiro'); setInviteHorasSemanais(40); setInviteLocalTrabalhoSS('1'); setInviteDefaultClientId(''); setInviteDefaultScheduleId(''); setConviteWaEnviado(false); setConviteWaErro(''); }}
               className="w-full text-xs text-[var(--slate-dim)] hover:text-[var(--ink-soft)] font-bold py-1 transition-colors"
             >
               Gerar novo link

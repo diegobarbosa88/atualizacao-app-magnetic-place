@@ -21,7 +21,7 @@ const ADMIN_FIELDS_VAZIO = {
   tipo_contrato: 'termo_incerto', regime: 'tempo_inteiro', horas_semanais: 40,
   modo_trabalho: 'presencial', enquadramento: 'REGE',
   subsidio_alimentacao_dia: '8', subsidio_alimentacao_tipo: 'dinheiro',
-  local_trabalho: '1', defaultClientId: 'c1775487391067', defaultScheduleId: 's1776008063149',
+  local_trabalho: '1', defaultClientId: '', defaultScheduleId: '',
   comunicar_ss: false, solicitar_seguro: false,
 };
 
