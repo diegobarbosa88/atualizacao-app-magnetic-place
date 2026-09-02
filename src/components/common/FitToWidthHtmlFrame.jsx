@@ -46,7 +46,7 @@ export default function FitToWidthHtmlFrame({ html, title, sandbox = 'allow-same
 
   return (
     <div ref={outerRef} className={containerClassName}>
-      <div ref={wrapperRef} style={{ transformOrigin: 'top left' }}>
+      <div ref={wrapperRef} style={{ transformOrigin: 'top left', margin: '0 auto' }}>
         <iframe
           title={title || 'Pré-visualização'}
           srcDoc={html}

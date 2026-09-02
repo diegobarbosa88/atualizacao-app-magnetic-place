@@ -273,7 +273,7 @@ export function useDocumentsAdmin() {
         // gravar nada; o carimbo do admin ({admin_stamp}) fica por resolver
         // até à aprovação real.
         if (raw.signature_data) {
-          html = html.replace('{worker_signature}', `<img src="${raw.signature_data}" alt="Assinatura do trabalhador" style="max-width:220px;max-height:90px;" />`);
+          html = html.replace('{worker_signature}', `<img src="${raw.signature_data}" alt="Assinatura do trabalhador" style="width:100%;height:100%;object-fit:contain;object-position:center;" />`);
         }
         setPreview({ title, loading: false, blob: null, html, error: '' });
         return;

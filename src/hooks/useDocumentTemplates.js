@@ -507,8 +507,8 @@ export function useDocumentTemplates(supabase, { onError } = {}) {
         // como no desenho anterior, decisão confirmada via comentário no
         // artefacto do carimbo.
         const finalHtml = doc.generated_html
-          .replace('{worker_signature}', `<img src="${doc.signature_data}" alt="Assinatura do trabalhador" style="width:100%;height:100%;object-fit:contain;" />`)
-          .replace('{admin_stamp}', `<img src="${companySignature.signatureDataUrl}" alt="Assinatura da empresa" style="width:100%;height:100%;object-fit:contain;" />`)
+          .replace('{worker_signature}', `<img src="${doc.signature_data}" alt="Assinatura do trabalhador" style="width:100%;height:100%;object-fit:contain;object-position:center;" />`)
+          .replace('{admin_stamp}', `<img src="${companySignature.signatureDataUrl}" alt="Assinatura da empresa" style="width:100%;height:100%;object-fit:contain;object-position:center;" />`)
           .replaceAll('{verification_code}', verificationCode)
           .replaceAll('{verification_qr}', qrImgTag)
           .replaceAll('{signed_datetime}', formatDateTimePT(doc.signed_at))

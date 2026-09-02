@@ -132,8 +132,8 @@ const SignDrawModal = ({ onClose, onSign, workerName, working }) => {
           </p>
         )}
         <div
-          className="mb-3 bg-white border-2 border-slate-200 rounded-2xl flex-1 sm:flex-none relative"
-          style={{ minHeight: '200px', height: 'auto', touchAction: 'none' }}
+          className="mb-3 bg-white border-2 border-slate-200 rounded-2xl flex-shrink-0 relative"
+          style={{ height: '170px', touchAction: 'none' }}
         >
           <canvas
             ref={canvasRef}

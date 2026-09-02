@@ -2944,3 +2944,236 @@ tem baixo valor probatório (redes móveis/partilhadas/VPN tornam o IP pouco fi�
 expõe um dado pessoal desnecessário num documento que pode circular indefinidamente — mesmo
 princípio já decidido para a página pública de verificação ("nunca IP", ver secção "Carimbo Opção E
 + validação de assinaturas" acima). Diego não pediu para reabrir esta decisão, só pediu opinião.
+
+## Bug real de paginação A4 no PDF real (2026-09-02) — achado ao testar ponta-a-ponta
+
+**Diego testou o fluxo real (assinou como trabalhador, aprovou como admin) no Contrato — o PDF
+gerado pela PDF.co tinha 3 páginas: uma cláusula cortada a meio entre página 1 e 2, e uma 3.ª
+página quase vazia (só o rodapé sozinho).** Pedido: "otimize tudo para uma folha A4 inclusive as
+quebras de página".
+
+**Achado metodológico, antes de qualquer correção — o instrumento de medição habitual desta sessão
+(`getBoundingClientRect()` num browser normal) não serve para validar quebras de página.** Um
+browser normal nunca pagina conteúdo — só a exportação real (impressão/PDF) o faz. Medir a altura
+acumulada de elementos e comparar contra múltiplos de 1123px (a altura A4 a 96dpi, já confirmada
+nesta sessão) só prevê *aproximadamente* onde o motor vai cortar, mas não confirma se uma correção
+de CSS (`page-break-inside`, `break-inside`, mesmo `page-break-before:always` inline) teve
+qualquer efeito — o browser ignora essas propriedades fora de um contexto real de paginação.
+**Descoberto por controlo negativo:** apliquei `page-break-before:always` inline diretamente no
+`<div class="footer">` (a propriedade de quebra mais básica e universalmente suportada) e o PDF
+gerado ficou byte-a-byte equivalente em contagem de texto por página ao original sem a regra — só
+aí ficou claro que a "correção" não estava a ser testada onde importa.
+
+**Ferramenta de verificação construída para este achado, reutilizável para qualquer dúvida futura
+sobre paginação real:** o projeto já tinha `playwright`/`playwright-core` instalado (usado pelos
+testes e2e) — usado aqui para gerar um PDF real via `chromium.launch()` → `page.goto('file://...')`
+→ `page.pdf({ format:'A4', margin:{...0} })`, o mesmo motor Chromium subjacente que a PDF.co usa
+(confirmado no início desta sessão por extração vetorial: páginas reais a exatos 794×1123px/96dpi
+antes do escalamento final). Depois, `pdfjs-dist` (já usado nesta sessão para inspecionar PDFs
+reais) lê o PDF gerado e devolve número de páginas + texto de cada página — permite confirmar por
+inspeção direta se uma frase específica aparece inteira numa só página, sem depender de medição de
+scroll. Testado com o `generated_html` real do documento de teste do Diego
+(`worker_documents.verification_code = 'DRB-MKKL'`), não com dados sintéticos — o texto mais longo
+que ele escreveu num campo livre ("Magnetic Place - obra localizada em trofa 123456789") é
+precisamente o que empurrou o documento para 3 páginas.
+
+**Causa raiz real, confirmada por bissecção:** não foi falta de `page-break-inside`/`break-inside`
+(essas propriedades funcionam neste motor — confirmado num teste isolado mínimo antes de se
+suspeitar de outra coisa) — foi simplesmente **o documento ultrapassar por poucos pixels o
+orçamento de páginas inteiras** (2×1123px), e o motor de paginação real do Chromium arredonda
+blocos compostos (flex/table) para a página seguinte inteiros em vez de os encolher, mesmo quando
+a medição ingénua por scroll sugeria que ainda cabiam por uma margem de 4-12px — a medição em
+scroll normal e a paginação real do motor de impressão **não coincidem exatamente**, mesmo para o
+mesmo documento. A correção não foi adicionar mais controlo de quebra (isso já lá estava e não
+mudava nada sozinho) — foi **dar folga real**, cortando espaçamento vertical sobrante.
+
+**Correção aplicada aos 3 templates (`.page`/`.stamp-block`/`.stamp-rule`/`.stamp-meta`/
+`.stamp-final-rule`):**
+- `.page` padding-bottom `40px`→`16px` (o footer já tem a sua própria separação por `border-top`,
+  não precisava de tanto espaço morto depois).
+- `.stamp-block` margin-top `40px`→`24px`, padding-top `20px`→`14px`.
+- `.stamp-rule` margin-bottom `18px`→`12px`.
+- `.stamp-meta` margin-top `12px`→`8px`.
+- `.stamp-final-rule` margin `14px/12px`→`10px/8px`.
+- Mais, como hygiene defensiva para documentos futuros mais longos (não mudou nada no teste atual,
+  mas não custa e pode ajudar em casos-limite diferentes): `page-break-inside:avoid;
+  break-inside:avoid-page;` em `.field`, `.fields-row`, `ol.declara li`, `.epi-list`,
+  `.stamp-block`, `.section-label`, `.doc-title`, `.title-band`, `.footer`.
+
+**Verificado com o motor real (não estimado), antes e depois:**
+- **Contrato** (o único dos 3 que já passava de 1 página, 9 cláusulas): antes 3 páginas (cláusula
+  4.ª cortada a meio entre a 1.ª e 2.ª; 3.ª página só com o rodapé, 41 caracteres) → depois **2
+  páginas limpas**, a cláusula inteira ("...trofa 123456789...") confirmada presente por completo
+  numa só página via `pdfjs-dist`, sem página residual.
+- **EPI**/**RGPD** (mais curtos): confirmado que continuam a caber numa única página depois da
+  correção, sem regressão.
+- Confirmado visualmente no browser que o carimbo, com os espaçamentos reduzidos, continua com
+  boa aparência — não ficou apertado.
+- Gravado nos 3 templates reais via Supabase, confirmado por SQL
+  (`template_html like '%avoid-page%'` e `like '%padding: 48px 56px 16px%'`, ambos `true` nos 3).
+
+**Pendência:** esta correção foi validada com Playwright/Chromium local, não com uma chamada real
+à API da PDF.co (a `VITE_PDFCO_API_KEY` é uma env var sensível só existente em produção/Vercel,
+irrecuperável localmente — já registado noutra secção deste ficheiro). Alta confiança por os dois
+motores partilharem a mesma base Chromium e a mesma geometria de página já confirmada
+anteriormente, mas o próximo documento real assinado é que fecha a verificação de facto.
+
+## Dois bugs reais no carimbo, achados pelo Diego ao testar em telemóvel (2026-09-02)
+
+**Feedback com 2 screenshots do telemóvel: (1) "os dados do assinante está desalinhado com o lugar
+que vai a assinatura"; (2) "quero que esteja visualmente limitado o espaço disponível para a
+assinatura no painel do worker".**
+
+**Achado 1 — a assinatura ficava centrada na caixa, mas o nome por baixo fica alinhado à
+esquerda.** Causa raiz confirmada por medição real (`getBoundingClientRect`), não suposta: as duas
+colunas (Trabalhador/Entidade Patronal) estavam perfeitamente simétricas entre si — não era um
+problema de simetria horizontal. O problema real: `.stamp-swatch` tinha `justify-content: center`
+(herdado da versão "com moldura" de uma ronda anterior do design, nunca ajustado quando a versão
+final passou a ser "assinatura solta, sem caixa"), enquanto `.stamp-role`/`.stamp-name` (o nome por
+baixo) são texto normal, alinhado à esquerda por omissão — os dois nunca partilhavam o mesmo eixo.
+**Achado secundário, mais importante que o primeiro** ao tentar corrigir só via CSS do template:
+mudar `justify-content` no `.stamp-swatch` não tinha efeito nenhum na imagem REAL da assinatura,
+só no texto placeholder — porque `handleApproveDocument` (`useDocumentTemplates.js`) insere a
+`<img>` com `style="width:100%;height:100%;object-fit:contain;"` **inline**, que sempre vence a
+classe `.stamp-swatch img` do template (mesma regra da cascata já documentada várias vezes neste
+ficheiro: `style` inline > classe, salvo `!important`). Como a imagem ocupa sempre 100% da largura
+da caixa, `justify-content` do pai deixa de ter qualquer efeito — o alinhamento real é controlado
+por `object-position`, não pela flexbox do contentor.
+**Correção em dois sítios, não um:** `object-position: left center` acrescentado (1) ao `style`
+inline gerado em `useDocumentTemplates.js` para `{worker_signature}`/`{admin_stamp}` (a correção
+que importa de facto, para assinaturas reais) e (2) à classe `.stamp-swatch img` nos 3 templates
+(redundante com o inline, mas mantém o preview "por preencher" — sem dados reais, só o texto
+placeholder — consistente, já que aí não há `style` inline nenhum a sobrepor-se). `justify-content`
+do `.stamp-swatch` também corrigido para `flex-start`, por doença semelhante — sem efeito na
+imagem real, mas ajusta o texto placeholder do preview em bruto.
+Verificado ao vivo, com uma assinatura de teste desenhada deliberadamente estreita (para expor bem
+o efeito do `object-position`): antes ficava centrada, com espaço vazio para os dois lados; depois
+começa exactamente no mesmo ponto vertical que "TRABALHADOR"/nome por baixo, nos 3 templates.
+
+**Achado 2 — o canvas de assinatura do trabalhador não tinha limite de altura em mobile.**
+`SignDrawModal.jsx` (`src/components/worker/SignDrawModal.jsx`, partilhado por Fluxo 2 e Fluxo 3 —
+`HtmlDocumentViewer.jsx` importa-o directamente, sem wrapper próprio) tinha o contentor do canvas
+com `flex-1 sm:flex-none` + `minHeight:'200px', height:'auto'` — em mobile (`flex-1` dentro de um
+modal `h-full`), o canvas esticava para preencher quase o ecrã inteiro (confirmado no screenshot do
+Diego: canvas quase quadrado/vertical, ocupando a maior parte de um ecrã de telemóvel). Isto não é
+só feio — produz assinaturas com uma proporção completamente desligada da caixa final onde vão
+parar (`.stamp-swatch`, larga e baixa, ~327×50px — ratio ~6,5:1), o que faz com que, mesmo com o
+`object-position` corrigido, uma assinatura desenhada alta-e-estreita fique pequena e sem preencher
+bem a caixa larga-e-baixa do carimbo.
+**Correção:** `flex-1 sm:flex-none` + `minHeight:'200px', height:'auto'` → `flex-shrink-0` +
+`height:'170px'` (altura fixa, igual em mobile e desktop, `ratio` mais "paisagem" que o anterior,
+sem ser tão extremo quanto o ratio real da caixa final, que tornaria o desenho impraticável a
+dedo). **Zona sensível, tratada com o cuidado já documentado** (ver Fluxo 2 acima — "os canvas de
+assinatura são dimensionados por JavaScript a partir de `parent.clientWidth`/`clientHeight`... se
+mudares o layout do pai, o traço sai distorcido, e fica gravado assim num documento legal"): a
+mudança só fixa a ALTURA do contentor antes do canvas ser inicializado (o `useEffect` de setup só
+corre uma vez no mount, lendo `parent.clientWidth/clientHeight` já com a nova altura fixa) — não
+mexe em nenhum traço já desenhado, nem na lógica de captura de coordenadas. Verificado com uma
+réplica isolada do modal (HTML estático com a mesma estrutura/classes, viewport mobile 375×812):
+antes, o wrapper `h-full` + canvas `flex-1` ocupava quase o ecrã todo; depois, a caixa de desenho
+fica claramente contida (170px), com o resto do modal compacto por baixo.
+**Só corrigido em `SignDrawModal.jsx` (painel do worker), por pedido explícito — `AdminSignDrawModal.jsx`
+tem exactamente o mesmo padrão (`flex-1 sm:flex-none`, `minHeight:'200px'`) e o mesmíssimo problema,
+mas fica por resolver até o Diego pedir, para não alargar o âmbito sozinho.**
+
+Gravado nos 3 templates via Supabase (confirmado por SQL,
+`template_html like '%object-position: left center%'` `true` nos 3); `npx eslint` limpo em
+`SignDrawModal.jsx` e `useDocumentTemplates.js`. Não confirmado ao vivo dentro da app real (o
+dashboard do trabalhador continua atrás do bloqueio de sessão 403 já registado várias vezes nesta
+sessão) — confiança apoiada na réplica isolada idêntica em estrutura/classes e na leitura cuidadosa
+do `useEffect` de setup do canvas, que não muda de comportamento, só o valor de altura de entrada.
+
+**Achado a seguir, mesmo dia — pré-visualização do template descentrada.** O Diego reportou (com
+screenshot) o preview "por preencher" do EPI encostado à esquerda do modal, com uma faixa de vazio
+à direita — não era a página em si (que já tem `width:794px;margin:0 auto` desde a correcção de
+largura fixa desta sessão), era o **wrapper escalado do `FitToWidthHtmlFrame.jsx`**: o `outer`
+(`absolute inset-0 overflow-auto p-4`) é um bloco normal sem `justify-content`, e o `wrapper`
+(que recebe `width`/`height` calculados em JS, já em pixels pós-escala) nunca teve `margin` nenhum
+— sempre que o modal fica mais largo que 794px (`scale` fica `clamped` a 1 via `Math.min(1, ...)`),
+sobra espaço à direita e, sem centering, o bloco cai à esquerda por omissão. Corrigido com
+`margin: '0 auto'` no `style` inline do wrapper (uma linha, no componente partilhado — corrige os
+3 consumidores de uma vez: `DocxPreviewModal.jsx`, `HtmlDocumentViewer.jsx`, `WorkerDocuments.jsx`).
+Verificado com uma réplica isolada fiel ao mecanismo real (mesmo `applyFit()`, mesmo template EPI
+real buscado do Supabase, mesma largura de modal 880px do `ModalShell` `size="viewer"`): antes,
+encostado à esquerda; depois, centrado (margem esquerda/direita a ~36px/~51px — a pequena diferença
+é só a largura da barra de scroll do `outer`, que reduz o espaço disponível de um lado só,
+imperceptível visualmente). `npx eslint` limpo. Não confirmado dentro da app real pelo mesmo
+bloqueio de sessão já registado.
+
+**Achado a seguir, mesmo dia — assinatura real cortada, achado com o próprio Diego a assinar de
+verdade e a circular o problema num screenshot.** Ele usou o canvas todo (170px, já corrigido) e a
+assinatura saiu cortada no documento — o traço ultrapassava a caixa (`.stamp-swatch`,
+`overflow:hidden`) e transbordava para cima, sobre o parágrafo anterior. **Não era o mesmo sítio já
+corrigido hoje** (`useDocumentTemplates.js`'s `handleApproveDocument`, que já tinha
+`width:100%;height:100%;object-fit:contain;object-position:left center`) — a correção de manhã
+resolveu o carimbo *final* (depois de o admin aprovar), mas o Diego estava a ver a
+**pré-visualização do documento ainda por aprovar** (o "olho" no ecrã "Documentos" do admin,
+`useDocumentsAdmin.js`'s `openGeneratedPreview` — reaproveita `generated_html` com
+`{worker_signature}` ainda literal e resolve-o só para mostrar, sem gravar, deixando
+`{admin_stamp}` por resolver). **Este segundo sítio tinha um `style` completamente diferente e
+desactualizado**, resíduo de uma versão antiga do carimbo (antes do redesenho desta sessão):
+`style="max-width:220px;max-height:90px;"` — sem `width`/`height` fixos, sem `object-fit`. Sem
+estar limitada a 100%/100% do pai, a imagem podia ocupar até 220×90px reais — muito maior que a
+caixa real (327×50px) — e como `.stamp-swatch` tem `overflow:hidden`, o excesso ficava cortado.
+Confirmado por grep em todo o `src/` que era o único sítio com este padrão desactualizado (`"max-
+width:220px"`/`"max-height:90px"`, zero outras ocorrências).
+**Correção:** mesmo `style` já usado no sítio bom —
+`width:100%;height:100%;object-fit:contain;object-position:left center;`.
+**Verificado com a assinatura REAL do Diego** (não sintética — buscada de
+`worker_documents.signature_data`, o documento exacto do screenshot,
+`id=468a6c83-1533-4c91-9a24-b408242b1e7d`), renderizada com o `style` antigo vs. o novo lado a
+lado: antes, o traço cruzava visivelmente a régua laranja por cima da caixa; depois, medido por
+`getBoundingClientRect()`, a imagem fica exactamente dentro dos limites de `.stamp-swatch`
+(mesmo `top`/`bottom` que a própria caixa, 50px de altura, sem overflow). `npx eslint` limpo.
+
+**Fluxo real confirmado a funcionar ponta-a-ponta pela primeira vez com o carimbo novo** — o Diego
+assinou como trabalhador e aprovou como admin de verdade (`verification_code=DRB-ED5C`,
+notificação "Documento aprovado" no telemóvel), sem passar por nenhum dos bugs já corrigidos hoje.
+
+**Último ajuste, mesmo dia — esquerda vs. centro.** Com o alinhamento à esquerda (corrigido mais
+cedo hoje, para bater a assinatura com o texto por baixo), o bloco assinatura+nome+cargo+data
+ficava a ocupar só uma fracção da largura da coluna (327px), sobrando um vazio grande à direita —
+visualmente desequilibrado. Diego pediu para deslocar para a direita, ou seja, **centrar o bloco
+inteiro dentro da coluna**, não voltar ao problema original (assinatura centrada sozinha, texto à
+esquerda) — desta vez os dois lados do carimbo (imagem e texto) passaram a **centrar juntos**, em
+vez de ficarem ambos à esquerda: `.stamp-party` ganhou `text-align: center` (aplica-se a
+`.stamp-role`/`.stamp-name`/`.stamp-time`, texto normal sem align próprio); `.stamp-swatch`
+voltou a `justify-content: center`; `object-position` passou de `left center` para `center` nos
+dois sítios que resolvem `{worker_signature}`/`{admin_stamp}` com dados reais
+(`useDocumentTemplates.js`, `useDocumentsAdmin.js`) e na classe `.stamp-swatch img` dos 3
+templates (consistência do preview "por preencher"). **`.stamp-meta` ("N.º do documento"/"Aprovado
+em") não foi tocado** — Diego não o incluiu no que circulou, continua `justify-content:
+space-between`, a abranger a largura toda da página, por decisão de layout já correcta.
+Verificado com a mesma assinatura real de antes (`worker_documents.verification_code=DRB-ED5C`,
+o documento exacto do último screenshot): medido por `getBoundingClientRect()` que o centro
+horizontal da coluna, do nome e da imagem da assinatura coincidem exactamente (mesmo valor de
+píxel, 290px, nos 3). `npx eslint` limpo em `useDocumentTemplates.js`/`useDocumentsAdmin.js`.
+
+**Última correção do dia — duas réguas sobrepostas no preview "por preencher".** `.stamp-block`
+tinha `border-top: 1px solid #E2DED4` (cinzento, resíduo herdado da Opção D, onde essa borda era o
+único separador) mais o `.stamp-rule` (2px laranja) logo a seguir, 14px de padding depois — as
+duas ficavam visualmente coladas. Diego pediu para manter só a laranja. Removido o `border-top`
+de `.stamp-block`, mantido `margin-top`/`padding-top` (só espaçamento, sem linha). Confirmado ao
+vivo no preview em bruto do EPI: só a régua laranja visível. Gravado nos 3 templates, confirmado
+por SQL.
+
+**Achado real a seguir, mesmo dia — a marca de água transbordava por cima da régua laranja.**
+Diego reportou (screenshot circulado) espaço vazio a mais antes do carimbo, e a régua a aparecer
+"por cima da marca d'água". Medido antes de mexer (`getBoundingClientRect`, não suposto): a marca
+de água (`.stamp-wm`, 150×150px, centrada por `top:50%;left:50%;transform:translate(-50%,-50%)`
+dentro de `.stamp-party-admin`) tinha o seu `top` real em 783px, enquanto a régua acima
+(`.stamp-rule`) terminava em 799px — a marca de água começava **antes** do fim da régua, porque a
+coluna `.stamp-party` onde está centrada só mede ~93px de altura (muito menos que os 150px da
+própria marca de água) e **não tinha `overflow:hidden`** — o excesso (28px) transbordava para
+cima, por cima da régua, que por não estar posicionada (`position:static`) fica visualmente por
+baixo de qualquer elemento posicionado (a `.stamp-party`/`.stamp-wm`), mesmo vindo antes no DOM.
+**Correcção:** `.stamp-party` ganhou `overflow: hidden` — contém a marca de água dentro dos
+limites da própria coluna, sem lhe tocar no tamanho (continua 150×150, só passa a ficar cortada
+pelos próprios limites da coluna, tal como já acontecia com `.stamp-swatch`). Espaçamento também
+reduzido, por pedido explícito: `.stamp-block` `margin-top` 24→14px, `padding-top` 14→10px;
+`.stamp-rule` `margin-bottom` 12→8px.
+**Verificado com a assinatura REAL do Diego** (mesmo documento aprovado, `verification_code=
+DRB-ED5C`): visualmente, a régua fica limpa, sem sobreposição da marca de água; a marca de água
+continua visível (discreta, atrás da assinatura da Entidade Patronal), só deixou de ultrapassar os
+limites da própria coluna; o espaço antes da assinatura ficou mais compacto sem parecer apertado.
+Gravado nos 3 templates, confirmado por SQL.
