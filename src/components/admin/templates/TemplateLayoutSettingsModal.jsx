@@ -1,18 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Sliders, Save, Loader2, RotateCcw, RefreshCw, AlertCircle, FileText } from 'lucide-react';
 import ModalShell from '../../common/ModalShell';
-import FitToWidthHtmlFrame from '../../common/FitToWidthHtmlFrame';
 import { useApp } from '../../../context/AppContext';
 import { FT } from '../../../styles/designTokens';
 import { TEMPLATES_BUCKET } from '../../../utils/docxTemplateService';
 import { replaceTemplateFields } from '../../../utils/templateFields';
-import {
-  generateHtmlDocumentPdf,
-  buildPdfHeaderFooter,
-  fetchLogoDataUrl,
-  measurePageHeightPx,
-  A4_HEIGHT_PX,
-} from '../../../utils/htmlDocumentPdf';
+import { generateHtmlDocumentPdf } from '../../../utils/htmlDocumentPdf';
 import {
   DEFAULT_LAYOUT_SETTINGS,
   LAYOUT_SETTING_FIELDS,
@@ -115,122 +108,92 @@ function PdfCanvasPreview({ pdfUrl }) {
   return <div ref={containerRef} className="w-full h-full overflow-auto p-4" />;
 }
 
-// Pedido do Diego: "quero quebra de página no simulado... ajuste o simulado
-// para o real" — a Simulação mostrava o documento como um scroll contínuo,
-// sem indicar onde o PDF real vai cortar a página. Reaproveita a MESMA
-// extração de timbre/rodapé (`buildPdfHeaderFooter`) usada no PDF real, para
-// desenhar N "folhas" A4 empilhadas — cada uma com o timbre/rodapé no
-// sítio certo e uma janela do conteúdo total, deslocada para mostrar só o
-// troço dessa página (técnica de "iframe deslocado + recortado", a única
-// forma de mostrar a mesma árvore de HTML em duas posições de scroll
-// diferentes ao mesmo tempo). É uma APROXIMAÇÃO por altura (não sabe evitar
-// cortar um item de lista a meio, ao contrário do motor real da PDF.co) —
-// por isso mantém-se o aviso e o separador "PDF Oficial" como fonte da
-// verdade, esta vista é só para ganhar intuição rápida e grátis.
-function PaginatedSimulation({ finalHtml, values }) {
-  const outerRef = useRef(null);
-  const [scale, setScale] = useState(1);
-  const [pages, setPages] = useState(null);
+// Pedido do Diego, depois de duas voltas de bugs de paginação causados por
+// tentar PREVER a altura da página num motor (o browser do admin) diferente
+// do que gera o PDF final (o Chromium do Lambda): "vamos pelo certo" — a
+// Simulação deixa de ser uma aproximação por CSS e passa a ser o PDF real,
+// gerado pelo mesmo pipeline de sempre (generateHtmlDocumentPdf), só que
+// automático (debounce ~800ms depois de parar de editar) em vez de exigir
+// um clique. Já não há previsão nenhuma para divergir — o que se vê AQUI é
+// literalmente o mesmo motor que gera o documento assinado.
+function LivePdfPreview({ finalHtml, values }) {
+  const [pdfUrl, setPdfUrl] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const urlRef = useRef(null);
+  const seqRef = useRef(0);
 
   useEffect(() => {
-    const el = outerRef.current;
-    if (!el) return undefined;
-    const applyScale = () => {
-      const available = Math.max(200, el.clientWidth - 32);
-      setScale(Math.min(1, available / 794));
-    };
-    applyScale();
-    const ro = new ResizeObserver(applyScale);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-
-  useEffect(() => {
-    if (!finalHtml) { setPages(null); return undefined; }
+    if (!finalHtml) { setPdfUrl(null); setLoading(false); return undefined; }
     let cancelled = false;
-    // Pequeno debounce — evita recalcular (mede num iframe escondido) a
-    // cada tecla enquanto se digita um valor.
+    const mySeq = ++seqRef.current;
+    setLoading(true);
     const t = setTimeout(async () => {
       try {
-        const logoDataUrl = await fetchLogoDataUrl();
-        if (cancelled) return;
-        const { html: contentHtml, header, footer } = buildPdfHeaderFooter(finalHtml, logoDataUrl);
-        if (!header) {
-          if (!cancelled) setPages({ header: null, contentHtml: finalHtml });
-          return;
-        }
-        const usableHeightPerPage = A4_HEIGHT_PX - values.headerMarginPx - values.footerMarginPx;
-        const measured = await measurePageHeightPx(contentHtml);
-        if (cancelled) return;
-        const numPages = Math.max(1, Math.ceil((measured || 0) / usableHeightPerPage));
-        setPages({ header, footer, contentHtml, numPages, usableHeightPerPage, contentHeight: measured || usableHeightPerPage });
+        const blob = await generateHtmlDocumentPdf(finalHtml, values);
+        if (cancelled || mySeq !== seqRef.current) return;
+        const url = URL.createObjectURL(blob);
+        if (urlRef.current) URL.revokeObjectURL(urlRef.current);
+        urlRef.current = url;
+        setPdfUrl(url);
+        setError('');
       } catch (err) {
-        console.error('Erro a paginar a simulação:', err);
+        if (cancelled || mySeq !== seqRef.current) return;
+        console.error('Erro a gerar pré-visualização ao vivo:', err);
+        setError(err.message || 'Erro a gerar o PDF.');
+      } finally {
+        if (!cancelled && mySeq === seqRef.current) setLoading(false);
       }
-    }, 250);
+    }, 800);
     return () => { cancelled = true; clearTimeout(t); };
-  }, [finalHtml, values.headerMarginPx, values.footerMarginPx]);
+  }, [finalHtml, values]);
+
+  useEffect(() => () => {
+    if (urlRef.current) URL.revokeObjectURL(urlRef.current);
+  }, []);
 
   return (
-    <div ref={outerRef} className="absolute inset-0 overflow-auto p-4">
-      {!pages ? (
-        <div className="w-full h-full flex items-center justify-center">
-          <Loader2 className="w-6 h-6 animate-spin text-[var(--slate-dim)]" />
-        </div>
-      ) : !pages.header ? (
-        <FitToWidthHtmlFrame html={pages.contentHtml} title="Simulação" containerClassName="w-full h-full" />
-      ) : (
-        <div className="flex flex-col items-center">
-          {Array.from({ length: pages.numPages }).map((_, i) => (
-            <div key={i} style={{ marginBottom: i < pages.numPages - 1 ? Math.round(40 * scale) : 0 }}>
-              {i > 0 && (
-                <p
-                  className="text-center font-black uppercase tracking-widest"
-                  style={{ fontSize: Math.max(9, Math.round(10 * scale)), color: 'var(--slate-dim)', marginBottom: Math.round(8 * scale) }}
-                >
-                  — Quebra de página — Página {i + 1} —
-                </p>
-              )}
-              <div
-                className="relative bg-white shadow-lg flex-shrink-0"
-                style={{ width: 794, height: A4_HEIGHT_PX, overflow: 'hidden', zoom: scale, outline: '1px solid var(--border)' }}
-              >
-                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: values.headerMarginPx }} dangerouslySetInnerHTML={{ __html: pages.header }} />
-                <div style={{ position: 'absolute', top: values.headerMarginPx, left: 0, right: 0, height: pages.usableHeightPerPage, overflow: 'hidden' }}>
-                  <iframe
-                    title={`Página ${i + 1}`}
-                    srcDoc={pages.contentHtml}
-                    style={{ width: 794, height: pages.contentHeight, border: 0, marginTop: -i * pages.usableHeightPerPage, display: 'block' }}
-                  />
-                </div>
-                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: values.footerMarginPx }} dangerouslySetInnerHTML={{ __html: pages.footer }} />
-              </div>
-            </div>
-          ))}
-          <p className="text-[10px] text-[var(--slate-dim)] text-center px-4 pb-2">
-            Simulação aproximada ({pages.numPages} página{pages.numPages === 1 ? '' : 's'}) — confirma sempre em "PDF Oficial" antes de gravar.
-          </p>
+    <div className="absolute inset-0">
+      {loading && pdfUrl && (
+        <div className="absolute top-2 right-2 z-10 flex items-center gap-1.5 px-2 py-1 bg-[var(--surface)] border border-[var(--border)] rounded-lg text-[11px] text-[var(--slate-dim)] shadow">
+          <Loader2 className="w-3 h-3 animate-spin" /> A atualizar...
         </div>
       )}
+      {error && (
+        <div className="absolute top-2 left-2 right-2 z-10 flex items-start gap-2 p-2 bg-[var(--tone-rose-bg)] border border-[var(--tone-rose-border)] rounded-lg text-[11px] text-[var(--tone-rose)]">
+          <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+          <span>{error}</span>
+        </div>
+      )}
+      {pdfUrl ? (
+        <PdfCanvasPreview pdfUrl={pdfUrl} />
+      ) : loading ? (
+        <div className="h-full flex items-center justify-center">
+          <Loader2 className="w-6 h-6 animate-spin text-[var(--slate-dim)]" />
+        </div>
+      ) : !error ? (
+        <div className="h-full flex items-center justify-center text-sm text-[var(--slate-dim)]">
+          Este template não tem conteúdo HTML.
+        </div>
+      ) : null}
     </div>
   );
 }
 
 export default function TemplateLayoutSettingsModal({ template, systemSettings, onClose, onSave, saving }) {
   const [values, setValues] = useState(() => resolveLayoutSettings(template.layout_settings));
-  // Duas vistas, pedido do Diego: "Simulação" (HTML normal, grátis, atualiza-
-  // -se sozinha a cada mudança) para iterar rápido, e "PDF Oficial" (chamada
-  // real à PDF.co, só quando pedido) para confirmar o resultado que vai
-  // mesmo para o documento assinado. A margem do cabeçalho/rodapé só existe
-  // no PDF real (não tem equivalente em CSS de ecrã), por isso a Simulação
-  // não a reflecte diretamente no espaçamento — mas já entra no cálculo de
-  // quantas páginas a Simulação mostra (ver PaginatedSimulation).
+  // Duas vistas, as duas com o PDF real (gerado pelo mesmo Chromium
+  // serverless que assina os documentos): "Simulação" atualiza-se sozinha
+  // (debounce ~800ms) a cada ajuste, "PDF Oficial" só gera quando pedido e
+  // fica gravada como a última versão confirmada. Deixou de haver uma
+  // vista aproximada — as duas usam generateHtmlDocumentPdf, nunca podem
+  // divergir uma da outra por definição.
   const { supabase } = useApp();
   const [tab, setTab] = useState('sim');
   // Pedido do Diego: "quero que o real fique salvo sempre a última
   // importação" — inicializa já com o último PDF Oficial gravado (se
-  // existir), para não ter de gerar de novo (e gastar créditos da PDF.co)
-  // só para ver o que já tinha sido confirmado da última vez.
+  // existir), para não ter de gerar de novo só para ver o que já tinha
+  // sido confirmado da última vez.
   const [pdfUrl, setPdfUrl] = useState(template.layout_preview_pdf_url || null);
   const [pdfIsStale, setPdfIsStale] = useState(!!template.layout_preview_pdf_url);
   const [generating, setGenerating] = useState(false);
@@ -267,8 +230,8 @@ export default function TemplateLayoutSettingsModal({ template, systemSettings, 
   // caminho fixo por template — cada geração substitui a anterior, é sempre
   // "a última") e aponta `document_templates.layout_preview_pdf_url` para
   // lá, para a próxima vez que o painel abrir já ter algo para mostrar sem
-  // gastar outro pedido à PDF.co. Corre em segundo plano — se falhar, o
-  // preview local (já visível via blob) não é afetado, só fica por gravar.
+  // gerar de novo. Corre em segundo plano — se falhar, o preview local (já
+  // visível via blob) não é afetado, só fica por gravar.
   const persistLastPreview = async (pdfBlob) => {
     const path = `layout-preview/${template.id}.pdf`;
     const { error: upErr } = await supabase.storage
@@ -291,8 +254,12 @@ export default function TemplateLayoutSettingsModal({ template, systemSettings, 
     setGenerating(true);
     setGenError('');
     try {
-      const finalHtml = fillSample(template.template_html, systemSettings);
-      const pdfBlob = await generateHtmlDocumentPdf(finalHtml, values);
+      // simulationHtml já leva applyLayoutOverride aplicado — achado ao
+      // reescrever este painel: esta função enviava fillSample(...) em bruto,
+      // sem o override de margens/espaçamentos, só a Simulação (CSS) é que o
+      // aplicava. Divergência real entre as duas vistas, agora corrigida
+      // usando a mesma fonte para as duas.
+      const pdfBlob = await generateHtmlDocumentPdf(simulationHtml, values);
       const url = URL.createObjectURL(pdfBlob);
       if (pdfUrlRef.current) URL.revokeObjectURL(pdfUrlRef.current);
       pdfUrlRef.current = url;
@@ -345,9 +312,9 @@ export default function TemplateLayoutSettingsModal({ template, systemSettings, 
         {/* Coluna esquerda: controlos de margem + botão de atualização */}
         <div className="@2xl:w-[280px] @2xl:border-r border-[var(--border)] p-6 space-y-4 flex-shrink-0">
           <p className="text-xs text-[var(--ink-soft)]">
-            Margens e espaçamentos deste template. Usa a "Simulação" para
-            iterar rápido (grátis, sem chamar a PDF.co) e o "PDF Oficial"
-            para confirmares o resultado real antes de gravar.
+            Margens e espaçamentos deste template. A "Simulação" atualiza-se
+            sozinha com o PDF real a cada ajuste; o "PDF Oficial" gera a
+            pedido e fica gravado como a última versão confirmada.
           </p>
           {LAYOUT_SETTING_FIELDS.map(f => (
             <div key={f.key}>
@@ -364,9 +331,6 @@ export default function TemplateLayoutSettingsModal({ template, systemSettings, 
                 />
                 <span className="text-xs text-[var(--slate-dim)]">px</span>
               </div>
-              {!f.css && (
-                <p className="text-[10px] text-[var(--slate-dim)] mt-1 italic">Só no PDF Oficial — sem efeito na Simulação.</p>
-              )}
             </div>
           ))}
           <button
@@ -375,7 +339,7 @@ export default function TemplateLayoutSettingsModal({ template, systemSettings, 
             className="w-full flex items-center justify-center gap-2 px-4 py-3 font-bold rounded-xl hover:opacity-90 disabled:opacity-50 border border-[var(--border)] text-[var(--navy)] bg-[var(--surface)]"
           >
             {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-            {generating ? 'A gerar PDF real...' : 'Gerar PDF Oficial (PDF.co)'}
+            {generating ? 'A gerar PDF real...' : 'Gerar PDF Oficial'}
           </button>
           {genError && (
             <div className="flex items-start gap-2 p-3 bg-[var(--tone-rose-bg)] border border-[var(--tone-rose-border)] rounded-xl text-xs text-[var(--tone-rose)]">
@@ -385,9 +349,10 @@ export default function TemplateLayoutSettingsModal({ template, systemSettings, 
           )}
         </div>
 
-        {/* Coluna direita: separador Simulação (HTML grátis, sempre ao vivo)
-            / PDF Oficial (PDF.co real, desenhado em canvas — funciona igual
-            em desktop e mobile, ver nota em PdfCanvasPreview) */}
+        {/* Coluna direita: separador Simulação (PDF real, auto-atualiza com
+            debounce) / PDF Oficial (PDF real, só a pedido, fica gravado) —
+            as duas desenhadas em canvas via PdfCanvasPreview, funciona
+            igual em desktop e mobile (ver nota no componente) */}
         <div className="flex-1 flex flex-col min-h-[400px]">
           <div className="flex border-b border-[var(--border)] px-4 pt-3 gap-1 flex-shrink-0 bg-[var(--surface-dim)]">
             {[
@@ -410,7 +375,7 @@ export default function TemplateLayoutSettingsModal({ template, systemSettings, 
           <div className="flex-1 relative bg-[var(--surface-dim)]">
             {tab === 'sim' ? (
               simulationHtml ? (
-                <PaginatedSimulation finalHtml={simulationHtml} values={values} />
+                <LivePdfPreview finalHtml={simulationHtml} values={values} />
               ) : (
                 <div className="h-full flex items-center justify-center text-sm text-[var(--slate-dim)]">
                   Este template não tem conteúdo HTML.
