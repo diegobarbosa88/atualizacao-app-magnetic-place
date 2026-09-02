@@ -106,7 +106,15 @@ export function buildPdfHeaderFooter(finalHtml, logoDataUrl) {
     .replace('@page { size: A4; margin: 0; }', '')
     .replace('padding: 48px 56px 4px;', 'padding: 16px 56px 4px;');
 
-  const header = `<div style="width:100%; font-family: Arial, Helvetica, sans-serif; box-sizing:border-box; padding: 0 56px;">
+  // O header/footer do Puppeteer corre num contexto ISOLADO, sem acesso ao
+  // <style> do documento principal — o @font-face que garante Liberation
+  // Sans (em vez do OpenSans que o Lambda usa como fallback de sans-serif)
+  // tem de ser repetido aqui. Extraído do próprio finalHtml em vez de
+  // duplicado à mão, para nunca divergir se as fontes embutidas mudarem.
+  const fontFaceCss = (finalHtml.match(/@font-face\s*\{[^}]*\}/g) || []).join('\n');
+  const fontFaceStyle = fontFaceCss ? `<style>${fontFaceCss}</style>` : '';
+
+  const header = `${fontFaceStyle}<div style="width:100%; font-family: 'Liberation Sans', Arial, Helvetica, sans-serif; box-sizing:border-box; padding: 0 56px;">
   <div style="display:flex; align-items:center; gap:16px;">
     <img src="${logoDataUrl}" style="width:40px;height:40px;flex-shrink:0;" />
     <div>
@@ -118,7 +126,7 @@ export function buildPdfHeaderFooter(finalHtml, logoDataUrl) {
   <div style="height:3px; background:linear-gradient(90deg,#1B3A57 0%,#1B3A57 60%,#EB8D00 100%); margin-top:12px;"></div>
 </div>`;
 
-  const footer = `<div style="width:100%; font-family: Arial, Helvetica, sans-serif; box-sizing:border-box; padding: 0 56px; font-size:8px; color:#5C7086;">
+  const footer = `${fontFaceStyle}<div style="width:100%; font-family: 'Liberation Sans', Arial, Helvetica, sans-serif; box-sizing:border-box; padding: 0 56px; font-size:8px; color:#5C7086;">
   <div style="border-top:1px solid #EAE7DF; padding-top:8px; display:flex; justify-content:space-between;">
     <span>${footerSpansMatch[1]}</span>
     <span>${footerSpansMatch[2]}</span>
