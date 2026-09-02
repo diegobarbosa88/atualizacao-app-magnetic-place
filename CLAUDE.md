@@ -3330,12 +3330,50 @@ não uma versão simplificada) nos 3 templates reais buscados do Supabase:**
   acrescentar números de página que ninguém pediu; fica confirmado como opção disponível, não
   activado).
 
-**Pendência explícita, a fechar com o próximo documento real:** tal como o resto do mecanismo
-`formato==='html'` desta sessão, isto não foi testado contra a API real da PDF.co (chave
-`VITE_PDFCO_API_KEY` só existe no Vercel) — a confiança vem de replicar o mecanismo subjacente
-(Chromium print header/footer template, mesmos nomes de classe especiais documentados pela PDF.co)
-via Playwright, não de uma chamada real. Pedir ao Diego para testar com um documento real (worker
-assina → admin aprova) antes de considerar isto definitivamente fechado.
+**Pendência fechada por um erro real em produção, no dia seguinte ao deploy — a pendência acima
+("testar contra a API real") não ficou por confirmar, ficou CONFIRMADA COMO QUEBRADA.** O Diego
+tentou aprovar um documento real e a PDF.co devolveu: `Error running process: [Errno 7] Argument
+list too long: '/opt/html2pdf/html2pdf'` — o motor deles invoca o binário `html2pdf` passando
+header/footer como argumento de linha de comandos, com um limite bem mais apertado do que o do
+corpo principal do documento (que sempre funcionou a ~245KB, deve seguir por outra via, ex. um
+ficheiro temporário).
+
+**Causa raiz, medida, não suposta:** a 1.ª implementação de `buildPdfHeaderFooter` copiava o
+`<style>` inteiro do documento (102KB, quase tudo a imagem base64 da marca de água — irrelevante
+para o header/footer) para dentro de CADA UM dos dois, e reaproveitava o logo já embutido no
+timbre do template (138KB — dimensionado para aparecer 1x no corpo do documento, nunca pensado
+para ir a cada aprovação para um parâmetro à parte). Resultado: `header` de 241KB, muito acima do
+que o `html2pdf` aceita como argumento.
+
+**Correção:** `buildPdfHeaderFooter` deixou de copiar o `<style>` — passou a gerar markup fixo e
+pequeno com `style=` inline (mesma técnica já confirmada com Playwright a funcionar dentro de
+headerTemplate/footerTemplate), extraindo do `finalHtml` só os DOIS campos de texto que realmente
+variam por documento (a referência "Doc. RH · {código}<br/>{data}" e as duas linhas do rodapé) —
+tipografia/cores/logo ficam fixos no próprio código, iguais nos 3 templates. **`public/
+logo-header-small.png` novo** (100×100px, 13,7KB, gerado com `sharp` a partir do
+`logo-magnetic.png` já existente — confirmado por hash SHA-256 que é a MESMA imagem embutida no
+timbre, só redimensionada) — buscado fresco a cada aprovação via `fetchLogoDataUrl()`, com
+fallback a um pixel transparente 1x1 se a busca falhar (nunca bloquear uma aprovação por causa do
+logo do cabeçalho).
+
+**Resultado medido (réplica exacta da função real, corrida contra os 3 templates reais do
+Supabase):** `header` 241.357→**19.187 bytes** (92% menor), `footer` 102.337→**337 bytes**. Bónus
+não pedido mas real: o `pdfHtml` principal também encolheu de ~245KB para ~106-110KB (o logo de
+138KB deixou de estar duplicado dentro do corpo, já que o timbre saiu de lá). Confirmado com
+Playwright, PDFs reais gerados a partir dos 3 templates: EPI/RGPD continuam a encolher para 1
+página sem sobra, Contrato continua exactamente em 2 páginas — mesmos resultados de antes, sem
+regressão nenhuma, só o payload muito mais pequeno. Confirmado visualmente que o logo pequeno
+renderiza nítido a 40px de exibição (dimensionado com folga suficiente para retina).
+
+**Lição a reter — reforça uma já registada nesta sessão sobre `paperSize`/`@page`:** parâmetros
+que "correm num contexto isolado" (headerTemplate/footerTemplate) não são só um problema de CSS
+não chegar lá — o MOTOR por trás pode ter limites de tamanho completamente diferentes do resto do
+pedido, e isso só apareceu ao testar a sério em produção, não era detectável por leitura da
+documentação nem por Playwright local (o Chromium local não tem esse limite de `ARG_MAX`, só
+apareceu porque a PDF.co invoca um binário externo por linha de comandos). **Regra prática para o
+futuro: qualquer conteúdo destinado a `header`/`footer` da PDF.co deve ser deliberadamente pequeno
+(dezenas de KB, não centenas) — nunca reaproveitar blocos grandes (imagens de alta resolução,
+`<style>` inteiros) só porque "já lá estão" no documento principal.**
 
 ## Padronização do canvas de assinatura da empresa — `AdminSignDrawModal.jsx` (2026-09-02)
 

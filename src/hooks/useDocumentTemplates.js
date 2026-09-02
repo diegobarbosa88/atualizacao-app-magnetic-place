@@ -93,6 +93,30 @@ function measurePageHeightPx(html) {
   });
 }
 
+// Fallback de 1x1 transparente — só usado se a busca ao logo pequeno falhar,
+// para nunca bloquear uma aprovação por causa do cabeçalho.
+const TRANSPARENT_PIXEL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+
+// Versão pequena (100×100, ~13,7KB) do logótipo, gerada com sharp a partir
+// de `public/logo-magnetic.png` — o mesmo ficheiro embutido no timbre do
+// template, mas esse vem a 138KB (pensado para o corpo do documento, nunca
+// para ir 1x por cada aprovação a um endpoint separado). Buscado fresco em
+// vez de extraído do template para não repetir o custo do original.
+async function fetchLogoDataUrl() {
+  try {
+    const res = await fetch('/logo-header-small.png');
+    const blob = await res.blob();
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return TRANSPARENT_PIXEL;
+  }
+}
+
 // Separa o timbre (`.letterhead`+`.rule`) e o rodapé (`.footer`) do fluxo do
 // `.page` para os passar como `header`/`footer` da PDF.co — repetem-se
 // automaticamente em TODAS as páginas físicas (timbre só aparecia na 1.ª
@@ -102,16 +126,26 @@ function measurePageHeightPx(html) {
 // `generated_html` continua a gravar a versão completa (timbre/rodapé
 // inline), para a pré-visualização em `openGeneratedPreview` continuar
 // correta (essa não passa pela PDF.co, é só HTML normal num iframe).
-// O `header`/`footer` da PDF.co corre num contexto isolado, sem acesso ao
-// `<style>` da página principal — por isso levam consigo uma cópia do
-// próprio bloco `<style>` extraído do documento (confirmado com Playwright:
-// um `<style>` com seletores de classe funciona dentro do header/footer,
-// não é preciso reescrever tudo em `style=` inline).
-function buildPdfHeaderFooter(finalHtml) {
-  const styleMatch = finalHtml.match(/<style>[\s\S]*?<\/style>/);
+//
+// Header/footer reescritos com `style=` inline, SEM duplicar o `<style>`
+// principal do documento — achado real, não hipotético: a 1.ª versão desta
+// função copiava o `<style>` inteiro (102KB, quase tudo a marca de água em
+// base64, irrelevante aqui) para dentro de cada um, e reaproveitava o logo
+// já embutido no timbre (138KB, pensado para o corpo do documento) — dava
+// um `header` de 241KB. A PDF.co devolveu em produção "Error running
+// process: [Errno 7] Argument list too long: '/opt/html2pdf/html2pdf'":
+// o motor deles passa o header/footer como argumento de linha de comandos
+// ao binário `html2pdf`, com um limite bem mais apertado do que o corpo
+// principal do documento (esse SEMPRE funcionou a ~245KB, deve ir por outra
+// via). Corrigido: só os campos de texto reais (referência do documento,
+// as duas linhas do rodapé) saem do template via regex; o resto — logo,
+// tipografia, cores — é markup fixo e pequeno, igual nos 3 templates.
+function buildPdfHeaderFooter(finalHtml, logoDataUrl) {
   const letterheadMatch = finalHtml.match(/<div class="letterhead">[\s\S]*?<\/div>\s*<div class="rule"><\/div>/);
   const footerMatch = finalHtml.match(/<div class="footer">[\s\S]*?<\/div>/);
-  if (!styleMatch || !letterheadMatch || !footerMatch) {
+  const docRefMatch = finalHtml.match(/<div class="doc-ref">([\s\S]*?)<\/div>/);
+  const footerSpansMatch = finalHtml.match(/<div class="footer">\s*<span>([\s\S]*?)<\/span>\s*<span>([\s\S]*?)<\/span>\s*<\/div>/);
+  if (!letterheadMatch || !footerMatch || !docRefMatch || !footerSpansMatch) {
     return { html: finalHtml, header: null, footer: null };
   }
 
@@ -121,11 +155,26 @@ function buildPdfHeaderFooter(finalHtml) {
     .replace('@page { size: A4; margin: 0; }', '')
     .replace('padding: 48px 56px 4px;', 'padding: 16px 56px 4px;');
 
-  return {
-    html,
-    header: `${styleMatch[0]}<div style="width:100%;">${letterheadMatch[0]}</div>`,
-    footer: `${styleMatch[0]}<div style="width:100%;">${footerMatch[0]}</div>`,
-  };
+  const header = `<div style="width:100%; font-family: Arial, Helvetica, sans-serif; box-sizing:border-box; padding: 0 56px;">
+  <div style="display:flex; align-items:center; gap:16px;">
+    <img src="${logoDataUrl}" style="width:40px;height:40px;flex-shrink:0;" />
+    <div>
+      <div style="font-weight:800; font-size:13px; letter-spacing:0.01em; color:#1B3A57; line-height:1.15;">MAGNETIC PLACE — Unipessoal, Lda.</div>
+      <div style="font-size:7.5px; color:#5C7086; letter-spacing:0.02em; margin-top:2px;">Cedência de Mão-de-Obra · Trofa, Portugal</div>
+    </div>
+    <div style="margin-left:auto; text-align:right; font-size:7.5px; color:#5C7086; line-height:1.4;">${docRefMatch[1]}</div>
+  </div>
+  <div style="height:3px; background:linear-gradient(90deg,#1B3A57 0%,#1B3A57 60%,#EB8D00 100%); margin-top:12px;"></div>
+</div>`;
+
+  const footer = `<div style="width:100%; font-family: Arial, Helvetica, sans-serif; box-sizing:border-box; padding: 0 56px; font-size:8px; color:#5C7086;">
+  <div style="border-top:1px solid #EAE7DF; padding-top:8px; display:flex; justify-content:space-between;">
+    <span>${footerSpansMatch[1]}</span>
+    <span>${footerSpansMatch[2]}</span>
+  </div>
+</div>`;
+
+  return { html, header, footer };
 }
 
 // Mesma lógica de src/data/... não existe utilitário partilhado — versão
@@ -604,7 +653,8 @@ export function useDocumentTemplates(supabase, { onError } = {}) {
         // na última). `pdfHtml` é só para esta chamada; `generated_html`
         // continua a gravar `finalHtml` completo (timbre/rodapé inline),
         // que é o que `openGeneratedPreview` mostra depois.
-        const { html: pdfHtml, header: pdfHeader, footer: pdfFooter } = buildPdfHeaderFooter(finalHtml);
+        const logoDataUrl = await fetchLogoDataUrl();
+        const { html: pdfHtml, header: pdfHeader, footer: pdfFooter } = buildPdfHeaderFooter(finalHtml, logoDataUrl);
 
         // Documento de 1 página só (EPI/RGPD): encolher a página física ao
         // tamanho real do conteúdo, para não sobrar espaço vazio no PDF.
