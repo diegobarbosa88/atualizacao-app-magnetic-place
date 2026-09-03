@@ -6,6 +6,18 @@ import ModalShell from '../../../components/common/ModalShell';
 import SelectProfissaoEmpresa from '../../../components/SelectProfissaoEmpresa';
 import { autoAtribuirPorProfissao } from '../formacao-interna/formacaoApi';
 import { autoGerarDocumentosGate } from './autoGerarDocumentosGate';
+import { sendOnboardingApprovedEmail } from '../../../utils/emailUtils';
+
+// Mesmo algoritmo de api/auth.js — o utilizador de login é sempre derivado
+// do nome, nunca escolhido, por isso é seguro calcular aqui para informar o
+// trabalhador sem esperar por uma resposta do servidor.
+function loginKeyFromName(name) {
+  if (!name) return '';
+  const parts = name.trim().split(/\s+/);
+  const first = parts[0].toLowerCase();
+  const last = parts.length > 1 ? parts[parts.length - 1].toLowerCase() : '';
+  return first + last;
+}
 
 const TABELA_IRS_LABELS = {
   tabelaI:   'Tabela I',
@@ -157,6 +169,18 @@ export default function OnboardingPendentes() {
         await autoGerarDocumentosGate(newWorkerId);
       } catch (e) {
         console.warn('Falha ao gerar documentos automáticos do gate de onboarding:', e.message);
+      }
+
+      // Avisa o próprio trabalhador de que já pode aceder — efeito
+      // secundário, mesma lógica de não bloquear a aprovação já gravada.
+      try {
+        await sendOnboardingApprovedEmail({
+          toEmail: selected.email,
+          workerName: selected.nome,
+          username: loginKeyFromName(selected.nome),
+        });
+      } catch (e) {
+        console.warn('Falha ao enviar email de aprovação ao trabalhador:', e.message);
       }
 
       // Se pediram para comunicar SS e/ou solicitar seguro, agenda para o
