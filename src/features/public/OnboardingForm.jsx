@@ -553,9 +553,19 @@ export default function OnboardingForm({ token }) {
             Os seus dados foram recebidos e serão revistos pela equipa da Magnetic Place.
             Após aprovação, receberá as informações de acesso.
           </p>
-          <div className="bg-slate-50 rounded-xl px-4 py-3">
+          {/* window.close() só fecha separadores abertos por script — em
+              muitos browsers/contextos não faz nada (falha em silêncio,
+              sem erro). Mesmo assim, em Custom Tabs abertos a partir de
+              WhatsApp/SMS costuma funcionar, e por isso volta a ser um
+              botão em vez de só texto instrutivo — pedido explícito do
+              Diego, testado no telemóvel real dele. */}
+          <button
+            type="button"
+            onClick={() => window.close()}
+            className="w-full bg-slate-50 hover:bg-slate-100 active:scale-[0.99] rounded-xl px-4 py-3 transition-all"
+          >
             <p className="text-slate-400 text-xs font-medium normal-case">Pode fechar esta janela.</p>
-          </div>
+          </button>
         </div>
       </div>
     </div>
