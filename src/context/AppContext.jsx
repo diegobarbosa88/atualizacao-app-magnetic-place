@@ -721,7 +721,32 @@ export const AppProvider = ({ children }) => {
     const { error } = await supabaseInstance.from(deleteTable).delete().eq('id', id);
 
     if (error && colName === 'workers' && deletedWorker) {
-      setWorkers(prev => prev.some(w => w.id === id) ? prev : [...prev, deletedWorker]);
+      const restoreWorker = () => setWorkers(prev => prev.some(w => w.id === id) ? prev : [...prev, deletedWorker]);
+
+      // Apagar de vez, a pedido explícito do admin. Feito via RPC
+      // (SECURITY DEFINER), não com deletes diretos do cliente aqui —
+      // formacao_participantes/formacoes_internas têm RLS ativo sem
+      // nenhuma policy, por isso um delete/update normal do cliente afeta
+      // sempre 0 linhas em silêncio (sem erro), o que fazia esta confirmação
+      // parecer aceite mas nunca remover o bloqueio real. Ver
+      // forcar_apagar_worker() na base de dados para a lista completa do
+      // que é apagado (formações, seguro, mensagens WhatsApp) — mantidos
+      // sem CASCADE de propósito, só saem daqui com esta confirmação
+      // explícita.
+      if (error.code === '23503' && window.confirm(
+        `Não foi possível apagar "${deletedWorker.name}" porque tem registos associados (formações, seguro ou mensagens WhatsApp) — mantidos de propósito, por serem registos de conformidade.\n\n` +
+        'Queres apagar também esses registos e o colaborador, de forma definitiva e irreversível?\n\n' +
+        '"Cancelar" mantém tudo — considera marcar o colaborador como inativo em vez de apagar.'
+      )) {
+        const { error: forceErr } = await supabaseInstance.rpc('forcar_apagar_worker', { p_worker_id: id });
+        if (forceErr) {
+          restoreWorker();
+          window.alert(`Não foi possível apagar "${deletedWorker.name}" mesmo depois de remover os registos associados: ${forceErr.message}`);
+        }
+        return;
+      }
+
+      restoreWorker();
       window.alert(
         `Não foi possível apagar "${deletedWorker.name}": ${error.message}\n\n` +
         'Provavelmente tem formações, seguro ou outros registos associados. ' +
@@ -862,7 +887,10 @@ export const AppProvider = ({ children }) => {
     const { error } = await supabaseInstance
       .from('system_settings')
       .upsert(payload, { onConflict: 'id' });
-    if (error) console.error('Erro ao gravar system_settings:', error);
+    if (error) {
+      console.error('Erro ao gravar system_settings:', error);
+      window.alert(`Não foi possível gravar as Configurações: ${error.message}`);
+    }
   };
 
   const value = {
