@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { User, Phone, Mail, MapPin, CreditCard, Shield, Landmark, Edit2, X, Send, Clock, CheckCircle, XCircle, FileCheck, Download, Bell, BellRing, Loader2 } from 'lucide-react';
+import { User, Phone, Mail, MapPin, CreditCard, Shield, Landmark, Edit2, X, Send, Clock, CheckCircle, XCircle, FileCheck, Download, Bell, BellRing, Loader2, Compass, ChevronRight } from 'lucide-react';
 import { isSigned } from '../../constants/documentStatus';
 import { FT, FONT_TITLE, FONT_MONO, SCALE } from '../../styles/designTokens';
 import { notifyEvent, TARGET } from '../../utils/notifyEvent';
@@ -28,7 +28,7 @@ function SectionLabel({ children }) {
   );
 }
 
-const WorkerProfile = ({ worker, changeRequests, documents = [] }) => {
+const WorkerProfile = ({ worker, changeRequests, documents = [], onRequestTour }) => {
   const signedDocs = [...documents]
     .filter(d => isSigned(d.status))
     .sort((a, b) => (b.signed_at || b.dataAssinatura || '').localeCompare(a.signed_at || a.dataAssinatura || ''));
@@ -103,6 +103,28 @@ const WorkerProfile = ({ worker, changeRequests, documents = [] }) => {
           )}
         </div>
       </div>
+
+      {/* Rever tour do painel */}
+      {onRequestTour && (
+        <button
+          type="button"
+          onClick={onRequestTour}
+          className="w-full bg-white rounded-2xl border border-slate-100 overflow-hidden px-4 py-3 text-left"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-7 h-7 rounded-xl flex items-center justify-center shrink-0" style={{ background: FT.okBg }}>
+                <Compass size={13} style={{ color: FT.ok }} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-slate-800">Rever tour do painel</p>
+                <p className={`${SCALE.text.meta} text-slate-400`}>Uma volta rápida pelas funcionalidades principais</p>
+              </div>
+            </div>
+            <ChevronRight size={15} className="text-slate-300 shrink-0" />
+          </div>
+        </button>
+      )}
 
       {/* Dados Pessoais */}
       <div>

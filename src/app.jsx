@@ -105,6 +105,11 @@ export default function App() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Dispara o tour guiado do painel só na transição real Gate→Dashboard
+  // desta sessão — nunca em logins seguintes, em que o Gate nem chega a
+  // montar (currentUser.gate.pendente já vem false do login).
+  const [justCompletedGate, setJustCompletedGate] = useState(false);
+
   const [portalMonth, setPortalMonth] = useState(new Date());
   const portalSubTab = useMemo(() => {
     const match = location.pathname.match(/^\/admin\/portal_validacao\/([^/]+)/);
@@ -554,12 +559,14 @@ export default function App() {
             const userSemGate = { ...currentUser, gate: { pendente: false, itens: [] } };
             setCurrentUser(userSemGate);
             localStorage.setItem('magnetic_user', JSON.stringify(userSemGate));
+            setJustCompletedGate(true);
           }}
         />
       )}
       {view === 'worker' && !currentUser?.gate?.pendente && (
         <WorkerDashboard
           {...{ onLogout: handleLogout, onLogin: handleLogin, currentUser, setCurrentUser, currentMonth, setCurrentMonth, logs, clients, handleSaveEntry, saveToDb, handleDelete, approvals, handleApproveMonth, systemSettings, documents, appNotifications }}
+          autoStartTour={justCompletedGate}
         />
       )}
       {view === 'client_portal' && (

@@ -26,6 +26,7 @@ export default function WorkerHeroStats({ currentUser, currentMonth, setCurrentM
         background: FT.navyDeep,
         backgroundImage: `radial-gradient(circle at 90% -10%, rgba(235,141,0,0.16), transparent 55%)`,
       }}
+      data-tour="hero-stats"
     >
 
       {/* Linha superior: data + selector de mês */}

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { WorkerProvider, useWorker } from './contexts/WorkerContext';
 import { useApp } from '../../context/AppContext';
 import { isPending } from '../../constants/documentStatus';
@@ -37,9 +37,10 @@ import ProfileModal from './worker-dashboard/ProfileModal';
 import DocumentsModal from './worker-dashboard/DocumentsModal';
 import FormacaoModal from './worker-dashboard/FormacaoModal';
 import ModalShell from '../../components/common/ModalShell';
+import WorkerDashboardTour from './worker-dashboard/WorkerDashboardTour';
 import { listMinhasFormacoes } from './worker-dashboard/formacaoWorkerApi';
 
-const WorkerDashboardContent = ({ onLogout, onLogin }) => {
+const WorkerDashboardContent = ({ onLogout, onLogin, autoStartTour }) => {
   const {
     currentUser, currentMonth, setCurrentMonth,
     logs, clients, schedules, personalSchedules,
@@ -88,6 +89,24 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
     if (!documentsModalOpen) loadPendingTemplateDocs();
   }, [documentsModalOpen, loadPendingTemplateDocs]);
   const [notifModalOpen, setNotifModalOpen] = useState(false);
+
+  // Tour guiado do painel — disparado uma vez a seguir ao Gate (autoStartTour)
+  // ou pedido manualmente a partir do Perfil (requestTour). Os alvos do tour
+  // (hero, calendário) só existem no separador "home" — requestTour muda
+  // para lá primeiro, e um efeito abre o tour só depois desse separador
+  // estar mesmo montado.
+  const [tourOpen, setTourOpen] = useState(false);
+  const [pendingTourStart, setPendingTourStart] = useState(false);
+  const requestTour = useCallback(() => {
+    setPendingTourStart(true);
+    setWorkerTab('home');
+  }, []);
+  useEffect(() => {
+    if (pendingTourStart && workerTab === 'home') {
+      setTourOpen(true);
+      setPendingTourStart(false);
+    }
+  }, [pendingTourStart, workerTab]);
 
   const [formacaoModalOpen, setFormacaoModalOpen] = useState(false);
   const [pendingFormacaoCount, setPendingFormacaoCount] = useState(0);
@@ -261,6 +280,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
     setAbsenceRequests?.(prev => prev.filter(r => r.id !== req.id));
   };
 
+  const isCurrentMonth = currentMonth.getFullYear() === new Date().getFullYear() && currentMonth.getMonth() === new Date().getMonth();
   const workerStartDate = currentUser?.dataInicio ? new Date(currentUser.dataInicio + 'T00:00:00') : null;
   const todayStr = toISODateLocal(new Date());
   const todayOpenLog = !myApproval && logs.find(l =>
@@ -282,6 +302,22 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
     if (alertCount > 0 && !alertsModalDismissed) setAlertsModalOpen(true);
   }, [alertCount, alertsModalDismissed]);
 
+  // Auto-arranque do tour, uma vez, mesmo instante em que o Gate acaba de
+  // ser concluído (autoStartTour). Só se não houver avisos pendentes a
+  // disputar o ecrã com o PendingAlertsModal — improvável logo a seguir ao
+  // Gate (quem acabou de tratar documentos/formações não deixa outros por
+  // trás), mas evita os dois overlays a competir se acontecer.
+  const alertCountRef = useRef(alertCount);
+  alertCountRef.current = alertCount;
+  useEffect(() => {
+    if (!autoStartTour) return;
+    const t = setTimeout(() => {
+      if (alertCountRef.current === 0) setTourOpen(true);
+    }, 900);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <div className="min-h-screen bg-slate-50 pb-32 font-sans relative">
       <WorkerNavBar
@@ -301,7 +337,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
         onOpenFormacaoModal={() => setFormacaoModalOpen(true)}
         onOpenEpiModal={() => setEpiModalOpen(true)}
         epiEnabled={!!currentUser?.epi_enabled}
-        isCurrentMonth={currentMonth.getFullYear() === new Date().getFullYear() && currentMonth.getMonth() === new Date().getMonth()}
+        isCurrentMonth={isCurrentMonth}
         absencePendingCount={(absenceRequests || []).filter(r => r.worker_id === currentUser?.id && (r.status === 'pending' || r.status === 'seen')).length}
         documentsPendingCount={pendingSignaturesCount}
         formacaoPendingCount={pendingFormacaoCount}
@@ -317,6 +353,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
             worker={currentUser}
             changeRequests={(workerChangeRequests || []).filter(r => r.worker_id === currentUser?.id)}
             documents={(documents || []).filter(d => (d.workerId === currentUser?.id || d.worker_id === currentUser?.id) && d.status !== 'Rascunho')}
+            onRequestTour={requestTour}
           />
         )}
 
@@ -536,6 +573,15 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
         worker={currentUser}
         changeRequests={(workerChangeRequests || []).filter(r => r.worker_id === currentUser?.id)}
         documents={(documents || []).filter(d => (d.workerId === currentUser?.id || d.worker_id === currentUser?.id) && d.status !== 'Rascunho')}
+        onRequestTour={() => { setProfileModalOpen(false); requestTour(); }}
+      />
+
+      <WorkerDashboardTour
+        isOpen={tourOpen}
+        onClose={() => setTourOpen(false)}
+        firstName={currentUser?.name?.split(' ')[0]}
+        epiEnabled={!!currentUser?.epi_enabled}
+        hasFalta={isCurrentMonth}
       />
 
       <DocumentsModal
@@ -587,9 +633,9 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
   );
 };
 
-const WorkerDashboard = ({ onLogout, onLogin, handleSaveEntry }) => (
+const WorkerDashboard = ({ onLogout, onLogin, handleSaveEntry, autoStartTour }) => (
   <WorkerProvider handleSaveEntry={handleSaveEntry}>
-    <WorkerDashboardContent onLogout={onLogout} onLogin={onLogin} />
+    <WorkerDashboardContent onLogout={onLogout} onLogin={onLogin} autoStartTour={autoStartTour} />
   </WorkerProvider>
 );
 

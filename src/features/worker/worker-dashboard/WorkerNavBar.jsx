@@ -26,11 +26,12 @@ const formatTimeCompact = (timeStr) => {
   return `${h}h${m === 0 ? '' : m.toString().padStart(2, '0')}`;
 };
 
-const TabButton = ({ active, onClick, icon, label, badge }) => (
+const TabButton = ({ active, onClick, icon, label, badge, tourTag }) => (
   <button
     onClick={onClick}
     className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 relative transition-colors"
     style={{ color: active ? FT.orange : FT.slateDim }}
+    data-tour={tourTag}
   >
     {icon}
     <span className={SCALE.text.badge} style={{ fontFamily: FONT_MONO }}>{label}</span>
@@ -75,6 +76,7 @@ export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, act
         <button
           onClick={() => { setWorkerTab('home'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
           className="flex items-center gap-3 hover:opacity-75 transition-opacity"
+          data-tour="welcome-anchor"
         >
           <div
             className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
@@ -114,6 +116,7 @@ export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, act
               onClick={handleBellClick}
               className="relative p-1.5 bg-[#1B3A57]/10 text-[var(--navy)] hover:bg-[var(--navy-solid)] hover:text-white rounded-xl transition-all shadow-sm"
               title={alertCount > 0 ? 'Avisos pendentes' : 'Notificações'}
+              data-tour="bell"
             >
               <Bell size={15} />
               <span className={`absolute -top-1 -right-1 min-w-[16px] h-[16px] bg-rose-500 rounded-full text-white flex items-center justify-center px-1 ${SCALE.text.badge}`}>
@@ -127,6 +130,7 @@ export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, act
             <button
               onClick={() => setWorkerTab(t => t === 'horarios' ? 'home' : 'horarios')}
               className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-black shadow-sm transition-all ${workerTab === 'horarios' ? 'bg-[var(--navy-solid)] text-white' : 'bg-[#1B3A57]/10 text-[var(--navy)] hover:bg-[#1B3A57]/20'}`}
+              data-tour="tab-horarios"
             >
               {activeWorkerSchedule && (
                 <span className={`${SCALE.text.badge} opacity-70 border-r border-current/20 pr-2 mr-1 leading-tight text-right`}>
@@ -147,6 +151,7 @@ export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, act
                 onClick={onOpenAbsenceModal}
                 className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-black shadow-sm transition-all bg-orange-50 text-orange-500 hover:bg-orange-100 relative"
                 title="Avisar Falta"
+                data-tour="tab-falta"
               >
                 <CalendarX size={15} className="shrink-0" />
                 <span>Falta</span>
@@ -163,6 +168,7 @@ export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, act
                 onClick={onOpenEpiModal}
                 className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-black shadow-sm transition-all bg-slate-50 text-slate-600 hover:bg-slate-100"
                 title="EPI"
+                data-tour="tab-epi"
               >
                 <HardHat size={15} className="shrink-0" />
                 <span>EPI</span>
@@ -173,6 +179,7 @@ export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, act
               onClick={onOpenDocumentsModal}
               className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-black shadow-sm transition-all bg-slate-50 text-slate-600 hover:bg-slate-100 relative"
               title="Documentos"
+              data-tour="tab-documentos"
             >
               <FileText size={15} className="shrink-0" />
               <span>Documentos</span>
@@ -187,6 +194,7 @@ export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, act
               onClick={onOpenFormacaoModal}
               className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-black shadow-sm transition-all bg-slate-50 text-slate-600 hover:bg-slate-100 relative"
               title="Formação"
+              data-tour="tab-formacao"
             >
               <GraduationCap size={15} className="shrink-0" />
               <span>Formação</span>
@@ -201,6 +209,7 @@ export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, act
               onClick={() => setWorkerTab(t => t === 'perfil' ? 'home' : 'perfil')}
               className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-black shadow-sm transition-all relative ${workerTab === 'perfil' ? 'bg-[var(--navy-solid)] text-white' : 'bg-[#1B3A57]/10 text-[var(--navy)] hover:bg-[#1B3A57]/20'}`}
               title="Meu Perfil"
+              data-tour="tab-perfil"
             >
               <UserCircle size={15} />
               <span>Perfil</span>
@@ -239,6 +248,7 @@ export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, act
           onClick={onOpenScheduleModal}
           icon={<Timer size={20} />}
           label="Horários"
+          tourTag="tab-horarios"
         />
         {isCurrentMonth && (
           <TabButton
@@ -254,6 +264,7 @@ export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, act
             }
             label="Falta"
             accent
+            tourTag="tab-falta"
           />
         )}
         {epiEnabled && (
@@ -262,6 +273,7 @@ export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, act
             onClick={onOpenEpiModal}
             icon={<HardHat size={20} />}
             label="EPI"
+            tourTag="tab-epi"
           />
         )}
         <TabButton
@@ -276,6 +288,7 @@ export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, act
             </span>
           }
           label="Documentos"
+          tourTag="tab-documentos"
         />
         <TabButton
           active={false}
@@ -289,6 +302,7 @@ export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, act
             </span>
           }
           label="Formação"
+          tourTag="tab-formacao"
         />
         <TabButton
           active={false}
@@ -296,6 +310,7 @@ export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, act
           icon={<UserCircle size={20} />}
           label="Perfil"
           badge={pendingRequests}
+          tourTag="tab-perfil"
         />
         {currentUser?.isAdmin && !currentUser?.isAdminImpersonating && (
           <TabButton

@@ -3,7 +3,7 @@ import { UserCircle } from 'lucide-react';
 import WorkerProfile from '../WorkerProfile';
 import ModalShell from '../../../components/common/ModalShell';
 
-export default function ProfileModal({ isOpen, onClose, worker, changeRequests, documents }) {
+export default function ProfileModal({ isOpen, onClose, worker, changeRequests, documents, onRequestTour }) {
   return (
     <ModalShell
       isOpen={isOpen}
@@ -18,6 +18,7 @@ export default function ProfileModal({ isOpen, onClose, worker, changeRequests, 
           worker={worker}
           changeRequests={changeRequests}
           documents={documents}
+          onRequestTour={onRequestTour}
         />
       </div>
     </ModalShell>
