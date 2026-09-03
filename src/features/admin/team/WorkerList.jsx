@@ -3,10 +3,11 @@ import { useApp } from '../../../context/AppContext';
 import { authFetch } from '../../../utils/authFetch';
 import { consultarComunicacoesPendentes, invalidarComunicacoesPendentes } from './ssComunicacoesPendentes';
 import { impersonarTrabalhador } from '../../../utils/impersonateWorker';
-import { Search, Edit2, Trash2, CheckCircle, ShieldCheck, ShieldOff, MoreVertical, FolderOpen, SendHorizonal, AlertTriangle, Shield, FileEdit, MapPin, Clock, Briefcase } from 'lucide-react';
+import { Search, Edit2, Trash2, CheckCircle, ShieldCheck, ShieldOff, MoreVertical, FolderOpen, SendHorizonal, AlertTriangle, Shield, FileEdit, MapPin, Clock, Briefcase, PackageCheck } from 'lucide-react';
 import SSComunicacaoModal from './SSComunicacaoModal';
 import AlterarContratoModal from './AlterarContratoModal';
 import TransferirLocalTrabalhoModal from './TransferirLocalTrabalhoModal';
+import EntregarEpiModal from '../epi/EntregarEpiModal';
 import { FT, SCALE } from '../../../styles/designTokens';
 import Card from '../../../components/common/Card';
 import { FONT_TITLE, FONT_MONO } from '../../../styles/designTokens';
@@ -163,15 +164,28 @@ function apoliceBadge(w, apoliceMap) {
 }
 
 const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, setWorkersSort, onLogin, onEdit, onOpenVHHistory, onOpenEmpHistory, onVerPasta }) => {
-  const { approvals, currentMonthStr, schedules, clients, saveToDb, setWorkers, supabase } = useApp();
+  const { approvals, currentMonthStr, schedules, clients, saveToDb, setWorkers, supabase, currentUser } = useApp();
   const [confirmDeleteWorkerId, setConfirmDeleteWorkerId] = useState(null);
   const [openMenuId, setOpenMenuId] = useState(null);
   const [ssModal, setSsModal] = useState(null); // { worker, tipo: 'admissao'|'cessacao' }
   const [alterarContratoWorker, setAlterarContratoWorker] = useState(null); // worker | null
   const [transferirLocalWorker, setTransferirLocalWorker] = useState(null); // worker | null
+  const [entregarEpiWorker, setEntregarEpiWorker] = useState(null); // worker | null
   const [ssAmbiente, setSsAmbiente] = useState('teste');
   const [apoliceMap, setApoliceMap] = useState({});
   const [ssComunicacoesMap, setSsComunicacoesMap] = useState({});
+  const [epiTypes, setEpiTypes] = useState([]);
+  const [epiCatalogoDocumento, setEpiCatalogoDocumento] = useState([]);
+
+  // Carregado só aqui (não vem do AppContext) — mesmo par de tabelas que
+  // EpiAdmin.jsx já busca para a própria aba EPI; este cartão só precisa de
+  // os ler para alimentar o EntregarEpiModal, não de os manter globais.
+  const reloadEpi = React.useCallback(() => {
+    if (!supabase) return;
+    supabase.from('epi_types').select('*').order('created_at').then(({ data }) => setEpiTypes(data || []));
+    supabase.from('epi_catalogo_documento').select('*').order('nome').then(({ data }) => setEpiCatalogoDocumento(data || []));
+  }, [supabase]);
+  useEffect(() => { reloadEpi(); }, [reloadEpi]);
 
   useEffect(() => {
     // supabase vem do AppContext (nunca window.supabaseInstance direto) —
@@ -352,6 +366,13 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                               <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-emerald-100 text-emerald-500 group-hover:bg-emerald-200 transition-colors shrink-0"><FolderOpen size={11} /></span>
                               <span className={`${SCALE.text.body} text-[var(--ink-mid)] group-hover:text-emerald-700`}>Ver Pasta</span>
                             </button>
+                            <button
+                              onClick={() => { setEntregarEpiWorker(w); setOpenMenuId(null); }}
+                              className="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-[var(--surface)] group transition-colors"
+                            >
+                              <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-[var(--warn-bg)] text-[var(--orange-deep)] group-hover:bg-amber-100 transition-colors shrink-0"><PackageCheck size={11} /></span>
+                              <span className={`${SCALE.text.body} text-[var(--ink-mid)] group-hover:text-[var(--orange-deep)]`}>Entregar EPI</span>
+                            </button>
                             <div className="mx-3 my-1 border-t border-[var(--border-soft)]" />
                             <button
                               onClick={() => { onOpenEmpHistory(w.id, w.name); setOpenMenuId(null); }}
@@ -477,6 +498,16 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
           onSuccess={() => setTransferirLocalWorker(null)}
         />
       )}
+      <EntregarEpiModal
+        open={!!entregarEpiWorker}
+        onClose={() => setEntregarEpiWorker(null)}
+        worker={entregarEpiWorker}
+        types={epiTypes}
+        catalogoDocumento={epiCatalogoDocumento}
+        currentUser={currentUser}
+        supabase={supabase}
+        onChange={reloadEpi}
+      />
     </>
     );
   }
@@ -522,6 +553,11 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                       <>
                         <div className="fixed inset-0 z-10" onClick={() => setOpenMenuId(null)} />
                         <div className="absolute right-0 top-full mt-1 z-20 bg-white border border-[var(--border)] rounded-xl shadow-xl ring-1 ring-black/5 py-1 min-w-[190px]">
+                          <button onClick={() => { setEntregarEpiWorker(w); setOpenMenuId(null); }} className="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-[var(--surface)] group transition-colors">
+                            <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-[var(--warn-bg)] text-[var(--orange-deep)] group-hover:bg-amber-100 transition-colors shrink-0"><PackageCheck size={11} /></span>
+                            <span className={`${SCALE.text.body} text-[var(--ink-mid)] group-hover:text-[var(--orange-deep)]`}>Entregar EPI</span>
+                          </button>
+                          <div className="mx-3 my-1 border-t border-[var(--border-soft)]" />
                           {w.status === 'ativo' && !w.ss_admissao_comunicada_em && (
                             <button onClick={() => { setSsModal({ worker: w, tipo: 'admissao' }); setOpenMenuId(null); }} className="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-amber-50 group transition-colors">
                               <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-amber-100 text-amber-600 group-hover:bg-amber-200 transition-colors shrink-0"><SendHorizonal size={11} /></span>
@@ -639,6 +675,16 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
         onSuccess={() => setTransferirLocalWorker(null)}
       />
     )}
+    <EntregarEpiModal
+      open={!!entregarEpiWorker}
+      onClose={() => setEntregarEpiWorker(null)}
+      worker={entregarEpiWorker}
+      types={epiTypes}
+      catalogoDocumento={epiCatalogoDocumento}
+      currentUser={currentUser}
+      supabase={supabase}
+      onChange={reloadEpi}
+    />
     </>
   );
 };
