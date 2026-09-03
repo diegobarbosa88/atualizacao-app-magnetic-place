@@ -299,8 +299,18 @@ const WorkerDashboardContent = ({ onLogout, onLogin, autoStartTour }) => {
   const alertCount = filteredPendingApprovals.length + (pendingSignaturesCount > 0 ? 1 : 0) + (pendingFormacaoCount > 0 ? 1 : 0) + (previousOpenLogs?.length || 0);
 
   useEffect(() => {
-    if (alertCount > 0 && !alertsModalDismissed) setAlertsModalOpen(true);
-  }, [alertCount, alertsModalDismissed]);
+    if (alertCount > 0 && !alertsModalDismissed && !tourOpen) setAlertsModalOpen(true);
+  }, [alertCount, alertsModalDismissed, tourOpen]);
+
+  // O tour nunca deve disputar o ecrã com "Avisos Pendentes" — se estava
+  // aberto (ex.: reaberto manualmente via Perfil, com avisos reais por
+  // trás), fecha-o e marca como visto para não voltar a saltar por cima.
+  useEffect(() => {
+    if (tourOpen) {
+      setAlertsModalOpen(false);
+      setAlertsModalDismissed(true);
+    }
+  }, [tourOpen]);
 
   // Auto-arranque do tour, uma vez, mesmo instante em que o Gate acaba de
   // ser concluído (autoStartTour). Só se não houver avisos pendentes a
