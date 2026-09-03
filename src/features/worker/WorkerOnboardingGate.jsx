@@ -181,7 +181,13 @@ export default function WorkerOnboardingGate({ itensIniciais, currentUser, onCom
       </div>
 
       {documentoAtivo && (
-        <ModalShell isOpen title="Assinar documento" onClose={() => { setDocumentoAtivo(null); reavaliar(); }} size="lg">
+        // HtmlDocumentViewer/DocumentViewer já são modais completos e
+        // auto-suficientes (cabeçalho, X, tamanho fixo) — o mesmo padrão de
+        // backdrop simples usado em WorkerDocuments.jsx. Envolvê-los também
+        // num ModalShell (como estava antes) empilhava dois modais um
+        // dentro do outro, cada um com o seu próprio scroll — daí as 3
+        // barras de rolagem reportadas.
+        <div className="fixed inset-0 z-[150] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
           {documentoAtivo._formato === 'html' ? (
             <HtmlDocumentViewer
               document={documentoAtivo}
@@ -195,7 +201,7 @@ export default function WorkerOnboardingGate({ itensIniciais, currentUser, onCom
               onSigned={() => { setDocumentoAtivo(null); reavaliar(); }}
             />
           )}
-        </ModalShell>
+        </div>
       )}
 
       {formacaoAtiva && (
