@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ScanSearch, Upload, X, Loader2, AlertTriangle, CheckCircle2, PackagePlus, RefreshCw } from 'lucide-react';
+import { ScanSearch, Upload, X, Loader2, AlertTriangle, CheckCircle2, PackagePlus, RefreshCw, Euro } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
 import { callGeminiVision } from '../../../utils/aiUtils';
 import { getStock } from '../../../utils/epiHelpers';
@@ -13,6 +13,10 @@ const readFileAsBase64 = (file) => new Promise((resolve, reject) => {
   reader.onerror = reject;
   reader.readAsDataURL(file);
 });
+
+const slugify = (s) => (s || '')
+  .normalize('NFD').replace(/[̀-ͯ]/g, '')
+  .replace(/[^a-zA-Z0-9.]+/g, '_').replace(/_+/g, '_');
 
 function buildPrompt(types) {
   const catalogoTexto = (types || []).map((t) => {
@@ -31,14 +35,25 @@ Para cada linha de artigo no albarán (ignora cabeçalhos de tabela, totais, IVA
 - tamanho_detectado: se a descrição ou uma coluna própria indicar um tamanho/medida (ex. "M", "42", "9"), esse valor como string; caso contrário null.
 - catalogo_id: o "id" do item do catálogo acima que corresponde melhor a esta linha. Se não houver nenhuma correspondência razoável, usa null.
 
+Extrai também, ao nível do documento inteiro (não por linha):
+- fornecedor: nome legal da empresa que EMITE o documento (o vendedor, não a Magnetic Place, que é sempre o cliente/destinatário).
+- nif_fornecedor: NIF/CIF do fornecedor, se visível (ex. "B-20342226"), sem espaços. null se não existir.
+- numero_documento: número do albarán/guia de remessa/fatura (ex. "709839"). null se não existir.
+- data_documento: data de emissão em formato YYYY-MM-DD. null se não existir.
+- valor_total: valor total do documento (IVA incluído se mostrado), número decimal. Usa a linha "Total"/"Importe"/"Total Bruto" — nunca portes/descontos isolados. null se não existir nenhum total.
+
 Responde EXCLUSIVAMENTE em JSON válido, sem texto antes ou depois, nesta estrutura:
 {
   "itens": [
     { "descricao_original": "string", "quantidade": number, "tamanho_detectado": "string ou null", "catalogo_id": "string ou null" }
-  ]
+  ],
+  "documento": {
+    "fornecedor": "string ou null", "nif_fornecedor": "string ou null", "numero_documento": "string ou null",
+    "data_documento": "YYYY-MM-DD ou null", "valor_total": "número ou null"
+  }
 }
 
-Se a imagem não parecer um albarán/guia de remessa/fatura de compra de material, devolve { "itens": [] }.`;
+Se a imagem não parecer um albarán/guia de remessa/fatura de compra de material, devolve { "itens": [], "documento": null }.`;
 }
 
 const normStr = (s) => (s || '').toString().trim().toLowerCase();
@@ -54,6 +69,8 @@ export default function EpiAlbaranScannerModal({ open, onClose, types, onChange 
   const [scanError, setScanError] = useState('');
   const [applying, setApplying] = useState(false);
   const [applyError, setApplyError] = useState('');
+  const [docInfo, setDocInfo] = useState(null); // { fornecedor, nifFornecedor, numeroDocumento, dataDocumento, valorTotal }
+  const [addToCustos, setAddToCustos] = useState(true);
 
   const reset = () => {
     setStep('upload');
@@ -61,6 +78,8 @@ export default function EpiAlbaranScannerModal({ open, onClose, types, onChange 
     setRows([]);
     setScanError('');
     setApplyError('');
+    setDocInfo(null);
+    setAddToCustos(true);
   };
 
   const handleClose = () => { reset(); onClose(); };
@@ -73,6 +92,7 @@ export default function EpiAlbaranScannerModal({ open, onClose, types, onChange 
     setScanError('');
     const prompt = buildPrompt(types);
     const collected = [];
+    let doc = null;
 
     for (let i = 0; i < files.length; i++) {
       const f = files[i];
@@ -83,6 +103,19 @@ export default function EpiAlbaranScannerModal({ open, onClose, types, onChange 
         const jsonMatch = raw.match(/\{[\s\S]*\}/);
         if (!jsonMatch) throw new Error('Sem JSON na resposta: ' + raw.substring(0, 200));
         const data = JSON.parse(jsonMatch[0]);
+        // Só a primeira foto com um valor_total identificado vira a fonte
+        // do custo — várias fotos do mesmo albarán (frente/verso, várias
+        // páginas) não devem somar o total várias vezes.
+        if (!doc && data.documento?.valor_total != null) {
+          doc = {
+            fornecedor: data.documento.fornecedor || '',
+            nifFornecedor: data.documento.nif_fornecedor || '',
+            numeroDocumento: data.documento.numero_documento || '',
+            dataDocumento: data.documento.data_documento || '',
+            valorTotal: Number(data.documento.valor_total) || 0,
+            file: f,
+          };
+        }
         (data.itens || []).forEach((item) => {
           const type = types.find((t) => t.id === item.catalogo_id) || null;
           let tamanhoEscolhido = '';
@@ -106,10 +139,13 @@ export default function EpiAlbaranScannerModal({ open, onClose, types, onChange 
     }
 
     setRows(collected);
+    setDocInfo(doc);
+    setAddToCustos(!!doc);
     setStep('review');
   };
 
   const updateRow = (id, patch) => setRows((prev) => prev.map((r) => (r._id === id ? { ...r, ...patch } : r)));
+  const updateDocInfo = (patch) => setDocInfo((prev) => ({ ...prev, ...patch }));
 
   const handleTipoChange = (id, tipoId) => {
     const type = types.find((t) => t.id === tipoId) || null;
@@ -152,6 +188,44 @@ export default function EpiAlbaranScannerModal({ open, onClose, types, onChange 
           const { error } = await supabase.from('epi_types').update({ stock: (type.stock || 0) + delta }).eq('id', tipoId);
           if (error) throw error;
         }
+      }
+
+      // Regista o custo em `faturas` — a mesma tabela/fluxo já usado para
+      // faturas importadas do Gmail, para aparecer em Custos → Despesas sem
+      // precisar de lógica nova ali. Entra como PENDENTE, não PAGO: uma
+      // guia de remessa não é prova de pagamento (o albarán real testado
+      // tinha "Giro a 30 días" — pagamento a prazo), fica visível em
+      // Faturação → Faturas e só passa a despesa quando a reconciliação
+      // bancária a casar com o extrato, tal como qualquer outra fatura de
+      // fornecedor.
+      if (addToCustos && docInfo?.valorTotal > 0) {
+        const ts = Date.now();
+        const ext = (docInfo.file.name.split('.').pop() || 'jpg').toLowerCase();
+        const storagePath = `epi-albaran/${ts}_${slugify(docInfo.file.name) || `albaran.${ext}`}`;
+        const { error: upErr } = await supabase.storage.from('faturas').upload(storagePath, docInfo.file, { contentType: docInfo.file.type || 'image/jpeg', upsert: true });
+        if (upErr) throw upErr;
+        const { data: urlData } = supabase.storage.from('faturas').getPublicUrl(storagePath);
+        const { error: faturaErr } = await supabase.from('faturas').insert({
+          filename: docInfo.file.name,
+          storage_path: storagePath,
+          url: urlData.publicUrl,
+          mime_type: docInfo.file.type || 'image/jpeg',
+          tamanho: docInfo.file.size,
+          tipo: 'fornecedor',
+          fonte: 'manual', // faturas_fonte_check só aceita gmail/toc/manual
+          entidade: docInfo.fornecedor || null,
+          descricao: 'Compra de EPI (albarán)',
+          valor: docInfo.valorTotal,
+          data_documento: docInfo.dataDocumento || null,
+          dados: {
+            fornecedor: docInfo.fornecedor || null,
+            nif_fornecedor: docInfo.nifFornecedor || null,
+            numero_fatura: docInfo.numeroDocumento || null,
+            data_fatura: docInfo.dataDocumento || null,
+            valor_total: docInfo.valorTotal,
+          },
+        });
+        if (faturaErr) throw faturaErr;
       }
 
       setApplying(false);
@@ -236,6 +310,32 @@ export default function EpiAlbaranScannerModal({ open, onClose, types, onChange 
               <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-600 font-semibold whitespace-pre-line">
                 <AlertTriangle size={14} className="mt-0.5 flex-shrink-0" />
                 {scanError}
+              </div>
+            )}
+
+            {docInfo && (
+              <div className="rounded-xl border border-[var(--border-soft)] bg-[var(--surface)] px-3 py-2.5 space-y-2">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={addToCustos} onChange={(e) => setAddToCustos(e.target.checked)} />
+                  <span className="flex items-center gap-1.5 text-xs font-bold text-[var(--ink)]"><Euro size={13} /> Adicionar este custo a Faturação → Faturas</span>
+                </label>
+                {addToCustos && (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pl-6">
+                    <div className="col-span-2">
+                      <label className={`${SCALE.text.meta} text-[var(--slate-dim)] block mb-0.5`}>Fornecedor</label>
+                      <input type="text" value={docInfo.fornecedor} onChange={(e) => updateDocInfo({ fornecedor: e.target.value })} className="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-xs" />
+                    </div>
+                    <div>
+                      <label className={`${SCALE.text.meta} text-[var(--slate-dim)] block mb-0.5`}>Data</label>
+                      <input type="date" value={docInfo.dataDocumento} onChange={(e) => updateDocInfo({ dataDocumento: e.target.value })} className="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-xs" />
+                    </div>
+                    <div>
+                      <label className={`${SCALE.text.meta} text-[var(--slate-dim)] block mb-0.5`}>Valor total (€)</label>
+                      <input type="number" step="0.01" min="0" value={docInfo.valorTotal} onChange={(e) => updateDocInfo({ valorTotal: Math.max(0, parseFloat(e.target.value) || 0) })} className="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-xs font-bold" />
+                    </div>
+                  </div>
+                )}
+                <p className={`${SCALE.text.meta} text-[var(--slate-dim)] pl-6`}>Entra como fatura pendente — só conta como despesa depois de reconciliada com o extrato bancário, como qualquer outra.</p>
               </div>
             )}
 
