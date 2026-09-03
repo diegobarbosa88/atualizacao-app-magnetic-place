@@ -13,6 +13,13 @@ const TABELA_IRS_LABELS = {
   tabelaIII: 'Tabela III',
 };
 
+const DNI_TIPO_LABELS = {
+  cc: 'Cartão de Cidadão',
+  titulo_residencia: 'Título de Residência',
+  passaporte: 'Passaporte',
+  outro: 'Outro',
+};
+
 // Valores por omissão pedidos pelo Diego (2026-09-02) — o caso mais comum de
 // onboarding hoje. Servem sobretudo submissões sem convite associado ou
 // convites antigos sem estes campos gravados — quando há convite com estes
@@ -346,7 +353,8 @@ export default function OnboardingPendentes() {
                   <Row label="Profissão" value={selected.profissao} />
                   <Row label="Telemóvel" value={selected.tel} />
                   <Row label="Email" value={selected.email} />
-                  <Row label="Documento" value={selected.dni} />
+                  <Row label="Tipo de documento" value={DNI_TIPO_LABELS[selected.dni_tipo] || selected.dni_tipo} />
+                  <Row label="Nº do documento" value={selected.dni} />
                   <Row label="Morada" value={selected.address} />
                 </Section>
                 <Section title="Situação Fiscal">

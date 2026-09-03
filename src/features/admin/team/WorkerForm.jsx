@@ -366,8 +366,18 @@ const WorkerForm = () => {
                   </select>
                 </div>
                 <div>
-                  <label className={lbl}>DNI</label>
-                  <input type="text" value={workerForm.dni || ''} onChange={f('dni')} className={inp} placeholder="DNI" />
+                  <label className={lbl}>Tipo de Documento</label>
+                  <select value={workerForm.dni_tipo || ''} onChange={f('dni_tipo')} className={inp}>
+                    <option value="">Selecionar</option>
+                    <option value="cc">Cartão de Cidadão</option>
+                    <option value="titulo_residencia">Título de Residência</option>
+                    <option value="passaporte">Passaporte</option>
+                    <option value="outro">Outro</option>
+                  </select>
+                </div>
+                <div>
+                  <label className={lbl}>Nº do Documento</label>
+                  <input type="text" value={workerForm.dni || ''} onChange={f('dni')} className={inp} placeholder="Número do documento" />
                 </div>
                 <div>
                   <label className={lbl}>Data de Nascimento</label>

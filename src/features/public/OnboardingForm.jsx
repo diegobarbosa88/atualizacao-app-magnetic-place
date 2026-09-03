@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import {
   CheckCircle, ChevronLeft, ChevronRight, Loader2, AlertCircle, Check,
   User, Briefcase, Phone, Mail, CreditCard, MapPin, FileText, Users,
-  Building2, Shield, Lock, Calendar, PenLine, X,
+  Building2, Shield, Lock, Calendar, PenLine,
 } from 'lucide-react';
 import { sendOnboardingNotifAdmin } from '../../utils/emailUtils';
 import { formatPersonName } from '../../utils/textUtils';
@@ -64,6 +64,13 @@ const ESTADO_CIVIL_OPTIONS = [
   { value: 'viuvo',          label: 'Viúvo(a)' },
 ];
 
+const DNI_TIPO_OPTIONS = [
+  { value: 'cc',                 label: 'Cartão de Cidadão' },
+  { value: 'titulo_residencia',  label: 'Título de Residência' },
+  { value: 'passaporte',         label: 'Passaporte' },
+  { value: 'outro',              label: 'Outro' },
+];
+
 // Indicativos dos países de onde vêm os trabalhadores da empresa (destacados
 // em PT e ES) — mantém-se pequena, com "Outro" para escrever um DDI livre.
 const DDI_OPTIONS = [
@@ -86,7 +93,7 @@ function parseTel(full) {
 }
 
 const EMPTY_FORM = {
-  nome: '', profissao: '', profissao_cnp: '', data_nascimento: '', tel: '', email: '', dni: '', documento_validade: '', estado_civil: '', address: '',
+  nome: '', profissao: '', profissao_cnp: '', data_nascimento: '', tel: '', email: '', dni: '', dni_tipo: '', documento_validade: '', estado_civil: '', address: '',
   tabela_irs: 'tabelaI', n_dependentes: 0,
   nis: '', nif: '', iban: '',
 };
@@ -366,7 +373,8 @@ export default function OnboardingForm({ token }) {
       if (!telLocal.trim()) errs.tel = 'Telemóvel é obrigatório.';
       if (!form.email.trim()) errs.email = 'Email é obrigatório.';
       else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errs.email = 'Email inválido.';
-      if (!form.dni.trim()) errs.dni = 'Documento de identificação é obrigatório.';
+      if (!form.dni_tipo) errs.dni_tipo = 'Tipo de documento é obrigatório.';
+      if (!form.dni.trim()) errs.dni = 'Número do documento é obrigatório.';
       if (!form.documento_validade) errs.documento_validade = 'Validade do documento é obrigatória.';
       if (!form.address.trim()) errs.address = 'Morada é obrigatória.';
     }
@@ -535,14 +543,6 @@ export default function OnboardingForm({ token }) {
             onError={e => { e.target.src = 'https://ui-avatars.com/api/?name=MP&background=4f46e5&color=fff'; }} />
         </div>
         <div className="relative bg-white rounded-2xl p-8 text-center shadow-2xl">
-          <button
-            type="button"
-            onClick={() => window.close()}
-            aria-label="Fechar"
-            className="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all"
-          >
-            <X size={18} />
-          </button>
           <div className="w-16 h-16 bg-emerald-100 rounded-2xl flex items-center justify-center mx-auto mb-5">
             <CheckCircle className="text-emerald-500" size={32} />
           </div>
@@ -678,13 +678,22 @@ export default function OnboardingForm({ token }) {
                 </InputField>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <InputField label="Documento de identificação" icon={CreditCard} error={errors.dni}>
-                  <Inp error={errors.dni} value={form.dni} onChange={e => set('dni', e.target.value)} placeholder="Nº CC / DNI / Passaporte" />
+                <InputField label="Tipo de documento" icon={CreditCard} error={errors.dni_tipo}>
+                  <div className="relative">
+                    <Sel error={errors.dni_tipo} value={form.dni_tipo} onChange={e => set('dni_tipo', e.target.value)}>
+                      <option value="">Selecionar…</option>
+                      {DNI_TIPO_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </Sel>
+                    <ChevronRight size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 rotate-90 pointer-events-none" />
+                  </div>
                 </InputField>
-                <InputField label="Válido até" icon={Calendar} error={errors.documento_validade}>
-                  <Inp error={errors.documento_validade} type="date" value={form.documento_validade} onChange={e => set('documento_validade', e.target.value)} />
+                <InputField label="Nº do documento" icon={CreditCard} error={errors.dni}>
+                  <Inp error={errors.dni} value={form.dni} onChange={e => set('dni', e.target.value)} placeholder="Número do documento" />
                 </InputField>
               </div>
+              <InputField label="Válido até" icon={Calendar} error={errors.documento_validade}>
+                <Inp error={errors.documento_validade} type="date" value={form.documento_validade} onChange={e => set('documento_validade', e.target.value)} />
+              </InputField>
               <InputField label="Morada completa" icon={MapPin} error={errors.address}>
                 <Inp error={errors.address} value={form.address} onChange={e => set('address', e.target.value)} placeholder="Rua, nº, localidade, código postal" />
               </InputField>
@@ -751,7 +760,8 @@ export default function OnboardingForm({ token }) {
                   <RRow label="Profissão" value={form.profissao} />
                   <RRow label="Telemóvel" value={form.tel} />
                   <RRow label="Email" value={form.email} />
-                  <RRow label="Documento" value={form.dni} />
+                  <RRow label="Tipo de documento" value={DNI_TIPO_OPTIONS.find(o => o.value === form.dni_tipo)?.label} />
+                  <RRow label="Nº do documento" value={form.dni} />
                   <RRow label="Válido até" value={form.documento_validade} />
                   <RRow label="Morada" value={form.address} />
                 </ReviewBlock>
