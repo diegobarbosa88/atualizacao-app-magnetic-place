@@ -683,7 +683,15 @@ export const AppProvider = ({ children }) => {
   const handleDelete = async (colName, id) => {
     // Local state updates
     const filterState = (setter) => setter(prev => prev.filter(x => x.id !== id));
-    
+
+    // Apagar um colaborador falha em silêncio quando há registos
+    // dependentes sem CASCADE (formacao_participantes, worker_apolice_seguro,
+    // worker_whatsapp_messages — de propósito, são registos de conformidade)
+    // — o Supabase devolve um erro de foreign key, mas nada verificava isso:
+    // o ecrã já tinha removido a linha por otimismo, e o colaborador só
+    // "voltava" ao recarregar a página, sem nenhum aviso do que aconteceu.
+    const deletedWorker = colName === 'workers' ? workers.find(w => w.id === id) : null;
+
     if (colName === 'clients') filterState(setClients);
     else if (colName === 'workers') filterState(setWorkers);
     else if (colName === 'schedules') filterState(setSchedules);
@@ -709,8 +717,17 @@ export const AppProvider = ({ children }) => {
     const deleteTable = (colName === 'documentos' || colName === 'documents') ? 'documents' :
                        (colName === 'logs' || colName === 'worker_logs') ? 'logs' :
                        colName.toLowerCase();
-    
-    await supabaseInstance.from(deleteTable).delete().eq('id', id);
+
+    const { error } = await supabaseInstance.from(deleteTable).delete().eq('id', id);
+
+    if (error && colName === 'workers' && deletedWorker) {
+      setWorkers(prev => prev.some(w => w.id === id) ? prev : [...prev, deletedWorker]);
+      window.alert(
+        `Não foi possível apagar "${deletedWorker.name}": ${error.message}\n\n` +
+        'Provavelmente tem formações, seguro ou outros registos associados. ' +
+        'Considera marcá-lo como inativo em vez de apagar.'
+      );
+    }
   };
 
   // Helper: verificar se um worker está ativo num determinado mês
