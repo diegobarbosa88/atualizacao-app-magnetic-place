@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { CheckCircle2, XCircle, PackageCheck, HardHat, List, Kanban as KanbanIcon } from 'lucide-react';
+import { CheckCircle2, XCircle, PackageCheck, HardHat, List, Kanban as KanbanIcon, PenLine } from 'lucide-react';
 import { FT, SCALE, FONT_TITLE } from '../../../styles/designTokens';
 import ModalShell from '../../../components/common/ModalShell';
 import Badge from '../../../components/common/Badge';
+import SignDrawModal from '../../../components/worker/SignDrawModal';
 import { EpiIcon } from '../../../utils/epiIcons';
 import { getStock, LOW_STOCK_THRESHOLD } from '../../../utils/epiHelpers';
 import { notifyWorkerEpiApproved, notifyWorkerEpiRejected, notifyWorkerEpiDelivered } from '../../../utils/epiRequestsApi';
@@ -44,6 +45,7 @@ export default function EpiRequestsTab({ requests, types, workers, clients, curr
   const [rejectTarget, setRejectTarget] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
   const [deliverTarget, setDeliverTarget] = useState(null);
+  const [signing, setSigning] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const typeById = (id) => types.find((t) => t.id === id) || { label: id, icon: 'Package', sizes: null, stock: 0 };
@@ -89,7 +91,7 @@ export default function EpiRequestsTab({ requests, types, workers, clients, curr
     onChange();
   };
 
-  const confirmDeliver = async () => {
+  const confirmDeliver = async (signatureDataUrl) => {
     if (!supabase || !deliverTarget || busy) return;
     setBusy(true);
     const req = deliverTarget;
@@ -100,10 +102,12 @@ export default function EpiRequestsTab({ requests, types, workers, clients, curr
     } else {
       await supabase.from('epi_types').update({ stock: Math.max(0, (type.stock || 0) - req.qty) }).eq('id', type.id);
     }
-    const { error } = await supabase.from('epi_requests').update({ status: 'delivered', delivered_at: new Date().toISOString() }).eq('id', req.id);
+    const now = new Date().toISOString();
+    const { error } = await supabase.from('epi_requests').update({ status: 'delivered', delivered_at: now, signature_data: signatureDataUrl, signed_at: now }).eq('id', req.id);
     setBusy(false);
     if (error) { window.alert('Erro ao registar entrega: ' + error.message); return; }
     notifyWorkerEpiDelivered(supabase, { workerId: req.worker_id, typeLabel: type.label, requestId: req.id });
+    setSigning(false);
     setDeliverTarget(null);
     onChange();
   };
@@ -212,6 +216,11 @@ export default function EpiRequestsTab({ requests, types, workers, clients, curr
                 <div className="text-right">
                   <p className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>{fmtDate(req.created_at)}</p>
                   <Badge tone={st.tone}>{st.label}</Badge>
+                  {req.signature_data && (
+                    <button onClick={() => window.open(req.signature_data, '_blank')} className={`flex items-center gap-1 ${SCALE.text.meta} text-[var(--navy)] mt-0.5`}>
+                      <PenLine size={10} /> assinado
+                    </button>
+                  )}
                 </div>
 
                 <div className="flex gap-2 shrink-0 ml-auto">
@@ -320,7 +329,9 @@ export default function EpiRequestsTab({ requests, types, workers, clients, curr
         footer={
           <div className="flex justify-end gap-2 px-6 py-4">
             <button onClick={() => setDeliverTarget(null)} className="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 text-sm font-semibold">Cancelar</button>
-            <button onClick={confirmDeliver} disabled={busy} className="px-4 py-2 rounded-xl bg-[var(--orange)] text-[var(--navy)] text-sm font-semibold disabled:opacity-50">Confirmar Entrega</button>
+            <button onClick={() => setSigning(true)} disabled={busy} className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[var(--orange)] text-[var(--navy)] text-sm font-semibold disabled:opacity-50">
+              <PenLine size={14} /> Confirmar Entrega
+            </button>
           </div>
         }
       >
@@ -348,6 +359,15 @@ export default function EpiRequestsTab({ requests, types, workers, clients, curr
           );
         })()}
       </ModalShell>
+
+      {signing && deliverTarget && (
+        <SignDrawModal
+          workerName={deliverTarget.worker_name}
+          working={busy}
+          onClose={() => !busy && setSigning(false)}
+          onSign={confirmDeliver}
+        />
+      )}
     </div>
   );
 }

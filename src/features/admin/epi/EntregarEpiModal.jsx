@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { PackageCheck, AlertTriangle, Loader2, Check } from 'lucide-react';
 import { SCALE, FT } from '../../../styles/designTokens';
 import ModalShell from '../../../components/common/ModalShell';
+import SignDrawModal from '../../../components/worker/SignDrawModal';
 import { EpiIcon } from '../../../utils/epiIcons';
 import { isBaseEligible, getStock } from '../../../utils/epiHelpers';
 import { newEpiRequestId, notifyWorkerEpiDelivered } from '../../../utils/epiRequestsApi';
@@ -29,6 +30,7 @@ export default function EntregarEpiModal({ open, onClose, worker, types, catalog
   const [rows, setRows] = useState({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [signing, setSigning] = useState(false);
 
   const kit = buildKitRows(worker, catalogoDocumento, types);
 
@@ -60,9 +62,14 @@ export default function EntregarEpiModal({ open, onClose, worker, types, catalog
     return type?.sizes?.length && !r.size;
   });
 
-  const handleConfirm = async () => {
+  const handleConfirm = () => {
     if (!includedEntries.length) return;
     if (missingSize) { setError('Há itens sem tamanho escolhido — seleciona um tamanho ou desmarca a linha.'); return; }
+    setError('');
+    setSigning(true);
+  };
+
+  const handleSigned = async (signatureDataUrl) => {
     setBusy(true);
     setError('');
     try {
@@ -104,16 +111,20 @@ export default function EntregarEpiModal({ open, onClose, worker, types, catalog
           approved_by: currentUser?.name || 'Admin',
           approved_at: now,
           delivered_at: now,
+          signature_data: signatureDataUrl,
+          signed_at: now,
         });
         if (err) throw err;
         await notifyWorkerEpiDelivered(supabase, { workerId: worker.id, typeLabel: type.label, requestId: id });
       }
 
       setBusy(false);
+      setSigning(false);
       onChange();
       onClose();
     } catch (err) {
       setBusy(false);
+      setSigning(false);
       setError('Erro ao registar entrega: ' + err.message);
     }
   };
@@ -230,7 +241,17 @@ export default function EntregarEpiModal({ open, onClose, worker, types, catalog
           {busy ? <Loader2 size={14} className="animate-spin" /> : <PackageCheck size={14} />}
           Confirmar Entrega — {includedEntries.length} {includedEntries.length === 1 ? 'item' : 'itens'}
         </button>
+        <p className="text-center text-[10px] text-[var(--slate-dim)] -mt-1">A seguir pede-se a assinatura do trabalhador, no dispositivo.</p>
       </div>
+
+      {signing && (
+        <SignDrawModal
+          workerName={worker.name}
+          working={busy}
+          onClose={() => !busy && setSigning(false)}
+          onSign={handleSigned}
+        />
+      )}
     </ModalShell>
   );
 }
