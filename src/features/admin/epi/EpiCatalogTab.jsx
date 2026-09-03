@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Plus, Pencil, Trash2, PackagePlus, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, PackagePlus, X, ScanSearch } from 'lucide-react';
 import { SCALE } from '../../../styles/designTokens';
 import ModalShell from '../../../components/common/ModalShell';
 import { EpiIcon, EPI_ICON_OPTIONS } from '../../../utils/epiIcons';
 import { typeStockList, LOW_STOCK_THRESHOLD } from '../../../utils/epiHelpers';
 import { PROFISSOES_EMPRESA, GRUPOS_PROFISSOES } from '../../../data/profissoesEmpresa';
+import EpiAlbaranScannerModal from './EpiAlbaranScannerModal';
 
 function blankForm() {
   return { id: null, label: '', icon: 'HardHat', sizesOn: false, sizeRows: [], noSizeStock: 0, eligAll: true, eligProfessions: [] };
@@ -31,6 +32,7 @@ export default function EpiCatalogTab({ types, requests, supabase, onChange }) {
   const [restockValues, setRestockValues] = useState({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [albaranOpen, setAlbaranOpen] = useState(false);
 
   const usageCount = (typeId) => requests.filter((r) => r.type_id === typeId).length;
 
@@ -118,6 +120,12 @@ export default function EpiCatalogTab({ types, requests, supabase, onChange }) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4 items-start">
       <div className="space-y-2">
+        <button
+          onClick={() => setAlbaranOpen(true)}
+          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl border border-dashed border-[var(--border)] text-[var(--ink-mid)] hover:border-[var(--navy-soft)] hover:bg-[var(--surface)] text-xs font-bold uppercase transition-all"
+        >
+          <ScanSearch size={14} /> Ler Albarán e Atualizar Stock
+        </button>
         {types.map((t) => {
           const used = usageCount(t.id);
           return (
@@ -287,6 +295,13 @@ export default function EpiCatalogTab({ types, requests, supabase, onChange }) {
           </div>
         )}
       </ModalShell>
+
+      <EpiAlbaranScannerModal
+        open={albaranOpen}
+        onClose={() => setAlbaranOpen(false)}
+        types={types}
+        onChange={onChange}
+      />
     </div>
   );
 }
