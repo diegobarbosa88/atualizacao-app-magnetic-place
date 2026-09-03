@@ -18,7 +18,7 @@ function buildSteps({ firstName, epiEnabled, hasFalta }) {
     { type: 'full', icon: Sparkles, title: `Bem-vindo ao teu painel, ${nome}!`, body: 'Aqui vais registar as tuas horas, ver os teus turnos e tratar de documentos e formações. Uma volta rápida — leva menos de um minuto.', cta: 'Começar tour' },
     { type: 'spot', target: 'welcome-anchor', title: 'O teu espaço', body: 'O teu nome e função ficam sempre visíveis aqui em cima — é o teu painel, só teu.' },
     { type: 'spot', target: 'hero-stats', title: 'As tuas horas, sempre à vista', body: 'Horas de hoje, do mês, e o que falta face ao teu horário — atualizado a cada registo.' },
-    { type: 'spot', target: 'calendar', title: 'Registar o teu dia', body: 'Toca num dia do calendário para registares a tua entrada, pausa e saída.' },
+    { type: 'spot', target: 'calendar', title: 'Registar o teu dia', body: 'Regista com um toque no botão rápido, ou toca num dia do calendário para editar entrada, pausa e saída.' },
     { type: 'spot', target: 'tab-horarios', title: 'O teu horário', body: 'Consulta aqui o turno que te foi atribuído: dias, entrada, saída e pausa.' },
   ];
   if (hasFalta) steps.push({ type: 'spot', target: 'tab-falta', title: 'Avisar uma falta', body: 'Precisas de faltar? Este atalho avisa a empresa em poucos toques, com o motivo.' });

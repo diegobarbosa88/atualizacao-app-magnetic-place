@@ -51,7 +51,7 @@ export default function WorkerCalendar({
   );
 
   return (
-    <div className="bg-white rounded-3xl md:rounded-[2.5rem] shadow-xl border border-slate-200 overflow-hidden mb-12" data-tour="calendar">
+    <div className="bg-white rounded-3xl md:rounded-[2.5rem] shadow-xl border border-slate-200 overflow-hidden mb-12">
 
       {/* Calendar grid */}
       <div className="p-4 sm:p-6">

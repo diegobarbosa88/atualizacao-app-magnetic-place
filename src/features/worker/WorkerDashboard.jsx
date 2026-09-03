@@ -429,44 +429,46 @@ const WorkerDashboardContent = ({ onLogout, onLogin, autoStartTour }) => {
             </div>
           )}
 
-          {!isLimitedWorker && currentMonth.getFullYear() === new Date().getFullYear() && currentMonth.getMonth() === new Date().getMonth() && (
-            <ManualTimeEntryCard
-              clients={clients}
-              currentUser={currentUser}
-              onSave={async (formData, date) => {
-                await handleSaveEntry(formData, false, date);
-                setSuccessMsg('Horário registado com sucesso!');
-                setTimeout(() => setSuccessMsg(''), 4000);
-              }}
-              onQuickRegister={(date) => {
-                const saved = handleQuickRegister(date);
-                if (saved !== false) {
-                  setSuccessMsg('Registo rápido guardado!');
+          <div data-tour="calendar">
+            {!isLimitedWorker && currentMonth.getFullYear() === new Date().getFullYear() && currentMonth.getMonth() === new Date().getMonth() && (
+              <ManualTimeEntryCard
+                clients={clients}
+                currentUser={currentUser}
+                onSave={async (formData, date) => {
+                  await handleSaveEntry(formData, false, date);
+                  setSuccessMsg('Horário registado com sucesso!');
                   setTimeout(() => setSuccessMsg(''), 4000);
-                }
-                return saved;
-              }}
-              monthLogs={monthLogs}
-              systemSettings={systemSettings}
-            />
-          )}
+                }}
+                onQuickRegister={(date) => {
+                  const saved = handleQuickRegister(date);
+                  if (saved !== false) {
+                    setSuccessMsg('Registo rápido guardado!');
+                    setTimeout(() => setSuccessMsg(''), 4000);
+                  }
+                  return saved;
+                }}
+                monthLogs={monthLogs}
+                systemSettings={systemSettings}
+              />
+            )}
 
-          <WorkerCalendar
-            daysList={daysList}
-            monthLogs={monthLogs}
-            dayRequestsByDate={dayRequestsByDate}
-            clients={clients}
-            myApproval={myApproval}
-            isLimitedWorker={isLimitedWorker}
-            workerStartDate={workerStartDate}
-            absenceRequests={absenceRequests}
-            currentUserId={currentUser?.id}
-            onAddEntry={openTimeEntryModal}
-            onEditLog={openIncompleteLogModal}
-            onDeleteLog={(log) => handleDelete('logs', log.id)}
-            onEditLimitedLog={openTimeEntryModal}
-            onQuickRegister={handleQuickRegister}
-          />
+            <WorkerCalendar
+              daysList={daysList}
+              monthLogs={monthLogs}
+              dayRequestsByDate={dayRequestsByDate}
+              clients={clients}
+              myApproval={myApproval}
+              isLimitedWorker={isLimitedWorker}
+              workerStartDate={workerStartDate}
+              absenceRequests={absenceRequests}
+              currentUserId={currentUser?.id}
+              onAddEntry={openTimeEntryModal}
+              onEditLog={openIncompleteLogModal}
+              onDeleteLog={(log) => handleDelete('logs', log.id)}
+              onEditLimitedLog={openTimeEntryModal}
+              onQuickRegister={handleQuickRegister}
+            />
+          </div>
 
           <PendingCorrectionsPanel
             pendingItems={pendingItems} resolvedItems={resolvedItems}
