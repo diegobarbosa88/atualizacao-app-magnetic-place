@@ -167,18 +167,20 @@ export default function WorkerOnboardingGate({ itensIniciais, currentUser, onCom
                     {isDoc ? <FileText size={17} /> : <GraduationCap size={17} />}
                   </span>
                   <span className="flex-1 min-w-0">
-                    <span className="block text-[9.5px] font-bold uppercase tracking-widest mb-0.5" style={{ fontFamily: FONT_MONO, color: FT.slate }}>
-                      {isDoc ? 'Documento' : 'Formação e-learning'}
+                    <span className="flex items-center justify-between gap-2 mb-1">
+                      <span className="text-[9.5px] font-bold uppercase tracking-widest" style={{ fontFamily: FONT_MONO, color: FT.slate }}>
+                        {isDoc ? 'Documento' : 'Formação e-learning'}
+                      </span>
+                      <span
+                        className="shrink-0 text-[10px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full"
+                        style={{ fontFamily: FONT_MONO, background: FT.warnBg, color: PENDING_INK }}
+                      >
+                        Pendente
+                      </span>
                     </span>
-                    <span className="block text-[15.5px] font-semibold truncate" style={{ fontFamily: FONT_TITLE, color: FT.ink }}>
+                    <span className="block text-[15.5px] font-semibold leading-snug" style={{ fontFamily: FONT_TITLE, color: FT.ink }}>
                       {item.label}
                     </span>
-                  </span>
-                  <span
-                    className="shrink-0 text-[10px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full"
-                    style={{ fontFamily: FONT_MONO, background: FT.warnBg, color: PENDING_INK }}
-                  >
-                    Pendente
                   </span>
                   <ChevronRight size={16} className="shrink-0 transition-transform" style={{ color: FT.slate, transform: isOpen ? 'rotate(90deg)' : 'none' }} />
                 </button>
