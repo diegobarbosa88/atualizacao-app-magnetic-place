@@ -166,16 +166,16 @@ export default function EpiCatalogTab({ types, requests, supabase, onChange }) {
         <p className="text-xs font-black uppercase tracking-widest text-[var(--slate-dim)]">{form.id ? 'Editar tipo' : 'Adicionar novo tipo'}</p>
 
         <div className="flex gap-2">
-          <div className="w-[92px] shrink-0">
+          <div className="w-40 shrink-0">
             <label className="block text-xs font-bold uppercase text-[var(--ink-mid)] mb-1">Ícone</label>
-            <div className="grid grid-cols-4 gap-1">
+            <div className="grid grid-cols-4 gap-1.5">
               {EPI_ICON_OPTIONS.map(({ name, Icon }) => (
                 <button
                   key={name}
                   onClick={() => setForm((f) => ({ ...f, icon: name }))}
-                  className={`w-5 h-5 sm:w-6 sm:h-6 rounded-lg border flex items-center justify-center ${form.icon === name ? 'border-[var(--orange)] bg-amber-50' : 'border-slate-200 bg-white'}`}
+                  className={`w-8 h-8 sm:w-9 sm:h-9 rounded-lg border flex items-center justify-center ${form.icon === name ? 'border-[var(--orange)] bg-amber-50' : 'border-slate-200 bg-white'}`}
                 >
-                  <Icon size={12} />
+                  <Icon size={16} />
                 </button>
               ))}
             </div>
