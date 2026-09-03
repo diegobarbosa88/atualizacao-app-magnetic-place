@@ -9,6 +9,10 @@ const DARK_TEXT  = rgb(0.10, 0.15, 0.22);
 const LIGHT_TEXT = rgb(0.42, 0.48, 0.56);
 const BORDER     = rgb(0.88, 0.90, 0.93);
 
+// Sede da empresa — mesma morada de RecibosCalculadora.jsx (fonte oficial),
+// mesmo valor por omissão de src/features/public/OnboardingCommitmentStep.jsx.
+const SEDE_EMPRESA = "Rua D. Pedro V n 715 Loja 80, Trofa, Bougado (São Martinho e Santiago)";
+
 // A4 em pontos (1 mm = 2.835 pt)
 const PAGE_W  = 595.28;
 const PAGE_H  = 841.89;
@@ -104,7 +108,7 @@ function personalizarTexto(template: string, dados: DadosPersonalizacao): string
   if (dados.morada) out = out.replace("residente em [morada completa]", `residente em ${dados.morada}`);
   if (dados.profissao) out = out.replace("na categoria profissional de [soldador / mecânico / outra]", `na categoria profissional de ${dados.profissao}`);
   if (inicio) out = out.replace("no dia [__/__/____]", `no dia ${inicio}`);
-  if (dados.localTrabalho) out = out.replace("com o local de trabalho em [___]", `com o local de trabalho em ${dados.localTrabalho}`);
+  out = out.replace("com o local de trabalho em [___]", `com o local de trabalho em ${dados.localTrabalho || SEDE_EMPRESA}`);
   if (salario) out = out.replace("retribuição base ilíquida mensal de [_____] €", `retribuição base ilíquida mensal de ${salario} €`);
   return out;
 }

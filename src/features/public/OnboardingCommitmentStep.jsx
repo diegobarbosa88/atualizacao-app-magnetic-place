@@ -5,6 +5,13 @@ import React, {
 import { AlertCircle, Check } from 'lucide-react';
 import { FT } from '../../styles/designTokens';
 
+// Sede da empresa — mesma morada usada em RecibosCalculadora.jsx (fonte
+// oficial). Valor por omissão da cláusula 2.ª quando o convite não define
+// um local de trabalho específico (dados.local_trabalho, vindo de
+// invite.local_trabalho_texto — campo que hoje nenhum ecrã de admin
+// preenche, por isso ficava sempre como "[___]" literal no documento).
+const SEDE_EMPRESA = 'Rua D. Pedro V n 715 Loja 80, Trofa, Bougado (São Martinho e Santiago)';
+
 // Ao alterar este texto, incrementar LEGAL_TEXT_VERSION e atualizar o texto
 // equivalente em supabase/functions/submit-onboarding-commitment/pdfGenerator.ts.
 // Os dois textos devem ser IDÊNTICOS para que o hash SHA-256 seja consistente.
@@ -77,7 +84,7 @@ export function personalizarTexto(template, dados = {}) {
     [/residente em \[morada completa\]/g, dados.morada ? `residente em ${dados.morada}` : null],
     [/na categoria profissional de \[soldador \/ mecânico \/ outra\]/g, dados.profissao ? `na categoria profissional de ${dados.profissao}` : null],
     [/no dia \[__\/__\/____\]/g, fmtData(dados.data_inicio) ? `no dia ${fmtData(dados.data_inicio)}` : null],
-    [/com o local de trabalho em \[___\]/g, dados.local_trabalho ? `com o local de trabalho em ${dados.local_trabalho}` : null],
+    [/com o local de trabalho em \[___\]/g, `com o local de trabalho em ${dados.local_trabalho || SEDE_EMPRESA}`],
     [/retribuição base ilíquida mensal de \[_____\] €/g, fmtMoeda(dados.vencimento_base) ? `retribuição base ilíquida mensal de ${fmtMoeda(dados.vencimento_base)} €` : null],
   ];
 
