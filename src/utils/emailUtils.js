@@ -155,10 +155,11 @@ export const sendOnboardingInviteEmail = async ({ toEmail, link }) => {
 
 /**
  * Envia ao trabalhador a confirmação de que o registo foi aprovado, com o
- * link de acesso e o utilizador a usar (a senha é o seu próprio NIF, que já
- * conhece — nunca enviado por email).
+ * link de acesso e as credenciais de login (utilizador + senha, o seu
+ * próprio NIF) — pedido explícito do Diego (2026-09-03), para o trabalhador
+ * não ter de adivinhar o formato do utilizador.
  */
-export const sendOnboardingApprovedEmail = async ({ toEmail, workerName, username, portalUrl }) => {
+export const sendOnboardingApprovedEmail = async ({ toEmail, workerName, username, password, portalUrl }) => {
   if (!toEmail) return false;
   if (!EMAILJS_SERVICE_ID || !EMAILJS_TEMPLATE_ID_NOTIF || !EMAILJS_PUBLIC_KEY) {
     console.warn('[emailUtils] EmailJS não configurado — email de aprovação não enviado.');
@@ -169,7 +170,7 @@ export const sendOnboardingApprovedEmail = async ({ toEmail, workerName, usernam
       to_email: toEmail,
       to_name: workerName || 'Colaborador',
       notification_title: 'O teu registo foi aprovado!',
-      notification_message: `Olá ${workerName || ''}, o teu registo na Magnetic Place foi aprovado. Já podes aceder ao teu painel — utilizador: ${username}, senha: o teu NIF.`,
+      notification_message: `Olá ${workerName || ''}, o teu registo na Magnetic Place foi aprovado. Já podes aceder ao teu painel — utilizador: ${username}, senha: ${password}.`,
       link_unico: portalUrl || (typeof window !== 'undefined' ? window.location.origin : ''),
     }, EMAILJS_PUBLIC_KEY);
     return true;

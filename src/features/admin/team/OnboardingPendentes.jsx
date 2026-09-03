@@ -178,6 +178,7 @@ export default function OnboardingPendentes() {
           toEmail: selected.email,
           workerName: selected.nome,
           username: loginKeyFromName(selected.nome),
+          password: selected.nif,
         });
       } catch (e) {
         console.warn('Falha ao enviar email de aprovação ao trabalhador:', e.message);
