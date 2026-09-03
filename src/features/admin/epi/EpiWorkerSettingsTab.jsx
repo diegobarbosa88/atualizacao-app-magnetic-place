@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, PackageCheck } from 'lucide-react';
 import { SCALE, FT, FONT_TITLE } from '../../../styles/designTokens';
 import { EpiIcon } from '../../../utils/epiIcons';
 import { isBaseEligible, eligibleTypesForWorker } from '../../../utils/epiHelpers';
+import EntregarEpiModal from './EntregarEpiModal';
 
 const getInitials = (name) => {
   if (!name) return '?';
@@ -15,8 +16,9 @@ const getInitials = (name) => {
 // tabela `workers` (channelWorkers) atualiza sozinha o array global assim
 // que o UPDATE chega, e esta lista lê sempre `workers` (prop, vindo de
 // useApp() no componente pai).
-export default function EpiWorkerSettingsTab({ types, workers, supabase }) {
+export default function EpiWorkerSettingsTab({ types, workers, catalogoDocumento, currentUser, supabase, onChange }) {
   const [pickedId, setPickedId] = useState(null);
+  const [entregarOpen, setEntregarOpen] = useState(false);
   const worker = workers.find((w) => w.id === pickedId) || null;
 
   const persist = async (patch) => {
@@ -82,9 +84,18 @@ export default function EpiWorkerSettingsTab({ types, workers, supabase }) {
       <button onClick={() => setPickedId(null)} className="flex items-center gap-1.5 text-sm font-semibold text-[var(--navy)] mb-3">
         <ArrowLeft size={14} /> todos os trabalhadores
       </button>
-      <div className="mb-3">
-        <p className="text-lg font-bold text-[var(--ink)]" style={{ fontFamily: FONT_TITLE }}>{worker.name}</p>
-        <p className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>{worker.profissao || '—'}</p>
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div>
+          <p className="text-lg font-bold text-[var(--ink)]" style={{ fontFamily: FONT_TITLE }}>{worker.name}</p>
+          <p className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>{worker.profissao || '—'}</p>
+        </div>
+        <button
+          onClick={() => setEntregarOpen(true)}
+          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-black uppercase shadow-sm shrink-0"
+          style={{ backgroundColor: FT.orange, color: FT.navy }}
+        >
+          <PackageCheck size={14} /> Entregar EPI
+        </button>
       </div>
       <div className="space-y-2">
         {types.map((t) => {
@@ -123,6 +134,17 @@ export default function EpiWorkerSettingsTab({ types, workers, supabase }) {
           );
         })}
       </div>
+
+      <EntregarEpiModal
+        open={entregarOpen}
+        onClose={() => setEntregarOpen(false)}
+        worker={worker}
+        types={types}
+        catalogoDocumento={catalogoDocumento}
+        currentUser={currentUser}
+        supabase={supabase}
+        onChange={onChange}
+      />
     </div>
   );
 }

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { ChevronDown, Search, Plus, Info, Lock } from 'lucide-react';
+import { ChevronDown, Search, Plus, Info, Lock, Boxes } from 'lucide-react';
 import { SCALE, FT } from '../../../styles/designTokens';
 import { PROFISSOES_EMPRESA, GRUPOS_PROFISSOES } from '../../../data/profissoesEmpresa';
+import { EpiIcon } from '../../../utils/epiIcons';
 
 // Pequena biblioteca de ícones SVG autocontidos (sem <img>/CDN — os
 // templates HTML deste catálogo vão para geração de PDF num Lambda
@@ -126,34 +127,41 @@ function NewEpiForm({ existingKeys, onCancel, onCreate }) {
   );
 }
 
-function EpiCard({ item, expanded, onToggle, onSave }) {
+function EpiCard({ item, types, expanded, onToggle, onSave }) {
   const [nome, setNome] = useState(item.nome);
   const [risco, setRisco] = useState(item.risco);
   const [manutencao, setManutencao] = useState(item.manutencao);
   const [profissoes, setProfissoes] = useState(item.profissoes || []);
+  const [epiTypeIds, setEpiTypeIds] = useState(item.epi_type_ids || []);
   const [saving, setSaving] = useState(false);
 
   // Reset do estado local do formulário sempre que o item de fora mudar
   // (ex. outra aba/sessão gravou entretanto) — evita mostrar dados presos
   // de uma edição anterior.
   React.useEffect(() => {
-    setNome(item.nome); setRisco(item.risco); setManutencao(item.manutencao); setProfissoes(item.profissoes || []);
+    setNome(item.nome); setRisco(item.risco); setManutencao(item.manutencao);
+    setProfissoes(item.profissoes || []); setEpiTypeIds(item.epi_type_ids || []);
   }, [item]);
 
   const toggleProf = (rotulo) => {
     setProfissoes((prev) => prev.includes(rotulo) ? prev.filter((p) => p !== rotulo) : [...prev, rotulo]);
   };
 
+  const toggleType = (typeId) => {
+    setEpiTypeIds((prev) => prev.includes(typeId) ? prev.filter((id) => id !== typeId) : [...prev, typeId]);
+  };
+
   const save = async () => {
     setSaving(true);
     try {
-      await onSave(item.key, { nome, risco, manutencao, profissoes });
+      await onSave(item.key, { nome, risco, manutencao, profissoes, epi_type_ids: epiTypeIds });
     } finally {
       setSaving(false);
     }
   };
 
   const has = (item.profissoes || []).length > 0;
+  const linkedCount = (item.epi_type_ids || []).length;
 
   return (
     <div className={`bg-white rounded-2xl border shadow-sm overflow-hidden transition-colors ${expanded ? 'border-[var(--navy)]' : 'border-[var(--border-soft)]'}`}>
@@ -165,6 +173,9 @@ function EpiCard({ item, expanded, onToggle, onSave }) {
           <p className="text-[15px] font-bold text-[var(--ink)] truncate" style={{ fontFamily: 'Barlow Condensed, sans-serif' }}>{item.nome}</p>
           <p className={`${SCALE.text.meta}`} style={{ color: has ? FT.ok : 'var(--slate-dim)' }}>
             {has ? `${item.profissoes.length} profissão(ões) atribuída(s)` : 'Nenhuma profissão atribuída'}
+          </p>
+          <p className={`${SCALE.text.meta}`} style={{ color: linkedCount ? FT.ok : FT.orangeDeep }}>
+            {linkedCount ? `Ligado a ${linkedCount} item${linkedCount > 1 ? 's' : ''} de stock` : 'Sem item de stock associado — só documento'}
           </p>
         </div>
         <ChevronDown size={16} className={`text-[var(--slate-dim)] shrink-0 transition-transform ${expanded ? 'rotate-180' : ''}`} />
@@ -217,6 +228,32 @@ function EpiCard({ item, expanded, onToggle, onSave }) {
               ))}
             </div>
           </div>
+          <div className="mt-3">
+            <label className={`${SCALE.text.statLabel} text-[var(--slate-dim)] mb-1 flex items-center gap-1.5`}>
+              <Boxes size={11} /> Item(ns) de stock associado(s)
+            </label>
+            <p className="text-xs text-[var(--slate-dim)] mb-2">
+              Liga este item do documento ao(s) SKU(s) reais do Catálogo — é o que a "Entrega de EPI" usa para saber o que abater do stock. Mais de um quando este item cobre profissões com produtos diferentes (ex. luvas de soldador vs. de serralheiro).
+            </p>
+            {!types?.length && <p className="text-xs italic text-[var(--slate-dim)]">Sem tipos no Catálogo ainda.</p>}
+            <div className="flex flex-wrap gap-1.5">
+              {(types || []).map((t) => {
+                const on = epiTypeIds.includes(t.id);
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => toggleType(t.id)}
+                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-semibold ${on ? 'border-[var(--orange)] bg-[var(--warn-bg)] text-[var(--orange-deep)]' : 'border-[var(--border)] bg-[var(--panel)] text-[var(--ink-mid)]'}`}
+                  >
+                    <EpiIcon name={t.icon} size={12} />
+                    {t.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-[var(--border-soft)]">
             <button onClick={onToggle} className="px-3.5 py-1.5 rounded-lg border border-[var(--border)] text-sm text-[var(--slate-dim)]">Fechar</button>
             <button onClick={save} disabled={saving} className="px-4 py-1.5 rounded-lg text-sm font-semibold text-white disabled:opacity-50" style={{ background: FT.navy }}>
@@ -235,7 +272,7 @@ function EpiCard({ item, expanded, onToggle, onSave }) {
 // há tamanhos nem controlo de stock, só nome/risco/manutenção (texto
 // oficial) e a atribuição por profissão, que o documento usa para montar a
 // lista de EPI automaticamente a partir de workers.profissao.
-export default function EpiDocumentoTab({ catalogo, supabase, onChange }) {
+export default function EpiDocumentoTab({ catalogo, types, supabase, onChange }) {
   const [expandedKey, setExpandedKey] = useState(null);
   const [search, setSearch] = useState('');
   const [showNew, setShowNew] = useState(false);
@@ -294,6 +331,7 @@ export default function EpiDocumentoTab({ catalogo, supabase, onChange }) {
           <EpiCard
             key={item.key}
             item={item}
+            types={types}
             expanded={expandedKey === item.key}
             onToggle={() => setExpandedKey((k) => k === item.key ? null : item.key)}
             onSave={persist}

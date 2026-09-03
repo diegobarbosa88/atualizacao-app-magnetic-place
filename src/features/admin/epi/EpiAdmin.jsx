@@ -88,10 +88,17 @@ export default function EpiAdmin() {
         <EpiCatalogTab types={types} requests={requests} supabase={supabase} onChange={reload} />
       )}
       {tab === 'trabalhadores' && (
-        <EpiWorkerSettingsTab types={types} workers={workers} supabase={supabase} />
+        <EpiWorkerSettingsTab
+          types={types}
+          workers={workers}
+          catalogoDocumento={catalogoDocumento}
+          currentUser={currentUser}
+          supabase={supabase}
+          onChange={reload}
+        />
       )}
       {tab === 'documento' && (
-        <EpiDocumentoTab catalogo={catalogoDocumento} supabase={supabase} onChange={reload} />
+        <EpiDocumentoTab catalogo={catalogoDocumento} types={types} supabase={supabase} onChange={reload} />
       )}
     </div>
   );
