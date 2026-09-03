@@ -302,13 +302,24 @@ export default function WorkerOnboardingGate({ itensIniciais, currentUser, onCom
       )}
 
       {formacaoAtiva && (
-        <ModalShell isOpen title={formacaoAtiva.tipo_formacao} onClose={() => { setFormacaoAtiva(null); reavaliar(); }} size="lg">
-          <FormacaoElearningFlow
-            participacao={formacaoAtiva}
-            currentUser={currentUser}
-            onFinalizado={() => { setFormacaoAtiva(null); reavaliar(); }}
-            onError={(msg) => setErro(msg)}
-          />
+        // FormacaoElearningFlow espera o mesmo wrapper que FormacaoModal.jsx
+        // (a única outra tela que o usa) já lhe dá — o rodapé "sticky" do
+        // fluxo (STICKY_FOOTER_CLS, -mx-5/px-5) pressupõe um pai com padding
+        // de 20px (p-5); sem ele, o sticky ficava mal posicionado por cima
+        // do conteúdo, lendo-se como texto cortado. size="2xl" e accent
+        // "brand" replicados pela mesma razão — é a largura/acento com que
+        // este fluxo já foi desenhado e testado.
+        <ModalShell isOpen title={formacaoAtiva.tipo_formacao} onClose={() => { setFormacaoAtiva(null); reavaliar(); }} size="2xl" accent="brand">
+          <div className="px-4 py-4 min-h-full" style={{ background: FT.bg }}>
+            <div className="rounded-[14px] p-5" style={{ background: FT.panel, border: `1px solid ${FT.border}` }}>
+              <FormacaoElearningFlow
+                participacao={formacaoAtiva}
+                currentUser={currentUser}
+                onFinalizado={() => { setFormacaoAtiva(null); reavaliar(); }}
+                onError={(msg) => setErro(msg)}
+              />
+            </div>
+          </div>
         </ModalShell>
       )}
 
