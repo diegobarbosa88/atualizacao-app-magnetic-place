@@ -373,12 +373,23 @@ export default function FaturasAdmin() {
   const guardarIbanFornecedor = async () => {
     if (!ibanModal || !ibanInputVal.trim()) return;
     const iban = ibanInputVal.replace(/\s/g, '').toUpperCase();
-    const res = await authFetch('/api/pagamentos?action=guardar-iban-fornecedor', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nif: ibanModal.nif, nome: ibanModal.nome, iban }),
-    });
-    if (!res.ok) { const d = await res.json(); alert(`Erro: ${d.error}`); return; }
-    setFornecedoresIban(prev => ({ ...prev, [ibanModal.nif]: iban }));
+    // Com NIF: grava no cadastro do fornecedor (aplica a todas as faturas
+    // dele). Sem NIF: grava só nesta fatura específica.
+    if (ibanModal.nif) {
+      const res = await authFetch('/api/pagamentos?action=guardar-iban-fornecedor', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nif: ibanModal.nif, nome: ibanModal.nome, iban }),
+      });
+      if (!res.ok) { const d = await res.json(); alert(`Erro: ${d.error}`); return; }
+      setFornecedoresIban(prev => ({ ...prev, [ibanModal.nif]: iban }));
+    } else {
+      const res = await authFetch('/api/pagamentos?action=guardar-iban-fatura', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fatura_id: ibanModal.faturaId, iban }),
+      });
+      if (!res.ok) { const d = await res.json(); alert(`Erro: ${d.error}`); return; }
+      setFaturas(prev => prev.map(x => x.id === ibanModal.faturaId ? { ...x, dados: { ...x.dados, iban } } : x));
+    }
     setIbanModal(null);
   };
 
@@ -714,20 +725,18 @@ export default function FaturasAdmin() {
                           >
                             <Repeat size={14} />
                           </button>
-                          {f.dados?.nif_fornecedor && (
-                            <button
-                              onClick={() => {
-                                const nif = f.dados.nif_fornecedor;
-                                const currentIban = fornecedoresIban[nif] || '';
-                                setIbanModal({ nif, nome: f.dados?.fornecedor || nif });
-                                setIbanInputVal(currentIban);
-                              }}
-                              title={fornecedoresIban[f.dados?.nif_fornecedor] ? `IBAN guardado: ${fornecedoresIban[f.dados?.nif_fornecedor]}` : 'Guardar IBAN do fornecedor'}
-                              className={`p-1.5 transition-colors rounded ${fornecedoresIban[f.dados?.nif_fornecedor] ? 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100' : 'text-[var(--slate)] hover:text-[var(--slate)]'}`}
-                            >
-                              <CreditCard size={14} />
-                            </button>
-                          )}
+                          <button
+                            onClick={() => {
+                              const nif = f.dados?.nif_fornecedor || null;
+                              const currentIban = (nif && fornecedoresIban[nif]) || f.dados?.iban || '';
+                              setIbanModal({ nif, faturaId: f.id, nome: f.dados?.fornecedor || nif || f.filename });
+                              setIbanInputVal(currentIban);
+                            }}
+                            title={(f.dados?.nif_fornecedor && fornecedoresIban[f.dados.nif_fornecedor]) || f.dados?.iban ? `IBAN guardado: ${(f.dados?.nif_fornecedor && fornecedoresIban[f.dados.nif_fornecedor]) || f.dados?.iban}` : 'Guardar IBAN do fornecedor'}
+                            className={`p-1.5 transition-colors rounded ${(f.dados?.nif_fornecedor && fornecedoresIban[f.dados.nif_fornecedor]) || f.dados?.iban ? 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100' : 'text-[var(--slate)] hover:text-[var(--slate)]'}`}
+                          >
+                            <CreditCard size={14} />
+                          </button>
                           <button onClick={() => handleApagarUm(f)} disabled={apagando} className="p-1.5 text-[var(--slate)] hover:text-red-500 transition-colors disabled:opacity-50" title="Apagar">
                             {apagando ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
                           </button>
@@ -786,7 +795,11 @@ export default function FaturasAdmin() {
               className="w-full border border-[var(--border)] rounded-xl px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-300"
               autoFocus
             />
-            <p className={`text-[var(--slate-dim)] mt-1 ${SCALE.text.body}`}>Aplicado a todas as faturas deste fornecedor (NIF: {ibanModal.nif})</p>
+            {ibanModal.nif ? (
+              <p className={`text-[var(--slate-dim)] mt-1 ${SCALE.text.body}`}>Aplicado a todas as faturas deste fornecedor (NIF: {ibanModal.nif})</p>
+            ) : (
+              <p className={`text-[var(--slate-dim)] mt-1 ${SCALE.text.body}`}>Sem NIF extraído — aplicado só a esta fatura.</p>
+            )}
           </div>
         </ModalShell>
       )}

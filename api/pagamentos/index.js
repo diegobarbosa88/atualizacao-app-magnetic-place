@@ -16,6 +16,22 @@ function supabase() {
   return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 }
 
+// Normaliza um nome de fornecedor para comparação tolerante a variações de
+// grafia (acentos, pontuação, sufixos legais) — usado como fallback quando a
+// fatura não tem nif_fornecedor extraído (caso frequente: o parser de IA
+// raramente extrai o NIF/CIF). Ex: "Quirón Prevención S.L.U.", "Quiron
+// Prevención" e "Quirónprevención" normalizam todos para "quironprevencion".
+function normalizarNomeFornecedor(nome) {
+  if (!nome) return '';
+  return nome
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[.,]/g, '')
+    .replace(/\b(slu|sl|sa|lda|unipessoal|limitada|ltd)\b/g, '')
+    .replace(/\s+/g, '')
+    .trim();
+}
+
 // Headers base Salt Edge (sem assinatura — obrigatória apenas em Live)
 function saltEdgeHeaders() {
   return {
@@ -571,6 +587,26 @@ export default async function handler(req, res) {
       return res.json({ ok: true });
     }
 
+    // ─── FATURAS GMAIL: GUARDAR IBAN NUMA FATURA ESPECÍFICA (sem NIF extraído) ───
+    // Usado quando a fatura não tem nif_fornecedor (não há como aplicar por
+    // NIF a todas as faturas do fornecedor) — grava só em dados.iban desta
+    // fatura, sempre por confirmação explícita do admin (nunca automático).
+    if (action === 'guardar-iban-fatura') {
+      if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+      const { fatura_id, iban } = req.body || {};
+      if (!fatura_id || !iban) return res.status(400).json({ error: 'fatura_id e iban obrigatórios' });
+      const ibanLimpo = String(iban).replace(/\s/g, '').toUpperCase();
+      if (!/^[A-Z]{2}\d{2}[A-Z0-9]{4,}$/.test(ibanLimpo)) {
+        return res.status(400).json({ error: 'IBAN inválido' });
+      }
+      const { data: fatura, error: fetchErr } = await db.from('faturas').select('dados').eq('id', fatura_id).single();
+      if (fetchErr) return res.status(500).json({ error: fetchErr.message });
+      const novosDados = { ...(fatura?.dados || {}), iban: ibanLimpo };
+      const { error } = await db.from('faturas').update({ dados: novosDados }).eq('id', fatura_id);
+      if (error) return res.status(500).json({ error: error.message });
+      return res.json({ ok: true, dados: novosDados });
+    }
+
     // ─── FORNECEDORES: LISTAR ───
     if (action === 'listar-fornecedores') {
       if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
@@ -656,20 +692,41 @@ export default async function handler(req, res) {
       if (error) return res.status(500).json({ error: error.message });
       const elegiveis = (data || []).filter(f => f.dados?.valor_total);
 
-      // Enriquecer com IBAN do fornecedor quando dados.iban é nulo
-      const nifsComFaturasSemIban = [...new Set(
-        elegiveis.filter(f => !f.dados?.iban && f.dados?.nif_fornecedor).map(f => f.dados.nif_fornecedor)
-      )];
-      if (nifsComFaturasSemIban.length > 0) {
+      // Enriquecer com IBAN do fornecedor cadastrado quando dados.iban é nulo.
+      // Primeiro por NIF (exato, mais seguro); quando a fatura não tem NIF
+      // extraído (caso frequente — o parser de IA raramente o preenche),
+      // cai para nome normalizado como fallback. Só aplica o fallback por
+      // nome quando o match for inequívoco: se dois fornecedores diferentes
+      // normalizarem para o mesmo nome com IBANs diferentes, nenhum é usado
+      // (ambíguo) — nunca aplicar IBAN a um pagamento por adivinhação.
+      const semIban = elegiveis.filter(f => !f.dados?.iban);
+      if (semIban.length > 0) {
         const { data: fns } = await db
           .from('fornecedores')
-          .select('nif, iban')
-          .in('nif', nifsComFaturasSemIban)
+          .select('nif, nome, iban')
           .not('iban', 'is', null);
-        const ibanByNif = Object.fromEntries((fns || []).map(f => [f.nif, f.iban]));
+        const fornecedores = fns || [];
+
+        const ibanByNif = Object.fromEntries(fornecedores.filter(f => f.nif).map(f => [f.nif, f.iban]));
+
+        const ibanByNomeNormalizado = {};
+        for (const f of fornecedores) {
+          const norm = normalizarNomeFornecedor(f.nome);
+          if (!norm) continue;
+          if (!(norm in ibanByNomeNormalizado)) ibanByNomeNormalizado[norm] = f.iban;
+          else if (ibanByNomeNormalizado[norm] !== f.iban) ibanByNomeNormalizado[norm] = null; // ambíguo
+        }
+
         elegiveis.forEach(f => {
-          if (!f.dados?.iban && f.dados?.nif_fornecedor && ibanByNif[f.dados.nif_fornecedor]) {
-            f.dados = { ...f.dados, iban: ibanByNif[f.dados.nif_fornecedor] };
+          if (f.dados?.iban) return;
+          const nif = f.dados?.nif_fornecedor;
+          if (nif && ibanByNif[nif]) {
+            f.dados = { ...f.dados, iban: ibanByNif[nif] };
+            return;
+          }
+          const nomeNorm = normalizarNomeFornecedor(f.dados?.fornecedor);
+          if (nomeNorm && ibanByNomeNormalizado[nomeNorm]) {
+            f.dados = { ...f.dados, iban: ibanByNomeNormalizado[nomeNorm] };
           }
         });
       }
@@ -810,8 +867,18 @@ export default async function handler(req, res) {
           .in('id', faturas_gmail_ids)
           .eq('status', 'PENDENTE');
         if (error) return res.status(500).json({ error: error.message });
+
+        // Recusa explicitamente em vez de ignorar em silêncio — uma fatura
+        // sem IBAN/valor selecionada para o lote nunca deve simplesmente
+        // desaparecer do XML final sem o admin saber (o frontend já bloqueia
+        // antes disto, mas esta é a última linha de defesa server-side).
+        const invalidas = (fats || []).filter(f => !f.dados?.iban || !f.dados?.valor_total);
+        if (invalidas.length > 0) {
+          const nomes = invalidas.map(f => f.dados?.fornecedor || f.filename || f.id).join(', ');
+          return res.status(400).json({ error: `${invalidas.length} fatura(s) sem IBAN ou valor — não é possível gerar o SEPA: ${nomes}` });
+        }
+
         for (const f of fats || []) {
-          if (!f.dados?.iban || !f.dados?.valor_total) continue;
           registos.push({
             nome: f.dados.fornecedor || f.filename || 'Fornecedor',
             iban: f.dados.iban,

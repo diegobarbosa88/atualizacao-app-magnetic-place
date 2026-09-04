@@ -264,10 +264,17 @@ export default function FilaAprovacaoTab() {
   const guardarIbanInline = async () => {
     if (!ibanModal || !ibanInputVal.trim()) return;
     const iban = ibanInputVal.replace(/\s/g, '').toUpperCase();
-    const res = await authFetch('/api/pagamentos?action=guardar-iban-fornecedor', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nif: ibanModal.nif, nome: ibanModal.nome, iban }),
-    });
+    // Com NIF: grava no cadastro do fornecedor (aplica a todas as faturas
+    // dele). Sem NIF: grava só nesta fatura específica.
+    const res = ibanModal.nif
+      ? await authFetch('/api/pagamentos?action=guardar-iban-fornecedor', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nif: ibanModal.nif, nome: ibanModal.nome, iban }),
+        })
+      : await authFetch('/api/pagamentos?action=guardar-iban-fatura', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fatura_id: ibanModal.faturaId, iban }),
+        });
     if (!res.ok) { const d = await res.json(); alert(`Erro: ${d.error}`); return; }
     setIbanModal(null);
     carregar();
@@ -445,9 +452,9 @@ export default function FilaAprovacaoTab() {
                     )}
                     {item.iban
                       ? <span className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>{maskIban(item.iban)}</span>
-                      : item.fonte === 'fatura-gmail' && item.nif
+                      : item.fonte === 'fatura-gmail'
                         ? <button
-                            onClick={() => { setIbanModal({ nif: item.nif, nome: item.label }); setIbanInputVal(''); }}
+                            onClick={() => { setIbanModal({ nif: item.nif || null, faturaId: item.id, nome: item.label }); setIbanInputVal(''); }}
                             className={`flex items-center gap-1 ${SCALE.text.meta} text-orange-400 hover:text-orange-600 underline underline-offset-2`}
                           >
                             <AlertTriangle size={10} /> Sem IBAN — Definir
@@ -541,8 +548,10 @@ export default function FilaAprovacaoTab() {
               className="w-full border border-[var(--border)] rounded-xl px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-300"
               autoFocus
             />
-            {ibanModal.nif && (
+            {ibanModal.nif ? (
               <p className={`${SCALE.text.meta} text-[var(--slate-dim)] mt-1`}>Aplicado a todas as faturas deste fornecedor (NIF: {ibanModal.nif})</p>
+            ) : (
+              <p className={`${SCALE.text.meta} text-[var(--slate-dim)] mt-1`}>Sem NIF extraído — aplicado só a esta fatura.</p>
             )}
           </div>
         </ModalShell>
