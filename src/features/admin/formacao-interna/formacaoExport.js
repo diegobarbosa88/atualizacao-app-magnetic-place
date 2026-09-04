@@ -427,6 +427,10 @@ export async function exportRegistoIndividualPDF(worker, ano, formacoesDoTrabalh
 
   rodape(doc);
   doc.save(`registo-formacao-${worker.name.replace(/\s+/g, '_')}-${ano}.pdf`);
+  // Download imediato acima (doc.save) + blob devolvido para quem chamar
+  // também o poder persistir (RegistoIndividualTab.jsx sobe-o para
+  // Documentos, para entrar no pacote de "Documentos para Cliente").
+  return doc.output('blob');
 }
 
 // Certificado individual de conclusão — um por formação já assinada pelo

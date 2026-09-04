@@ -11,6 +11,8 @@ import { calcularRecibo, valorDiarioLegal, getIRSTabelasPorAno } from '../../src
 import { calcMesParcial } from '../../src/lib/payroll/mesParcial.js';
 import { calcularDiasUteisNoMes } from '../../src/lib/payroll/feriadosPortugal.js';
 import { findBestCombo, SYNC_TOLERANCE } from '../../src/lib/payroll/mapaAutoFill.js';
+import { isSigned } from '../../src/constants/documentStatus.js';
+import { TIPOS_DOCUMENTOS_CLIENTE } from '../../src/constants/clientDocuments.js';
 
 // Router único para os 4 endpoints relacionados com o contabilista — consolidados
 // num só ficheiro para não exceder o limite de Serverless Functions do plano
@@ -1091,6 +1093,123 @@ async function handleApagar(req, res) {
 }
 
 // ---------------------------------------------------------------------------
+// tipo=documentos-cliente-enviar — envia por email ao cliente atual do
+// trabalhador o pacote de 3 documentos (Registo de Formação Interna, Termo
+// de Responsabilidade EPI, Registo de Riscos), todos já assinados. Vive
+// aqui (não em api/documentos-cliente/enviar.js, como um endpoint próprio
+// pediria) porque o plano Hobby da Vercel já está no limite de 12 funções
+// serverless — mesma razão por trás de "push-send" em api/formacao/index.js.
+// Caminho front-end limpo preservado via rewrite em vercel.json
+// (/api/documentos-cliente/enviar → /api/contador?tipo=documentos-cliente-enviar).
+// Reaproveita sendGmailNewMessage/gmailClient já importados/definidos acima
+// para o fluxo do contador — não é lógica de envio nova.
+// ---------------------------------------------------------------------------
+
+function slugifyNomeDoc(nome) {
+  return nome
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+}
+
+async function handleDocumentosClienteEnviar(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  const sessao = requireAuth(req, res, ['admin']);
+  if (!sessao) return;
+
+  const missingEnv = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'GMAIL_CLIENT_ID', 'GMAIL_CLIENT_SECRET', 'GMAIL_REFRESH_TOKEN']
+    .filter(k => !process.env[k]);
+  if (missingEnv.length) return res.status(500).json({ error: `Env vars em falta: ${missingEnv.join(', ')}` });
+
+  const { worker_id } = req.body || {};
+  if (!worker_id) return res.status(400).json({ error: 'worker_id é obrigatório' });
+
+  const supabase = supabaseAdmin();
+
+  const { data: worker, error: workerErr } = await supabase.from('workers').select('id, name').eq('id', worker_id).maybeSingle();
+  if (workerErr) return res.status(500).json({ error: workerErr.message });
+  if (!worker) return res.status(404).json({ error: 'Trabalhador não encontrado.' });
+
+  const { data: historico, error: histErr } = await supabase
+    .from('worker_client_history')
+    .select('client_id')
+    .eq('worker_id', worker_id)
+    .is('data_fim', null)
+    .maybeSingle();
+  if (histErr) return res.status(500).json({ error: histErr.message });
+  if (!historico?.client_id) return res.status(400).json({ error: 'Este trabalhador não tem cliente atual atribuído.' });
+
+  const { data: cliente, error: clienteErr } = await supabase.from('clients').select('id, name, email').eq('id', historico.client_id).maybeSingle();
+  if (clienteErr) return res.status(500).json({ error: clienteErr.message });
+  if (!cliente?.email) return res.status(400).json({ error: `O cliente "${cliente?.name || historico.client_id}" não tem email configurado.` });
+
+  const [{ data: manuais, error: manErr }, { data: gerados, error: genErr }] = await Promise.all([
+    supabase.from('documents').select('id, status, url, pdfAssinadoUrl, dataEmissao')
+      .eq('workerId', worker_id).eq('tipo', 'Registo de Formação Interna')
+      .order('dataEmissao', { ascending: false }),
+    supabase.from('worker_documents').select('id, title, status, signed_pdf_url')
+      .eq('worker_id', worker_id)
+      .in('title', TIPOS_DOCUMENTOS_CLIENTE.filter(t => t !== 'Registo de Formação Interna')),
+  ]);
+  if (manErr) return res.status(500).json({ error: manErr.message });
+  if (genErr) return res.status(500).json({ error: genErr.message });
+
+  const resolvidos = TIPOS_DOCUMENTOS_CLIENTE.map((tipo) => {
+    if (tipo === 'Registo de Formação Interna') {
+      const doc = (manuais || [])[0] || null; // mais recente primeiro (order acima)
+      return { tipo, url: doc && isSigned(doc.status) ? (doc.pdfAssinadoUrl || doc.url) : null };
+    }
+    const doc = (gerados || []).find((d) => d.title === tipo) || null;
+    return { tipo, url: doc && isSigned(doc.status) ? doc.signed_pdf_url : null };
+  });
+
+  const emFalta = resolvidos.filter((r) => !r.url).map((r) => r.tipo);
+  if (emFalta.length) {
+    return res.status(400).json({ error: `Documentos por assinar/gerar antes de enviar: ${emFalta.join(', ')}`, em_falta: emFalta });
+  }
+
+  let anexos;
+  try {
+    anexos = await Promise.all(resolvidos.map(async (r) => {
+      const resp = await fetch(r.url);
+      if (!resp.ok) throw new Error(`Falha ao descarregar "${r.tipo}" (${resp.status})`);
+      const buffer = Buffer.from(await resp.arrayBuffer());
+      return { filename: `${slugifyNomeDoc(r.tipo)}.pdf`, mimeType: 'application/pdf', content: buffer };
+    }));
+  } catch (e) {
+    return res.status(502).json({ error: `Erro ao descarregar documentos: ${e.message}` });
+  }
+
+  let sendResult;
+  try {
+    const gmail = gmailClient();
+    sendResult = await sendGmailNewMessage(gmail, {
+      to: cliente.email,
+      subject: `Documentos de ${worker.name} — Magnetic Place`,
+      bodyText: `Boa tarde,\n\nSeguem em anexo os documentos de ${worker.name}:\n- Registo de Formação Interna\n- Termo de Responsabilidade — EPI\n- Registo de Informações sobre Riscos no Local de Trabalho\n\nCom os melhores cumprimentos,\nMagnetic Place`,
+      attachments: anexos,
+    });
+  } catch (e) {
+    return res.status(502).json({ error: `Falha ao enviar via Gmail: ${e.message}` });
+  }
+
+  const { error: logError } = await supabase.from('documentos_cliente_envios').insert({
+    worker_id,
+    client_id: cliente.id,
+    enviado_por: sessao.id || null,
+    gmail_message_id: sendResult.id,
+    tipos_incluidos: TIPOS_DOCUMENTOS_CLIENTE,
+  });
+  if (logError) {
+    return res.status(200).json({
+      sucesso: true, aviso: `Email enviado, mas falhou registar auditoria: ${logError.message}`,
+      gmail_message_id: sendResult.id, cliente_email: cliente.email,
+    });
+  }
+
+  return res.status(200).json({ sucesso: true, gmail_message_id: sendResult.id, cliente_email: cliente.email, enviado_em: new Date().toISOString() });
+}
+
+// ---------------------------------------------------------------------------
 
 export default async function handler(req, res) {
   try {
@@ -1102,6 +1221,7 @@ export default async function handler(req, res) {
       case 'aprovar':         return await handleAprovar(req, res);
       case 'apagar':          return await handleApagar(req, res);
       case 'preparar_mensal': return await handlePararMensal(req, res);
+      case 'documentos-cliente-enviar': return await handleDocumentosClienteEnviar(req, res);
       default:                return res.status(400).json({ error: `tipo desconhecido: ${tipo || '(não definido)'}` });
     }
   } catch (e) {

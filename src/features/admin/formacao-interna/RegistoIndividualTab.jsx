@@ -44,7 +44,7 @@ function calcularHorasMinimas(worker, ano) {
 }
 
 export default function RegistoIndividualTab() {
-  const { supabase, companySignature } = useApp();
+  const { supabase, companySignature, saveToDb } = useApp();
   const [workers, setWorkers] = useState([]);
   const [workerId, setWorkerId] = useState('');
   const [ano, setAno] = useState(String(ANO_ATUAL));
@@ -102,8 +102,34 @@ export default function RegistoIndividualTab() {
   const handleExportar = async () => {
     if (!worker || !resumo) return;
     setExportando(true);
+    setError('');
     try {
-      await exportRegistoIndividualPDF(worker, ano, formacoesDoTrabalhador, resumo, companySignature);
+      const blob = await exportRegistoIndividualPDF(worker, ano, formacoesDoTrabalhador, resumo, companySignature);
+      // Persiste em Documentos além do download imediato acima — para
+      // entrar no pacote de "Documentos para Cliente" (WorkerDocsFolderView).
+      // id estável por trabalhador+ano: reexportar sobrescreve o mesmo
+      // registo em vez de acumular um novo por cada exportação.
+      if (blob && supabase) {
+        const path = `${worker.id}/registo-formacao/${ano}.pdf`;
+        const { error: upErr } = await supabase.storage.from('documentos').upload(path, blob, { contentType: 'application/pdf', upsert: true });
+        if (upErr) throw upErr;
+        const { data: urlData } = supabase.storage.from('documentos').getPublicUrl(path);
+        const todasAssinadas = formacoesDoTrabalhador.length > 0 && formacoesDoTrabalhador.every(x => x.participacao.assinado_em);
+        await saveToDb('documents', `regformacao_${worker.id}_${ano}`, {
+          workerId: worker.id,
+          tipo: 'Registo de Formação Interna',
+          nomeFicheiro: `registo-formacao-${worker.name.replace(/\s+/g, '_')}-${ano}.pdf`,
+          url: urlData.publicUrl,
+          // pdfAssinadoUrl == url (não há assinatura própria neste
+          // documento — é o admin quem o gera) para unifyDocuments() expor
+          // signedPdfUrl, que é o campo que o pacote "Documentos para
+          // Cliente" (WorkerDocsFolderView.jsx) usa para juntar os 3 PDFs.
+          pdfAssinadoUrl: urlData.publicUrl,
+          status: todasAssinadas ? 'Assinado' : 'Pendente',
+          categoria: 'Formação Profissional',
+          dataEmissao: new Date().toISOString(),
+        });
+      }
     } catch (e) {
       setError(e.message);
     }

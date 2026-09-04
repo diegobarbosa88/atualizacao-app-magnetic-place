@@ -7,7 +7,7 @@ import {
   FileText, Clock,
   FolderOpen, Eye, EyeOff, UserCheck, CheckCircle, AlertTriangle, ChevronDown, ChevronUp,
   Folder, ArrowLeft, Search, FileSignature, Download, Trash2,
-  Layers, Calendar, Plus, ScanSearch,
+  Layers, Calendar, Plus, ScanSearch, Send,
 } from 'lucide-react';
 import ModalShell from '../../../components/common/ModalShell';
 import { CATEGORIAS_RH_ACT, getValidadeStatus, getDiasRestantes, getExpiryRelativeLabel, CATEGORIA_CONFIG, CATEGORIA_COLOR_MAP } from '../../../constants/rhCategories';
@@ -15,6 +15,8 @@ import { getCategoryFields } from '../../../constants/documentFieldsByCategory';
 import { toSentenceCase, toSentenceCaseFilename, getInitials } from '../../../utils/textUtils';
 import UploadManualModal from './UploadManualModal';
 import { CompactDocRow } from './docBadges';
+import ClientDocumentsPackageModal from './ClientDocumentsPackageModal';
+import { TIPOS_DOCUMENTOS_CLIENTE } from '../../../constants/clientDocuments';
 
 // Icon-button padronizado — mesmo par usado no resto do admin (neutro:
 // hover navy/surface; destrutivo: hover bad/bad-bg).
@@ -663,8 +665,41 @@ function CategorySection({ categoria, docs, onOpenItem }) {
 }
 
 export function WorkerPastaView({ worker, docs, onBack, onOpenDoc, onDelete, onAddDoc, onScan, hideHeader }) {
+  const { supabase } = useApp();
   const [quickViewItem, setQuickViewItem] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [pacoteOpen, setPacoteOpen] = useState(false);
+  const [compromisso, setCompromisso] = useState(null);
+
+  // "Compromisso de Início de Atividade" — assinado pelo candidato antes de
+  // ser aprovado como trabalhador, num sistema à parte (onboarding_commitments,
+  // ligado por worker_id desde 2026-09-04). Não faz parte de documents/
+  // worker_documents nem de TIPOS_DOCUMENTOS_CLIENTE — é pré-contratual, não
+  // um documento RH normal, por isso vive fora das secções por categoria.
+  useEffect(() => {
+    if (!supabase || !worker?.workerId) { setCompromisso(null); return; }
+    let cancelled = false;
+    supabase
+      .from('onboarding_commitments')
+      .select('pdf_url, created_at')
+      .eq('worker_id', worker.workerId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => { if (!cancelled) setCompromisso(data || null); });
+    return () => { cancelled = true; };
+  }, [supabase, worker?.workerId]);
+
+  // Slot fixo por tipo — no máximo 1 doc "ativo" por tipo faz sentido aqui
+  // (Registo de Formação Interna tem id estável por ano, sempre o do ano
+  // corrente; os 2 templates do Gate só são gerados uma vez por
+  // trabalhador). Se por acaso existir mais que um, fica o mais recente.
+  const docsCliente = useMemo(() => {
+    return TIPOS_DOCUMENTOS_CLIENTE.map((tipo) => {
+      const candidatos = docs.filter((d) => d.tipo === tipo).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      return { tipo, doc: candidatos[0] || null };
+    });
+  }, [docs]);
 
   const byCategoria = useMemo(() => {
     const map = {};
@@ -776,6 +811,53 @@ export function WorkerPastaView({ worker, docs, onBack, onOpenDoc, onDelete, onA
           </div>
       )}
 
+      {/* Compromisso de Início de Atividade — só aparece se este trabalhador
+          tiver vindo do fluxo público de onboarding com assinatura. */}
+      {compromisso && (
+        <div className="flex items-center justify-between gap-3 rounded-xl px-4 py-2.5 bg-[var(--surface)] border border-[var(--border-soft)]">
+          <div className="flex items-center gap-2 min-w-0">
+            <FileSignature size={14} className="text-[var(--slate)] shrink-0" />
+            <span className={`${SCALE.text.meta} text-[var(--ink-mid)] truncate`}>
+              Compromisso de Início de Atividade — assinado em {new Date(compromisso.created_at).toLocaleDateString('pt-PT')}
+            </span>
+          </div>
+          {compromisso.pdf_url && (
+            <a href={compromisso.pdf_url} target="_blank" rel="noreferrer" className={`${SCALE.text.badge} text-[var(--navy)] hover:underline shrink-0`}>
+              Ver PDF
+            </a>
+          )}
+        </div>
+      )}
+
+      {/* Documentos para Cliente — pacote fixo de 3 (TIPOS_DOCUMENTOS_CLIENTE),
+          independente das categorias abaixo. Botão fica sempre ativo — o
+          próprio modal explica o que falta em vez de um botão desabilitado
+          sem contexto. */}
+      <div className="rounded-2xl p-4 bg-white border border-[var(--border-soft)]">
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <h5 className={`${SCALE.text.statLabel} text-[var(--slate-dim)]`}>Documentos para Cliente</h5>
+          <button
+            onClick={() => setPacoteOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black uppercase shrink-0"
+            style={{ backgroundColor: FT.orange, color: FT.navy }}
+          >
+            <Send size={12} /> Preparar Pacote Cliente
+          </button>
+        </div>
+        <div className="space-y-1.5">
+          {docsCliente.map(({ tipo, doc }) => (
+            <div key={tipo} className="flex items-center justify-between gap-2">
+              <span className={`${SCALE.text.meta} text-[var(--ink-mid)] truncate`}>{tipo}</span>
+              {doc ? <StateBadgeSmall state={doc.state} /> : (
+                <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded ${SCALE.text.meta}`} style={{ color: 'var(--slate-dim)', backgroundColor: 'var(--surface-dim)' }}>
+                  Em falta
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Secções por categoria */}
       {categoriasComDocs.length === 0 ? (
         <div className="py-12 text-center opacity-30">
@@ -822,6 +904,13 @@ export function WorkerPastaView({ worker, docs, onBack, onOpenDoc, onDelete, onA
           </div>
         )}
       </ModalShell>
+
+      <ClientDocumentsPackageModal
+        open={pacoteOpen}
+        onClose={() => setPacoteOpen(false)}
+        worker={worker}
+        docsCliente={docsCliente}
+      />
     </div>
   );
 }
