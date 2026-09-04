@@ -390,6 +390,22 @@ function DocCardSingle({ d, onOpenDoc, onDelete, confirmDeleteId, setConfirmDele
   );
 }
 
+// Extraído para fora de DocCardPair (era declarado dentro do render) — uma
+// função-componente recriada a cada render muda de identidade para o React,
+// que a trata como um componente diferente e remonta o ThumbImg lá dentro a
+// cada render do pai, refazendo o fetch/download da imagem sem necessidade.
+function PreviewThumb({ doc, label }) {
+  const thumbUrl = doc?.viewUrl || doc?.signedPdfUrl || null;
+  return (
+    <div className="flex-1 min-w-0">
+      <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] text-center mb-1`}>{label}</p>
+      <div className="h-32 rounded-lg border border-[var(--border)] overflow-hidden">
+        <ThumbImg url={thumbUrl} alt={label} imgClassName="w-full h-full object-contain" wrapperClassName="w-full h-full flex items-center justify-center bg-[var(--surface-dim)]" />
+      </div>
+    </div>
+  );
+}
+
 function DocCardPair({ pair, onOpenDoc, onDelete, confirmDeleteId, setConfirmDeleteId }) {
   const { supabase } = useApp();
   const frente = pair.find(d => d.lado === 'frente') || pair[0];
@@ -410,18 +426,6 @@ function DocCardPair({ pair, onOpenDoc, onDelete, confirmDeleteId, setConfirmDel
   const pairTitle = emissao
     ? `${tipoBase} — Frente & Verso - ${MESES_PT[emissao.getMonth()]} ${emissao.getFullYear()}`
     : `${tipoBase} — Frente & Verso`;
-
-  const PreviewThumb = ({ doc, label }) => {
-    const thumbUrl = doc?.viewUrl || doc?.signedPdfUrl || null;
-    return (
-      <div className="flex-1 min-w-0">
-        <p className={`${SCALE.text.statLabel} text-[var(--slate-dim)] text-center mb-1`}>{label}</p>
-        <div className="h-32 rounded-lg border border-[var(--border)] overflow-hidden">
-          <ThumbImg url={thumbUrl} alt={label} imgClassName="w-full h-full object-contain" wrapperClassName="w-full h-full flex items-center justify-center bg-[var(--surface-dim)]" />
-        </div>
-      </div>
-    );
-  };
 
   return (
     <div className={`rounded-xl border-2 overflow-hidden ${temExpirado ? 'border-red-200' : temUrgente ? 'border-amber-200' : 'border-violet-200'} bg-violet-50/20`}>
