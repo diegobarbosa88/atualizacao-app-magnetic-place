@@ -89,6 +89,16 @@
 // Browser.setDownloadBehavior (eventsEnabled:true) + escrever para /tmp é
 // a forma correta e robusta de capturar isto, independente de que
 // página/aba o dispara.
+//
+// 9ª tentativa: a 8ª CONFIRMOU o mecanismo certo — o evento 'completed' do
+// CDP chegou a disparar (confirmado em produção, 2026-09-08), mas o
+// ficheiro deu ENOENT ao tentar ler pelo GUID logo a seguir. Causa
+// provável: o evento pode chegar antes do flush a disco terminar
+// (corrida de tempo, mesma família das anteriores). Acrescentada
+// pequena espera com repetição (6x, 300ms) antes de desistir, a tentar
+// tanto o GUID como o suggestedFilename do evento downloadWillBegin — e,
+// se mesmo assim falhar, lista o conteúdo real da pasta no erro em vez de
+// continuar a adivinhar o nome do ficheiro às cegas.
 import chromiumModule from '@sparticuz/chromium';
 import puppeteer from 'puppeteer-core';
 import fsPromises from 'node:fs/promises';
@@ -298,15 +308,17 @@ async function obterPdfClicandoObter(browser, page, cssSelectorBotao, timeoutMs)
 
   const downloadPromise = new Promise((resolve, reject) => {
     let guid = null;
+    let suggestedFilename = null;
 
     const onWillBegin = (evt) => {
       guid = evt.guid;
+      suggestedFilename = evt.suggestedFilename;
     };
     const onProgress = (evt) => {
       if (guid && evt.guid !== guid) return;
       if (evt.state === 'completed') {
         limpar();
-        resolve(evt.guid);
+        resolve({ guid: evt.guid, suggestedFilename });
       } else if (evt.state === 'canceled') {
         limpar();
         reject(new Error('O download do PDF foi cancelado pelo browser.'));
@@ -328,10 +340,41 @@ async function obterPdfClicandoObter(browser, page, cssSelectorBotao, timeoutMs)
   });
 
   await clickByText(page, cssSelectorBotao, 'Obter');
-  const guidFicheiro = await downloadPromise;
+  const { guid: guidFicheiro, suggestedFilename } = await downloadPromise;
 
-  const caminhoFicheiro = `${downloadDir}/${guidFicheiro}`;
-  const pdfBuffer = await fsPromises.readFile(caminhoFicheiro);
+  // O evento 'completed' do CDP chegou a disparar (achado real, 2026-09-08:
+  // ENOENT ao ler pelo GUID logo a seguir) — mas o ficheiro pode ainda não
+  // estar totalmente gravado em disco no instante exato do evento (corrida
+  // entre o evento chegar e o flush terminar). Pequena espera com repetição
+  // antes de desistir, em vez de assumir que 'completed' significa
+  // "pronto a ler" no mesmo tick.
+  const candidatosNome = [guidFicheiro, suggestedFilename].filter(Boolean);
+  let pdfBuffer = null;
+  let ultimoErro = null;
+  for (let tentativa = 0; tentativa < 6 && !pdfBuffer; tentativa++) {
+    for (const nome of candidatosNome) {
+      try {
+        pdfBuffer = await fsPromises.readFile(`${downloadDir}/${nome}`);
+        break;
+      } catch (e) {
+        ultimoErro = e;
+      }
+    }
+    if (!pdfBuffer) await new Promise((r) => setTimeout(r, 300));
+  }
+
+  if (!pdfBuffer) {
+    // Diagnóstico de último recurso — lista o que realmente ficou gravado
+    // na pasta, em vez de continuar a adivinhar o nome do ficheiro às
+    // cegas na próxima ronda.
+    const ficheirosReais = await fsPromises.readdir(downloadDir).catch(() => []);
+    await fsPromises.rm(downloadDir, { recursive: true, force: true }).catch(() => {});
+    throw new Error(
+      `Download completo (guid=${guidFicheiro}, suggestedFilename=${suggestedFilename}) mas não foi possível ler o ficheiro. ` +
+      `Ficheiros reais em ${downloadDir}: [${ficheirosReais.join(', ')}]. Último erro: ${ultimoErro?.message}`
+    );
+  }
+
   await fsPromises.rm(downloadDir, { recursive: true, force: true }).catch(() => {});
   return pdfBuffer;
 }
