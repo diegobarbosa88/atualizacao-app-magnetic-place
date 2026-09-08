@@ -229,28 +229,41 @@ export default async function handler(req, res) {
 
   // RLC (Recibo de Liquidação de Cotizações) — a PSI não tem nenhum web
   // service dedicado a isto (confirmado contra o índice oficial completo,
-  // 2026-09-09). Reaproveita "documento-pagamento/consulta" (o mesmo já
-  // usado pela tab "Documentos de Pagamento"), filtrando pelo tipo/subtipo
-  // que pareça RLC. Nunca foi testado com dados reais até agora — em vez de
-  // assumir o nome exato do campo do caminho do PDF (o que violaria a regra
-  // do projeto de nunca inventar códigos da SS), tenta os candidatos mais
-  // prováveis e, se não encontrar nada reconhecível, devolve o registo em
-  // bruto para diagnóstico em vez de falhar em silêncio — mesma disciplina
-  // que resolveu o RPA da Certidão Fiscal (api/_obterCertidaoFiscalAT.js).
+  // 2026-09-09). Sem candidato certo à partida, tenta os dois endpoints de
+  // pagamento que existem: "documento-pagamento/consulta" (guias por pagar
+  // — confirmado ao vivo, 2026-09-09, que devolve vazio quando a empresa
+  // está regularizada, portanto pouco provável ser o RLC, que é um recibo
+  // de algo já pago) e "comprovativos-pagamento/{ano}" (tem dataPagamento/
+  // valorPago, mais parecido com um recibo emitido). Em vez de assumir o
+  // nome exato do campo do caminho do PDF (violaria a regra do projeto de
+  // nunca inventar códigos da SS), tenta os candidatos mais prováveis e,
+  // se não encontrar nada reconhecível, devolve os registos em bruto dos
+  // dois para diagnóstico — mesma disciplina que resolveu o RPA da
+  // Certidão Fiscal (api/_obterCertidaoFiscalAT.js).
   if (req.method === 'GET' && action === 'obter-rlc') {
     if (!credenciaisConfiguradas()) return res.status(400).json({ erro: 'Token PSI não configurado.' });
-    const url = `${CI_BASE()}/documento-pagamento/consulta`;
-    try {
+
+    async function candidatoDe(url) {
       const r = await callSSRestGetUrl(url);
-      if (r.semRegistos) return res.status(200).json({ encontrado: false, motivo: 'Sem documentos de pagamento na Segurança Social.' });
-      if (!r.ok) return res.status(422).json({ erro: r.erro });
+      if (r.semRegistos || !r.ok) return { candidato: null, dados: [] };
       const dados = Array.isArray(r.json) ? r.json : (r.json?.documentos || r.json?.resultado || []);
       const candidato = dados.find((d) => {
-        const texto = `${d.tipo || ''} ${d.subtipo || ''}`.toUpperCase();
+        const texto = `${d.tipo || ''} ${d.subtipo || ''} ${d.mensagemNaturezaPagamento || ''}`.toUpperCase();
         return texto.includes('RLC') || texto.includes('LIQUIDA');
-      });
+      }) || null;
+      return { candidato, dados };
+    }
+
+    try {
+      const anoAtual = new Date().getFullYear();
+      const [pagamento, comprovativo] = await Promise.all([
+        candidatoDe(`${CI_BASE()}/documento-pagamento/consulta`),
+        candidatoDe(`${CI_BASE()}/comprovativos-pagamento/${anoAtual}`),
+      ]);
+      const candidato = comprovativo.candidato || pagamento.candidato;
+      const todosDados = [...comprovativo.dados, ...pagamento.dados];
       if (!candidato) {
-        return res.status(200).json({ encontrado: false, motivo: 'Nenhum documento com tipo/subtipo "RLC" encontrado.', dadosBrutos: dados, ambiente: getAmbiente() });
+        return res.status(200).json({ encontrado: false, motivo: 'Nenhum documento com tipo/subtipo "RLC" encontrado em documentos ou comprovativos de pagamento.', dadosBrutos: todosDados, ambiente: getAmbiente() });
       }
       const caminho = candidato.caminho || candidato.caminhoDocumento || candidato.link || candidato.url || null;
       if (!caminho) {
