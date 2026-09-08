@@ -78,23 +78,45 @@ async function clickByText(page, cssSelector, text, { timeout = 10000, exact = f
   throw new Error(`Elemento "${cssSelector}" com texto "${text}" não encontrado (a AT pode ter mudado o layout).`);
 }
 
+// Clica o elemento com texto exato dado inteiramente dentro do contexto da
+// página (frame.evaluate + el.click() do próprio DOM) em vez de via
+// coordenadas do Puppeteer (elementHandle.click(), que simula mouse por
+// CDP) — mais fiável contra componentes de abas reativos (Angular
+// Material e afins), que às vezes não reagem a um clique sintético de
+// baixo nível mas reagem sempre a el.click() nativo. Sobe até 4 níveis na
+// árvore à procura de um ancestral com role="tab"/button/a, que é
+// normalmente onde o listener real vive, não no <span> de texto interno.
+async function clickNativeByExactText(frame, cssSelector, text) {
+  return frame.evaluate((sel, txt) => {
+    // eslint-disable-next-line no-undef -- corre no contexto da página (browser), não no Node
+    const els = Array.from(document.querySelectorAll(sel));
+    const el = els.find(e => e.textContent && e.textContent.trim() === txt);
+    if (!el) return false;
+    let target = el;
+    for (let i = 0; i < 4 && target; i++) {
+      if (target.getAttribute?.('role') === 'tab' || target.tagName === 'BUTTON' || target.tagName === 'A') break;
+      target = target.parentElement;
+    }
+    (target || el).click();
+    return true;
+  }, cssSelector, text).catch(() => false);
+}
+
 // A aba "CC/CMD" fica ativa por omissão no formulário de login — clicar em
 // "NIF" precisa de fazer a troca de facto acontecer, não só o clique
-// disparar sem efeito (achado real, 2026-09-08: o primeiro clique não
-// mudava de aba, ficava sempre em CC/CMD — provavelmente porque `includes`
-// apanhava outro elemento antes do botão-aba real, ou porque um único
-// clique não bastava). Confirma a troca depois de cada tentativa, em vez de
-// assumir que funcionou.
-async function selecionarAbaNif(page, { tentativas = 4, timeout = 10000 } = {}) {
+// disparar sem efeito (achado real, 2026-09-08: 2 tentativas diferentes de
+// clicar via Puppeteer elementHandle.click() não mudavam a aba, ficava
+// sempre em CC/CMD). Tenta clique nativo em cada frame, confirma a troca
+// depois de cada tentativa — nunca assume que um clique bastou.
+async function selecionarAbaNif(page, { tentativas = 6 } = {}) {
   for (let i = 0; i < tentativas; i++) {
-    // Texto EXATO "NIF", não substring — evita apanhar outro elemento.
-    await clickByText(page, 'a, button, div, span, li', 'NIF', { timeout: 4000, exact: true }).catch(() => {});
-    const trocou = await findInFrames(page, 'input[placeholder="Número de Contribuinte"]', { timeout: 2500 });
+    for (const frame of page.frames()) {
+      await clickNativeByExactText(frame, 'a, button, div, span, li, [role="tab"]', 'NIF');
+    }
+    const trocou = await findInFrames(page, 'input[placeholder="Número de Contribuinte"]', { timeout: 1500 });
     if (trocou) return;
   }
-  // Última tentativa: nenhuma correspondência exata funcionou — tenta por
-  // substring, caso o texto real tenha espaços/carateres extra.
-  await clickByText(page, 'a, button, div, span, li', 'NIF', { timeout }).catch(() => {});
+  throw new Error('Não foi possível mudar para a aba "NIF" do formulário de login.');
 }
 
 // Captura um screenshot (base64) para anexar ao erro, quando algo falhar a
