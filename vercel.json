@@ -62,6 +62,7 @@
     { "source": "/api/apagar-email-contador", "destination": "/api/contador?tipo=apagar" },
     { "source": "/api/documentos-cliente/enviar", "destination": "/api/contador?tipo=documentos-cliente-enviar" },
     { "source": "/api/documentos-empresa/enviar", "destination": "/api/contador?tipo=documentos-empresa-enviar" },
+    { "source": "/api/documentos-empresa/certidao-fiscal", "destination": "/api/contador?tipo=obter-certidao-fiscal" },
     { "source": "/api/toconline/bank-accounts", "destination": "/api/toconline/proxy?action=bank-accounts" },
     { "source": "/api/toconline/clientes", "destination": "/api/toconline/proxy?action=clientes" },
     { "source": "/api/toconline/fornecedores", "destination": "/api/toconline/proxy?action=fornecedores" },

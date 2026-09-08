@@ -103,6 +103,7 @@ function UploadCompanyDocModal({ tipo, mensal, onClose, onUploaded }) {
 }
 
 const TIPO_SS_AUTOMATIZAVEL = 'Certidão de Situação Contributiva Regularizada';
+const TIPO_AT_AUTOMATIZAVEL = 'Certidão de Situação Fiscal Regularizada';
 
 // Ver (preview) + Descarregar — mesmo par de ações já usado nos documentos
 // por trabalhador (DocumentViewerModal), reaproveitado aqui em vez de
@@ -128,6 +129,8 @@ export default function CompanyDocumentsAdmin() {
   const [uploadTipo, setUploadTipo] = useState(null); // tipo em upload, ou null
   const [obtendoSS, setObtendoSS] = useState(false);
   const [erroSS, setErroSS] = useState('');
+  const [obtendoAT, setObtendoAT] = useState(false);
+  const [erroAT, setErroAT] = useState('');
   const [pacoteOpen, setPacoteOpen] = useState(false);
   const [previewDoc, setPreviewDoc] = useState(null);
 
@@ -205,6 +208,24 @@ export default function CompanyDocumentsAdmin() {
     setObtendoSS(false);
   };
 
+  // RPA sobre o Portal das Finanças (api/_obterCertidaoFiscalAT.js) — não há
+  // API oficial, ao contrário da SS. Corre só sob pedido manual (não em
+  // cron), até se confirmar que aguenta o portal mudar de layout sem quebrar
+  // — ver nota no ficheiro do RPA.
+  const handleObterAT = async () => {
+    setObtendoAT(true);
+    setErroAT('');
+    try {
+      const res = await authFetch('/api/documentos-empresa/certidao-fiscal', { method: 'POST' });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || `Erro ${res.status}`);
+      reload();
+    } catch (e) {
+      setErroAT(e.message);
+    }
+    setObtendoAT(false);
+  };
+
   return (
     <div className="space-y-3">
       <div className="flex justify-end">
@@ -214,6 +235,7 @@ export default function CompanyDocumentsAdmin() {
       </div>
 
       {erroSS && <p className="text-xs text-red-600 font-bold bg-red-50 rounded-lg p-2">{erroSS}</p>}
+      {erroAT && <p className="text-xs text-red-600 font-bold bg-red-50 rounded-lg p-2">{erroAT}</p>}
 
       {loading ? (
         <div className="py-12 text-center opacity-40"><Loader2 className="animate-spin mx-auto" size={24} /></div>
@@ -243,6 +265,11 @@ export default function CompanyDocumentsAdmin() {
                     {tipo === TIPO_SS_AUTOMATIZAVEL && (
                       <button onClick={handleObterSS} disabled={obtendoSS} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--surface)] transition-all disabled:opacity-50">
                         {obtendoSS ? <Loader2 size={12} className="animate-spin" /> : <ShieldCheck size={12} />} <span className={SCALE.text.meta}>Obter da SS</span>
+                      </button>
+                    )}
+                    {tipo === TIPO_AT_AUTOMATIZAVEL && (
+                      <button onClick={handleObterAT} disabled={obtendoAT} title="RPA sobre o Portal das Finanças — sem API oficial, pode demorar ~30s" className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--surface)] transition-all disabled:opacity-50">
+                        {obtendoAT ? <Loader2 size={12} className="animate-spin" /> : <ShieldCheck size={12} />} <span className={SCALE.text.meta}>Obter da AT</span>
                       </button>
                     )}
                     <button onClick={() => setUploadTipo(tipo)} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--surface)] transition-all">

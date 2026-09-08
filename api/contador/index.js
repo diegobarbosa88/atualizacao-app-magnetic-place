@@ -1329,6 +1329,51 @@ async function handleDocumentosEmpresaEnviar(req, res) {
 }
 
 // ---------------------------------------------------------------------------
+// tipo=obter-certidao-fiscal — RPA sobre o Portal das Finanças (ver
+// api/_obterCertidaoFiscalAT.js), botão "Obter da AT" em
+// CompanyDocumentsAdmin.jsx. Mensal, tal como RLC/RNT/TC2 — grava com o
+// período do mês corrente, não substitui o anterior.
+// ---------------------------------------------------------------------------
+
+async function handleObterCertidaoFiscal(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (!requireAuth(req, res, ['admin'])) return;
+
+  let resultado;
+  try {
+    const { obterCertidaoFiscalAT } = await import('../_obterCertidaoFiscalAT.js');
+    resultado = await obterCertidaoFiscalAT();
+  } catch (e) {
+    console.error('obter-certidao-fiscal error:', e);
+    return res.status(502).json({ error: `Falha ao obter certidão do Portal das Finanças: ${e.message}` });
+  }
+
+  const supabase = supabaseAdmin();
+  const periodo = resultado.dataEmissao.slice(0, 7); // 'YYYY-MM'
+  const path = `certidao-situacao-fiscal/${periodo}_${Date.now()}.pdf`;
+
+  const { error: upErr } = await supabase.storage
+    .from('documentos-empresa')
+    .upload(path, resultado.pdfBuffer, { contentType: 'application/pdf' });
+  if (upErr) return res.status(500).json({ error: `Falha ao gravar o PDF: ${upErr.message}` });
+
+  const { data: urlData } = supabase.storage.from('documentos-empresa').getPublicUrl(path);
+
+  const { error: dbErr } = await supabase.from('company_documents').insert({
+    id: `cdoc_${Date.now()}`,
+    tipo: 'Certidão de Situação Fiscal Regularizada',
+    periodo,
+    nome_ficheiro: 'situacao-fiscal.pdf',
+    url: urlData.publicUrl,
+    data_validade: resultado.dataValidade,
+    data_emissao: new Date().toISOString(),
+  });
+  if (dbErr) return res.status(500).json({ error: `PDF obtido, mas falhou gravar o registo: ${dbErr.message}` });
+
+  return res.status(200).json({ sucesso: true, periodo, data_validade: resultado.dataValidade });
+}
+
+// ---------------------------------------------------------------------------
 
 export default async function handler(req, res) {
   try {
@@ -1342,6 +1387,7 @@ export default async function handler(req, res) {
       case 'preparar_mensal': return await handlePararMensal(req, res);
       case 'documentos-cliente-enviar': return await handleDocumentosClienteEnviar(req, res);
       case 'documentos-empresa-enviar': return await handleDocumentosEmpresaEnviar(req, res);
+      case 'obter-certidao-fiscal': return await handleObterCertidaoFiscal(req, res);
       default:                return res.status(400).json({ error: `tipo desconhecido: ${tipo || '(não definido)'}` });
     }
   } catch (e) {

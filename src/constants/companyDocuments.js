@@ -16,7 +16,13 @@ export const TIPOS_DOCUMENTOS_EMPRESA = [
 // histórico completo, "pronto" é sempre o do período mais recente
 // disponível, não um único ficheiro substituído. Os restantes só guardam
 // o mais recente por tipo.
+//
+// A Certidão de Situação Fiscal também passou a mensal (pedido do Diego,
+// 2026-09-08: "sei que tem validade de 4 meses, porém quero tirar 1 a cada
+// mês, pedem os clientes isso") — apesar de a AT a emitir válida por 4
+// meses, o cliente quer sempre a do mês corrente.
 export const TIPOS_DOCUMENTOS_EMPRESA_MENSAIS = [
+  'Certidão de Situação Fiscal Regularizada',
   'RLC — Recibo de Liquidação de Cotizações',
   'RNT — Relação Nominal de Trabalhadores',
   'TC2',
