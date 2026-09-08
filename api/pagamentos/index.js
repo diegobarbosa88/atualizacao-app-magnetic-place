@@ -717,18 +717,33 @@ export default async function handler(req, res) {
           else if (ibanByNomeNormalizado[norm] !== f.iban) ibanByNomeNormalizado[norm] = null; // ambíguo
         }
 
+        // Persistir na BD, não só devolver enriquecido na resposta — sem
+        // isto, gerar-sepa-lote (que relê `faturas` diretamente da BD) nunca
+        // via o IBAN herdado, apesar de a Fila o mostrar. Era o mesmo defeito
+        // já no enrich por NIF antigo, só que silencioso (a fatura desaparecia
+        // do XML sem aviso); agora que gerar-sepa-lote recusa em vez de
+        // ignorar, o problema deixou de passar despercebido.
+        const paraGravar = [];
         elegiveis.forEach(f => {
           if (f.dados?.iban) return;
           const nif = f.dados?.nif_fornecedor;
-          if (nif && ibanByNif[nif]) {
-            f.dados = { ...f.dados, iban: ibanByNif[nif] };
-            return;
+          let ibanHerdado = null;
+          if (nif && ibanByNif[nif]) ibanHerdado = ibanByNif[nif];
+          else {
+            const nomeNorm = normalizarNomeFornecedor(f.dados?.fornecedor);
+            if (nomeNorm && ibanByNomeNormalizado[nomeNorm]) ibanHerdado = ibanByNomeNormalizado[nomeNorm];
           }
-          const nomeNorm = normalizarNomeFornecedor(f.dados?.fornecedor);
-          if (nomeNorm && ibanByNomeNormalizado[nomeNorm]) {
-            f.dados = { ...f.dados, iban: ibanByNomeNormalizado[nomeNorm] };
+          if (ibanHerdado) {
+            f.dados = { ...f.dados, iban: ibanHerdado };
+            paraGravar.push({ id: f.id, dados: f.dados });
           }
         });
+
+        if (paraGravar.length > 0) {
+          await Promise.all(
+            paraGravar.map(f => db.from('faturas').update({ dados: f.dados }).eq('id', f.id))
+          );
+        }
       }
 
       return res.json({ data: elegiveis });
