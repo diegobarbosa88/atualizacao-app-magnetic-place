@@ -66,12 +66,24 @@ export function setRequisitoProfissao(profissaoCnp, formacaoId, ativo) {
   }).then(json);
 }
 
-export function autoAtribuirPorProfissao(workerId, profissaoCnp) {
+// datasConclusao (opcional): { [formacao_id]: 'YYYY-MM-DD' } — quando
+// presente para uma formação, o registo já entra concluído nessa data em
+// vez de "não iniciado" (trabalhador antigo que já a fez antes de o
+// sistema existir, ver SincronizarFormacoesModal.jsx).
+export function autoAtribuirPorProfissao(workerId, profissaoCnp, datasConclusao) {
   return authFetch('/api/formacao/auto-atribuir', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ worker_id: workerId, profissao_cnp: profissaoCnp }),
+    body: JSON.stringify({ worker_id: workerId, profissao_cnp: profissaoCnp, datas_conclusao: datasConclusao }),
   }).then(json);
+}
+
+// Lista as formações obrigatórias (por profissão + Gate) que este
+// trabalhador ainda não tem — sem atribuir nada.
+export function formacoesPendentes(workerId, profissaoCnp) {
+  const params = new URLSearchParams({ worker_id: workerId });
+  if (profissaoCnp) params.set('profissao_cnp', profissaoCnp);
+  return authFetch(`/api/formacao/formacoes-pendentes?${params}`).then(json);
 }
 
 export function gateStatus() {

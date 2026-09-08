@@ -81,6 +81,7 @@
     { "source": "/api/formacao/requisitos", "destination": "/api/formacao?action=requisitos" },
     { "source": "/api/formacao/requisitos-set", "destination": "/api/formacao?action=requisitos-set" },
     { "source": "/api/formacao/auto-atribuir", "destination": "/api/formacao?action=auto-atribuir" },
+    { "source": "/api/formacao/formacoes-pendentes", "destination": "/api/formacao?action=formacoes-pendentes" },
     { "source": "/api/formacao/gate-status", "destination": "/api/formacao?action=gate-status" },
     { "source": "/api/formacao/gate-requisitos", "destination": "/api/formacao?action=gate-requisitos" },
     { "source": "/api/formacao/gate-requisitos-set", "destination": "/api/formacao?action=gate-requisitos-set" },

@@ -608,25 +608,17 @@ async function handleRequisitosSet(req, res) {
   return res.status(200).json({ ok: true });
 }
 
-async function handleAutoAtribuir(req, res) {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-  if (!requireAuth(req, res, ['admin'])) return;
-
-  const { worker_id, profissao_cnp } = req.body || {};
-  if (!worker_id) {
-    return res.status(400).json({ error: 'Campo obrigatório: worker_id.' });
-  }
-
-  const supabase = getSupabase();
-
-  // Duas fontes de "obrigatório", combinadas: por profissão
-  // (formacao_requisitos_profissao) + universal para todos os trabalhadores
-  // novos, independente de profissão (onboarding_gate_itens, tipo='formacao').
+// Duas fontes de "obrigatório", combinadas: por profissão
+// (formacao_requisitos_profissao) + universal para todos os trabalhadores
+// novos, independente de profissão (onboarding_gate_itens, tipo='formacao').
+// Partilhado por handleAutoAtribuir e handleFormacoesPendentes — o segundo
+// só lê, o primeiro também insere.
+async function buscarRequisitosCombinados(supabase, profissao_cnp) {
   const buscas = [
     profissao_cnp?.trim()
       ? supabase
           .from('formacao_requisitos_profissao')
-          .select('formacao_id, formacoes_internas(categoria, data_fim)')
+          .select('formacao_id, formacoes_internas(titulo, categoria, data_fim)')
           .eq('profissao_cnp', profissao_cnp.trim())
           .eq('ativo', true)
       : Promise.resolve({ data: [] }),
@@ -637,16 +629,16 @@ async function handleAutoAtribuir(req, res) {
       .eq('ativo', true),
   ];
   const [{ data: requisitosProfissao, error: fetchError }, { data: itensGate, error: gateError }] = await Promise.all(buscas);
-  if (fetchError) return res.status(500).json({ error: fetchError.message });
-  if (gateError) return res.status(500).json({ error: gateError.message });
+  if (fetchError) return { error: fetchError };
+  if (gateError) return { error: gateError };
 
   let requisitosGate = [];
   if (itensGate?.length) {
     const { data: formacoesGate, error: formacoesError } = await supabase
       .from('formacoes_internas')
-      .select('id, categoria, data_fim')
+      .select('id, titulo, categoria, data_fim')
       .in('slug', itensGate.map(i => i.slug));
-    if (formacoesError) return res.status(500).json({ error: formacoesError.message });
+    if (formacoesError) return { error: formacoesError };
     requisitosGate = (formacoesGate || []).map(f => ({ formacao_id: f.id, formacoes_internas: f }));
   }
 
@@ -657,7 +649,52 @@ async function handleAutoAtribuir(req, res) {
     vistos.add(r.formacao_id);
     return true;
   });
+  return { requisitos };
+}
 
+// Lista as formações obrigatórias (por profissão + Gate) que este
+// trabalhador ainda não tem — sem inserir nada. Usado pelo modal
+// "Sincronizar Formações" para deixar o admin escolher, por formação, a
+// data em que foi de facto realizada antes de confirmar (2026-09-08).
+async function handleFormacoesPendentes(req, res) {
+  if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+  if (!requireAuth(req, res, ['admin'])) return;
+
+  const { worker_id, profissao_cnp } = req.query || {};
+  if (!worker_id) return res.status(400).json({ error: 'Campo obrigatório: worker_id.' });
+
+  const supabase = getSupabase();
+  const { requisitos, error: reqError } = await buscarRequisitosCombinados(supabase, profissao_cnp);
+  if (reqError) return res.status(500).json({ error: reqError.message });
+  if (!requisitos.length) return res.status(200).json({ pendentes: [] });
+
+  const { data: jaTem, error: jaTemError } = await supabase
+    .from('formacao_participantes')
+    .select('formacao_id')
+    .eq('worker_id', worker_id)
+    .in('formacao_id', requisitos.map(r => r.formacao_id));
+  if (jaTemError) return res.status(500).json({ error: jaTemError.message });
+  const idsExistentes = new Set((jaTem || []).map(p => p.formacao_id));
+
+  const pendentes = requisitos
+    .filter(r => !idsExistentes.has(r.formacao_id))
+    .map(r => ({ formacao_id: r.formacao_id, titulo: r.formacoes_internas?.titulo || 'Formação', categoria: r.formacoes_internas?.categoria || null }));
+
+  return res.status(200).json({ pendentes });
+}
+
+async function handleAutoAtribuir(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (!requireAuth(req, res, ['admin'])) return;
+
+  const { worker_id, profissao_cnp, datas_conclusao } = req.body || {};
+  if (!worker_id) {
+    return res.status(400).json({ error: 'Campo obrigatório: worker_id.' });
+  }
+
+  const supabase = getSupabase();
+  const { requisitos, error: reqError } = await buscarRequisitosCombinados(supabase, profissao_cnp);
+  if (reqError) return res.status(500).json({ error: reqError.message });
   if (!requisitos.length) return res.status(200).json({ atribuidas: 0, ignoradas: 0 });
 
   let atribuidas = 0;
@@ -668,9 +705,18 @@ async function handleAutoAtribuir(req, res) {
     const validadeDefaultMeses = VALIDADE_PADRAO_MESES[formacao?.categoria];
     const dataValidade = exigeValidade && validadeDefaultMeses ? addMeses(formacao.data_fim, validadeDefaultMeses) : null;
 
+    // Data de conclusão retroativa, escolhida pelo admin no modal de
+    // sincronização (trabalhador antigo que já fez a formação antes de o
+    // sistema existir) — quando presente, o registo já entra concluído em
+    // vez de "não iniciado", sem passar pelo fluxo normal de assinatura.
+    const dataConclusaoEscolhida = datas_conclusao?.[requisito.formacao_id];
+    const camposConclusao = dataConclusaoEscolhida
+      ? { estado_conclusao: 'concluido', concluido_em: new Date(dataConclusaoEscolhida).toISOString() }
+      : {};
+
     const { error } = await supabase
       .from('formacao_participantes')
-      .insert({ formacao_id: requisito.formacao_id, worker_id, data_validade: dataValidade });
+      .insert({ formacao_id: requisito.formacao_id, worker_id, data_validade: dataValidade, ...camposConclusao });
 
     if (error) {
       if (error.code === '23505') { ignoradas++; continue; }
@@ -988,6 +1034,7 @@ const ACTIONS = {
   'requisitos': handleRequisitos,
   'requisitos-set': handleRequisitosSet,
   'auto-atribuir': handleAutoAtribuir,
+  'formacoes-pendentes': handleFormacoesPendentes,
   'gate-status': handleGateStatus,
   'gate-requisitos': handleGateRequisitos,
   'gate-requisitos-set': handleGateRequisitosSet,

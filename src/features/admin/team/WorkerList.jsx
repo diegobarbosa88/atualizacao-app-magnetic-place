@@ -3,12 +3,12 @@ import { useApp } from '../../../context/AppContext';
 import { authFetch } from '../../../utils/authFetch';
 import { consultarComunicacoesPendentes, invalidarComunicacoesPendentes } from './ssComunicacoesPendentes';
 import { impersonarTrabalhador } from '../../../utils/impersonateWorker';
-import { Search, Edit2, Trash2, CheckCircle, ShieldCheck, ShieldOff, MoreVertical, FolderOpen, SendHorizonal, AlertTriangle, Shield, FileEdit, MapPin, Clock, Briefcase, PackageCheck, GraduationCap, Loader2 } from 'lucide-react';
+import { Search, Edit2, Trash2, CheckCircle, ShieldCheck, ShieldOff, MoreVertical, FolderOpen, SendHorizonal, AlertTriangle, Shield, FileEdit, MapPin, Clock, Briefcase, PackageCheck, GraduationCap } from 'lucide-react';
 import SSComunicacaoModal from './SSComunicacaoModal';
 import AlterarContratoModal from './AlterarContratoModal';
 import TransferirLocalTrabalhoModal from './TransferirLocalTrabalhoModal';
 import EntregarEpiModal from '../epi/EntregarEpiModal';
-import { autoAtribuirPorProfissao } from '../formacao-interna/formacaoApi';
+import SincronizarFormacoesModal from './SincronizarFormacoesModal';
 import { FT, SCALE } from '../../../styles/designTokens';
 import Card from '../../../components/common/Card';
 import { FONT_TITLE, FONT_MONO } from '../../../styles/designTokens';
@@ -172,7 +172,7 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
   const [alterarContratoWorker, setAlterarContratoWorker] = useState(null); // worker | null
   const [transferirLocalWorker, setTransferirLocalWorker] = useState(null); // worker | null
   const [entregarEpiWorker, setEntregarEpiWorker] = useState(null); // worker | null
-  const [syncingFormacoesId, setSyncingFormacoesId] = useState(null); // worker.id em sincronização, ou null
+  const [sincronizarFormacoesWorker, setSincronizarFormacoesWorker] = useState(null); // worker | null
   const [ssAmbiente, setSsAmbiente] = useState('teste');
   const [apoliceMap, setApoliceMap] = useState({});
   const [ssComunicacoesMap, setSsComunicacoesMap] = useState({});
@@ -212,24 +212,6 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
     }
   };
 
-  // Aplica agora, para um trabalhador já existente, as formações obrigatórias
-  // (por profissão + universais do Gate) que hoje só são atribuídas
-  // automaticamente na criação/aprovação do trabalhador (TeamContext.jsx,
-  // OnboardingPendentes.jsx) — quem entrou antes disso existir, ou foi criado
-  // manualmente, nunca teve essa atribuição. Endpoint é idempotente (ignora
-  // as já atribuídas), seguro de correr a qualquer momento.
-  const handleSincronizarFormacoes = async (w) => {
-    setSyncingFormacoesId(w.id);
-    try {
-      const { atribuidas, ignoradas } = await autoAtribuirPorProfissao(w.id, w.profissao_cnp || null);
-      alert(atribuidas > 0
-        ? `${atribuidas} formação(ões) obrigatória(s) atribuída(s) a ${w.name}.${ignoradas > 0 ? ` (${ignoradas} já estava(m) atribuída(s).)` : ''}`
-        : `${w.name} já tinha todas as formações obrigatórias atribuídas.`);
-    } catch (e) {
-      alert(`Erro ao sincronizar formações: ${e.message}`);
-    }
-    setSyncingFormacoesId(null);
-  };
 
   useEffect(() => {
     authFetch('/api/seguranca-social?action=status')
@@ -395,12 +377,11 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                               <span className={`${SCALE.text.body} text-[var(--ink-mid)] group-hover:text-[var(--orange-deep)]`}>Entregar EPI</span>
                             </button>
                             <button
-                              onClick={() => { handleSincronizarFormacoes(w); setOpenMenuId(null); }}
-                              disabled={syncingFormacoesId === w.id}
-                              className="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-[var(--surface)] group transition-colors disabled:opacity-50"
+                              onClick={() => { setSincronizarFormacoesWorker(w); setOpenMenuId(null); }}
+                              className="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-[var(--surface)] group transition-colors"
                             >
                               <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-indigo-50 text-indigo-600 group-hover:bg-indigo-100 transition-colors shrink-0">
-                                {syncingFormacoesId === w.id ? <Loader2 size={11} className="animate-spin" /> : <GraduationCap size={11} />}
+                                <GraduationCap size={11} />
                               </span>
                               <span className={`${SCALE.text.body} text-[var(--ink-mid)] group-hover:text-indigo-600`}>Sincronizar Formações</span>
                             </button>
@@ -539,6 +520,12 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
         supabase={supabase}
         onChange={reloadEpi}
       />
+      {sincronizarFormacoesWorker && (
+        <SincronizarFormacoesModal
+          worker={sincronizarFormacoesWorker}
+          onClose={() => setSincronizarFormacoesWorker(null)}
+        />
+      )}
     </>
     );
   }
@@ -588,9 +575,9 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                             <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-[var(--warn-bg)] text-[var(--orange-deep)] group-hover:bg-amber-100 transition-colors shrink-0"><PackageCheck size={11} /></span>
                             <span className={`${SCALE.text.body} text-[var(--ink-mid)] group-hover:text-[var(--orange-deep)]`}>Entregar EPI</span>
                           </button>
-                          <button onClick={() => { handleSincronizarFormacoes(w); setOpenMenuId(null); }} disabled={syncingFormacoesId === w.id} className="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-[var(--surface)] group transition-colors disabled:opacity-50">
+                          <button onClick={() => { setSincronizarFormacoesWorker(w); setOpenMenuId(null); }} className="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-[var(--surface)] group transition-colors">
                             <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-indigo-50 text-indigo-600 group-hover:bg-indigo-100 transition-colors shrink-0">
-                              {syncingFormacoesId === w.id ? <Loader2 size={11} className="animate-spin" /> : <GraduationCap size={11} />}
+                              <GraduationCap size={11} />
                             </span>
                             <span className={`${SCALE.text.body} text-[var(--ink-mid)] group-hover:text-indigo-600`}>Sincronizar Formações</span>
                           </button>
