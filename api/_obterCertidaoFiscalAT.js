@@ -47,6 +47,17 @@
 // para o clique REAL do Puppeteer (ElementHandle.click(), via CDP) — a
 // primeira vez que as duas correções (elemento certo + clique fiável) são
 // combinadas.
+//
+// 5ª tentativa CONFIRMOU que a aba NIF ficou resolvida — o robô passou a
+// entrar com sucesso (screenshot real: "Boa noite, Rpa Certidões"),
+// navegar até "Emissão de Certidão" e selecionar o dropdown, falhando só
+// mais à frente em "Elemento 'button' com texto Confirmar não encontrado".
+// Causa: essa página já não é o formulário React do login (acesso.gov.pt)
+// — é a página clássica de serviços do portal (portaldasfinancas.gov.pt),
+// onde "Confirmar"/"Obter" são tipicamente <input type="submit">, não
+// <button>, e <input> não tem textContent (o rótulo vive no atributo
+// `value`). Seletor alargado para incluir input[type="submit"/"button"] +
+// clickByText também a comparar `value`, não só `textContent`.
 import chromiumModule from '@sparticuz/chromium';
 import puppeteer from 'puppeteer-core';
 
@@ -79,6 +90,13 @@ async function findInFrames(page, selector, { timeout = 10000 } = {}) {
 // `exact`: compara o texto inteiro do elemento (trim), não uma substring —
 // necessário para abas curtas como "NIF", onde `includes` também bateria
 // com qualquer outro texto da página que contenha essas 3 letras.
+//
+// Lê `value` além de `textContent` (achado real, 2026-09-08) — um
+// `<input type="submit" value="Confirmar">`, típico da página clássica de
+// serviços do portal, não tem `textContent` nenhum (elementos `<input>` não
+// têm filhos/texto interno, o rótulo vive só no atributo `value`); sem
+// isto, o robô nunca encontrava o botão "Confirmar"/"Obter" dessa página,
+// apesar do seletor já incluir `input[type="submit"]`.
 async function clickByText(page, cssSelector, text, { timeout = 10000, exact = false } = {}) {
   const deadline = Date.now() + timeout;
   while (Date.now() < deadline) {
@@ -87,7 +105,7 @@ async function clickByText(page, cssSelector, text, { timeout = 10000, exact = f
         // eslint-disable-next-line no-undef -- corre no contexto da página (browser), não no Node
         const els = Array.from(document.querySelectorAll(sel));
         return els.find(el => {
-          const t = el.textContent && el.textContent.trim();
+          const t = (el.textContent && el.textContent.trim()) || (el.value && el.value.trim()) || '';
           return ex ? t === txt : (t && t.includes(txt));
         }) || null;
       }, cssSelector, text, exact).catch(() => null);
@@ -318,9 +336,18 @@ export async function obterCertidaoFiscalAT() {
     });
     if (!opcaoEncontrada) throw new Error('Opção "Dívida e Não Dívida" não encontrada no dropdown de certidão.');
 
+    // "Confirmar"/"Obter" vivem na página clássica de serviços do portal
+    // (portaldasfinancas.gov.pt), não no formulário React moderno do login
+    // (acesso.gov.pt) — achado real, 2026-09-08: o robô chegou até aqui com
+    // sucesso (login e seleção do dropdown confirmados por screenshot), mas
+    // falhou em "Elemento 'button' com texto Confirmar não encontrado".
+    // Página clássica deste tipo tipicamente usa <input type="submit">, não
+    // <button> — seletor alargado para cobrir os dois casos.
+    const SELETOR_BOTAO_CLASSICO = 'button, input[type="submit"], input[type="button"]';
+
     await Promise.all([
       page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 10000 }).catch(() => {}),
-      clickByText(page, 'button', 'Confirmar'),
+      clickByText(page, SELETOR_BOTAO_CLASSICO, 'Confirmar'),
     ]);
 
     // "OBTER" devolve o PDF diretamente na resposta HTTP — interceta-se a
@@ -331,7 +358,7 @@ export async function obterCertidaoFiscalAT() {
         r => (r.headers()['content-type'] || '').includes('application/pdf'),
         { timeout: 20000 }
       ),
-      clickByText(page, 'button', 'Obter'),
+      clickByText(page, SELETOR_BOTAO_CLASSICO, 'Obter'),
     ]);
     const pdfBuffer = Buffer.from(await pdfResponse.buffer());
     if (!pdfBuffer.length) throw new Error('O Portal das Finanças devolveu um PDF vazio.');
