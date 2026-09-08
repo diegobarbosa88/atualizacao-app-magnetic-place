@@ -70,6 +70,15 @@
 // de pedido: em vez de pesquisa interna + clique num link, navegação
 // direta ao URL confirmado pelo Diego ao navegar manualmente
 // (emissaoCertidaoForm.action).
+//
+// 7ª tentativa: a 1ª correção para a aba nova (ouvir 'response' em
+// qualquer página nova via browser.on('targetcreated')) falhou 2 vezes
+// seguidas em produção, mesmo já a apanhar a aba nova certa (confirmado
+// pelo Diego: "abre o PDF em outra janela") — corrida de tempo real entre
+// a criação da aba (assíncrona) e o listener ficar pronto. Trocado para
+// esperar a aba nova aparecer/estabilizar sem depender de eventos
+// (browser.pages()), e fazer um pedido GET próprio dentro do contexto
+// dessa aba (reaproveita os cookies de sessão automaticamente).
 import chromiumModule from '@sparticuz/chromium';
 import puppeteer from 'puppeteer-core';
 
@@ -250,52 +259,53 @@ async function selecionarAbaNif(page, { tentativas = 6 } = {}) {
   throw err;
 }
 
-// Aguarda uma resposta PDF na página dada OU em qualquer aba/janela nova
-// criada pelo browser durante a espera — page.waitForResponse sozinho só
-// vê respostas da própria página, e uma página .gov mais antiga (como a
-// de emissão de certidões, ao contrário do login React) pode abrir o PDF
-// numa aba nova (target="_blank") em vez de servi-lo na mesma página.
-function aguardarRespostaPdfEmQualquerAba(browser, page, timeoutMs) {
-  return new Promise((resolve, reject) => {
-    let resolvido = false;
-    const paginasOuvidas = new Set();
+// Clica "Obter" e devolve os bytes do PDF que abre numa aba/janela nova —
+// confirmado pelo Diego, 2026-09-08 ("abre o PDF em outra janela").
+//
+// A 1ª tentativa (aguardarRespostaPdfEmQualquerAba, ouvir 'response' em
+// qualquer página nova via browser.on('targetcreated')) falhou 2 vezes
+// seguidas em produção, mesmo já a apanhar a aba nova — a causa é uma
+// corrida de tempo real: targetcreated → target.page() são passos
+// assíncronos, e a resposta original da nova aba pode já ter passado
+// antes do listener 'response' ficar pronto. Em vez de tentar apanhar
+// esse evento a tempo, esta versão espera a aba nova aparecer e
+// estabilizar (`browser.pages()`, sem depender de nenhum evento), e faz
+// um pedido GET próprio ao URL final, DENTRO do contexto dessa aba — os
+// cookies de sessão já lá estão (mesmo browser/contexto), sem corrida de
+// tempo nenhuma possível, ao custo de um 2º pedido HTTP idempotente
+// (mesma certidão, sem efeito colateral em pedi-la duas vezes).
+async function obterPdfClicandoObter(browser, page, cssSelectorBotao, timeoutMs) {
+  const paginasAntes = new Set(await browser.pages());
 
-    const ehPdf = (r) => (r.headers()['content-type'] || '').includes('application/pdf');
+  await clickByText(page, cssSelectorBotao, 'Obter');
 
-    const onResponse = (r) => {
-      if (resolvido || !ehPdf(r)) return;
-      resolvido = true;
-      limpar();
-      resolve(r);
-    };
+  const deadline = Date.now() + timeoutMs;
+  let paginaAlvo = null;
+  while (Date.now() < deadline && !paginaAlvo) {
+    const paginasAgora = await browser.pages();
+    paginaAlvo = paginasAgora.find((p) => !paginasAntes.has(p)) || null;
+    if (!paginaAlvo) await new Promise((r) => setTimeout(r, 250));
+  }
+  if (!paginaAlvo) {
+    throw new Error('O clique em "Obter" não abriu nenhuma aba/janela nova com o PDF.');
+  }
 
-    const ouvirPagina = (p) => {
-      if (paginasOuvidas.has(p)) return;
-      paginasOuvidas.add(p);
-      p.on('response', onResponse);
-    };
+  await paginaAlvo.waitForNavigation({ waitUntil: 'networkidle2', timeout: 10000 }).catch(() => {});
+  const urlPdf = paginaAlvo.url();
+  if (!urlPdf || urlPdf === 'about:blank') {
+    throw new Error('A aba nova aberta por "Obter" não navegou para nenhum URL.');
+  }
 
-    const onTargetCreated = async (target) => {
-      if (target.type() !== 'page') return;
-      const novaPagina = await target.page().catch(() => null);
-      if (novaPagina) ouvirPagina(novaPagina);
-    };
-
-    const limpar = () => {
-      clearTimeout(temporizador);
-      for (const p of paginasOuvidas) p.off('response', onResponse);
-      browser.off('targetcreated', onTargetCreated);
-    };
-
-    ouvirPagina(page);
-    browser.on('targetcreated', onTargetCreated);
-
-    const temporizador = setTimeout(() => {
-      if (resolvido) return;
-      limpar();
-      reject(new Error(`Timed out after waiting ${timeoutMs}ms for a PDF response`));
-    }, timeoutMs);
+  const pdfBase64 = await paginaAlvo.evaluate(async () => {
+    // eslint-disable-next-line no-undef -- corre no contexto da página (browser), não no Node
+    const res = await fetch(window.location.href);
+    const buf = await res.arrayBuffer();
+    const bytes = new Uint8Array(buf);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    return btoa(binary);
   });
+  return Buffer.from(pdfBase64, 'base64');
 }
 
 // Captura um screenshot (base64) para anexar ao erro, quando algo falhar a
@@ -400,24 +410,10 @@ export async function obterCertidaoFiscalAT() {
       clickByText(page, SELETOR_BOTAO_CLASSICO, 'Confirmar'),
     ]);
 
-    // "OBTER" devolve o PDF diretamente na resposta HTTP — interceta-se a
-    // resposta em vez de esperar um download, mais fiável em Chromium
-    // headless (sem UI de download).
-    //
-    // Achado real, 2026-09-08: o clique em "Obter" funcionou (sem erro de
-    // "elemento não encontrado"), mas page.waitForResponse (scoped só à
-    // página original) nunca via o PDF — timeout aos 20s, confirmado por
-    // screenshot mostrando a página de pedido ainda visível, sem navegação
-    // nem erro algum. Causa mais provável: "Obter" abre o PDF numa NOVA
-    // aba/janela (comum em páginas .gov mais antigas, via target="_blank"),
-    // que page.waitForResponse nunca alcança por estar limitado à página
-    // onde foi chamado. aguardarRespostaPdfEmQualquerAba ouve respostas na
-    // página original E em qualquer aba nova criada pelo browser.
-    const [pdfResponse] = await Promise.all([
-      aguardarRespostaPdfEmQualquerAba(browser, page, 20000),
-      clickByText(page, SELETOR_BOTAO_CLASSICO, 'Obter'),
-    ]);
-    const pdfBuffer = Buffer.from(await pdfResponse.buffer());
+    // "OBTER" abre o PDF numa aba/janela nova — confirmado pelo Diego,
+    // 2026-09-08. obterPdfClicandoObter() trata do clique e da captura,
+    // ver comentário da própria função para o histórico da correção.
+    const pdfBuffer = await obterPdfClicandoObter(browser, page, SELETOR_BOTAO_CLASSICO, 20000);
     if (!pdfBuffer.length) throw new Error('O Portal das Finanças devolveu um PDF vazio.');
 
     const hoje = new Date().toISOString().slice(0, 10);
