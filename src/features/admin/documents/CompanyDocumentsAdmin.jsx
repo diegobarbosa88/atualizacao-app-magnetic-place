@@ -104,6 +104,7 @@ function UploadCompanyDocModal({ tipo, mensal, onClose, onUploaded }) {
 
 const TIPO_SS_AUTOMATIZAVEL = 'Certidão de Situação Contributiva Regularizada';
 const TIPO_AT_AUTOMATIZAVEL = 'Certidão de Situação Fiscal Regularizada';
+const TIPO_RLC_AUTOMATIZAVEL = 'RLC — Recibo de Liquidação de Cotizações';
 
 // Ver (preview) + Descarregar — mesmo par de ações já usado nos documentos
 // por trabalhador (DocumentViewerModal), reaproveitado aqui em vez de
@@ -129,6 +130,9 @@ export default function CompanyDocumentsAdmin() {
   const [uploadTipo, setUploadTipo] = useState(null); // tipo em upload, ou null
   const [obtendoSS, setObtendoSS] = useState(false);
   const [erroSS, setErroSS] = useState('');
+  const [obtendoRLC, setObtendoRLC] = useState(false);
+  const [erroRLC, setErroRLC] = useState('');
+  const [erroRLCDados, setErroRLCDados] = useState(null);
   const [obtendoAT, setObtendoAT] = useState(false);
   const [erroAT, setErroAT] = useState('');
   const [erroATScreenshot, setErroATScreenshot] = useState(null);
@@ -210,6 +214,60 @@ export default function CompanyDocumentsAdmin() {
     setObtendoSS(false);
   };
 
+  // RLC — sem web service dedicado da PSI (confirmado contra o índice
+  // oficial, 2026-09-09); reaproveita "documento-pagamento/consulta" com
+  // deteção por tipo/subtipo (ver api/seguranca-social/index.js, ação
+  // "obter-rlc"). Primeira vez a correr contra dados reais — se o
+  // "encontrado"/"semCaminho" vier negativo, mostra o registo bruto em vez
+  // de falhar em silêncio, para se poder corrigir a heurística na próxima
+  // ronda sem adivinhar às cegas.
+  const handleObterRLC = async () => {
+    setObtendoRLC(true);
+    setErroRLC('');
+    setErroRLCDados(null);
+    try {
+      const res = await authFetch('/api/seguranca-social?action=obter-rlc');
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.erro || `Erro ${res.status}`);
+      if (!body.encontrado) {
+        setErroRLC(body.motivo || 'RLC não encontrado na Segurança Social.');
+        setErroRLCDados(body.dadosBrutos || null);
+        return;
+      }
+      if (body.semCaminho) {
+        setErroRLC(body.motivo || 'RLC encontrado, mas sem forma de obter o PDF.');
+        setErroRLCDados(body.dadosBrutos || null);
+        return;
+      }
+
+      const hoje = new Date();
+      const periodo = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`;
+      const nomeFicheiro = `rlc-${periodo}.pdf`;
+
+      const pdfRes = await authFetch(`/api/seguranca-social?action=situacao-contributiva-pdf&caminho=${encodeURIComponent(body.caminho)}&nome=${encodeURIComponent(nomeFicheiro)}`);
+      if (!pdfRes.ok) throw new Error('Falha ao descarregar o PDF da Segurança Social.');
+      const blob = await pdfRes.blob();
+
+      const path = `rlc/${Date.now()}.pdf`;
+      const { error: upErr } = await supabase.storage.from('documentos-empresa').upload(path, blob, { contentType: 'application/pdf' });
+      if (upErr) throw upErr;
+      const { data: urlData } = supabase.storage.from('documentos-empresa').getPublicUrl(path);
+
+      const { error: dbErr } = await supabase.from('company_documents').insert({
+        id: `cdoc_${Date.now()}`,
+        tipo: TIPO_RLC_AUTOMATIZAVEL,
+        periodo,
+        nome_ficheiro: nomeFicheiro,
+        url: urlData.publicUrl,
+      });
+      if (dbErr) throw dbErr;
+      reload();
+    } catch (e) {
+      setErroRLC(e.message);
+    }
+    setObtendoRLC(false);
+  };
+
   // RPA sobre o Portal das Finanças (api/_obterCertidaoFiscalAT.js) — não há
   // API oficial, ao contrário da SS. Corre só sob pedido manual (não em
   // cron), até se confirmar que aguenta o portal mudar de layout sem quebrar
@@ -243,6 +301,19 @@ export default function CompanyDocumentsAdmin() {
       </div>
 
       {erroSS && <p className="text-xs text-red-600 font-bold bg-red-50 rounded-lg p-2">{erroSS}</p>}
+      {erroRLC && (
+        <div className="text-xs text-red-600 font-bold bg-red-50 rounded-lg p-2 space-y-1">
+          <p>{erroRLC}</p>
+          {erroRLCDados && (
+            <details>
+              <summary className="cursor-pointer underline">Ver dados devolvidos pela Segurança Social</summary>
+              <pre className="mt-1 max-h-60 overflow-auto whitespace-pre-wrap font-normal text-[10px] bg-white/60 rounded p-2">
+                {JSON.stringify(erroRLCDados, null, 2)}
+              </pre>
+            </details>
+          )}
+        </div>
+      )}
       {erroAT && (
         <div className="text-xs text-red-600 font-bold bg-red-50 rounded-lg p-2 space-y-1">
           <p>{erroAT}</p>
@@ -290,6 +361,11 @@ export default function CompanyDocumentsAdmin() {
                     {tipo === TIPO_SS_AUTOMATIZAVEL && (
                       <button onClick={handleObterSS} disabled={obtendoSS} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--surface)] transition-all disabled:opacity-50">
                         {obtendoSS ? <Loader2 size={12} className="animate-spin" /> : <ShieldCheck size={12} />} <span className={SCALE.text.meta}>Obter da SS</span>
+                      </button>
+                    )}
+                    {tipo === TIPO_RLC_AUTOMATIZAVEL && (
+                      <button onClick={handleObterRLC} disabled={obtendoRLC} title="Sem web service dedicado da PSI — reaproveita a consulta de documentos de pagamento, primeira vez em produção" className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--surface)] transition-all disabled:opacity-50">
+                        {obtendoRLC ? <Loader2 size={12} className="animate-spin" /> : <ShieldCheck size={12} />} <span className={SCALE.text.meta}>Obter da SS</span>
                       </button>
                     )}
                     {tipo === TIPO_AT_AUTOMATIZAVEL && (

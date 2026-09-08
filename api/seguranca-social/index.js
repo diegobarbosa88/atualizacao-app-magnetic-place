@@ -193,12 +193,14 @@ export default async function handler(req, res) {
     return res.status(200).json({ comunicacoes: data || [] });
   }
 
-  // Proxy do PDF da declaração de Situação Contributiva. A SS devolve um
-  // `caminho` já qualificado (https://app.seg-social.pt/ptss/fraw/download/...)
-  // mas exige o mesmo Bearer da API — um <a href> direto do browser não tem
-  // como enviar esse header, e o download falha em silêncio ("erro ao
-  // carregar o documento PDF"). O browser autentica-se à nossa app (token de
-  // sessão), a nossa app autentica-se à SS (token PSI) e devolve o binário.
+  // Proxy do PDF da declaração de Situação Contributiva (e, desde 2026-09-09,
+  // também do RLC — o mecanismo é genérico, só recebe um `caminho` já
+  // qualificado da própria Segurança Social). A SS devolve um `caminho`
+  // (https://app.seg-social.pt/ptss/fraw/download/...) mas exige o mesmo
+  // Bearer da API — um <a href> direto do browser não tem como enviar esse
+  // header, e o download falha em silêncio ("erro ao carregar o documento
+  // PDF"). O browser autentica-se à nossa app (token de sessão), a nossa
+  // app autentica-se à SS (token PSI) e devolve o binário.
   // Tem de ficar ANTES do bloqueio "Método não permitido" abaixo — é GET, não POST.
   if (req.method === 'GET' && action === 'situacao-contributiva-pdf') {
     if (!credenciaisConfiguradas()) return res.status(400).json({ erro: 'Token PSI não configurado.' });
@@ -220,8 +222,41 @@ export default async function handler(req, res) {
       if (!r.ok) return res.status(502).json({ erro: `Erro ao obter documento (HTTP ${r.status}).` });
       const buffer = Buffer.from(await r.arrayBuffer());
       res.setHeader('Content-Type', r.headers.get('content-type') || 'application/pdf');
-      res.setHeader('Content-Disposition', 'inline; filename="situacao-contributiva.pdf"');
+      res.setHeader('Content-Disposition', `inline; filename="${req.query?.nome || 'situacao-contributiva.pdf'}"`);
       return res.status(200).send(buffer);
+    } catch (e) { return res.status(502).json({ erro: e.message }); }
+  }
+
+  // RLC (Recibo de Liquidação de Cotizações) — a PSI não tem nenhum web
+  // service dedicado a isto (confirmado contra o índice oficial completo,
+  // 2026-09-09). Reaproveita "documento-pagamento/consulta" (o mesmo já
+  // usado pela tab "Documentos de Pagamento"), filtrando pelo tipo/subtipo
+  // que pareça RLC. Nunca foi testado com dados reais até agora — em vez de
+  // assumir o nome exato do campo do caminho do PDF (o que violaria a regra
+  // do projeto de nunca inventar códigos da SS), tenta os candidatos mais
+  // prováveis e, se não encontrar nada reconhecível, devolve o registo em
+  // bruto para diagnóstico em vez de falhar em silêncio — mesma disciplina
+  // que resolveu o RPA da Certidão Fiscal (api/_obterCertidaoFiscalAT.js).
+  if (req.method === 'GET' && action === 'obter-rlc') {
+    if (!credenciaisConfiguradas()) return res.status(400).json({ erro: 'Token PSI não configurado.' });
+    const url = `${CI_BASE()}/documento-pagamento/consulta`;
+    try {
+      const r = await callSSRestGetUrl(url);
+      if (r.semRegistos) return res.status(200).json({ encontrado: false, motivo: 'Sem documentos de pagamento na Segurança Social.' });
+      if (!r.ok) return res.status(422).json({ erro: r.erro });
+      const dados = Array.isArray(r.json) ? r.json : (r.json?.documentos || r.json?.resultado || []);
+      const candidato = dados.find((d) => {
+        const texto = `${d.tipo || ''} ${d.subtipo || ''}`.toUpperCase();
+        return texto.includes('RLC') || texto.includes('LIQUIDA');
+      });
+      if (!candidato) {
+        return res.status(200).json({ encontrado: false, motivo: 'Nenhum documento com tipo/subtipo "RLC" encontrado.', dadosBrutos: dados, ambiente: getAmbiente() });
+      }
+      const caminho = candidato.caminho || candidato.caminhoDocumento || candidato.link || candidato.url || null;
+      if (!caminho) {
+        return res.status(200).json({ encontrado: true, semCaminho: true, motivo: 'RLC encontrado mas sem campo de caminho/URL reconhecido.', dadosBrutos: candidato, ambiente: getAmbiente() });
+      }
+      return res.status(200).json({ encontrado: true, caminho, dados: candidato, ambiente: getAmbiente() });
     } catch (e) { return res.status(502).json({ erro: e.message }); }
   }
 
