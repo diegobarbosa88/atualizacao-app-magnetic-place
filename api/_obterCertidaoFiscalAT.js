@@ -79,8 +79,19 @@
 // esperar a aba nova aparecer/estabilizar sem depender de eventos
 // (browser.pages()), e fazer um pedido GET próprio dentro do contexto
 // dessa aba (reaproveita os cookies de sessão automaticamente).
+//
+// 8ª tentativa: a 7ª também falhou, mas de forma diferente — nenhuma
+// página nova apareceu em `browser.pages()` (confirmado em produção),
+// apesar do Diego confirmar visualmente "abre o PDF em outra janela".
+// Conclusão: não é uma navegação normal para uma aba — é um DOWNLOAD
+// nativo do Chromium, que não cria nenhum Target/Page navegável, só
+// dispara eventos do domínio Browser do CDP.
+// Browser.setDownloadBehavior (eventsEnabled:true) + escrever para /tmp é
+// a forma correta e robusta de capturar isto, independente de que
+// página/aba o dispara.
 import chromiumModule from '@sparticuz/chromium';
 import puppeteer from 'puppeteer-core';
+import fsPromises from 'node:fs/promises';
 
 const chromium = chromiumModule.default ?? chromiumModule;
 
@@ -259,53 +270,70 @@ async function selecionarAbaNif(page, { tentativas = 6 } = {}) {
   throw err;
 }
 
-// Clica "Obter" e devolve os bytes do PDF que abre numa aba/janela nova —
-// confirmado pelo Diego, 2026-09-08 ("abre o PDF em outra janela").
+// Clica "Obter" e devolve os bytes do PDF, via download real interceptado
+// por CDP — não uma resposta de rede normal, nem uma aba nova navegável.
 //
-// A 1ª tentativa (aguardarRespostaPdfEmQualquerAba, ouvir 'response' em
-// qualquer página nova via browser.on('targetcreated')) falhou 2 vezes
-// seguidas em produção, mesmo já a apanhar a aba nova — a causa é uma
-// corrida de tempo real: targetcreated → target.page() são passos
-// assíncronos, e a resposta original da nova aba pode já ter passado
-// antes do listener 'response' ficar pronto. Em vez de tentar apanhar
-// esse evento a tempo, esta versão espera a aba nova aparecer e
-// estabilizar (`browser.pages()`, sem depender de nenhum evento), e faz
-// um pedido GET próprio ao URL final, DENTRO do contexto dessa aba — os
-// cookies de sessão já lá estão (mesmo browser/contexto), sem corrida de
-// tempo nenhuma possível, ao custo de um 2º pedido HTTP idempotente
-// (mesma certidão, sem efeito colateral em pedi-la duas vezes).
+// Histórico: a 1ª tentativa (ouvir 'response' em qualquer página nova via
+// browser.on('targetcreated')) falhou 2 vezes seguidas em produção por
+// corrida de tempo (targetcreated → target.page() são passos assíncronos,
+// a resposta pode já ter passado antes do listener ficar pronto). A 2ª
+// tentativa (esperar uma página nova aparecer via `browser.pages()`, sem
+// depender de eventos) falhou de forma diferente: NENHUMA página nova
+// apareceu, apesar do Diego confirmar visualmente "abre o PDF em outra
+// janela" — sinal de que não é uma navegação normal para uma aba, é um
+// DOWNLOAD nativo do Chromium (não cria nenhum Target/Page navegável,
+// só dispara eventos do domínio Browser do CDP). `Browser.setDownloadBehavior`
+// com `eventsEnabled:true` é a forma correta e robusta de apanhar isto,
+// independentemente de qual página/aba o dispara.
 async function obterPdfClicandoObter(browser, page, cssSelectorBotao, timeoutMs) {
-  const paginasAntes = new Set(await browser.pages());
+  const downloadDir = `/tmp/at-certidao-${Date.now()}`;
+  await fsPromises.mkdir(downloadDir, { recursive: true });
+
+  const browserCdp = await browser.target().createCDPSession();
+  await browserCdp.send('Browser.setDownloadBehavior', {
+    behavior: 'allow',
+    downloadPath: downloadDir,
+    eventsEnabled: true,
+  });
+
+  const downloadPromise = new Promise((resolve, reject) => {
+    let guid = null;
+
+    const onWillBegin = (evt) => {
+      guid = evt.guid;
+    };
+    const onProgress = (evt) => {
+      if (guid && evt.guid !== guid) return;
+      if (evt.state === 'completed') {
+        limpar();
+        resolve(evt.guid);
+      } else if (evt.state === 'canceled') {
+        limpar();
+        reject(new Error('O download do PDF foi cancelado pelo browser.'));
+      }
+    };
+    const limpar = () => {
+      clearTimeout(temporizador);
+      browserCdp.off('Browser.downloadWillBegin', onWillBegin);
+      browserCdp.off('Browser.downloadProgress', onProgress);
+    };
+
+    browserCdp.on('Browser.downloadWillBegin', onWillBegin);
+    browserCdp.on('Browser.downloadProgress', onProgress);
+
+    const temporizador = setTimeout(() => {
+      limpar();
+      reject(new Error(`Timed out after waiting ${timeoutMs}ms for the PDF download to complete`));
+    }, timeoutMs);
+  });
 
   await clickByText(page, cssSelectorBotao, 'Obter');
+  const guidFicheiro = await downloadPromise;
 
-  const deadline = Date.now() + timeoutMs;
-  let paginaAlvo = null;
-  while (Date.now() < deadline && !paginaAlvo) {
-    const paginasAgora = await browser.pages();
-    paginaAlvo = paginasAgora.find((p) => !paginasAntes.has(p)) || null;
-    if (!paginaAlvo) await new Promise((r) => setTimeout(r, 250));
-  }
-  if (!paginaAlvo) {
-    throw new Error('O clique em "Obter" não abriu nenhuma aba/janela nova com o PDF.');
-  }
-
-  await paginaAlvo.waitForNavigation({ waitUntil: 'networkidle2', timeout: 10000 }).catch(() => {});
-  const urlPdf = paginaAlvo.url();
-  if (!urlPdf || urlPdf === 'about:blank') {
-    throw new Error('A aba nova aberta por "Obter" não navegou para nenhum URL.');
-  }
-
-  const pdfBase64 = await paginaAlvo.evaluate(async () => {
-    // eslint-disable-next-line no-undef -- corre no contexto da página (browser), não no Node
-    const res = await fetch(window.location.href);
-    const buf = await res.arrayBuffer();
-    const bytes = new Uint8Array(buf);
-    let binary = '';
-    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-    return btoa(binary);
-  });
-  return Buffer.from(pdfBase64, 'base64');
+  const caminhoFicheiro = `${downloadDir}/${guidFicheiro}`;
+  const pdfBuffer = await fsPromises.readFile(caminhoFicheiro);
+  await fsPromises.rm(downloadDir, { recursive: true, force: true }).catch(() => {});
+  return pdfBuffer;
 }
 
 // Captura um screenshot (base64) para anexar ao erro, quando algo falhar a
