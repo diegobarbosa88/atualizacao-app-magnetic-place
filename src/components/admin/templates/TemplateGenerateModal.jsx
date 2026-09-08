@@ -1,7 +1,45 @@
 import React from 'react';
-import { Loader2, Send, Users } from 'lucide-react';
+import { Loader2, Send, Users, FileCheck2 } from 'lucide-react';
 import ModalShell from '../../common/ModalShell';
 import { FT, SCALE } from '../../../styles/designTokens';
+
+// Trabalhador antigo já assinou este documento em papel, antes de o
+// sistema existir — em vez do fluxo normal (pending → assinatura digital →
+// aprovação), o admin escolhe a data real e anexa o scan. Fica gravado
+// como um documento real (signed_pdf_url preenchido), não um registo vazio
+// — ver useDocumentTemplates.js handleGenerateDocuments. Pedido do Diego,
+// 2026-09-08.
+function RetroativoFields({ value, onChange }) {
+  const ativo = !!value;
+  return (
+    <div className="ml-7 mt-1">
+      <label className="flex items-center gap-1.5 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={ativo}
+          onChange={(e) => onChange(e.target.checked ? { data: '', file: null } : null)}
+        />
+        <span className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>Já assinado em papel — anexar scan</span>
+      </label>
+      {ativo && (
+        <div className="flex items-center gap-2 mt-1.5">
+          <input
+            type="date"
+            value={value.data || ''}
+            onChange={(e) => onChange({ ...value, data: e.target.value })}
+            className="p-1.5 rounded-lg border border-[var(--border)] text-xs"
+          />
+          <input
+            type="file"
+            accept=".pdf"
+            onChange={(e) => onChange({ ...value, file: e.target.files?.[0] || null })}
+            className="text-xs flex-1 min-w-0"
+          />
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function TemplateGenerateModal({
   template,
@@ -9,11 +47,14 @@ export default function TemplateGenerateModal({
   clients,
   selectedWorkers, setSelectedWorkers,
   selectedClientId, setSelectedClientId,
+  retroativos, setRetroativos,
   generating,
   genProgress,
   onClose,
   onSubmit,
 }) {
+  const retroativosIncompletos = Object.values(retroativos || {}).some((r) => r && (!r.data || !r.file));
+
   return (
     <ModalShell
       isOpen
@@ -33,9 +74,10 @@ export default function TemplateGenerateModal({
           </button>
           <button
             onClick={onSubmit}
-            disabled={generating || selectedWorkers.length === 0}
+            disabled={generating || selectedWorkers.length === 0 || retroativosIncompletos}
  className="flex items-center gap-2 px-6 py-2 font-bold rounded-xl hover:opacity-90 disabled:opacity-50"
             style={{ backgroundColor: FT.orange, color: FT.navy }}
+            title={retroativosIncompletos ? 'Falta data ou ficheiro num dos trabalhadores marcados como já assinados' : undefined}
           >
             {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
             Gerar {selectedWorkers.length} documento(s)
@@ -70,24 +112,36 @@ export default function TemplateGenerateModal({
           ) : workers.map(w => {
             const checked = selectedWorkers.includes(w.id);
             return (
-              <label key={w.id} className="flex items-center gap-3 p-3 cursor-pointer hover:bg-[var(--surface)]">
-                <input
-                  type="checkbox"
-                  checked={checked}
-                  disabled={generating}
-                  onChange={(e) => {
-                    if (e.target.checked) setSelectedWorkers([...selectedWorkers, w.id]);
-                    else setSelectedWorkers(selectedWorkers.filter(id => id !== w.id));
-                  }}
-                />
-                <Users className="w-4 h-4 text-[var(--slate)]" />
-                <span className="text-sm flex-1">{w.name}</span>
-                {!w.email && (
-                  <span className={`${SCALE.text.meta} text-amber-600`} title="Sem email — não receberá notificação">
-                    sem email
-                  </span>
+              <div key={w.id} className="p-3 hover:bg-[var(--surface)]">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    disabled={generating}
+                    onChange={(e) => {
+                      if (e.target.checked) setSelectedWorkers([...selectedWorkers, w.id]);
+                      else {
+                        setSelectedWorkers(selectedWorkers.filter(id => id !== w.id));
+                        setRetroativos((prev) => { const next = { ...prev }; delete next[w.id]; return next; });
+                      }
+                    }}
+                  />
+                  <Users className="w-4 h-4 text-[var(--slate)]" />
+                  <span className="text-sm flex-1">{w.name}</span>
+                  {retroativos?.[w.id] && <FileCheck2 size={13} className="text-[var(--ok)]" />}
+                  {!w.email && (
+                    <span className={`${SCALE.text.meta} text-amber-600`} title="Sem email — não receberá notificação">
+                      sem email
+                    </span>
+                  )}
+                </label>
+                {checked && (
+                  <RetroativoFields
+                    value={retroativos?.[w.id] || null}
+                    onChange={(v) => setRetroativos((prev) => ({ ...prev, [w.id]: v }))}
+                  />
                 )}
-              </label>
+              </div>
             );
           })}
         </div>

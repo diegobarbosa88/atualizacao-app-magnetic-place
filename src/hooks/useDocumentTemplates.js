@@ -330,7 +330,7 @@ export function useDocumentTemplates(supabase, { onError } = {}) {
   const handleGenerateDocuments = useCallback(async (
     selectedTemplate,
     selectedWorkers,
-    { onProgress, workersById, sendEmail = true, clientId = null } = {}
+    { onProgress, workersById, sendEmail = true, clientId = null, retroativos = {} } = {}
   ) => {
     if (!selectedTemplate || !selectedWorkers?.length) {
       throw new Error('Template ou trabalhadores não selecionados');
@@ -350,38 +350,71 @@ export function useDocumentTemplates(supabase, { onError } = {}) {
         const workerId = selectedWorkers[i];
         const worker = workersById?.[workerId] || null;
         const workerName = worker?.name || workerId;
+        // Trabalhador antigo já assinado em papel (pedido do Diego,
+        // 2026-09-08 — "também para os templates quando for atribuir a um
+        // trabalhador"): admin escolhe uma data + anexa o scan real, em vez
+        // do fluxo normal (pending → assinatura digital → aprovação). Grava
+        // já como 'signed' com o PDF real, para não deixar o sistema num
+        // estado inconsistente (um "signed" sem ficheiro real quebraria o
+        // pacote de Documentos para Cliente, que exige signedPdfUrl).
+        const retroativo = retroativos[workerId];
 
         onProgress?.({ current: i, total, workerId, workerName, status: 'pending' });
 
         try {
+          let insertPayload = {
+            template_id: selectedTemplate.id,
+            worker_id: workerId,
+            client_id: clientId || null,
+            title: selectedTemplate.name,
+            status: 'pending',
+            created_at: new Date().toISOString(),
+            categoria: inferirCategoria(selectedTemplate.name) || null,
+          };
+
+          if (retroativo?.file && retroativo?.data) {
+            const dataISO = new Date(retroativo.data).toISOString();
+            const path = `signed/retroativo_${workerId}_${Date.now()}.pdf`;
+            const { error: upErr } = await supabase.storage
+              .from('document_templates')
+              .upload(path, retroativo.file, { contentType: 'application/pdf' });
+            if (upErr) throw upErr;
+            const { data: urlData } = supabase.storage.from('document_templates').getPublicUrl(path);
+            const verificationCode = await generateUniqueVerificationCode(workerName, supabase);
+            insertPayload = {
+              ...insertPayload,
+              status: 'signed',
+              signed_at: dataISO,
+              admin_signed_at: dataISO,
+              signed_pdf_url: urlData.publicUrl,
+              verification_code: verificationCode,
+            };
+          }
+
           const { data: inserted, error } = await supabase
             .from('worker_documents')
-            .insert([{
-              template_id: selectedTemplate.id,
-              worker_id: workerId,
-              client_id: clientId || null,
-              title: selectedTemplate.name,
-              status: 'pending',
-              created_at: new Date().toISOString(),
-              categoria: inferirCategoria(selectedTemplate.name) || null,
-            }])
+            .insert([insertPayload])
             .select()
             .single();
           if (error) throw error;
           succeeded++;
 
-          // N1: notificar o trabalhador que tem um documento para assinar
-          await notifyEvent(supabase, {
-            idPrefix: 'notif',
-            title: `📄 Novo documento para assinar`,
-            message: `Tens um novo documento "${selectedTemplate.name}" para rever e assinar.`,
-            type: 'info',
-            target: TARGET.WORKER,
-            targetWorkerIds: [workerId],
-            payload: { kind: 'document_pending' },
-          });
+          // N1: notificar o trabalhador que tem um documento para assinar —
+          // só faz sentido no fluxo normal, não num registo retroativo já
+          // assinado em papel.
+          if (!retroativo) {
+            await notifyEvent(supabase, {
+              idPrefix: 'notif',
+              title: `📄 Novo documento para assinar`,
+              message: `Tens um novo documento "${selectedTemplate.name}" para rever e assinar.`,
+              type: 'info',
+              target: TARGET.WORKER,
+              targetWorkerIds: [workerId],
+              payload: { kind: 'document_pending' },
+            });
+          }
 
-          if (sendEmail && worker?.email) {
+          if (!retroativo && sendEmail && worker?.email) {
             const ok = await sendWorkerDocumentEmail({
               workerEmail: worker.email,
               workerName: worker.name,
@@ -394,6 +427,8 @@ export function useDocumentTemplates(supabase, { onError } = {}) {
               current: i + 1, total, workerId, workerName,
               status: ok ? 'ok' : 'email_failed',
             });
+          } else if (retroativo) {
+            onProgress?.({ current: i + 1, total, workerId, workerName, status: 'retroativo' });
           } else {
             if (!worker?.email) emailsSkipped++;
             onProgress?.({

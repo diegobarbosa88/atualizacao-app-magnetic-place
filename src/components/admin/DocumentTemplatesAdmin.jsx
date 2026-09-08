@@ -30,6 +30,7 @@ const DocumentTemplatesAdmin = forwardRef(function DocumentTemplatesAdmin({
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [selectedWorkers, setSelectedWorkers] = useState([]);
   const [selectedClientId, setSelectedClientId] = useState('');
+  const [retroativos, setRetroativos] = useState({}); // { workerId: { data, file } }
   const [generating, setGenerating] = useState(false);
   const [genProgress, setGenProgress] = useState(null);
   const [preview, setPreview] = useState(null);
@@ -96,6 +97,7 @@ const DocumentTemplatesAdmin = forwardRef(function DocumentTemplatesAdmin({
     setSelectedTemplate(template);
     setSelectedWorkers([]);
     setSelectedClientId('');
+    setRetroativos({});
     setShowGenerateModal(true);
   };
 
@@ -108,6 +110,7 @@ const DocumentTemplatesAdmin = forwardRef(function DocumentTemplatesAdmin({
         workersById: workerById,
         clientId: selectedClientId || null,
         onProgress: (p) => setGenProgress(p),
+        retroativos,
       });
       const parts = [`${res.succeeded}/${res.total} documento(s) gerado(s)`];
       if (res.emailsSent > 0) parts.push(`${res.emailsSent} email(s) enviado(s)`);
@@ -117,6 +120,7 @@ const DocumentTemplatesAdmin = forwardRef(function DocumentTemplatesAdmin({
       setShowGenerateModal(false);
       setSelectedTemplate(null);
       setSelectedWorkers([]);
+      setRetroativos({});
     } catch (err) {
       console.error('Erro a gerar:', err);
       alert('Erro: ' + err.message);
@@ -211,9 +215,10 @@ const DocumentTemplatesAdmin = forwardRef(function DocumentTemplatesAdmin({
           clients={clients}
           selectedWorkers={selectedWorkers} setSelectedWorkers={setSelectedWorkers}
           selectedClientId={selectedClientId} setSelectedClientId={setSelectedClientId}
+          retroativos={retroativos} setRetroativos={setRetroativos}
           generating={generating}
           genProgress={genProgress}
-          onClose={() => { setShowGenerateModal(false); setSelectedTemplate(null); setSelectedWorkers([]); }}
+          onClose={() => { setShowGenerateModal(false); setSelectedTemplate(null); setSelectedWorkers([]); setRetroativos({}); }}
           onSubmit={submitGenerate}
         />
       )}
