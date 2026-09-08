@@ -652,10 +652,13 @@ async function buscarRequisitosCombinados(supabase, profissao_cnp) {
   return { requisitos };
 }
 
-// Lista as formações obrigatórias (por profissão + Gate) que este
-// trabalhador ainda não tem — sem inserir nada. Usado pelo modal
-// "Sincronizar Formações" para deixar o admin escolher, por formação, a
-// data em que foi de facto realizada antes de confirmar (2026-09-08).
+// Lista as formações obrigatórias (por profissão + Gate) deste trabalhador,
+// separadas em pendentes (ainda não tem) e já atribuídas (com o registo de
+// participante, para dar a opção de remover e reatribuir) — sem inserir
+// nada. Usado pelo modal "Sincronizar Formações": pendentes ganham um campo
+// de data para entrar já concluída; já atribuídas ganham um botão remover
+// (2026-09-08 — pedido do Diego, "excluir formações assinadas, deixar
+// possível atribuir outra vez").
 async function handleFormacoesPendentes(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
   if (!requireAuth(req, res, ['admin'])) return;
@@ -666,21 +669,50 @@ async function handleFormacoesPendentes(req, res) {
   const supabase = getSupabase();
   const { requisitos, error: reqError } = await buscarRequisitosCombinados(supabase, profissao_cnp);
   if (reqError) return res.status(500).json({ error: reqError.message });
-  if (!requisitos.length) return res.status(200).json({ pendentes: [] });
+  if (!requisitos.length) return res.status(200).json({ pendentes: [], atribuidas: [] });
 
   const { data: jaTem, error: jaTemError } = await supabase
     .from('formacao_participantes')
-    .select('formacao_id')
+    .select('id, formacao_id, estado_conclusao, concluido_em')
     .eq('worker_id', worker_id)
     .in('formacao_id', requisitos.map(r => r.formacao_id));
   if (jaTemError) return res.status(500).json({ error: jaTemError.message });
-  const idsExistentes = new Set((jaTem || []).map(p => p.formacao_id));
+  const porFormacaoId = new Map((jaTem || []).map(p => [p.formacao_id, p]));
 
   const pendentes = requisitos
-    .filter(r => !idsExistentes.has(r.formacao_id))
+    .filter(r => !porFormacaoId.has(r.formacao_id))
     .map(r => ({ formacao_id: r.formacao_id, titulo: r.formacoes_internas?.titulo || 'Formação', categoria: r.formacoes_internas?.categoria || null }));
 
-  return res.status(200).json({ pendentes });
+  const atribuidas = requisitos
+    .filter(r => porFormacaoId.has(r.formacao_id))
+    .map(r => {
+      const p = porFormacaoId.get(r.formacao_id);
+      return {
+        participante_id: p.id, formacao_id: r.formacao_id,
+        titulo: r.formacoes_internas?.titulo || 'Formação', categoria: r.formacoes_internas?.categoria || null,
+        estado_conclusao: p.estado_conclusao, concluido_em: p.concluido_em,
+      };
+    });
+
+  return res.status(200).json({ pendentes, atribuidas });
+}
+
+// Remove um registo de participante — liberta o slot para reatribuir a
+// mesma formação (novo insert, seja via "Sincronizar Formações" seja pelo
+// fluxo normal do trabalhador). Não apaga a formação em si
+// (formacoes_internas), só a participação deste trabalhador nela.
+async function handleFormacaoParticipanteRemover(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (!requireAuth(req, res, ['admin'])) return;
+
+  const { participante_id } = req.body || {};
+  if (!participante_id) return res.status(400).json({ error: 'Campo obrigatório: participante_id.' });
+
+  const supabase = getSupabase();
+  const { error } = await supabase.from('formacao_participantes').delete().eq('id', participante_id);
+  if (error) return res.status(500).json({ error: error.message });
+
+  return res.status(200).json({ sucesso: true });
 }
 
 async function handleAutoAtribuir(req, res) {
@@ -1035,6 +1067,7 @@ const ACTIONS = {
   'requisitos-set': handleRequisitosSet,
   'auto-atribuir': handleAutoAtribuir,
   'formacoes-pendentes': handleFormacoesPendentes,
+  'formacao-participante-remover': handleFormacaoParticipanteRemover,
   'gate-status': handleGateStatus,
   'gate-requisitos': handleGateRequisitos,
   'gate-requisitos-set': handleGateRequisitosSet,

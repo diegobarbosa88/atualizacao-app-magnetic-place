@@ -78,12 +78,23 @@ export function autoAtribuirPorProfissao(workerId, profissaoCnp, datasConclusao)
   }).then(json);
 }
 
-// Lista as formações obrigatórias (por profissão + Gate) que este
-// trabalhador ainda não tem — sem atribuir nada.
+// Lista as formações obrigatórias (por profissão + Gate) deste trabalhador,
+// separadas em pendentes (ainda não tem) e já atribuídas — sem atribuir
+// nem remover nada.
 export function formacoesPendentes(workerId, profissaoCnp) {
   const params = new URLSearchParams({ worker_id: workerId });
   if (profissaoCnp) params.set('profissao_cnp', profissaoCnp);
   return authFetch(`/api/formacao/formacoes-pendentes?${params}`).then(json);
+}
+
+// Remove um registo de participante (formacao_participantes) — liberta a
+// formação para ser reatribuída depois.
+export function removerParticipante(participanteId) {
+  return authFetch('/api/formacao/formacao-participante-remover', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ participante_id: participanteId }),
+  }).then(json);
 }
 
 export function gateStatus() {
