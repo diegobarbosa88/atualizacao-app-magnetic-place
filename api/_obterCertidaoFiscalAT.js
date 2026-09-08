@@ -52,15 +52,21 @@ async function findInFrames(page, selector, { timeout = 10000 } = {}) {
 // Clica no primeiro elemento que bate com o seletor CSS E contém o texto
 // dado, em qualquer frame da página — mais resiliente a mudanças de
 // classe/id do que um seletor CSS sozinho, e a login isolado num iframe.
-async function clickByText(page, cssSelector, text, { timeout = 10000 } = {}) {
+// `exact`: compara o texto inteiro do elemento (trim), não uma substring —
+// necessário para abas curtas como "NIF", onde `includes` também bateria
+// com qualquer outro texto da página que contenha essas 3 letras.
+async function clickByText(page, cssSelector, text, { timeout = 10000, exact = false } = {}) {
   const deadline = Date.now() + timeout;
   while (Date.now() < deadline) {
     for (const frame of page.frames()) {
-      const handle = await frame.evaluateHandle((sel, txt) => {
+      const handle = await frame.evaluateHandle((sel, txt, ex) => {
         // eslint-disable-next-line no-undef -- corre no contexto da página (browser), não no Node
         const els = Array.from(document.querySelectorAll(sel));
-        return els.find(el => el.textContent && el.textContent.trim().includes(txt)) || null;
-      }, cssSelector, text).catch(() => null);
+        return els.find(el => {
+          const t = el.textContent && el.textContent.trim();
+          return ex ? t === txt : (t && t.includes(txt));
+        }) || null;
+      }, cssSelector, text, exact).catch(() => null);
       const el = handle?.asElement();
       if (el) {
         await el.click();
@@ -70,6 +76,25 @@ async function clickByText(page, cssSelector, text, { timeout = 10000 } = {}) {
     await new Promise(r => setTimeout(r, 300));
   }
   throw new Error(`Elemento "${cssSelector}" com texto "${text}" não encontrado (a AT pode ter mudado o layout).`);
+}
+
+// A aba "CC/CMD" fica ativa por omissão no formulário de login — clicar em
+// "NIF" precisa de fazer a troca de facto acontecer, não só o clique
+// disparar sem efeito (achado real, 2026-09-08: o primeiro clique não
+// mudava de aba, ficava sempre em CC/CMD — provavelmente porque `includes`
+// apanhava outro elemento antes do botão-aba real, ou porque um único
+// clique não bastava). Confirma a troca depois de cada tentativa, em vez de
+// assumir que funcionou.
+async function selecionarAbaNif(page, { tentativas = 4, timeout = 10000 } = {}) {
+  for (let i = 0; i < tentativas; i++) {
+    // Texto EXATO "NIF", não substring — evita apanhar outro elemento.
+    await clickByText(page, 'a, button, div, span, li', 'NIF', { timeout: 4000, exact: true }).catch(() => {});
+    const trocou = await findInFrames(page, 'input[placeholder="Número de Contribuinte"]', { timeout: 2500 });
+    if (trocou) return;
+  }
+  // Última tentativa: nenhuma correspondência exata funcionou — tenta por
+  // substring, caso o texto real tenha espaços/carateres extra.
+  await clickByText(page, 'a, button, div, span, li', 'NIF', { timeout }).catch(() => {});
 }
 
 // Captura um screenshot (base64) para anexar ao erro, quando algo falhar a
@@ -109,10 +134,10 @@ export async function obterCertidaoFiscalAT() {
     await clickByText(page, 'a, button', 'Iniciar Sessão');
     await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 15000 }).catch(() => {});
 
-    // Aba "NIF" do formulário de autenticação (por omissão pode abrir noutra
-    // aba — CC/CMD) — pode viver dentro de um iframe, daí clickByText
-    // já percorrer todos os frames.
-    await clickByText(page, 'a, button, div, span', 'NIF', { timeout: 8000 }).catch(() => {});
+    // Aba "NIF" do formulário de autenticação — CC/CMD fica ativa por
+    // omissão (confirmado por screenshot real, 2026-09-08), é preciso
+    // trocar e VERIFICAR que trocou, não só clicar.
+    await selecionarAbaNif(page);
 
     const loginFrame = await findInFrames(page, 'input[placeholder="Número de Contribuinte"]', { timeout: 15000 });
     if (!loginFrame) {
