@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Upload, ShieldCheck, Loader2, Send, Calendar, CheckCircle, AlertTriangle, Clock } from 'lucide-react';
+import { Upload, ShieldCheck, Loader2, Send, Calendar, CheckCircle, AlertTriangle, Clock, Eye, Download } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
 import { authFetch } from '../../../utils/authFetch';
 import { TIPOS_DOCUMENTOS_EMPRESA, TIPOS_DOCUMENTOS_EMPRESA_MENSAIS } from '../../../constants/companyDocuments';
 import { getValidadeStatus, getExpiryRelativeLabel } from '../../../constants/rhCategories';
 import { FT, SCALE, FONT_TITLE } from '../../../styles/designTokens';
 import CompanyDocumentsPackageModal from './CompanyDocumentsPackageModal';
+import { DocumentViewerModal } from './WorkerDocsFolderView';
 
 function StatusBadge({ status }) {
   const map = {
@@ -103,6 +104,23 @@ function UploadCompanyDocModal({ tipo, mensal, onClose, onUploaded }) {
 
 const TIPO_SS_AUTOMATIZAVEL = 'Certidão de Situação Contributiva Regularizada';
 
+// Ver (preview) + Descarregar — mesmo par de ações já usado nos documentos
+// por trabalhador (DocumentViewerModal), reaproveitado aqui em vez de
+// deixar o documento "disponível" sem forma nenhuma de o abrir/baixar.
+function DocActions({ doc, label, onPreview }) {
+  if (!doc?.url) return null;
+  return (
+    <div className="flex items-center gap-1 shrink-0">
+      <button onClick={() => onPreview(doc, label)} title="Ver" className="p-1.5 rounded-lg text-[var(--slate)] hover:text-[var(--navy)] hover:bg-[var(--surface)] transition-colors">
+        <Eye size={14} />
+      </button>
+      <a href={doc.url} download title="Descarregar" className="p-1.5 rounded-lg text-[var(--slate)] hover:text-[var(--navy)] hover:bg-[var(--surface)] transition-colors">
+        <Download size={14} />
+      </a>
+    </div>
+  );
+}
+
 export default function CompanyDocumentsAdmin() {
   const { supabase } = useApp();
   const [docs, setDocs] = useState([]);
@@ -111,6 +129,16 @@ export default function CompanyDocumentsAdmin() {
   const [obtendoSS, setObtendoSS] = useState(false);
   const [erroSS, setErroSS] = useState('');
   const [pacoteOpen, setPacoteOpen] = useState(false);
+  const [previewDoc, setPreviewDoc] = useState(null);
+
+  const handlePreview = (doc, label) => {
+    setPreviewDoc({
+      previewUrl: doc.url,
+      tipo: label,
+      title: doc.nome_ficheiro || null,
+      createdAt: doc.data_emissao ? new Date(doc.data_emissao) : null,
+    });
+  };
 
   const reload = () => {
     if (!supabase) return;
@@ -211,6 +239,7 @@ export default function CompanyDocumentsAdmin() {
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <StatusBadge status={status} />
+                    {!mensal && <DocActions doc={doc} label={tipo} onPreview={handlePreview} />}
                     {tipo === TIPO_SS_AUTOMATIZAVEL && (
                       <button onClick={handleObterSS} disabled={obtendoSS} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--surface)] transition-all disabled:opacity-50">
                         {obtendoSS ? <Loader2 size={12} className="animate-spin" /> : <ShieldCheck size={12} />} <span className={SCALE.text.meta}>Obter da SS</span>
@@ -228,9 +257,10 @@ export default function CompanyDocumentsAdmin() {
                       <p className={`${SCALE.text.meta} text-[var(--slate-dim)] italic`}>Nenhum mês disponível ainda.</p>
                     ) : (
                       porTipo[tipo].map((d) => (
-                        <a key={d.id} href={d.url} target="_blank" rel="noreferrer" className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-[var(--surface-dim)] hover:bg-[var(--border-soft)] transition-colors ${SCALE.text.meta}`}>
+                        <div key={d.id} className={`inline-flex items-center gap-1 pl-2 pr-1 py-1 rounded-lg bg-[var(--surface-dim)] ${SCALE.text.meta}`}>
                           <Calendar size={10} /> {d.periodo}
-                        </a>
+                          <DocActions doc={d} label={`${tipo} — ${d.periodo}`} onPreview={handlePreview} />
+                        </div>
                       ))
                     )}
                   </div>
@@ -251,6 +281,8 @@ export default function CompanyDocumentsAdmin() {
       )}
 
       <CompanyDocumentsPackageModal open={pacoteOpen} onClose={() => setPacoteOpen(false)} porTipo={porTipo} />
+
+      <DocumentViewerModal key={previewDoc?.previewUrl} doc={previewDoc} onClose={() => setPreviewDoc(null)} />
     </div>
   );
 }
