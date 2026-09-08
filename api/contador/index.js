@@ -1345,7 +1345,26 @@ async function handleObterCertidaoFiscal(req, res) {
     resultado = await obterCertidaoFiscalAT();
   } catch (e) {
     console.error('obter-certidao-fiscal error:', e);
-    return res.status(502).json({ error: `Falha ao obter certidão do Portal das Finanças: ${e.message}` });
+    // Screenshot do momento da falha — grava-se no storage e devolve-se a
+    // URL, para dar a ver exatamente onde o RPA ficou preso em vez de só a
+    // mensagem de erro (ver api/_obterCertidaoFiscalAT.js).
+    let debugScreenshotUrl = null;
+    if (e.debugScreenshot) {
+      try {
+        const supabase = supabaseAdmin();
+        const debugPath = `certidao-fiscal-debug/${Date.now()}.jpg`;
+        await supabase.storage.from('documentos-empresa').upload(debugPath, Buffer.from(e.debugScreenshot, 'base64'), { contentType: 'image/jpeg' });
+        const { data } = supabase.storage.from('documentos-empresa').getPublicUrl(debugPath);
+        debugScreenshotUrl = data.publicUrl;
+      } catch (upErr) {
+        console.error('Falha ao gravar screenshot de debug:', upErr);
+      }
+    }
+    return res.status(502).json({
+      error: `Falha ao obter certidão do Portal das Finanças: ${e.message}`,
+      debug_screenshot_url: debugScreenshotUrl,
+      debug_url: e.debugUrl || null,
+    });
   }
 
   const supabase = supabaseAdmin();

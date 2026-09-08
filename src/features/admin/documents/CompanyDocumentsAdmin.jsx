@@ -131,6 +131,7 @@ export default function CompanyDocumentsAdmin() {
   const [erroSS, setErroSS] = useState('');
   const [obtendoAT, setObtendoAT] = useState(false);
   const [erroAT, setErroAT] = useState('');
+  const [erroATScreenshot, setErroATScreenshot] = useState(null);
   const [pacoteOpen, setPacoteOpen] = useState(false);
   const [previewDoc, setPreviewDoc] = useState(null);
 
@@ -215,10 +216,14 @@ export default function CompanyDocumentsAdmin() {
   const handleObterAT = async () => {
     setObtendoAT(true);
     setErroAT('');
+    setErroATScreenshot(null);
     try {
       const res = await authFetch('/api/documentos-empresa/certidao-fiscal', { method: 'POST' });
       const body = await res.json();
-      if (!res.ok) throw new Error(body.error || `Erro ${res.status}`);
+      if (!res.ok) {
+        setErroATScreenshot(body.debug_screenshot_url || null);
+        throw new Error(body.error || `Erro ${res.status}`);
+      }
       reload();
     } catch (e) {
       setErroAT(e.message);
@@ -235,7 +240,16 @@ export default function CompanyDocumentsAdmin() {
       </div>
 
       {erroSS && <p className="text-xs text-red-600 font-bold bg-red-50 rounded-lg p-2">{erroSS}</p>}
-      {erroAT && <p className="text-xs text-red-600 font-bold bg-red-50 rounded-lg p-2">{erroAT}</p>}
+      {erroAT && (
+        <div className="text-xs text-red-600 font-bold bg-red-50 rounded-lg p-2 space-y-1">
+          <p>{erroAT}</p>
+          {erroATScreenshot && (
+            <a href={erroATScreenshot} target="_blank" rel="noreferrer" className="underline">
+              Ver screenshot do momento da falha
+            </a>
+          )}
+        </div>
+      )}
 
       {loading ? (
         <div className="py-12 text-center opacity-40"><Loader2 className="animate-spin mx-auto" size={24} /></div>
