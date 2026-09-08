@@ -30,10 +30,23 @@
 // visualmente ativa, "NIF" nunca troca). Como três mecanismos de clique
 // diferentes dão o mesmo resultado, o problema provavelmente não é COMO se
 // clica — é O QUÊ está a ser encontrado. 4ª tentativa: filtrar candidatos
-// por visibilidade real antes de clicar (pode haver mais do que um "NIF" no
-// DOM, ex. clone responsivo escondido) + capturar a estrutura real de TODOS
-// os candidatos (outerHTML, visibilidade) se mesmo assim falhar, em vez de
-// continuar a adivinhar só pelo screenshot.
+// por visibilidade real antes de clicar + capturar a estrutura real de
+// TODOS os candidatos (outerHTML, visibilidade) se mesmo assim falhar.
+//
+// 4ª tentativa CONFIRMOU a causa parcial: o dump de diagnóstico mostrou 2
+// pares idênticos de "NIF" no DOM (confirmado depois, ao vivo, por
+// inspeção direta do portal real, 2026-09-08 — é um formulário de login
+// Radix UI duplicado, um para mobile escondido via CSS "d-md-none", um para
+// desktop, sempre os dois no DOM independentemente do viewport) — mas
+// mesmo já a clicar no candidato certo (confirmado `visivel: true` no
+// dump), a aba continuou sem trocar ao fim de 6 tentativas. Isso aponta
+// para uma segunda causa: el.click() dispara um evento SINTÉTICO
+// (isTrusted: false); um clique real do Diego no browser funcionou
+// instantaneamente. 5ª tentativa: mantém o filtro de visibilidade (já
+// provado certo), mas troca o mecanismo de clique de el.click() sintético
+// para o clique REAL do Puppeteer (ElementHandle.click(), via CDP) — a
+// primeira vez que as duas correções (elemento certo + clique fiável) são
+// combinadas.
 import chromiumModule from '@sparticuz/chromium';
 import puppeteer from 'puppeteer-core';
 
@@ -89,27 +102,29 @@ async function clickByText(page, cssSelector, text, { timeout = 10000, exact = f
   throw new Error(`Elemento "${cssSelector}" com texto "${text}" não encontrado (a AT pode ter mudado o layout).`);
 }
 
-// Clica o elemento com texto exato dado inteiramente dentro do contexto da
-// página (frame.evaluate + el.click() do próprio DOM) em vez de via
-// coordenadas do Puppeteer (elementHandle.click(), que simula mouse por
-// CDP) — mais fiável contra componentes de abas reativos (Angular
-// Material e afins), que às vezes não reagem a um clique sintético de
-// baixo nível mas reagem sempre a el.click() nativo. Sobe até 4 níveis na
-// árvore à procura de um ancestral com role="tab"/button/a, que é
-// normalmente onde o listener real vive, não no <span> de texto interno.
+// Marca (com um atributo temporário) o elemento correto — visível, subindo
+// até 4 níveis na árvore à procura de um ancestral com role="tab"/button/a
+// — sem o clicar. Devolve o seletor do atributo para o Node conseguir obter
+// um ElementHandle Puppeteer real do mesmo elemento a seguir, em vez de o
+// clicar aqui dentro do browser.
 //
-// Filtro de visibilidade acrescentado (2026-09-08) — três estratégias de
-// clique diferentes (Puppeteer por substring, Puppeteer por texto exato,
-// este clique nativo sem filtro) falharam de forma IDÊNTICA, sempre com a
-// mesma aba "CC/CMD" a continuar ativa. Isso sugere que o problema pode não
-// ser COMO se clica, mas O QUÊ está a ser encontrado: se existir mais do
-// que um elemento com o texto exato "NIF" (ex. um clone responsivo
-// desktop/mobile escondido por CSS), `Array.find` apanha sempre o primeiro
-// do DOM, que pode não ser o visível. Filtrar por visibilidade real
-// (display/visibility computados + bounding box > 0) garante que só se
-// clica no que está genuinamente à vista.
-async function clickNativeByExactText(frame, cssSelector, text) {
-  return frame.evaluate((sel, txt) => {
+// Separado em duas fases (marcar em frame.evaluate, clicar via
+// ElementHandle.click() do Puppeteer) porque o achado do Diego, 2026-09-08
+// (confirmado ao vivo: o candidato certo já era identificado como
+// `visivel: true` no dump de diagnóstico, mas 6 tentativas de
+// frame.evaluate(() => el.click()) não faziam a aba trocar) aponta para uma
+// causa diferente da que se pensava — não é "elemento errado" (já resolvido
+// pelo filtro de visibilidade), é que el.click() dispara um evento
+// SINTÉTICO (isTrusted: false), e um componente Radix UI (confirmado pelas
+// classes "data-radix-collection-item"/"radix-:xx:-trigger" no dump) pode
+// não reagir da mesma forma a um clique não fiável. O Puppeteer
+// ElementHandle.click() simula um clique REAL via CDP (sequência completa
+// mousedown/mouseup/click, isTrusted: true) — o mesmo mecanismo que as
+// tentativas 1 e 2 já usavam, mas sempre no elemento ERRADO (invisível),
+// porque não existia ainda o filtro de visibilidade. Esta é a primeira
+// tentativa a combinar as duas correções.
+async function marcarAbaVisivel(frame, cssSelector, text, marcador) {
+  return frame.evaluate((sel, txt, marc) => {
     /* eslint-disable no-undef -- corre no contexto da página (browser), não no Node */
     function visivel(el) {
       const style = window.getComputedStyle(el);
@@ -126,9 +141,25 @@ async function clickNativeByExactText(frame, cssSelector, text) {
       if (target.getAttribute?.('role') === 'tab' || target.tagName === 'BUTTON' || target.tagName === 'A') break;
       target = target.parentElement;
     }
-    (target || el).click();
+    (target || el).setAttribute(marc, '1');
     return true;
-  }, cssSelector, text).catch(() => false);
+  }, cssSelector, text, marcador).catch(() => false);
+}
+
+// Clica de facto o elemento marcado por marcarAbaVisivel, num frame — clique
+// REAL do Puppeteer (ElementHandle.click(), via CDP), não o el.click()
+// sintético usado nas tentativas anteriores.
+async function clicarMarcado(frame, marcador) {
+  const handle = await frame.$(`[${marcador}]`).catch(() => null);
+  if (!handle) return false;
+  try {
+    await handle.click();
+    return true;
+  } catch {
+    return false;
+  } finally {
+    await handle.dispose().catch(() => {});
+  }
 }
 
 // Diagnóstico de último recurso, acrescentado depois de 3 estratégias de
@@ -168,14 +199,17 @@ async function dumpCandidatosTexto(page, cssSelector, text) {
 
 // A aba "CC/CMD" fica ativa por omissão no formulário de login — clicar em
 // "NIF" precisa de fazer a troca de facto acontecer, não só o clique
-// disparar sem efeito (achado real, 2026-09-08: 2 tentativas diferentes de
-// clicar via Puppeteer elementHandle.click() não mudavam a aba, ficava
-// sempre em CC/CMD). Tenta clique nativo em cada frame, confirma a troca
-// depois de cada tentativa — nunca assume que um clique bastou.
+// disparar sem efeito (achado real, 2026-09-08: 4 tentativas diferentes já
+// falharam, incluindo com filtro de visibilidade a confirmar que o
+// candidato certo estava a ser encontrado). Marca o elemento certo em cada
+// frame, clica com o Puppeteer real (CDP), confirma a troca depois de cada
+// tentativa — nunca assume que um clique bastou.
 async function selecionarAbaNif(page, { tentativas = 6 } = {}) {
+  const marcador = 'data-at-rpa-alvo';
   for (let i = 0; i < tentativas; i++) {
     for (const frame of page.frames()) {
-      await clickNativeByExactText(frame, 'a, button, div, span, li, [role="tab"]', 'NIF');
+      const marcado = await marcarAbaVisivel(frame, 'a, button, div, span, li, [role="tab"]', 'NIF', marcador);
+      if (marcado) await clicarMarcado(frame, marcador);
     }
     const trocou = await findInFrames(page, 'input[placeholder="Número de Contribuinte"]', { timeout: 1500 });
     if (trocou) return;
