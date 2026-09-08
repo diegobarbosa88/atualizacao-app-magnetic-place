@@ -35,6 +35,7 @@ export const AUTO_CATEGORIA_TIPO = {
   "Recibo de Vencimento": "Remuneração",
   "Mapa de Deslocamento": "Remuneração",
   "Contrato de Trabalho": "Contratual",
+  "Certificado de Aptidão Médica": "Saúde e Segurança no Trabalho",
 };
 
 /**

@@ -4,7 +4,7 @@ import ModalShell from '../../../components/common/ModalShell';
 import { CATEGORIAS_RH_ACT, AUTO_CATEGORIA_TIPO, CATEGORIAS_COM_VALIDADE } from '../../../constants/rhCategories';
 import { SCALE } from '../../../styles/designTokens';
 
-const TIPOS_MANUAIS = ['Recibo de Vencimento', 'Mapa de Ajudas de Custo', 'Mapa de Deslocamento', 'Contrato de Trabalho', 'Outro'];
+const TIPOS_MANUAIS = ['Recibo de Vencimento', 'Mapa de Ajudas de Custo', 'Mapa de Deslocamento', 'Contrato de Trabalho', 'Certificado de Aptidão Médica', 'Outro'];
 
 export default function UploadManualModal({
   workers,

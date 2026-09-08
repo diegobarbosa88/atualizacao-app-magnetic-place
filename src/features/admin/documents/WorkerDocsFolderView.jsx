@@ -16,7 +16,7 @@ import { toSentenceCase, toSentenceCaseFilename, getInitials } from '../../../ut
 import UploadManualModal from './UploadManualModal';
 import { CompactDocRow } from './docBadges';
 import ClientDocumentsPackageModal from './ClientDocumentsPackageModal';
-import { TIPOS_DOCUMENTOS_CLIENTE } from '../../../constants/clientDocuments';
+import { TIPOS_DOCUMENTOS_CLIENTE, TIPOS_DOCUMENTOS_CLIENTE_SEM_ASSINATURA } from '../../../constants/clientDocuments';
 
 // Icon-button padronizado — mesmo par usado no resto do admin (neutro:
 // hover navy/surface; destrutivo: hover bad/bad-bg).
@@ -849,16 +849,29 @@ export function WorkerPastaView({ worker, docs, onBack, onOpenDoc, onDelete, onA
           </button>
         </div>
         <div className="space-y-1.5">
-          {docsCliente.map(({ tipo, doc }) => (
-            <div key={tipo} className="flex items-center justify-between gap-2">
-              <span className={`${SCALE.text.meta} text-[var(--ink-mid)] truncate`}>{tipo}</span>
-              {doc ? <StateBadgeSmall state={doc.state} /> : (
-                <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded ${SCALE.text.meta}`} style={{ color: 'var(--slate-dim)', backgroundColor: 'var(--surface-dim)' }}>
-                  Em falta
-                </span>
-              )}
-            </div>
-          ))}
+          {docsCliente.map(({ tipo, doc }) => {
+            const semAssinatura = TIPOS_DOCUMENTOS_CLIENTE_SEM_ASSINATURA.includes(tipo);
+            // Certificado de Aptidão Médica nunca fica state='signed' (é
+            // upload manual sem fluxo de assinatura) — "pronto" aqui é só
+            // existir o ficheiro, badge próprio para não ler como "Pendente".
+            const disponivel = semAssinatura ? !!(doc?.viewUrl || doc?.signedPdfUrl) : doc?.state === 'signed';
+            return (
+              <div key={tipo} className="flex items-center justify-between gap-2">
+                <span className={`${SCALE.text.meta} text-[var(--ink-mid)] truncate`}>{tipo}</span>
+                {!disponivel ? (
+                  <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded ${SCALE.text.meta}`} style={{ color: 'var(--slate-dim)', backgroundColor: 'var(--surface-dim)' }}>
+                    Em falta
+                  </span>
+                ) : semAssinatura ? (
+                  <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded ${SCALE.text.meta}`} style={{ color: 'var(--ok)', backgroundColor: 'var(--ok-bg)' }}>
+                    <CheckCircle size={8} /> Disponível
+                  </span>
+                ) : (
+                  <StateBadgeSmall state={doc.state} />
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 

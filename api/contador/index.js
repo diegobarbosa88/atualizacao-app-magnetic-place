@@ -12,7 +12,7 @@ import { calcMesParcial } from '../../src/lib/payroll/mesParcial.js';
 import { calcularDiasUteisNoMes } from '../../src/lib/payroll/feriadosPortugal.js';
 import { findBestCombo, SYNC_TOLERANCE } from '../../src/lib/payroll/mapaAutoFill.js';
 import { isSigned } from '../../src/constants/documentStatus.js';
-import { TIPOS_DOCUMENTOS_CLIENTE } from '../../src/constants/clientDocuments.js';
+import { TIPOS_DOCUMENTOS_CLIENTE, TIPOS_DOCUMENTOS_CLIENTE_SEM_ASSINATURA } from '../../src/constants/clientDocuments.js';
 
 // Router único para os 4 endpoints relacionados com o contabilista — consolidados
 // num só ficheiro para não exceder o limite de Serverless Functions do plano
@@ -1142,34 +1142,44 @@ async function handleDocumentosClienteEnviar(req, res) {
   if (clienteErr) return res.status(500).json({ error: clienteErr.message });
   if (!cliente?.email) return res.status(400).json({ error: `O cliente "${cliente?.name || historico.client_id}" não tem email configurado.` });
 
+  // Registo de Formação Interna e Certificado de Aptidão Médica vêm de
+  // uploads manuais (tabela documents); os outros 2 vêm de templates
+  // assinados (worker_documents). O Certificado nunca é assinado — ver
+  // TIPOS_DOCUMENTOS_CLIENTE_SEM_ASSINATURA.
+  const tiposOrigemManual = ['Registo de Formação Interna', 'Certificado de Aptidão Médica'];
   const [{ data: manuais, error: manErr }, { data: gerados, error: genErr }] = await Promise.all([
-    supabase.from('documents').select('id, status, url, pdfAssinadoUrl, dataEmissao')
-      .eq('workerId', worker_id).eq('tipo', 'Registo de Formação Interna')
+    supabase.from('documents').select('id, tipo, status, url, pdfAssinadoUrl, dataEmissao')
+      .eq('workerId', worker_id).in('tipo', tiposOrigemManual)
       .order('dataEmissao', { ascending: false }),
     supabase.from('worker_documents').select('id, title, status, signed_pdf_url')
       .eq('worker_id', worker_id)
-      .in('title', TIPOS_DOCUMENTOS_CLIENTE.filter(t => t !== 'Registo de Formação Interna')),
+      .in('title', TIPOS_DOCUMENTOS_CLIENTE.filter(t => !tiposOrigemManual.includes(t))),
   ]);
   if (manErr) return res.status(500).json({ error: manErr.message });
   if (genErr) return res.status(500).json({ error: genErr.message });
 
   const resolvidos = TIPOS_DOCUMENTOS_CLIENTE.map((tipo) => {
-    if (tipo === 'Registo de Formação Interna') {
-      const doc = (manuais || [])[0] || null; // mais recente primeiro (order acima)
-      return { tipo, url: doc && isSigned(doc.status) ? (doc.pdfAssinadoUrl || doc.url) : null };
+    if (tiposOrigemManual.includes(tipo)) {
+      const doc = (manuais || []).find((d) => d.tipo === tipo) || null; // mais recente primeiro (order acima)
+      const exigeAssinatura = !TIPOS_DOCUMENTOS_CLIENTE_SEM_ASSINATURA.includes(tipo);
+      const pronto = doc && (!exigeAssinatura || isSigned(doc.status));
+      return { tipo, url: pronto ? (doc.pdfAssinadoUrl || doc.url) : null };
     }
     const doc = (gerados || []).find((d) => d.title === tipo) || null;
     return { tipo, url: doc && isSigned(doc.status) ? doc.signed_pdf_url : null };
   });
 
+  // Pedido do Diego (2026-09-08): enviar o que já está pronto, mesmo com
+  // documentos por assinar em falta — só bloqueia se não houver NENHUM.
+  const prontos = resolvidos.filter((r) => r.url);
   const emFalta = resolvidos.filter((r) => !r.url).map((r) => r.tipo);
-  if (emFalta.length) {
-    return res.status(400).json({ error: `Documentos por assinar/gerar antes de enviar: ${emFalta.join(', ')}`, em_falta: emFalta });
+  if (!prontos.length) {
+    return res.status(400).json({ error: `Nenhum documento assinado/gerado ainda: ${emFalta.join(', ')}`, em_falta: emFalta });
   }
 
   let anexos;
   try {
-    anexos = await Promise.all(resolvidos.map(async (r) => {
+    anexos = await Promise.all(prontos.map(async (r) => {
       const resp = await fetch(r.url);
       if (!resp.ok) throw new Error(`Falha ao descarregar "${r.tipo}" (${resp.status})`);
       const buffer = Buffer.from(await resp.arrayBuffer());
@@ -1179,13 +1189,18 @@ async function handleDocumentosClienteEnviar(req, res) {
     return res.status(502).json({ error: `Erro ao descarregar documentos: ${e.message}` });
   }
 
+  const listaAnexados = prontos.map((r) => `- ${r.tipo}`).join('\n');
+  const notaFalta = emFalta.length
+    ? `\n\nAinda em falta (serão enviados assim que disponíveis):\n${emFalta.map((t) => `- ${t}`).join('\n')}`
+    : '';
+
   let sendResult;
   try {
     const gmail = gmailClient();
     sendResult = await sendGmailNewMessage(gmail, {
       to: cliente.email,
       subject: `Documentos de ${worker.name} — Magnetic Place`,
-      bodyText: `Boa tarde,\n\nSeguem em anexo os documentos de ${worker.name}:\n- Registo de Formação Interna\n- Termo de Responsabilidade — EPI\n- Registo de Informações sobre Riscos no Local de Trabalho\n\nCom os melhores cumprimentos,\nMagnetic Place`,
+      bodyText: `Boa tarde,\n\nSeguem em anexo os documentos de ${worker.name}:\n${listaAnexados}${notaFalta}\n\nCom os melhores cumprimentos,\nMagnetic Place`,
       attachments: anexos,
     });
   } catch (e) {
@@ -1197,7 +1212,7 @@ async function handleDocumentosClienteEnviar(req, res) {
     client_id: cliente.id,
     enviado_por: sessao.id || null,
     gmail_message_id: sendResult.id,
-    tipos_incluidos: TIPOS_DOCUMENTOS_CLIENTE,
+    tipos_incluidos: prontos.map((r) => r.tipo),
   });
   if (logError) {
     return res.status(200).json({
@@ -1206,7 +1221,10 @@ async function handleDocumentosClienteEnviar(req, res) {
     });
   }
 
-  return res.status(200).json({ sucesso: true, gmail_message_id: sendResult.id, cliente_email: cliente.email, enviado_em: new Date().toISOString() });
+  return res.status(200).json({
+    sucesso: true, gmail_message_id: sendResult.id, cliente_email: cliente.email,
+    enviado_em: new Date().toISOString(), em_falta: emFalta,
+  });
 }
 
 // ---------------------------------------------------------------------------

@@ -6,7 +6,7 @@ import { useApp } from '../../../context/AppContext';
 import { authFetch } from '../../../utils/authFetch';
 import ModalShell from '../../../components/common/ModalShell';
 import { FT, SCALE } from '../../../styles/designTokens';
-import { TIPOS_DOCUMENTOS_CLIENTE } from '../../../constants/clientDocuments';
+import { TIPOS_DOCUMENTOS_CLIENTE, TIPOS_DOCUMENTOS_CLIENTE_SEM_ASSINATURA } from '../../../constants/clientDocuments';
 
 const slugify = (s) => (s || '')
   .normalize('NFD').replace(/[̀-ͯ]/g, '')
@@ -66,8 +66,16 @@ export default function ClientDocumentsPackageModal({ open, onClose, worker, doc
   // o Registo de Formação Interna tem sempre um PDF anexado assim que é
   // exportado (mesmo em 'Pendente', ver RegistoIndividualTab.jsx), então só
   // olhar para a URL deixaria enviar um registo por assinar ao cliente.
-  const prontos = docsCliente.filter((x) => x.doc?.state === 'signed' && x.doc?.signedPdfUrl);
+  // Exceção: o Certificado de Aptidão Médica nunca é assinado (upload manual
+  // de um exame feito fora do sistema) — "pronto" para ele é só existir.
+  const isPronto = (x) => TIPOS_DOCUMENTOS_CLIENTE_SEM_ASSINATURA.includes(x.tipo)
+    ? !!(x.doc?.viewUrl || x.doc?.signedPdfUrl)
+    : x.doc?.state === 'signed' && x.doc?.signedPdfUrl;
+  const prontos = docsCliente.filter(isPronto);
   const todosProntos = prontos.length === TIPOS_DOCUMENTOS_CLIENTE.length;
+  // Pedido do Diego (2026-09-08): as ações passam a operar com o que já
+  // estiver assinado, mesmo faltando algum — só bloqueiam sem NENHUM pronto.
+  const algumPronto = prontos.length > 0;
 
   const nomeBase = `${slugify(worker.workerName)}`;
 
@@ -76,8 +84,8 @@ export default function ClientDocumentsPackageModal({ open, onClose, worker, doc
     setError('');
     try {
       const merged = await PDFDocument.create();
-      for (const { doc } of docsCliente) {
-        const bytes = await fetchPdfBytes(doc.signedPdfUrl);
+      for (const { doc } of prontos) {
+        const bytes = await fetchPdfBytes(doc.signedPdfUrl || doc.viewUrl);
         const src = await PDFDocument.load(bytes);
         const paginas = await merged.copyPages(src, src.getPageIndices());
         paginas.forEach((p) => merged.addPage(p));
@@ -95,8 +103,8 @@ export default function ClientDocumentsPackageModal({ open, onClose, worker, doc
     setError('');
     try {
       const zip = new JSZip();
-      for (const { tipo, doc } of docsCliente) {
-        const bytes = await fetchPdfBytes(doc.signedPdfUrl);
+      for (const { tipo, doc } of prontos) {
+        const bytes = await fetchPdfBytes(doc.signedPdfUrl || doc.viewUrl);
         zip.file(`${slugify(tipo)}.pdf`, bytes);
       }
       const blob = await zip.generateAsync({ type: 'blob' });
@@ -160,7 +168,7 @@ export default function ClientDocumentsPackageModal({ open, onClose, worker, doc
             <div>
               <p className="text-xs font-bold text-amber-700">Ainda faltam documentos assinados:</p>
               <ul className="text-xs text-amber-700 list-disc pl-4 mt-1">
-                {docsCliente.filter((x) => !(x.doc?.state === 'signed' && x.doc?.signedPdfUrl)).map((x) => <li key={x.tipo}>{x.tipo}</li>)}
+                {docsCliente.filter((x) => !isPronto(x)).map((x) => <li key={x.tipo}>{x.tipo}</li>)}
               </ul>
             </div>
           </div>
@@ -179,23 +187,23 @@ export default function ClientDocumentsPackageModal({ open, onClose, worker, doc
           <div className="space-y-2">
             <button
               onClick={handlePdfUnico}
-              disabled={!todosProntos || !!busy}
+              disabled={!algumPronto || !!busy}
               className="w-full flex items-center justify-center gap-2 disabled:opacity-50 py-2.5 rounded-xl font-bold text-xs border border-[var(--border)] hover:bg-[var(--surface)] transition-all"
             >
               {busy === 'pdf' ? <Loader2 size={14} className="animate-spin" /> : <FileDown size={14} />}
-              PDF único
+              PDF único{!todosProntos && algumPronto ? ` (${prontos.length}/${TIPOS_DOCUMENTOS_CLIENTE.length})` : ''}
             </button>
             <button
               onClick={handleZip}
-              disabled={!todosProntos || !!busy}
+              disabled={!algumPronto || !!busy}
               className="w-full flex items-center justify-center gap-2 disabled:opacity-50 py-2.5 rounded-xl font-bold text-xs border border-[var(--border)] hover:bg-[var(--surface)] transition-all"
             >
               {busy === 'zip' ? <Loader2 size={14} className="animate-spin" /> : <FileArchive size={14} />}
-              ZIP
+              ZIP{!todosProntos && algumPronto ? ` (${prontos.length}/${TIPOS_DOCUMENTOS_CLIENTE.length})` : ''}
             </button>
             <button
               onClick={abrirConfirmacaoEnvio}
-              disabled={!todosProntos || !!busy || carregandoCliente}
+              disabled={!algumPronto || !!busy || carregandoCliente}
               className="w-full flex items-center justify-center gap-2 disabled:opacity-50 py-2.5 rounded-xl font-black text-xs uppercase shadow-lg transition-all"
               style={{ backgroundColor: FT.orange, color: FT.navy }}
             >
@@ -206,7 +214,11 @@ export default function ClientDocumentsPackageModal({ open, onClose, worker, doc
         ) : (
           <div className="space-y-3">
             <p className="text-sm text-[var(--ink-soft)]">
-              Enviar os 3 documentos de <b>{worker.workerName}</b> para <b>{clienteEmail}</b>?
+              {todosProntos ? (
+                <>Enviar os 3 documentos de <b>{worker.workerName}</b> para <b>{clienteEmail}</b>?</>
+              ) : (
+                <>Enviar {prontos.length} de {TIPOS_DOCUMENTOS_CLIENTE.length} documentos de <b>{worker.workerName}</b> para <b>{clienteEmail}</b> — os restantes ainda não estão assinados?</>
+              )}
             </p>
             <div className="flex gap-2">
               <button onClick={() => setConfirmandoEnvio(false)} disabled={busy === 'email'} className="flex-1 px-4 py-2 rounded-xl bg-slate-100 text-slate-600 text-sm font-semibold disabled:opacity-50">
