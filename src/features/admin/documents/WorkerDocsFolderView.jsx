@@ -7,7 +7,7 @@ import {
   FileText, Clock,
   FolderOpen, Eye, EyeOff, UserCheck, CheckCircle, AlertTriangle, ChevronDown, ChevronUp,
   Folder, ArrowLeft, Search, FileSignature, Download, Trash2,
-  Layers, Calendar, Plus, ScanSearch, Send,
+  Layers, Calendar, Plus, ScanSearch, Send, Loader2,
 } from 'lucide-react';
 import ModalShell from '../../../components/common/ModalShell';
 import { CATEGORIAS_RH_ACT, getValidadeStatus, getDiasRestantes, getExpiryRelativeLabel, CATEGORIA_CONFIG, CATEGORIA_COLOR_MAP } from '../../../constants/rhCategories';
@@ -176,8 +176,8 @@ function StateBadgeSmall({ state }) {
     </span>
   );
   if (state === 'awaiting_admin') return (
-    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded ${SCALE.text.meta}`} style={{ color: 'var(--slate-dim)', backgroundColor: 'var(--surface-dim)' }}>
-      <FileSignature size={8} /> Aguarda aprovação
+    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded ${SCALE.text.meta}`} style={{ color: 'var(--tone-indigo)', backgroundColor: 'var(--tone-indigo-bg)' }}>
+      <FileSignature size={8} /> Aguarda a tua aprovação
     </span>
   );
   return (
@@ -291,7 +291,7 @@ export function DocumentViewerModal({ doc, onClose }) {
 // passam de linhas "rótulo: valor" para uma grelha de fichas, e as ações
 // ganham rótulo em vez de ícones sozinhos. Estrutura/dados não mudam —
 // continua a ler getCategoryFields(d) tal como estava.
-function DocCardSingle({ d, onOpenDoc, onDelete, confirmDeleteId, setConfirmDeleteId }) {
+function DocCardSingle({ d, onOpenDoc, onDelete, confirmDeleteId, setConfirmDeleteId, onApprove, approvingId }) {
   const { supabase } = useApp();
   const [visivelWorker, setVisivelWorker] = useState(d.visivel_worker ?? false);
   const url = d.viewUrl || d.signedPdfUrl || null;
@@ -367,6 +367,16 @@ function DocCardSingle({ d, onOpenDoc, onDelete, confirmDeleteId, setConfirmDele
           <button onClick={() => onOpenDoc(d)} className={`flex-1 flex items-center justify-center gap-1.5 h-9 rounded-[10px] bg-[var(--surface)] text-[var(--ink-soft)] ${SCALE.text.badge} hover:bg-[var(--border-soft)] transition-colors`}>
             <Eye size={14} /> Ver
           </button>
+          {d.state === 'awaiting_admin' && onApprove && (
+            <button
+              onClick={() => onApprove(d.raw)}
+              disabled={approvingId === d.id}
+              className={`flex-1 flex items-center justify-center gap-1.5 h-9 rounded-[10px] font-black uppercase ${SCALE.text.badge} transition-colors disabled:opacity-50`}
+              style={{ backgroundColor: FT.orange, color: FT.navy }}
+            >
+              {approvingId === d.id ? <Loader2 size={14} className="animate-spin" /> : <FileSignature size={14} />} Aprovar
+            </button>
+          )}
           {d.source === 'manual' && (
             <button
               onClick={async () => {
@@ -668,7 +678,7 @@ function CategorySection({ categoria, docs, onOpenItem }) {
   );
 }
 
-export function WorkerPastaView({ worker, docs, onBack, onOpenDoc, onDelete, onAddDoc, onScan, hideHeader }) {
+export function WorkerPastaView({ worker, docs, onBack, onOpenDoc, onDelete, onAddDoc, onScan, hideHeader, onApprove, approvingId }) {
   const { supabase } = useApp();
   const [quickViewItem, setQuickViewItem] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
@@ -721,10 +731,20 @@ export function WorkerPastaView({ worker, docs, onBack, onOpenDoc, onDelete, onA
 
   // Resumo do cabeçalho — buckets mutuamente exclusivos (um documento
   // pendente E expirado conta só como "expirado", nunca nos dois ao mesmo
-  // tempo, para a barra segmentada somar sempre 100%).
-  const porResolver = docs.filter(d => d.state !== 'signed' && !['expirado', 'urgente'].includes(getValidadeStatus(d.data_validade))).length;
-  const resolvidos = docs.length - porResolver - expirados;
+  // tempo, para a barra segmentada somar sempre 100%). "Aguarda aprovação"
+  // separado de "Por resolver" — o primeiro precisa de AÇÃO DO ADMIN, o
+  // segundo só do trabalhador; misturados escondiam o que havia para fazer
+  // (achado real, 2026-09-08, ver CLAUDE.md).
+  const naoExpirado = d => !['expirado', 'urgente'].includes(getValidadeStatus(d.data_validade));
+  const aguardaAprovacao = docs.filter(d => d.state === 'awaiting_admin' && naoExpirado(d)).length;
+  const porResolver = docs.filter(d => d.state === 'pending' && naoExpirado(d)).length;
+  const resolvidos = docs.length - porResolver - aguardaAprovacao - expirados;
   const pctResolvido = docs.length ? Math.round(resolvidos / docs.length * 100) : 0;
+
+  const docsAprovacao = useMemo(
+    () => docs.filter(d => d.state === 'awaiting_admin'),
+    [docs]
+  );
 
   const quickViewTitle = quickViewItem
     ? (quickViewItem.type === 'pair' ? itemToRowModel(quickViewItem).tipo : buildDocTitle(quickViewItem.doc))
@@ -789,6 +809,16 @@ export function WorkerPastaView({ worker, docs, onBack, onOpenDoc, onDelete, onA
                 <p className={SCALE.text.statValue} style={{ fontFamily: FONT_TITLE, color: FT.orange }}>{porResolver}</p>
                 <p className={SCALE.text.statLabel} style={{ color: 'var(--on-navy)' }}>Por resolver</p>
               </div>
+              {aguardaAprovacao > 0 && (
+                <div>
+                  {/* #9ba3ff fixo — mesmo tom de --tone-indigo do modo
+                      escuro (já validado sobre fundos escuros), o cabeçalho
+                      é navy fixo em qualquer tema, mesma lógica de
+                      --on-navy/#e08872 já usada para Expirados. */}
+                  <p className={SCALE.text.statValue} style={{ fontFamily: FONT_TITLE, color: '#9ba3ff' }}>{aguardaAprovacao}</p>
+                  <p className={SCALE.text.statLabel} style={{ color: 'var(--on-navy)' }}>Aguarda aprovação</p>
+                </div>
+              )}
               {expirados > 0 && (
                 <div>
                   {/* #e08872 fixo (não var(--bad)) — o cabeçalho é navy fixo
@@ -807,12 +837,35 @@ export function WorkerPastaView({ worker, docs, onBack, onOpenDoc, onDelete, onA
                 <div className="h-1.5 rounded-full overflow-hidden flex" style={{ backgroundColor: 'rgba(255,255,255,.12)' }}>
                   {resolvidos > 0 && <div style={{ width: `${resolvidos / docs.length * 100}%`, backgroundColor: 'var(--ok)' }} />}
                   {porResolver > 0 && <div style={{ width: `${porResolver / docs.length * 100}%`, backgroundColor: FT.orange }} />}
+                  {aguardaAprovacao > 0 && <div style={{ width: `${aguardaAprovacao / docs.length * 100}%`, backgroundColor: '#9ba3ff' }} />}
                   {expirados > 0 && <div style={{ width: `${expirados / docs.length * 100}%`, backgroundColor: 'var(--bad)' }} />}
                 </div>
                 <p className={`${SCALE.text.meta} mt-1.5`} style={{ color: 'var(--on-navy)' }}>{pctResolvido}% da pasta resolvida</p>
               </div>
             )}
           </div>
+      )}
+
+      {/* Secção fixa no topo, sempre visível quando há algo — antes disto
+          não havia forma de aprovar um documento a partir da pasta do
+          trabalhador (só saindo para "Por categoria"), e um documento
+          awaiting_admin ficava perdido no meio de categorias/meses quando
+          a pasta tinha muitos documentos. Achado real, 2026-09-08, ver
+          CLAUDE.md — não depende de em que categoria/mês o documento está. */}
+      {docsAprovacao.length > 0 && (
+        <div className="rounded-2xl p-4 border-2" style={{ backgroundColor: 'var(--tone-indigo-bg)', borderColor: 'var(--tone-indigo-border)' }}>
+          <div className="flex items-center gap-2 mb-2.5">
+            <FileSignature size={14} style={{ color: 'var(--tone-indigo)' }} />
+            <h5 className={SCALE.text.statLabel} style={{ color: 'var(--tone-indigo)' }}>
+              Aguarda a tua aprovação ({docsAprovacao.length})
+            </h5>
+          </div>
+          <div className="flex flex-col gap-1">
+            {docsAprovacao.map((d) => (
+              <CompactDocRow key={d.id} d={d} onClick={() => setQuickViewItem({ type: 'single', doc: d })} />
+            ))}
+          </div>
+        </div>
       )}
 
       {/* Compromisso de Início de Atividade — só aparece se este trabalhador
@@ -916,6 +969,8 @@ export function WorkerPastaView({ worker, docs, onBack, onOpenDoc, onDelete, onA
                 onDelete={onDelete}
                 confirmDeleteId={confirmDeleteId}
                 setConfirmDeleteId={setConfirmDeleteId}
+                onApprove={onApprove}
+                approvingId={approvingId}
               />
             )}
           </div>
@@ -932,7 +987,7 @@ export function WorkerPastaView({ worker, docs, onBack, onOpenDoc, onDelete, onA
   );
 }
 
-export default function WorkerDocsFolderView({ docs, onPreview, onDeleteManual, onDeleteGenerated }) {
+export default function WorkerDocsFolderView({ docs, onPreview, onDeleteManual, onDeleteGenerated, onApprove, approvingId }) {
   const { supabase, setDocuments } = useApp();
   const [searchParams] = useSearchParams();
   const [selectedWorker, setSelectedWorker] = useState(() => searchParams.get('worker') || null);
@@ -1029,6 +1084,8 @@ export default function WorkerDocsFolderView({ docs, onPreview, onDeleteManual, 
             onOpenDoc={handleOpenDoc}
             onDelete={handleDelete}
             onAddDoc={() => setShowUpload(true)}
+            onApprove={onApprove}
+            approvingId={approvingId}
           />
           {showUpload && (
             <UploadManualModal

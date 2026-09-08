@@ -12,9 +12,14 @@ export const ACTION_ICON_CLS = "p-1.5 rounded-lg transition-all text-[var(--slat
 export const ACTION_ICON_DELETE_CLS = "p-1.5 rounded-lg transition-all text-[var(--bad)] hover:bg-[var(--bad-bg)]";
 
 export const STATE_META = {
-  signed:          { icon: CheckCircle,   label: 'Assinado',          color: 'var(--ok)',        bg: 'var(--ok-bg)' },
-  awaiting_admin:  { icon: FileSignature, label: 'Aguarda aprovação', color: 'var(--slate-dim)',  bg: 'var(--surface-dim)' },
-  pending:         { icon: Clock,         label: 'Pendente',          color: 'var(--warn)',       bg: 'var(--warn-bg)' },
+  signed:          { icon: CheckCircle,   label: 'Assinado',          color: 'var(--ok)',           bg: 'var(--ok-bg)' },
+  // Cor própria (não a cinzenta neutra de antes, quase invisível numa lista
+  // longa) — precisa de se destacar de "Pendente" (aguarda o TRABALHADOR)
+  // porque este é o único estado que precisa de AÇÃO DO ADMIN. Achado real,
+  // 2026-09-08: numa pasta com 35 documentos, o único awaiting_admin passava
+  // despercebido. Ver CLAUDE.md.
+  awaiting_admin:  { icon: FileSignature, label: 'Aguarda a tua aprovação', color: 'var(--tone-indigo)', bg: 'var(--tone-indigo-bg)' },
+  pending:         { icon: Clock,         label: 'Pendente',          color: 'var(--warn)',         bg: 'var(--warn-bg)' },
 };
 const stateMeta = (state) => STATE_META[state] || STATE_META.pending;
 

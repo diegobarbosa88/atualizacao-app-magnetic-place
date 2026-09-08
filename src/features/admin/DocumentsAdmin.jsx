@@ -276,6 +276,8 @@ export default function DocumentsAdmin() {
               onPreview={a.openGeneratedPreview}
               onDeleteManual={a.handleDeleteManual}
               onDeleteGenerated={a.handleDeleteGenerated}
+              onApprove={a.onApprove}
+              approvingId={a.approvingId}
             />
           )}
         </>

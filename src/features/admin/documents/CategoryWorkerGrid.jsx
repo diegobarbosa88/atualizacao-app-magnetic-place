@@ -206,6 +206,8 @@ export default function CategoryWorkerGrid({
               onBack={() => setOpenWorkerId(null)}
               onOpenDoc={handleOpenDoc}
               onDelete={handleDelete}
+              onApprove={onApprove}
+              approvingId={approvingId}
             />
           </div>
         )}
