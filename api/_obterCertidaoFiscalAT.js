@@ -23,6 +23,17 @@
 // procurar em todos os frames (findInFrames) — sem confirmação ainda de que
 // resolve, é a explicação mais plausível para este tipo de falha em
 // portais de autenticação .gov, que costumam isolar o login num iframe.
+//
+// 2ª e 3ª tentativas (mesmo dia): clique por texto exato via Puppeteer, e
+// depois clique nativo (el.click()) em vez de clique por coordenadas —
+// ambas falharam de forma IDÊNTICA ao testar ao vivo (mesma aba "CC/CMD"
+// visualmente ativa, "NIF" nunca troca). Como três mecanismos de clique
+// diferentes dão o mesmo resultado, o problema provavelmente não é COMO se
+// clica — é O QUÊ está a ser encontrado. 4ª tentativa: filtrar candidatos
+// por visibilidade real antes de clicar (pode haver mais do que um "NIF" no
+// DOM, ex. clone responsivo escondido) + capturar a estrutura real de TODOS
+// os candidatos (outerHTML, visibilidade) se mesmo assim falhar, em vez de
+// continuar a adivinhar só pelo screenshot.
 import chromiumModule from '@sparticuz/chromium';
 import puppeteer from 'puppeteer-core';
 
@@ -86,11 +97,29 @@ async function clickByText(page, cssSelector, text, { timeout = 10000, exact = f
 // baixo nível mas reagem sempre a el.click() nativo. Sobe até 4 níveis na
 // árvore à procura de um ancestral com role="tab"/button/a, que é
 // normalmente onde o listener real vive, não no <span> de texto interno.
+//
+// Filtro de visibilidade acrescentado (2026-09-08) — três estratégias de
+// clique diferentes (Puppeteer por substring, Puppeteer por texto exato,
+// este clique nativo sem filtro) falharam de forma IDÊNTICA, sempre com a
+// mesma aba "CC/CMD" a continuar ativa. Isso sugere que o problema pode não
+// ser COMO se clica, mas O QUÊ está a ser encontrado: se existir mais do
+// que um elemento com o texto exato "NIF" (ex. um clone responsivo
+// desktop/mobile escondido por CSS), `Array.find` apanha sempre o primeiro
+// do DOM, que pode não ser o visível. Filtrar por visibilidade real
+// (display/visibility computados + bounding box > 0) garante que só se
+// clica no que está genuinamente à vista.
 async function clickNativeByExactText(frame, cssSelector, text) {
   return frame.evaluate((sel, txt) => {
-    // eslint-disable-next-line no-undef -- corre no contexto da página (browser), não no Node
+    /* eslint-disable no-undef -- corre no contexto da página (browser), não no Node */
+    function visivel(el) {
+      const style = window.getComputedStyle(el);
+      if (style.display === 'none' || style.visibility === 'hidden') return false;
+      const rect = el.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0;
+    }
     const els = Array.from(document.querySelectorAll(sel));
-    const el = els.find(e => e.textContent && e.textContent.trim() === txt);
+    /* eslint-enable no-undef */
+    const el = els.find(e => e.textContent && e.textContent.trim() === txt && visivel(e));
     if (!el) return false;
     let target = el;
     for (let i = 0; i < 4 && target; i++) {
@@ -100,6 +129,41 @@ async function clickNativeByExactText(frame, cssSelector, text) {
     (target || el).click();
     return true;
   }, cssSelector, text).catch(() => false);
+}
+
+// Diagnóstico de último recurso, acrescentado depois de 3 estratégias de
+// clique diferentes falharem de forma idêntica (2026-09-08) — até agora só
+// havia screenshot, que mostra o resultado visual mas não a estrutura real
+// do DOM. Captura TODOS os elementos que batem com o texto exato dado, em
+// qualquer frame, visíveis ou não, com outerHTML truncado — para finalmente
+// inspecionar se existe mais do que um "NIF" na página (ex. clone
+// invisível) em vez de continuar a adivinhar pela imagem.
+async function dumpCandidatosTexto(page, cssSelector, text) {
+  const candidatos = [];
+  for (const frame of page.frames()) {
+    const dados = await frame.evaluate((sel, txt) => {
+      /* eslint-disable no-undef -- corre no contexto da página (browser), não no Node */
+      function visivel(el) {
+        const style = window.getComputedStyle(el);
+        if (style.display === 'none' || style.visibility === 'hidden') return false;
+        const rect = el.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      }
+      const els = Array.from(document.querySelectorAll(sel));
+      /* eslint-enable no-undef */
+      return els
+        .filter(e => e.textContent && e.textContent.trim() === txt)
+        .map(e => ({
+          tag: e.tagName,
+          role: e.getAttribute('role'),
+          className: typeof e.className === 'string' ? e.className.slice(0, 150) : '',
+          visivel: visivel(e),
+          outerHtml: e.outerHTML.slice(0, 400),
+        }));
+    }, cssSelector, text).catch(() => []);
+    for (const d of dados) candidatos.push({ frameUrl: frame.url(), ...d });
+  }
+  return candidatos;
 }
 
 // A aba "CC/CMD" fica ativa por omissão no formulário de login — clicar em
@@ -116,7 +180,10 @@ async function selecionarAbaNif(page, { tentativas = 6 } = {}) {
     const trocou = await findInFrames(page, 'input[placeholder="Número de Contribuinte"]', { timeout: 1500 });
     if (trocou) return;
   }
-  throw new Error('Não foi possível mudar para a aba "NIF" do formulário de login.');
+  const candidatos = await dumpCandidatosTexto(page, 'a, button, div, span, li, [role="tab"]', 'NIF');
+  const err = new Error('Não foi possível mudar para a aba "NIF" do formulário de login.');
+  err.debugCandidates = candidatos;
+  throw err;
 }
 
 // Captura um screenshot (base64) para anexar ao erro, quando algo falhar a

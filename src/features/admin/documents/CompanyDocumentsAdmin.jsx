@@ -132,6 +132,7 @@ export default function CompanyDocumentsAdmin() {
   const [obtendoAT, setObtendoAT] = useState(false);
   const [erroAT, setErroAT] = useState('');
   const [erroATScreenshot, setErroATScreenshot] = useState(null);
+  const [erroATCandidatos, setErroATCandidatos] = useState(null);
   const [pacoteOpen, setPacoteOpen] = useState(false);
   const [previewDoc, setPreviewDoc] = useState(null);
 
@@ -217,11 +218,13 @@ export default function CompanyDocumentsAdmin() {
     setObtendoAT(true);
     setErroAT('');
     setErroATScreenshot(null);
+    setErroATCandidatos(null);
     try {
       const res = await authFetch('/api/documentos-empresa/certidao-fiscal', { method: 'POST' });
       const body = await res.json();
       if (!res.ok) {
         setErroATScreenshot(body.debug_screenshot_url || null);
+        setErroATCandidatos(body.debug_candidates || null);
         throw new Error(body.error || `Erro ${res.status}`);
       }
       reload();
@@ -247,6 +250,14 @@ export default function CompanyDocumentsAdmin() {
             <a href={erroATScreenshot} target="_blank" rel="noreferrer" className="underline">
               Ver screenshot do momento da falha
             </a>
+          )}
+          {erroATCandidatos && erroATCandidatos.length > 0 && (
+            <details>
+              <summary className="cursor-pointer underline">Ver detalhes técnicos ({erroATCandidatos.length} candidato(s) encontrado(s))</summary>
+              <pre className="mt-1 max-h-60 overflow-auto whitespace-pre-wrap font-normal text-[10px] bg-white/60 rounded p-2">
+                {JSON.stringify(erroATCandidatos, null, 2)}
+              </pre>
+            </details>
           )}
         </div>
       )}

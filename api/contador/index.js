@@ -1364,6 +1364,7 @@ async function handleObterCertidaoFiscal(req, res) {
       error: `Falha ao obter certidão do Portal das Finanças: ${e.message}`,
       debug_screenshot_url: debugScreenshotUrl,
       debug_url: e.debugUrl || null,
+      debug_candidates: e.debugCandidates || null,
     });
   }
 
