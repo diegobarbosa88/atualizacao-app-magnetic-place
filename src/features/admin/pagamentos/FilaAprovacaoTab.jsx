@@ -321,7 +321,7 @@ export default function FilaAprovacaoTab() {
       <div className="flex items-center gap-1 bg-[var(--surface-dim)] p-1 rounded-2xl w-fit">
         {Object.entries(TAB_LABELS).map(([key, label]) => {
           const count = key === 'pendente' ? pendenteCount
-            : key === 'exportado' ? fornecedores.filter(p => p.status === 'exportado' || p.status === 'enviado').length + impostos.filter(i => i.status === 'exportado').length
+            : key === 'exportado' ? fornecedores.filter(p => p.status === 'exportado' || p.status === 'enviado').length + impostos.filter(i => i.status === 'exportado').length + faturasGmail.filter(f => f.status === 'PAGO').length
             : impostos.filter(i => i.status === 'rejeitado').length;
           return (
             <button
@@ -452,7 +452,7 @@ export default function FilaAprovacaoTab() {
                     )}
                     {item.iban
                       ? <span className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>{maskIban(item.iban)}</span>
-                      : item.fonte === 'fatura-gmail'
+                      : item.fonte === 'fatura-gmail' && isPendente
                         ? <button
                             onClick={() => { setIbanModal({ nif: item.nif || null, faturaId: item.id, nome: item.label }); setIbanInputVal(''); }}
                             className={`flex items-center gap-1 ${SCALE.text.meta} text-orange-400 hover:text-orange-600 underline underline-offset-2`}

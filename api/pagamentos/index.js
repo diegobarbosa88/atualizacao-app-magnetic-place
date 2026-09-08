@@ -682,10 +682,14 @@ export default async function handler(req, res) {
     // ─── FATURAS GMAIL: LISTAR ELEGÍVEIS PARA FILA ───
     if (action === 'listar-faturas-fila') {
       if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+      // Traz PENDENTE (fila para exportar) e PAGO (já exportadas — a aba
+      // "Exportados" do frontend filtra por este status) — antes só trazia
+      // PENDENTE, e por isso uma fatura desaparecia da Fila por completo
+      // assim que era paga via SEPA, sem nunca aparecer em "Exportados".
       const { data, error } = await db
         .from('faturas')
         .select('id, dados, status, url, importado_em, filename')
-        .eq('status', 'PENDENTE')
+        .in('status', ['PENDENTE', 'PAGO'])
         .eq('debito_automatico', false)
         .not('dados', 'is', null)
         .order('importado_em', { ascending: false });
@@ -699,7 +703,9 @@ export default async function handler(req, res) {
       // nome quando o match for inequívoco: se dois fornecedores diferentes
       // normalizarem para o mesmo nome com IBANs diferentes, nenhum é usado
       // (ambíguo) — nunca aplicar IBAN a um pagamento por adivinhação.
-      const semIban = elegiveis.filter(f => !f.dados?.iban);
+      // Só faz sentido para as ainda PENDENTES — uma fatura já PAGA não vai
+      // ser reexportada, não há razão para lhe tocar.
+      const semIban = elegiveis.filter(f => f.status === 'PENDENTE' && !f.dados?.iban);
       if (semIban.length > 0) {
         const { data: fns } = await db
           .from('fornecedores')
@@ -725,7 +731,7 @@ export default async function handler(req, res) {
         // ignorar, o problema deixou de passar despercebido.
         const paraGravar = [];
         elegiveis.forEach(f => {
-          if (f.dados?.iban) return;
+          if (f.status !== 'PENDENTE' || f.dados?.iban) return;
           const nif = f.dados?.nif_fornecedor;
           let ibanHerdado = null;
           if (nif && ibanByNif[nif]) ibanHerdado = ibanByNif[nif];
