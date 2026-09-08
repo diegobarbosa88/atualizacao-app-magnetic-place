@@ -1,7 +1,8 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { FileText, FileSignature, Users, ScanSearch, Plus, AlertTriangle, ChevronDown } from 'lucide-react';
+import { FileText, FileSignature, Users, ScanSearch, Plus, AlertTriangle, ChevronDown, Building2 } from 'lucide-react';
 import DocumentTemplatesAdmin from '../../components/admin/DocumentTemplatesAdmin';
+import CompanyDocumentsAdmin from './documents/CompanyDocumentsAdmin';
 import DocxPreviewModal from '../../components/common/DocxPreviewModal';
 import { getValidadeStatus, CATEGORIAS_RH_ACT, isUncategorized, SEM_CATEGORIA } from '../../constants/rhCategories';
 import SectionHeaderShell from '../../components/common/SectionHeaderShell';
@@ -125,9 +126,9 @@ export default function DocumentsAdmin() {
   };
 
   const expiringCount = a.unifiedDocs.filter(d => ['expirado', 'urgente'].includes(getValidadeStatus(d.data_validade))).length;
-  const activeTabId = activeSection === 'templates' ? 'templates' : a.docMode;
+  const activeTabId = activeSection === 'templates' ? 'templates' : activeSection === 'empresa' ? 'empresa' : a.docMode;
 
-  const headerAction = activeTabId === 'templates' ? (
+  const headerAction = activeTabId === 'empresa' ? null : activeTabId === 'templates' ? (
     <button
       onClick={() => templatesRef.current?.openCreate()}
       className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg shadow-sm transition-all ${SCALE.text.badge}`}
@@ -164,14 +165,18 @@ export default function DocumentsAdmin() {
           { id: 'worker',    label: 'Por colaborador', icon: Users },
           { id: 'category',  label: 'Por categoria',   icon: FileText },
           { id: 'templates', label: 'Templates',       icon: FileSignature },
+          { id: 'empresa',   label: 'Empresa',         icon: Building2 },
         ]}
         activeTab={activeTabId}
-        onTabChange={(id) => (id === 'templates' ? navigateTo('templates') : goMode(id))}
+        onTabChange={(id) => (id === 'templates' || id === 'empresa' ? navigateTo(id) : goMode(id))}
         rightSlot={headerAction}
       />
 
-      {/* Cartões de estatística — faixa lateral de cor semântica em vez de
-          brancos iguais; clicáveis, saltam para Por categoria já filtrado. */}
+      {/* Cartões de estatística — só fazem sentido para documentos por
+          trabalhador; a aba Empresa tem o seu próprio estado, sem estas 4
+          métricas (Templates já não as usava mas continua a mostrá-las,
+          comportamento existente, não tocado). */}
+      {activeSection !== 'empresa' && (
       <div className="flex flex-wrap gap-3 mb-5">
         <StatCard
           label="Pendentes" value={a.counts.pending || 0} tone="warn"
@@ -194,6 +199,7 @@ export default function DocumentsAdmin() {
           onClick={() => goStat({ stateFilter: 'all', validadeFilter: 'expiring' })}
         />
       </div>
+      )}
 
       {activeSection === 'templates' && (
         <Card>
@@ -273,6 +279,12 @@ export default function DocumentsAdmin() {
             />
           )}
         </>
+      )}
+
+      {activeSection === 'empresa' && (
+        <Card>
+          <CompanyDocumentsAdmin />
+        </Card>
       )}
 
       {a.showUploadModal && (

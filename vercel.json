@@ -61,6 +61,7 @@
     { "source": "/api/aprovar-resposta-contador", "destination": "/api/contador?tipo=aprovar" },
     { "source": "/api/apagar-email-contador", "destination": "/api/contador?tipo=apagar" },
     { "source": "/api/documentos-cliente/enviar", "destination": "/api/contador?tipo=documentos-cliente-enviar" },
+    { "source": "/api/documentos-empresa/enviar", "destination": "/api/contador?tipo=documentos-empresa-enviar" },
     { "source": "/api/toconline/bank-accounts", "destination": "/api/toconline/proxy?action=bank-accounts" },
     { "source": "/api/toconline/clientes", "destination": "/api/toconline/proxy?action=clientes" },
     { "source": "/api/toconline/fornecedores", "destination": "/api/toconline/proxy?action=fornecedores" },

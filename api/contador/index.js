@@ -13,6 +13,7 @@ import { calcularDiasUteisNoMes } from '../../src/lib/payroll/feriadosPortugal.j
 import { findBestCombo, SYNC_TOLERANCE } from '../../src/lib/payroll/mapaAutoFill.js';
 import { isSigned } from '../../src/constants/documentStatus.js';
 import { TIPOS_DOCUMENTOS_CLIENTE, TIPOS_DOCUMENTOS_CLIENTE_SEM_ASSINATURA } from '../../src/constants/clientDocuments.js';
+import { TIPOS_DOCUMENTOS_EMPRESA, TIPOS_DOCUMENTOS_EMPRESA_MENSAIS } from '../../src/constants/companyDocuments.js';
 
 // Router único para os 4 endpoints relacionados com o contabilista — consolidados
 // num só ficheiro para não exceder o limite de Serverless Functions do plano
@@ -1228,6 +1229,106 @@ async function handleDocumentosClienteEnviar(req, res) {
 }
 
 // ---------------------------------------------------------------------------
+// tipo=documentos-empresa-enviar — envia por email a um cliente escolhido
+// pelo admin o pacote de documentos da EMPRESA (certidões, RLC/RNT/TC2,
+// certificado SPA, normas do cliente) — mesma ideia de
+// handleDocumentosClienteEnviar, mas sem worker/worker_client_history: aqui
+// não há "cliente atual", o admin escolhe o destinatário no modal.
+// ---------------------------------------------------------------------------
+
+async function handleDocumentosEmpresaEnviar(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  const sessao = requireAuth(req, res, ['admin']);
+  if (!sessao) return;
+
+  const missingEnv = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'GMAIL_CLIENT_ID', 'GMAIL_CLIENT_SECRET', 'GMAIL_REFRESH_TOKEN']
+    .filter(k => !process.env[k]);
+  if (missingEnv.length) return res.status(500).json({ error: `Env vars em falta: ${missingEnv.join(', ')}` });
+
+  const { client_id } = req.body || {};
+  if (!client_id) return res.status(400).json({ error: 'client_id é obrigatório' });
+
+  const supabase = supabaseAdmin();
+
+  const { data: cliente, error: clienteErr } = await supabase.from('clients').select('id, name, email').eq('id', client_id).maybeSingle();
+  if (clienteErr) return res.status(500).json({ error: clienteErr.message });
+  if (!cliente) return res.status(404).json({ error: 'Cliente não encontrado.' });
+  if (!cliente.email) return res.status(400).json({ error: `O cliente "${cliente.name}" não tem email configurado.` });
+
+  const { data: todos, error: docsErr } = await supabase
+    .from('company_documents').select('tipo, periodo, url')
+    .in('tipo', TIPOS_DOCUMENTOS_EMPRESA)
+    .order('data_emissao', { ascending: false });
+  if (docsErr) return res.status(500).json({ error: docsErr.message });
+
+  const resolvidos = TIPOS_DOCUMENTOS_EMPRESA.map((tipo) => {
+    if (TIPOS_DOCUMENTOS_EMPRESA_MENSAIS.includes(tipo)) {
+      // Mais recente período com documento — todos() já vem ordenado por
+      // data_emissao desc, mas o período mais recente pode não ser o mais
+      // recentemente carregado, por isso ordena explicitamente por periodo.
+      const doTipo = (todos || []).filter((d) => d.tipo === tipo && d.periodo).sort((a, b) => b.periodo.localeCompare(a.periodo));
+      return { tipo, url: doTipo[0]?.url || null };
+    }
+    const doc = (todos || []).find((d) => d.tipo === tipo) || null; // mais recente primeiro (order acima)
+    return { tipo, url: doc?.url || null };
+  });
+
+  const prontos = resolvidos.filter((r) => r.url);
+  const emFalta = resolvidos.filter((r) => !r.url).map((r) => r.tipo);
+  if (!prontos.length) {
+    return res.status(400).json({ error: `Nenhum documento da empresa disponível ainda: ${emFalta.join(', ')}`, em_falta: emFalta });
+  }
+
+  let anexos;
+  try {
+    anexos = await Promise.all(prontos.map(async (r) => {
+      const resp = await fetch(r.url);
+      if (!resp.ok) throw new Error(`Falha ao descarregar "${r.tipo}" (${resp.status})`);
+      const buffer = Buffer.from(await resp.arrayBuffer());
+      return { filename: `${slugifyNomeDoc(r.tipo)}.pdf`, mimeType: 'application/pdf', content: buffer };
+    }));
+  } catch (e) {
+    return res.status(502).json({ error: `Erro ao descarregar documentos: ${e.message}` });
+  }
+
+  const listaAnexados = prontos.map((r) => `- ${r.tipo}`).join('\n');
+  const notaFalta = emFalta.length
+    ? `\n\nAinda em falta (serão enviados assim que disponíveis):\n${emFalta.map((t) => `- ${t}`).join('\n')}`
+    : '';
+
+  let sendResult;
+  try {
+    const gmail = gmailClient();
+    sendResult = await sendGmailNewMessage(gmail, {
+      to: cliente.email,
+      subject: `Documentos da Empresa — Magnetic Place`,
+      bodyText: `Boa tarde,\n\nSeguem em anexo os documentos da Magnetic Place:\n${listaAnexados}${notaFalta}\n\nCom os melhores cumprimentos,\nMagnetic Place`,
+      attachments: anexos,
+    });
+  } catch (e) {
+    return res.status(502).json({ error: `Falha ao enviar via Gmail: ${e.message}` });
+  }
+
+  const { error: logError } = await supabase.from('documentos_empresa_envios').insert({
+    client_id: cliente.id,
+    enviado_por: sessao.id || null,
+    gmail_message_id: sendResult.id,
+    tipos_incluidos: prontos.map((r) => r.tipo),
+  });
+  if (logError) {
+    return res.status(200).json({
+      sucesso: true, aviso: `Email enviado, mas falhou registar auditoria: ${logError.message}`,
+      gmail_message_id: sendResult.id, cliente_email: cliente.email,
+    });
+  }
+
+  return res.status(200).json({
+    sucesso: true, gmail_message_id: sendResult.id, cliente_email: cliente.email,
+    enviado_em: new Date().toISOString(), em_falta: emFalta,
+  });
+}
+
+// ---------------------------------------------------------------------------
 
 export default async function handler(req, res) {
   try {
@@ -1240,6 +1341,7 @@ export default async function handler(req, res) {
       case 'apagar':          return await handleApagar(req, res);
       case 'preparar_mensal': return await handlePararMensal(req, res);
       case 'documentos-cliente-enviar': return await handleDocumentosClienteEnviar(req, res);
+      case 'documentos-empresa-enviar': return await handleDocumentosEmpresaEnviar(req, res);
       default:                return res.status(400).json({ error: `tipo desconhecido: ${tipo || '(não definido)'}` });
     }
   } catch (e) {
