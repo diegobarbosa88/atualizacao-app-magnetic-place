@@ -58,6 +58,18 @@
 // <button>, e <input> não tem textContent (o rótulo vive no atributo
 // `value`). Seletor alargado para incluir input[type="submit"/"button"] +
 // clickByText também a comparar `value`, não só `textContent`.
+//
+// 6ª tentativa: a 5ª CONFIRMOU que "Confirmar" ficou resolvido — o robô
+// chegou à página final ("Pedido de Certificação de Dívida e Não Dívida",
+// screenshot real com NIF/Nome/Tipo já preenchidos, botão OBTER visível),
+// clicou "Obter" sem erro de elemento, mas o PDF nunca chegou
+// (page.waitForResponse deu timeout aos 20s). Causa mais provável: "Obter"
+// abre o PDF numa aba/janela NOVA (comum em páginas .gov mais antigas via
+// target="_blank"), que page.waitForResponse nunca alcança por só ouvir a
+// página onde foi chamado. Também simplificado o passo de chegar à página
+// de pedido: em vez de pesquisa interna + clique num link, navegação
+// direta ao URL confirmado pelo Diego ao navegar manualmente
+// (emissaoCertidaoForm.action).
 import chromiumModule from '@sparticuz/chromium';
 import puppeteer from 'puppeteer-core';
 
@@ -238,6 +250,54 @@ async function selecionarAbaNif(page, { tentativas = 6 } = {}) {
   throw err;
 }
 
+// Aguarda uma resposta PDF na página dada OU em qualquer aba/janela nova
+// criada pelo browser durante a espera — page.waitForResponse sozinho só
+// vê respostas da própria página, e uma página .gov mais antiga (como a
+// de emissão de certidões, ao contrário do login React) pode abrir o PDF
+// numa aba nova (target="_blank") em vez de servi-lo na mesma página.
+function aguardarRespostaPdfEmQualquerAba(browser, page, timeoutMs) {
+  return new Promise((resolve, reject) => {
+    let resolvido = false;
+    const paginasOuvidas = new Set();
+
+    const ehPdf = (r) => (r.headers()['content-type'] || '').includes('application/pdf');
+
+    const onResponse = (r) => {
+      if (resolvido || !ehPdf(r)) return;
+      resolvido = true;
+      limpar();
+      resolve(r);
+    };
+
+    const ouvirPagina = (p) => {
+      if (paginasOuvidas.has(p)) return;
+      paginasOuvidas.add(p);
+      p.on('response', onResponse);
+    };
+
+    const onTargetCreated = async (target) => {
+      if (target.type() !== 'page') return;
+      const novaPagina = await target.page().catch(() => null);
+      if (novaPagina) ouvirPagina(novaPagina);
+    };
+
+    const limpar = () => {
+      clearTimeout(temporizador);
+      for (const p of paginasOuvidas) p.off('response', onResponse);
+      browser.off('targetcreated', onTargetCreated);
+    };
+
+    ouvirPagina(page);
+    browser.on('targetcreated', onTargetCreated);
+
+    const temporizador = setTimeout(() => {
+      if (resolvido) return;
+      limpar();
+      reject(new Error(`Timed out after waiting ${timeoutMs}ms for a PDF response`));
+    }, timeoutMs);
+  });
+}
+
 // Captura um screenshot (base64) para anexar ao erro, quando algo falhar a
 // meio — sem isto, diagnosticar uma falha de RPA é adivinhar às cegas onde
 // o robô ficou preso.
@@ -295,24 +355,14 @@ export async function obterCertidaoFiscalAT() {
       clickByText(page, 'button', 'Autenticar'),
     ]);
 
-    // Pesquisa interna do portal, em vez de navegar pelo menu "Os Seus
-    // Serviços > Obter > Certidões" (depende de hovers/dropdowns) — mais
-    // resiliente.
-    const searchBox = await page.waitForSelector('input[placeholder*="Indique"]', { timeout: 15000 }).catch(() => null);
-    if (!searchBox) {
-      const debug = await screenshotDebug(page);
-      const err = new Error('Caixa de pesquisa do portal não apareceu depois do login — a autenticação pode ter falhado.');
-      err.debugScreenshot = debug;
-      err.debugUrl = page.url();
-      throw err;
-    }
-    await searchBox.click({ clickCount: 3 });
-    await searchBox.type('Pedir Certidão', { delay: 20 });
-    await page.keyboard.press('Enter');
-    await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 10000 }).catch(() => {});
-
-    await clickByText(page, 'a', 'Pedir Certidão', { timeout: 10000 });
-    await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 10000 }).catch(() => {});
+    // Navegação direta ao URL da página de pedido de certidão, em vez de
+    // pesquisa interna + clique num link — encontrado e confirmado pelo
+    // Diego ao navegar manualmente, 2026-09-08 ("vai para o lugar certo").
+    // Mais direto e menos frágil do que depender do texto/comportamento da
+    // caixa de pesquisa interna do portal (a verificação do dropdown logo a
+    // seguir continua a servir de rede de segurança se este URL um dia
+    // deixar de levar ao sítio certo).
+    await page.goto('https://www.portaldasfinancas.gov.pt/pt/emissaoCertidaoForm.action', { waitUntil: 'networkidle2' });
 
     // Dropdown "Certidão:" — select nativo (confirmado pela UI de opções em
     // radio buttons do Chrome Android, típica de <select> nativo).
@@ -353,11 +403,18 @@ export async function obterCertidaoFiscalAT() {
     // "OBTER" devolve o PDF diretamente na resposta HTTP — interceta-se a
     // resposta em vez de esperar um download, mais fiável em Chromium
     // headless (sem UI de download).
+    //
+    // Achado real, 2026-09-08: o clique em "Obter" funcionou (sem erro de
+    // "elemento não encontrado"), mas page.waitForResponse (scoped só à
+    // página original) nunca via o PDF — timeout aos 20s, confirmado por
+    // screenshot mostrando a página de pedido ainda visível, sem navegação
+    // nem erro algum. Causa mais provável: "Obter" abre o PDF numa NOVA
+    // aba/janela (comum em páginas .gov mais antigas, via target="_blank"),
+    // que page.waitForResponse nunca alcança por estar limitado à página
+    // onde foi chamado. aguardarRespostaPdfEmQualquerAba ouve respostas na
+    // página original E em qualquer aba nova criada pelo browser.
     const [pdfResponse] = await Promise.all([
-      page.waitForResponse(
-        r => (r.headers()['content-type'] || '').includes('application/pdf'),
-        { timeout: 20000 }
-      ),
+      aguardarRespostaPdfEmQualquerAba(browser, page, 20000),
       clickByText(page, SELETOR_BOTAO_CLASSICO, 'Obter'),
     ]);
     const pdfBuffer = Buffer.from(await pdfResponse.buffer());
