@@ -310,33 +310,31 @@ async function preencher2FASeNecessario(page, desdeMs) {
   ]);
 }
 
-// IDs reais dos dois campos "Período de Referência" (De/a) — confirmados
-// pelo Diego via inspeção do HTML real, 2026-09-09: PrimeFaces (JSF),
-// formato "aaaa-mm". Os ":" fazem parte do id do PrimeFaces e têm de ser
-// escapados em CSS. "Período de Entrega" não é tocado — fica com o valor
-// por omissão que a própria página já carrega.
+// ID real do campo "Período de Referência" — "De" — confirmado pelo Diego
+// via inspeção do HTML real, 2026-09-09: PrimeFaces (JSF), formato
+// "aaaa-mm". Os ":" fazem parte do id do PrimeFaces e têm de ser escapados
+// em CSS.
 const SELETOR_PERIODO_REF_DE = '#dadosPesquisaDeclaracoes\\:dataReferenciaInicioMonthPicker\\:calendar_input';
-const SELETOR_PERIODO_REF_A = '#dadosPesquisaDeclaracoes\\:dataReferenciaFimMonthPicker\\:calendar_input';
 
-// Preenche os 2 campos "Período de Referência" (De/a) com um INTERVALO
-// (não um único mês) — decisão do Diego, 2026-09-09: a declaração do mês
-// mais recente pode ainda não estar aceite na SS quando o RPA corre
-// (confirmado ao vivo: pesquisando só "2026-08" dava "sem resultados",
-// mas alargando para "De 2026-07 a 2026-09" já aparecia a declaração real
-// de julho). O robô escolhe depois a linha mais recente entre os
-// resultados (ver obterDeclaracoesRemuneracoesSSD), em vez de assumir que
-// o mês pedido tem sempre dados. Pelos IDs reais; fallback para a heurística
-// antiga (heading + inputs no mesmo contentor, preenchendo os dois com
-// `periodoDe`) só se os IDs tiverem mudado. Pequena espera entre os dois
-// campos — mudar "De" pode disparar um postback AJAX do PrimeFaces (comum
-// nestes formulários JSF) que precisa de tempo para assentar antes de
-// mexer no campo "a", evitando uma corrida entre o preenchimento e esse
-// callback.
-async function preencherPeriodoReferencia(page, periodoDe, periodoA) {
+// Preenche só o campo "De" do "Período de Referência", alargando o
+// intervalo de pesquisa (não um único mês) — decisão do Diego, 2026-09-09:
+// a declaração do mês mais recente pode ainda não estar aceite na SS
+// quando o RPA corre (confirmado ao vivo: pesquisando só "2026-08" dava
+// "sem resultados", mas alargando para "De 2026-07 a 2026-09" já aparecia
+// a declaração real de julho). O robô escolhe depois a linha mais recente
+// entre os resultados (ver obterDeclaracoesRemuneracoesSSD).
+//
+// O campo "a" NUNCA é tocado, de propósito — já vem pré-preenchido com o
+// mês atual ao carregar a página, que é exatamente o limite superior
+// pretendido. Uma tentativa anterior de o preencher programaticamente
+// (com o mesmo mecanismo do "De") deixava-o VAZIO em vez do valor esperado
+// (achado real, 2026-09-09, confirmado pelo screenshot de debug: campo
+// "a" a mostrar só o placeholder "aaaa-mm") — provavelmente um postback
+// AJAX do PrimeFaces, disparado ao editar "De", a interferir com a edição
+// do campo "a" logo a seguir. Mexer só num campo evita esse risco.
+async function preencherPeriodoReferencia(page, periodoDe) {
   const preencheuDe = await preencherCampoPorSeletor(page, SELETOR_PERIODO_REF_DE, periodoDe);
-  if (preencheuDe) await new Promise(r => setTimeout(r, 500));
-  const preencheuA = preencheuDe ? await preencherCampoPorSeletor(page, SELETOR_PERIODO_REF_A, periodoA) : false;
-  if (preencheuDe && preencheuA) return true;
+  if (preencheuDe) return true;
 
   const deadline = Date.now() + 10000;
   while (Date.now() < deadline) {
@@ -349,14 +347,12 @@ async function preencherPeriodoReferencia(page, periodoDe, periodoA) {
         let container = h.parentElement;
         for (let i = 0; i < 3 && container; i++) {
           const inputs = container.querySelectorAll('input');
-          if (inputs.length >= 2) {
+          if (inputs.length >= 1) {
             const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-            for (const input of [inputs[0], inputs[1]]) {
-              nativeSetter.call(input, valor);
-              input.dispatchEvent(new Event('input', { bubbles: true }));
-              input.dispatchEvent(new Event('change', { bubbles: true }));
-              input.dispatchEvent(new Event('blur', { bubbles: true }));
-            }
+            nativeSetter.call(inputs[0], valor);
+            inputs[0].dispatchEvent(new Event('input', { bubbles: true }));
+            inputs[0].dispatchEvent(new Event('change', { bubbles: true }));
+            inputs[0].dispatchEvent(new Event('blur', { bubbles: true }));
             return true;
           }
           container = container.parentElement;
@@ -595,7 +591,7 @@ export async function obterDeclaracoesRemuneracoesSSD({ anoMes } = {}) {
     // `dswid`, que parece ser um id de janela gerado por sessão).
     await page.goto('https://www.seg-social.pt/ptss/gr/pesquisa/consultarDR', { waitUntil: 'networkidle2' });
 
-    const preencheuPeriodo = await preencherPeriodoReferencia(page, periodoDe, periodoA);
+    const preencheuPeriodo = await preencherPeriodoReferencia(page, periodoDe);
     if (!preencheuPeriodo) {
       const debug = await screenshotDebug(page);
       const err = new Error('Campo "Período de Referência" não encontrado na página de pesquisa.');
