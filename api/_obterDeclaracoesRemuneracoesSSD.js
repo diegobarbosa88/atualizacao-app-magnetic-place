@@ -17,11 +17,76 @@
 // Por omissão obtém o MÊS ANTERIOR ao atual (decisão do Diego, 2026-09-09 —
 // as declarações de remunerações são entregues no mês seguinte ao dos
 // salários), com `anoMes` opcional para reprocessar um mês antigo.
+//
+// A subconta criada para este RPA (2026-09-09) ficou sob autenticação de
+// dois fatores obrigatória — login com NISS+senha continua a funcionar
+// (confirmado pelo Diego), mas pede sempre um código de verificação por
+// e-mail a seguir. Resolvido reaproveitando a integração Gmail já existente
+// no projeto (api/gmail/import-faturas.js, mesmas env vars
+// GMAIL_CLIENT_ID/GMAIL_CLIENT_SECRET/GMAIL_REFRESH_TOKEN) — confirmado
+// pelo Diego que essa caixa (diegobarbosa@magneticplace.pt) é a mesma que
+// recebe o código da SS. Formato do e-mail confirmado com um exemplo real
+// (2026-09-09): remetente noreply@seg-social.pt, assunto "Código de
+// verificação", corpo com "Código de verificação: NNNNNN" (6 dígitos).
 import chromiumModule from '@sparticuz/chromium';
 import puppeteer from 'puppeteer-core';
 import fsPromises from 'node:fs/promises';
+import { google } from 'googleapis';
 
 const chromium = chromiumModule.default ?? chromiumModule;
+
+function gmailClient() {
+  const auth = new google.auth.OAuth2(process.env.GMAIL_CLIENT_ID, process.env.GMAIL_CLIENT_SECRET);
+  auth.setCredentials({ refresh_token: process.env.GMAIL_REFRESH_TOKEN });
+  return google.gmail({ version: 'v1', auth });
+}
+
+// Extrai o texto simples de uma mensagem Gmail (percorre as partes
+// multipart à procura de text/plain; cai para text/html sem tags só se não
+// houver nenhuma parte de texto simples).
+function extrairTextoMensagem(payload) {
+  let textoPlano = null;
+  let textoHtml = null;
+  function percorrer(part) {
+    if (!part) return;
+    if (part.mimeType === 'text/plain' && part.body?.data && !textoPlano) {
+      textoPlano = Buffer.from(part.body.data, 'base64url').toString('utf8');
+    } else if (part.mimeType === 'text/html' && part.body?.data && !textoHtml) {
+      textoHtml = Buffer.from(part.body.data, 'base64url').toString('utf8').replace(/<[^>]+>/g, ' ');
+    }
+    (part.parts || []).forEach(percorrer);
+  }
+  percorrer(payload);
+  return textoPlano || textoHtml || '';
+}
+
+// Faz polling ao Gmail à procura do e-mail "Código de verificação" da SS
+// mais recente que `desdeMs` — evita reaproveitar por engano o código de
+// uma tentativa de login anterior (ex. se o RPA falhar e for corrido de
+// novo pouco depois).
+async function obterCodigoVerificacaoEmail(desdeMs, { timeout = 60000, intervalo = 3000 } = {}) {
+  const gmail = gmailClient();
+  const deadline = Date.now() + timeout;
+  while (Date.now() < deadline) {
+    const listRes = await gmail.users.messages.list({
+      userId: 'me',
+      q: 'from:noreply@seg-social.pt subject:"Código de verificação"',
+      maxResults: 5,
+    }).catch(() => null);
+    const ids = listRes?.data?.messages || [];
+    for (const { id } of ids) {
+      const full = await gmail.users.messages.get({ userId: 'me', id, format: 'full' }).catch(() => null);
+      if (!full) continue;
+      const internalDate = Number(full.data.internalDate || 0);
+      if (internalDate < desdeMs) continue;
+      const texto = extrairTextoMensagem(full.data.payload);
+      const m = texto.match(/Código de verificação:\s*(\d{6})/);
+      if (m) return m[1];
+    }
+    await new Promise(r => setTimeout(r, intervalo));
+  }
+  throw new Error('Código de verificação não chegou ao e-mail dentro do tempo limite.');
+}
 
 function mesAnterior() {
   const hoje = new Date();
@@ -92,6 +157,34 @@ async function preencherCampoPorLabel(page, labelText, value, { timeout = 10000 
     await new Promise(r => setTimeout(r, 300));
   }
   return false;
+}
+
+// Depois do clique em "Entrar", a SS pode pedir um código de verificação
+// por e-mail (autenticação de dois fatores) — detectado pela presença do
+// rótulo "Código de verificação de e-mail". Se não aparecer (2FA não pedido
+// nesta sessão/subconta), não faz nada. `desdeMs` é o instante ANTES do
+// clique em "Entrar" — usado para não reaproveitar por engano o código de
+// uma tentativa de login anterior.
+async function preencher2FASeNecessario(page, desdeMs) {
+  let apareceu2FA = false;
+  for (const frame of page.frames()) {
+    const achou = await frame.evaluate(() => {
+      // eslint-disable-next-line no-undef -- corre no contexto da página (browser), não no Node
+      return Array.from(document.querySelectorAll('label, div, span, p, strong, b'))
+        .some(el => el.textContent && el.textContent.trim() === 'Código de verificação de e-mail');
+    }).catch(() => false);
+    if (achou) { apareceu2FA = true; break; }
+  }
+  if (!apareceu2FA) return;
+
+  const codigo = await obterCodigoVerificacaoEmail(desdeMs);
+  const preencheu = await preencherCampoPorLabel(page, 'Código de verificação de e-mail', codigo);
+  if (!preencheu) throw new Error('Campo "Código de verificação de e-mail" (2FA) não encontrado para preencher.');
+
+  await Promise.all([
+    page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 15000 }).catch(() => {}),
+    clickByText(page, 'button, input[type="submit"]', 'Confirmar código de verificação'),
+  ]);
 }
 
 // Localiza o bloco "Período de Referência" (heading + os 2 inputs "De"/"a"
@@ -323,10 +416,13 @@ export async function obterDeclaracoesRemuneracoesSSD({ anoMes } = {}) {
       throw err;
     }
 
+    const antesLoginMs = Date.now();
     await Promise.all([
       page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 20000 }).catch(() => {}),
       clickByText(page, 'button, input[type="submit"]', 'Entrar'),
     ]);
+
+    await preencher2FASeNecessario(page, antesLoginMs);
 
     // Página de pesquisa de declarações de remunerações — URL confirmada
     // pelo Diego ao navegar manualmente, 2026-09-09 (sem o parâmetro
