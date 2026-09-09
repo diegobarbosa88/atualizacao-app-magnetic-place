@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 import webpush from 'web-push';
 import { requireAuth } from '../_authUtils.js';
@@ -1084,6 +1085,24 @@ async function handleLembreteValidacao(req, res) {
 const PONTO_QR_TTL_SEGUNDOS = Number(process.env.PONTO_QR_TOKEN_TTL_SECONDS) || 20;
 const PONTO_QR_GEO_ENABLED = process.env.PONTO_QR_GEO_ENABLED === 'true';
 
+// O segredo vive numa tabela sem policy nenhuma para `anon`
+// (clients_qr_secrets, ver supabase/migrations/20260909b_ponto_qr_secret_isolado.sql)
+// — nunca em `clients`, que é lida por `select('*')` no fetch geral do
+// AppContext e por isso chegaria ao browser de qualquer pessoa autenticada,
+// incluindo trabalhadores (que poderiam forjar QR tokens sem nunca apontar
+// a câmara ao kiosk físico). `clients.ponto_qr_ativo` é só um booleano
+// público, sem valor secreto, usado pelo frontend para saber se o kiosk
+// está ligado e se os trabalhadores desse cliente devem ver "Picar Ponto".
+async function buscarSegredoKiosk(supabase, clientId) {
+  const { data, error } = await supabase
+    .from('clients_qr_secrets')
+    .select('secret')
+    .eq('client_id', clientId)
+    .maybeSingle();
+  if (error) return { error };
+  return { secret: data?.secret || null };
+}
+
 async function handlePontoToken(req, res) {
   const clientId = req.query?.clientId;
   if (!clientId) return res.status(400).json({ error: 'clientId em falta.' });
@@ -1091,18 +1110,21 @@ async function handlePontoToken(req, res) {
   const supabase = getSupabase();
   const { data: client, error } = await supabase
     .from('clients')
-    .select('id, name, qr_secret_key')
+    .select('id, name, ponto_qr_ativo')
     .eq('id', clientId)
     .maybeSingle();
-
   if (error) return res.status(500).json({ error: error.message });
-  if (!client || !client.qr_secret_key) {
+  if (!client || !client.ponto_qr_ativo) {
     return res.status(404).json({ error: 'Kiosk não configurado para este cliente.' });
   }
 
+  const { secret, error: secretErr } = await buscarSegredoKiosk(supabase, clientId);
+  if (secretErr) return res.status(500).json({ error: secretErr.message });
+  if (!secret) return res.status(404).json({ error: 'Kiosk não configurado para este cliente.' });
+
   const iat = Date.now();
   const payload = { clientId: client.id, iat, exp: iat + PONTO_QR_TTL_SEGUNDOS * 1000 };
-  const token = assinarTokenQr(payload, client.qr_secret_key);
+  const token = assinarTokenQr(payload, secret);
 
   return res.status(200).json({ token, ttlSeconds: PONTO_QR_TTL_SEGUNDOS, clientName: client.name });
 }
@@ -1122,15 +1144,19 @@ async function handlePontoRegistar(req, res) {
 
   const { data: client, error: clientErr } = await supabase
     .from('clients')
-    .select('id, name, timezone, lat, lng, geo_radius_m, qr_secret_key')
+    .select('id, name, timezone, lat, lng, geo_radius_m, ponto_qr_ativo')
     .eq('id', clientId)
     .maybeSingle();
   if (clientErr) return res.status(500).json({ error: clientErr.message });
-  if (!client || !client.qr_secret_key) {
+  if (!client || !client.ponto_qr_ativo) {
     return res.status(404).json({ error: 'Kiosk não configurado para este cliente.' });
   }
 
-  const payload = verificarTokenQr(token, client.qr_secret_key);
+  const { secret, error: secretErr } = await buscarSegredoKiosk(supabase, clientId);
+  if (secretErr) return res.status(500).json({ error: secretErr.message });
+  if (!secret) return res.status(404).json({ error: 'Kiosk não configurado para este cliente.' });
+
+  const payload = verificarTokenQr(token, secret);
   if (!payload) {
     return res.status(400).json({ error: 'QR expirado — aponta a câmara outra vez.' });
   }
@@ -1211,6 +1237,55 @@ async function handlePontoRegistar(req, res) {
   return res.status(200).json({ ok: true, tipo, hora: horaHHMM, data: dateStr, logId: patch.id });
 }
 
+// Ativar/desativar o kiosk é "atribuir a opção de registo de ponto a este
+// cliente" — os trabalhadores afetos a um cliente só veem "Picar Ponto" se
+// ponto_qr_ativo for true (ver getEffectiveClientId no frontend). Gera um
+// segredo novo sempre que ativa — reativar um cliente já ativo também
+// serve para regenerar/revogar QRs em exibição.
+async function handlePontoKioskAtivar(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (!requireAuth(req, res, ['admin'])) return;
+
+  const { clientId } = req.body || {};
+  if (!clientId) return res.status(400).json({ error: 'clientId em falta.' });
+
+  const supabase = getSupabase();
+  const novoSegredo = crypto.randomBytes(32).toString('hex');
+
+  const { error: secretErr } = await supabase
+    .from('clients_qr_secrets')
+    .upsert({ client_id: clientId, secret: novoSegredo, updated_at: new Date().toISOString() });
+  if (secretErr) return res.status(500).json({ error: secretErr.message });
+
+  const { error: clientErr } = await supabase
+    .from('clients')
+    .update({ ponto_qr_ativo: true })
+    .eq('id', clientId);
+  if (clientErr) return res.status(500).json({ error: clientErr.message });
+
+  return res.status(200).json({ ok: true, ponto_qr_ativo: true });
+}
+
+async function handlePontoKioskDesativar(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (!requireAuth(req, res, ['admin'])) return;
+
+  const { clientId } = req.body || {};
+  if (!clientId) return res.status(400).json({ error: 'clientId em falta.' });
+
+  const supabase = getSupabase();
+  const { error: clientErr } = await supabase
+    .from('clients')
+    .update({ ponto_qr_ativo: false })
+    .eq('id', clientId);
+  if (clientErr) return res.status(500).json({ error: clientErr.message });
+
+  const { error: secretErr } = await supabase.from('clients_qr_secrets').delete().eq('client_id', clientId);
+  if (secretErr) return res.status(500).json({ error: secretErr.message });
+
+  return res.status(200).json({ ok: true, ponto_qr_ativo: false });
+}
+
 const ACTIONS = {
   'list': handleList,
   'create': handleCreate,
@@ -1234,6 +1309,8 @@ const ACTIONS = {
   'lembrete-validacao': handleLembreteValidacao,
   'ponto-token': handlePontoToken,
   'ponto-registar': handlePontoRegistar,
+  'ponto-kiosk-ativar': handlePontoKioskAtivar,
+  'ponto-kiosk-desativar': handlePontoKioskDesativar,
 };
 
 export default async function handler(req, res) {

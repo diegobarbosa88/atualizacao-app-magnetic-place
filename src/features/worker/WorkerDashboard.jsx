@@ -144,6 +144,11 @@ const WorkerDashboardContent = ({ onLogout, onLogin, autoStartTour }) => {
   useEffect(() => { loadEpiData(); }, [loadEpiData]);
 
   const [picarPontoModalOpen, setPicarPontoModalOpen] = useState(false);
+  // "Picar Ponto" é atribuído por cliente (clients.ponto_qr_ativo, via painel
+  // admin "Ponto QR"), não por trabalhador — visível quando o cliente
+  // efetivo de hoje do trabalhador tem o kiosk atribuído.
+  const clienteEfetivoHojeId = getEffectiveClientId(toISODateLocal(new Date()));
+  const pontoQrAtivo = !!clients.find((c) => String(c.id) === String(clienteEfetivoHojeId))?.ponto_qr_ativo;
 
   const handleEpiSubmit = async ({ typeId, typeLabel, qty, size, motivo, notes }) => {
     await createEpiRequest(supabase, { worker: currentUser, typeId, typeLabel, qty, size, motivo, notes });
@@ -351,7 +356,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin, autoStartTour }) => {
         onOpenEpiModal={() => setEpiModalOpen(true)}
         epiEnabled={!!currentUser?.epi_enabled}
         onOpenPicarPontoModal={() => setPicarPontoModalOpen(true)}
-        pontoQrEnabled={!!currentUser?.ponto_qr_enabled}
+        pontoQrEnabled={pontoQrAtivo}
         isCurrentMonth={isCurrentMonth}
         absencePendingCount={(absenceRequests || []).filter(r => r.worker_id === currentUser?.id && (r.status === 'pending' || r.status === 'seen')).length}
         documentsPendingCount={pendingSignaturesCount}
@@ -562,7 +567,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin, autoStartTour }) => {
             />
           )}
 
-          {currentUser?.ponto_qr_enabled && (
+          {pontoQrAtivo && (
             <PicarPontoModal
               isOpen={picarPontoModalOpen}
               onClose={() => setPicarPontoModalOpen(false)}

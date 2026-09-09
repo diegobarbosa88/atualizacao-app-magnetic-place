@@ -3,15 +3,18 @@ import { QrCode, RefreshCw, ExternalLink, MapPin } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
 import SectionHeaderShell from '../../../components/common/SectionHeaderShell';
 import { toISODateLocal } from '../../../utils/dateUtils';
+import { authFetch } from '../../../utils/authFetch';
 
-// Painel mínimo v1: activar/regenerar o secreto do kiosk por cliente, e ver
-// as picagens de hoje registadas via QR (logs com source='qr'). O registo em
-// si vive só em `logs` — este ecrã é só leitura + a acção de gerir o
-// secreto, sem endpoint dedicado (RLS de clients já desligada, logs já
-// permissiva, mesmo padrão de EpiAdmin.jsx).
+// Painel mínimo v1: atribuir/revogar o registo de ponto por QR a um cliente
+// (ativa o kiosk para esse cliente — todos os trabalhadores afetos a ele
+// passam a ver "Picar Ponto"), e ver as picagens de hoje (logs com
+// source='qr'). O segredo de assinatura do QR NUNCA chega a este
+// componente nem a `clients` — vive numa tabela isolada só acessível pelos
+// endpoints admin (ver api/formacao/index.js, ponto-kiosk-ativar/
+// -desativar) — este ecrã só lê/escreve o booleano público `ponto_qr_ativo`.
 export default function PontoAdmin() {
-  const { clients, logs, workers, saveToDb } = useApp();
-  const [regenerando, setRegenerando] = useState(null);
+  const { clients, logs, workers } = useApp();
+  const [processando, setProcessando] = useState(null);
 
   const hoje = toISODateLocal(new Date());
   const logsHoje = (logs || []).filter((l) => l.date === hoje && l.source === 'qr');
@@ -19,13 +22,17 @@ export default function PontoAdmin() {
   const workerName = (id) => workers.find((w) => String(w.id) === String(id))?.name || id;
   const kioskUrl = (clientId) => `${window.location.origin}/kiosk/${clientId}`;
 
-  const handleRegenerar = async (client) => {
-    setRegenerando(client.id);
+  const handleToggleKiosk = async (client) => {
+    setProcessando(client.id);
+    const endpoint = client.ponto_qr_ativo ? '/api/ponto/kiosk-desativar' : '/api/ponto/kiosk-ativar';
     try {
-      const novoSecret = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '');
-      await saveToDb('clients', client.id, { ...client, qr_secret_key: novoSecret });
+      await authFetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientId: client.id }),
+      });
     } finally {
-      setRegenerando(null);
+      setProcessando(null);
     }
   };
 
@@ -47,11 +54,11 @@ export default function PontoAdmin() {
               <div>
                 <p className="text-sm font-bold text-slate-700">{c.name}</p>
                 <p className="text-xs text-slate-400">
-                  {c.qr_secret_key ? 'Kiosk ativo' : 'Kiosk desativado — sem secreto configurado'}
+                  {c.ponto_qr_ativo ? 'Ponto por QR atribuído — trabalhadores deste cliente veem "Picar Ponto"' : 'Ponto por QR não atribuído a este cliente'}
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                {c.qr_secret_key && (
+                {c.ponto_qr_ativo && (
                   <a
                     href={kioskUrl(c.id)}
                     target="_blank"
@@ -62,12 +69,12 @@ export default function PontoAdmin() {
                   </a>
                 )}
                 <button
-                  onClick={() => handleRegenerar(c)}
-                  disabled={regenerando === c.id}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--navy-solid)] text-white text-xs font-bold disabled:opacity-50"
+                  onClick={() => handleToggleKiosk(c)}
+                  disabled={processando === c.id}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold disabled:opacity-50 ${c.ponto_qr_ativo ? 'bg-rose-50 text-rose-600' : 'bg-[var(--navy-solid)] text-white'}`}
                 >
-                  <RefreshCw size={13} className={regenerando === c.id ? 'animate-spin' : ''} />
-                  {c.qr_secret_key ? 'Regenerar chave' : 'Ativar kiosk'}
+                  <RefreshCw size={13} className={processando === c.id ? 'animate-spin' : ''} />
+                  {c.ponto_qr_ativo ? 'Desativar' : 'Atribuir a este cliente'}
                 </button>
               </div>
             </div>

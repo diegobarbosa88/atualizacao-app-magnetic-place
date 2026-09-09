@@ -91,6 +91,8 @@
     { "source": "/api/push/send", "destination": "/api/formacao?action=push-send" },
     { "source": "/api/ponto/token", "destination": "/api/formacao?action=ponto-token" },
     { "source": "/api/ponto/registar", "destination": "/api/formacao?action=ponto-registar" },
+    { "source": "/api/ponto/kiosk-ativar", "destination": "/api/formacao?action=ponto-kiosk-ativar" },
+    { "source": "/api/ponto/kiosk-desativar", "destination": "/api/formacao?action=ponto-kiosk-desativar" },
     { "source": "/api/whatsapp", "destination": "/api/salarios/exportar-sepa" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
