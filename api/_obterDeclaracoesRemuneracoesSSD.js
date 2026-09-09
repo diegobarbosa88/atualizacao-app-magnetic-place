@@ -14,9 +14,12 @@
 // API: se a SS mudar o layout/fluxo, isto pode parar de funcionar sem aviso.
 // Login via CAS (`seg-social.pt/sso/login`), utilizador = NISS + senha.
 //
-// Por omissão obtém o MÊS ANTERIOR ao atual (decisão do Diego, 2026-09-09 —
-// as declarações de remunerações são entregues no mês seguinte ao dos
-// salários), com `anoMes` opcional para reprocessar um mês antigo.
+// Por omissão pesquisa um intervalo alargado (últimos 3 meses até o mês
+// atual) e escolhe a declaração MAIS RECENTE encontrada — não um mês fixo
+// (decisão do Diego, 2026-09-09, depois de confirmar ao vivo que o mês
+// mais recente pode ainda não estar aceite na SS quando o RPA corre).
+// `anoMes` opcional pesquisa e exige só esse mês exato, para reprocessar
+// um mês antigo específico.
 //
 // A subconta criada para este RPA (2026-09-09) ficou sob autenticação de
 // dois fatores obrigatória — login com NISS+senha continua a funcionar
@@ -88,9 +91,14 @@ async function obterCodigoVerificacaoEmail(desdeMs, { timeout = 60000, intervalo
   throw new Error('Código de verificação não chegou ao e-mail dentro do tempo limite.');
 }
 
-function mesAnterior() {
+function anoMesAtual() {
   const hoje = new Date();
-  const d = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);
+  return `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function subtrairMeses(anoMesBase, meses) {
+  const [ano, mes] = anoMesBase.split('-').map(Number);
+  const d = new Date(ano, mes - 1 - meses, 1);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
@@ -306,13 +314,19 @@ async function preencher2FASeNecessario(page, desdeMs) {
 const SELETOR_PERIODO_REF_DE = '#dadosPesquisaDeclaracoes\\:dataReferenciaInicioMonthPicker\\:calendar_input';
 const SELETOR_PERIODO_REF_A = '#dadosPesquisaDeclaracoes\\:dataReferenciaFimMonthPicker\\:calendar_input';
 
-// Preenche os 2 campos "Período de Referência" (De/a) com o mesmo anoMes
-// (consulta um único mês, não um intervalo), pelos IDs reais. Fallback para
-// a heurística antiga (heading + inputs no mesmo contentor) só se os IDs
-// tiverem mudado.
-async function preencherPeriodoReferencia(page, anoMes) {
-  const preencheuDe = await preencherCampoPorSeletor(page, SELETOR_PERIODO_REF_DE, anoMes);
-  const preencheuA = preencheuDe ? await preencherCampoPorSeletor(page, SELETOR_PERIODO_REF_A, anoMes) : false;
+// Preenche os 2 campos "Período de Referência" (De/a) com um INTERVALO
+// (não um único mês) — decisão do Diego, 2026-09-09: a declaração do mês
+// mais recente pode ainda não estar aceite na SS quando o RPA corre
+// (confirmado ao vivo: pesquisando só "2026-08" dava "sem resultados",
+// mas alargando para "De 2026-07 a 2026-09" já aparecia a declaração real
+// de julho). O robô escolhe depois a linha mais recente entre os
+// resultados (ver obterLinhaDeclaracaoEscolhida), em vez de assumir que o
+// mês pedido tem sempre dados. Pelos IDs reais; fallback para a heurística
+// antiga (heading + inputs no mesmo contentor, preenchendo os dois com
+// `periodoDe`) só se os IDs tiverem mudado.
+async function preencherPeriodoReferencia(page, periodoDe, periodoA) {
+  const preencheuDe = await preencherCampoPorSeletor(page, SELETOR_PERIODO_REF_DE, periodoDe);
+  const preencheuA = preencheuDe ? await preencherCampoPorSeletor(page, SELETOR_PERIODO_REF_A, periodoA) : false;
   if (preencheuDe && preencheuA) return true;
 
   const deadline = Date.now() + 10000;
@@ -340,7 +354,7 @@ async function preencherPeriodoReferencia(page, anoMes) {
         }
         return false;
         /* eslint-enable no-undef */
-      }, 'Período de Referência', anoMes).catch(() => false);
+      }, 'Período de Referência', periodoDe).catch(() => false);
       if (ok) return true;
     }
     await new Promise(r => setTimeout(r, 300));
@@ -348,35 +362,36 @@ async function preencherPeriodoReferencia(page, anoMes) {
   return false;
 }
 
-// Conta as linhas de resultados da tabela de "Declarações de remunerações"
-// — localizada por ter uma célula de cabeçalho a começar por "Ano/Mês",
-// mais específico do que o heading da secção (que colide com o título da
-// própria página).
-async function contarLinhasResultado(page, { timeout = 15000 } = {}) {
+// Devolve as linhas de resultado REAIS da tabela "Declarações de
+// remunerações" — localizada por ter uma célula de cabeçalho a começar por
+// "Ano/Mês" — com o respetivo Ano/Mês (2ª coluna). Sem resultados, o
+// PrimeFaces normalmente devolve uma única linha com uma mensagem tipo
+// "Não existem resultados..." em vez de dados reais; só entram linhas que
+// tenham de facto o link "Ações" dentro, para não confundir isso com uma
+// declaração real (achado real, 2026-09-09). `indice` é a posição DENTRO
+// deste subconjunto já filtrado (0-based) — o mesmo índice que
+// clicarAcaoEExtrato espera, não a posição na tabela completa.
+async function obterLinhasValidas(page, { timeout = 15000 } = {}) {
   const deadline = Date.now() + timeout;
   while (Date.now() < deadline) {
     for (const frame of page.frames()) {
-      const n = await frame.evaluate(() => {
+      const linhas = await frame.evaluate(() => {
         /* eslint-disable no-undef -- corre no contexto da página (browser), não no Node */
         const ths = Array.from(document.querySelectorAll('th, td'));
         const anoMesTh = ths.find(el => el.textContent && el.textContent.trim().startsWith('Ano/Mês'));
         const table = anoMesTh?.closest('table');
         if (!table) return null;
-        // Sem resultados, o PrimeFaces normalmente devolve uma única linha
-        // com uma mensagem tipo "Não existem resultados..." em vez de
-        // dados reais — só conta linhas que tenham de facto o link "Ações"
-        // dentro, para não confundir isso com uma declaração real (achado
-        // real, 2026-09-09).
-        const linhas = Array.from(table.querySelectorAll('tbody tr'));
-        return linhas.filter(row => Array.from(row.querySelectorAll('a, button'))
-          .some(el => el.textContent && el.textContent.trim() === 'Ações')).length;
+        return Array.from(table.querySelectorAll('tbody tr'))
+          .filter(row => Array.from(row.querySelectorAll('a, button'))
+            .some(el => el.textContent && el.textContent.trim() === 'Ações'))
+          .map((row, indice) => ({ indice, anoMes: row.querySelectorAll('td')[1]?.textContent?.trim() || null }));
         /* eslint-enable no-undef */
       }).catch(() => null);
-      if (n != null) return { frame, count: n };
+      if (linhas != null) return { frame, linhas };
     }
     await new Promise(r => setTimeout(r, 300));
   }
-  return { frame: null, count: 0 };
+  return { frame: null, linhas: [] };
 }
 
 // Clica o link "Ações" da linha `indiceLinha` (0-based) da tabela de
@@ -389,7 +404,7 @@ async function clicarAcaoEExtrato(frame, indiceLinha, textoItem) {
     const anoMesTh = ths.find(el => el.textContent && el.textContent.trim().startsWith('Ano/Mês'));
     const table = anoMesTh?.closest('table');
     if (!table) return null;
-    // Mesma filtragem de contarLinhasResultado — só linhas com o link
+    // Mesma filtragem de obterLinhasValidas — só linhas com o link
     // "Ações" de facto contam como resultado real, não a linha de
     // "Não existem resultados..." que o PrimeFaces devolve sem dados.
     const rows = Array.from(table.querySelectorAll('tbody tr')).filter(row =>
@@ -516,7 +531,13 @@ export async function obterDeclaracoesRemuneracoesSSD({ anoMes } = {}) {
   if (!utilizador || !senha) {
     throw new Error('SS_DIRETA_UTILIZADOR/SS_DIRETA_SENHA não configurados nas variáveis de ambiente.');
   }
-  const periodo = anoMes || mesAnterior();
+  // "De": intervalo alargado (3 meses atrás) quando anoMes não é pedido
+  // explicitamente — a declaração mais recente pode ainda não estar aceite
+  // na SS no momento em que o RPA corre (ver preencherPeriodoReferencia
+  // para o achado real que motivou isto). Quando anoMes É pedido
+  // (reprocessar um mês específico), pesquisa só esse mês exato.
+  const periodoDe = anoMes || subtrairMeses(anoMesAtual(), 3);
+  const periodoA = anoMes || anoMesAtual();
 
   let browser;
   let page;
@@ -565,7 +586,7 @@ export async function obterDeclaracoesRemuneracoesSSD({ anoMes } = {}) {
     // `dswid`, que parece ser um id de janela gerado por sessão).
     await page.goto('https://www.seg-social.pt/ptss/gr/pesquisa/consultarDR', { waitUntil: 'networkidle2' });
 
-    const preencheuPeriodo = await preencherPeriodoReferencia(page, periodo);
+    const preencheuPeriodo = await preencherPeriodoReferencia(page, periodoDe, periodoA);
     if (!preencheuPeriodo) {
       const debug = await screenshotDebug(page);
       const err = new Error('Campo "Período de Referência" não encontrado na página de pesquisa.');
@@ -580,21 +601,34 @@ export async function obterDeclaracoesRemuneracoesSSD({ anoMes } = {}) {
     ]);
     await new Promise(r => setTimeout(r, 1000));
 
-    const { frame, count } = await contarLinhasResultado(page);
-    if (!frame || count === 0) {
-      return { periodo, disponivel: false };
+    const { frame, linhas } = await obterLinhasValidas(page);
+    if (!frame || linhas.length === 0) {
+      return { periodo: anoMes || periodoA, disponivel: false };
+    }
+
+    // anoMes pedido explicitamente (reprocessar um mês específico): exige
+    // a declaração exata desse mês. Caso contrário (uso normal, intervalo
+    // alargado): escolhe a mais recente entre as encontradas — "aaaa-mm"
+    // ordena lexicograficamente igual a numericamente, por isso comparar
+    // como string já dá a ordem cronológica certa.
+    const linhaEscolhida = anoMes
+      ? linhas.find(l => l.anoMes === anoMes) || null
+      : linhas.reduce((maisRecente, l) => (!maisRecente || l.anoMes > maisRecente.anoMes ? l : maisRecente), null);
+    if (!linhaEscolhida) {
+      return { periodo: anoMes || periodoA, disponivel: false };
     }
 
     // Assume um único estabelecimento (confirmado pelo Diego — Magnetic
-    // Place tem só a linha "Estab. 1") — usa sempre a primeira linha.
+    // Place tem só a linha "Estab. 1") — usa sempre a mesma linha
+    // escolhida para os dois documentos (mesma declaração).
     const rntBuffer = await capturarDownload(
       browser,
-      () => clicarAcaoEExtrato(frame, 0, 'Extrato Declaração'),
+      () => clicarAcaoEExtrato(frame, linhaEscolhida.indice, 'Extrato Declaração'),
       20000,
     );
     const tc2Buffer = await capturarDownload(
       browser,
-      () => clicarAcaoEExtrato(frame, 0, 'Extrato Resumo'),
+      () => clicarAcaoEExtrato(frame, linhaEscolhida.indice, 'Extrato Resumo'),
       20000,
     );
 
@@ -602,7 +636,7 @@ export async function obterDeclaracoesRemuneracoesSSD({ anoMes } = {}) {
       throw new Error('A Segurança Social devolveu um PDF vazio (RNT ou TC2).');
     }
 
-    return { periodo, disponivel: true, rntBuffer, tc2Buffer };
+    return { periodo: linhaEscolhida.anoMes, disponivel: true, rntBuffer, tc2Buffer };
   } catch (err) {
     if (page && !err.debugScreenshot) {
       err.debugScreenshot = await screenshotDebug(page);
