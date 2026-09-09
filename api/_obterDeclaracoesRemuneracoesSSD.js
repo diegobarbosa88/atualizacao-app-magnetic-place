@@ -217,6 +217,11 @@ async function preencherCampoPorSeletor(page, seletor, value, { timeout = 10000 
         await el.click({ clickCount: 3 }).catch(() => {});
         await el.type(String(value), { delay: 20 });
         await el.dispose().catch(() => {});
+        // Fecha um eventual popup de datepicker (jQuery UI, campos
+        // "hasDatepicker") que a digitação possa ter aberto — sem isto,
+        // o popup podia intercetar o clique seguinte em "Pesquisar".
+        // Sem efeito em campos sem datepicker (Utilizador/Palavra-passe).
+        await page.keyboard.press('Escape').catch(() => {});
         return true;
       }
     }
@@ -293,16 +298,24 @@ async function preencher2FASeNecessario(page, desdeMs) {
   ]);
 }
 
-// Localiza o bloco "Período de Referência" (heading + os 2 inputs "De"/"a"
-// dentro do mesmo contentor, subindo até 3 níveis) e preenche os dois com o
-// mesmo anoMes (consulta um único mês, não um intervalo). Usa o "native
-// setter" de HTMLInputElement.value em vez de atribuição direta — necessário
-// para o evento `input` disparado a seguir ser reconhecido por um campo
-// controlado por JS (React/similar intercepta o setter normal), mesma
-// técnica que evita o problema já documentado em
-// api/_obterCertidaoFiscalAT.js (cliques sintéticos ignorados por Radix UI).
-async function preencherPeriodoReferencia(page, anoMes, { timeout = 10000 } = {}) {
-  const deadline = Date.now() + timeout;
+// IDs reais dos dois campos "Período de Referência" (De/a) — confirmados
+// pelo Diego via inspeção do HTML real, 2026-09-09: PrimeFaces (JSF),
+// formato "aaaa-mm". Os ":" fazem parte do id do PrimeFaces e têm de ser
+// escapados em CSS. "Período de Entrega" não é tocado — fica com o valor
+// por omissão que a própria página já carrega.
+const SELETOR_PERIODO_REF_DE = '#dadosPesquisaDeclaracoes\\:dataReferenciaInicioMonthPicker\\:calendar_input';
+const SELETOR_PERIODO_REF_A = '#dadosPesquisaDeclaracoes\\:dataReferenciaFimMonthPicker\\:calendar_input';
+
+// Preenche os 2 campos "Período de Referência" (De/a) com o mesmo anoMes
+// (consulta um único mês, não um intervalo), pelos IDs reais. Fallback para
+// a heurística antiga (heading + inputs no mesmo contentor) só se os IDs
+// tiverem mudado.
+async function preencherPeriodoReferencia(page, anoMes) {
+  const preencheuDe = await preencherCampoPorSeletor(page, SELETOR_PERIODO_REF_DE, anoMes);
+  const preencheuA = preencheuDe ? await preencherCampoPorSeletor(page, SELETOR_PERIODO_REF_A, anoMes) : false;
+  if (preencheuDe && preencheuA) return true;
+
+  const deadline = Date.now() + 10000;
   while (Date.now() < deadline) {
     for (const frame of page.frames()) {
       const ok = await frame.evaluate((headingTxt, valor) => {
