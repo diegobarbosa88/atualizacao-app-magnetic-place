@@ -132,7 +132,6 @@ export default function CompanyDocumentsAdmin() {
   const [erroSS, setErroSS] = useState('');
   const [obtendoRLC, setObtendoRLC] = useState(false);
   const [erroRLC, setErroRLC] = useState('');
-  const [erroRLCDados, setErroRLCDados] = useState(null);
   const [obtendoAT, setObtendoAT] = useState(false);
   const [erroAT, setErroAT] = useState('');
   const [erroATScreenshot, setErroATScreenshot] = useState(null);
@@ -214,29 +213,24 @@ export default function CompanyDocumentsAdmin() {
     setObtendoSS(false);
   };
 
-  // RLC — sem web service dedicado da PSI (confirmado contra o índice
-  // oficial, 2026-09-09); reaproveita "documento-pagamento/consulta" com
-  // deteção por tipo/subtipo (ver api/seguranca-social/index.js, ação
-  // "obter-rlc"). Primeira vez a correr contra dados reais — se o
-  // "encontrado"/"semCaminho" vier negativo, mostra o registo bruto em vez
-  // de falhar em silêncio, para se poder corrigir a heurística na próxima
-  // ronda sem adivinhar às cegas.
+  // RLC — endpoint real e documentado da PSI (Serviço EEAOC
+  // ObterComprovativoConfirmacao + DownloadFicheiro, PDFs enviados pelo
+  // Diego, 2026-09-09) — ver api/seguranca-social/index.js, ação
+  // "comprovativo-confirmacao". Substitui a tentativa anterior
+  // ("documento-pagamento/consulta"/"comprovativos-pagamento"), confirmada
+  // vazia em produção — este é o mecanismo do novo Ciclo Contributivo
+  // Simplificado, não os pagamentos antigos. Primeira vez a correr contra
+  // dados reais — se "disponivel" vier falso, mostra a mensagem real da SS
+  // (pode ser simplesmente "ainda a processar", não um erro).
   const handleObterRLC = async () => {
     setObtendoRLC(true);
     setErroRLC('');
-    setErroRLCDados(null);
     try {
-      const res = await authFetch('/api/seguranca-social?action=obter-rlc');
+      const res = await authFetch('/api/seguranca-social?action=comprovativo-confirmacao');
       const body = await res.json();
       if (!res.ok) throw new Error(body.erro || `Erro ${res.status}`);
-      if (!body.encontrado) {
-        setErroRLC(body.motivo || 'RLC não encontrado na Segurança Social.');
-        setErroRLCDados(body.dadosBrutos || null);
-        return;
-      }
-      if (body.semCaminho) {
-        setErroRLC(body.motivo || 'RLC encontrado, mas sem forma de obter o PDF.');
-        setErroRLCDados(body.dadosBrutos || null);
+      if (!body.disponivel) {
+        setErroRLC(body.mensagem || 'Comprovativo de Confirmação ainda não disponível.');
         return;
       }
 
@@ -301,19 +295,7 @@ export default function CompanyDocumentsAdmin() {
       </div>
 
       {erroSS && <p className="text-xs text-red-600 font-bold bg-red-50 rounded-lg p-2">{erroSS}</p>}
-      {erroRLC && (
-        <div className="text-xs text-red-600 font-bold bg-red-50 rounded-lg p-2 space-y-1">
-          <p>{erroRLC}</p>
-          {erroRLCDados && (
-            <details>
-              <summary className="cursor-pointer underline">Ver dados devolvidos pela Segurança Social</summary>
-              <pre className="mt-1 max-h-60 overflow-auto whitespace-pre-wrap font-normal text-[10px] bg-white/60 rounded p-2">
-                {JSON.stringify(erroRLCDados, null, 2)}
-              </pre>
-            </details>
-          )}
-        </div>
-      )}
+      {erroRLC && <p className="text-xs text-red-600 font-bold bg-red-50 rounded-lg p-2">{erroRLC}</p>}
       {erroAT && (
         <div className="text-xs text-red-600 font-bold bg-red-50 rounded-lg p-2 space-y-1">
           <p>{erroAT}</p>
@@ -364,7 +346,7 @@ export default function CompanyDocumentsAdmin() {
                       </button>
                     )}
                     {tipo === TIPO_RLC_AUTOMATIZAVEL && (
-                      <button onClick={handleObterRLC} disabled={obtendoRLC} title="Sem web service dedicado da PSI — reaproveita a consulta de documentos de pagamento, primeira vez em produção" className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--surface)] transition-all disabled:opacity-50">
+                      <button onClick={handleObterRLC} disabled={obtendoRLC} title="Comprovativo de Confirmação (Ciclo Contributivo Simplificado) — primeira vez em produção" className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--surface)] transition-all disabled:opacity-50">
                         {obtendoRLC ? <Loader2 size={12} className="animate-spin" /> : <ShieldCheck size={12} />} <span className={SCALE.text.meta}>Obter da SS</span>
                       </button>
                     )}

@@ -227,49 +227,52 @@ export default async function handler(req, res) {
     } catch (e) { return res.status(502).json({ erro: e.message }); }
   }
 
-  // RLC (Recibo de Liquidação de Cotizações) — a PSI não tem nenhum web
-  // service dedicado a isto (confirmado contra o índice oficial completo,
-  // 2026-09-09). Sem candidato certo à partida, tenta os dois endpoints de
-  // pagamento que existem: "documento-pagamento/consulta" (guias por pagar
-  // — confirmado ao vivo, 2026-09-09, que devolve vazio quando a empresa
-  // está regularizada, portanto pouco provável ser o RLC, que é um recibo
-  // de algo já pago) e "comprovativos-pagamento/{ano}" (tem dataPagamento/
-  // valorPago, mais parecido com um recibo emitido). Em vez de assumir o
-  // nome exato do campo do caminho do PDF (violaria a regra do projeto de
-  // nunca inventar códigos da SS), tenta os candidatos mais prováveis e,
-  // se não encontrar nada reconhecível, devolve os registos em bruto dos
-  // dois para diagnóstico — mesma disciplina que resolveu o RPA da
-  // Certidão Fiscal (api/_obterCertidaoFiscalAT.js).
-  if (req.method === 'GET' && action === 'obter-rlc') {
+  // Comprovativo de Confirmação (RLC) — endpoints reais e documentados da
+  // PSI, confirmados pelo Diego via 2 PDFs de especificação técnica
+  // dedicados (2026-09-09): "Serviço EEAOC - ObterComprovativoConfirmacao"
+  // e "Serviço EEAOC - DownloadFicheiro". As duas tentativas anteriores
+  // (documento-pagamento/consulta, comprovativos-pagamento) confirmaram-se
+  // vazias em produção — este é um mecanismo diferente e específico,
+  // ligado ao novo "Ciclo Contributivo Simplificado" (Valores Apurados →
+  // Confirmar → Comprovativo), não aos pagamentos/documentos antigos.
+  //
+  // Fluxo em 2 passos, cada um documentado nos PDFs:
+  // 1. GET .../obrigacao-contributiva/entidade-empregadora/{niss}/
+  //    comprovativo-confirmacao?ano-mes={anomes} → identificadorFicheiro
+  //    (pode não vir já pronto — mensagens possíveis incluem "Pedido em
+  //    processamento", "Não existe confirmação para o ano mês." ou
+  //    "Pedido de geração... efetuado com sucesso! Aguarde o
+  //    processamento" — none destas tem ficheiro pronto).
+  // 2. GET .../ficheiros/entidade-empregadora/{niss}/download/
+  //    {identificadorFicheiro}/COMPROVATIVO_CONFIRMACAO → `url` do PDF —
+  //    exatamente o mesmo formato do `caminho` da Situação Contributiva,
+  //    por isso reaproveita o proxy já existente (situacao-contributiva-pdf,
+  //    genérico desde 2026-09-09) em vez de duplicar a lógica de host-
+  //    allowlist + Bearer.
+  if (req.method === 'GET' && action === 'comprovativo-confirmacao') {
     if (!credenciaisConfiguradas()) return res.status(400).json({ erro: 'Token PSI não configurado.' });
-
-    async function candidatoDe(url) {
-      const r = await callSSRestGetUrl(url);
-      if (r.semRegistos || !r.ok) return { candidato: null, dados: [] };
-      const dados = Array.isArray(r.json) ? r.json : (r.json?.documentos || r.json?.resultado || []);
-      const candidato = dados.find((d) => {
-        const texto = `${d.tipo || ''} ${d.subtipo || ''} ${d.mensagemNaturezaPagamento || ''}`.toUpperCase();
-        return texto.includes('RLC') || texto.includes('LIQUIDA');
-      }) || null;
-      return { candidato, dados };
-    }
+    const nissEmpresa = process.env.SS_NISS_EMPRESA;
+    const hoje = new Date();
+    const anoMes = req.query?.anoMes || `${hoje.getFullYear()}${String(hoje.getMonth() + 1).padStart(2, '0')}`;
+    if (!/^\d{6}$/.test(anoMes)) return res.status(400).json({ erro: 'Parâmetro "anoMes" inválido — use o formato YYYYMM.' });
 
     try {
-      const anoAtual = new Date().getFullYear();
-      const [pagamento, comprovativo] = await Promise.all([
-        candidatoDe(`${CI_BASE()}/documento-pagamento/consulta`),
-        candidatoDe(`${CI_BASE()}/comprovativos-pagamento/${anoAtual}`),
-      ]);
-      const candidato = comprovativo.candidato || pagamento.candidato;
-      const todosDados = [...comprovativo.dados, ...pagamento.dados];
-      if (!candidato) {
-        return res.status(200).json({ encontrado: false, motivo: 'Nenhum documento com tipo/subtipo "RLC" encontrado em documentos ou comprovativos de pagamento.', dadosBrutos: todosDados, ambiente: getAmbiente() });
+      const urlComprovativo = `${EEAOC_BASE()}/obrigacao-contributiva/entidade-empregadora/${nissEmpresa}/comprovativo-confirmacao?ano-mes=${anoMes}`;
+      const r1 = await callSSRestGetUrl(urlComprovativo);
+      if (!r1.ok) return res.status(422).json({ erro: r1.erro });
+      const identificadorFicheiro = r1.json?.identificadorFicheiro || null;
+      if (!identificadorFicheiro) {
+        return res.status(200).json({ disponivel: false, mensagem: r1.json?.mensagem || 'Comprovativo ainda não disponível.', ambiente: getAmbiente() });
       }
-      const caminho = candidato.caminho || candidato.caminhoDocumento || candidato.link || candidato.url || null;
+
+      const urlDownload = `${EEAOC_BASE()}/ficheiros/entidade-empregadora/${nissEmpresa}/download/${identificadorFicheiro}/COMPROVATIVO_CONFIRMACAO`;
+      const r2 = await callSSRestGetUrl(urlDownload);
+      if (!r2.ok) return res.status(422).json({ erro: r2.erro });
+      const caminho = r2.json?.url || null;
       if (!caminho) {
-        return res.status(200).json({ encontrado: true, semCaminho: true, motivo: 'RLC encontrado mas sem campo de caminho/URL reconhecido.', dadosBrutos: candidato, ambiente: getAmbiente() });
+        return res.status(200).json({ disponivel: false, mensagem: 'O serviço Download Ficheiro não devolveu URL.', ambiente: getAmbiente() });
       }
-      return res.status(200).json({ encontrado: true, caminho, dados: candidato, ambiente: getAmbiente() });
+      return res.status(200).json({ disponivel: true, caminho, ambiente: getAmbiente() });
     } catch (e) { return res.status(502).json({ erro: e.message }); }
   }
 
