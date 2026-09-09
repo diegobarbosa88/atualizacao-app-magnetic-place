@@ -105,6 +105,7 @@ function UploadCompanyDocModal({ tipo, mensal, onClose, onUploaded }) {
 const TIPO_SS_AUTOMATIZAVEL = 'Certidão de Situação Contributiva Regularizada';
 const TIPO_AT_AUTOMATIZAVEL = 'Certidão de Situação Fiscal Regularizada';
 const TIPO_RLC_AUTOMATIZAVEL = 'RLC — Recibo de Liquidação de Cotizações';
+const TIPO_RNT_AUTOMATIZAVEL = 'RNT — Relação Nominal de Trabalhadores';
 
 // Ver (preview) + Descarregar — mesmo par de ações já usado nos documentos
 // por trabalhador (DocumentViewerModal), reaproveitado aqui em vez de
@@ -136,6 +137,9 @@ export default function CompanyDocumentsAdmin() {
   const [erroAT, setErroAT] = useState('');
   const [erroATScreenshot, setErroATScreenshot] = useState(null);
   const [erroATCandidatos, setErroATCandidatos] = useState(null);
+  const [obtendoRNT, setObtendoRNT] = useState(false);
+  const [erroRNT, setErroRNT] = useState('');
+  const [erroRNTScreenshot, setErroRNTScreenshot] = useState(null);
   const [pacoteOpen, setPacoteOpen] = useState(false);
   const [previewDoc, setPreviewDoc] = useState(null);
 
@@ -286,6 +290,32 @@ export default function CompanyDocumentsAdmin() {
     setObtendoAT(false);
   };
 
+  // RPA sobre a Segurança Social Direta (api/_obterDeclaracoesRemuneracoesSSD.js)
+  // — obtém RNT + TC2 de uma vez (mesma declaração), mês anterior por
+  // omissão. Sem API PSI que devolva estes PDFs (consultarFicheiro só dá o
+  // estado, não o documento) — ver ficheiro do RPA para o histórico.
+  const handleObterRNT = async () => {
+    setObtendoRNT(true);
+    setErroRNT('');
+    setErroRNTScreenshot(null);
+    try {
+      const res = await authFetch('/api/contador?tipo=obter-declaracoes-remuneracoes', { method: 'POST' });
+      const body = await res.json();
+      if (!res.ok) {
+        setErroRNTScreenshot(body.debug_screenshot_url || null);
+        throw new Error(body.error || `Erro ${res.status}`);
+      }
+      if (!body.disponivel) {
+        setErroRNT(`Sem declaração encontrada para o período ${body.periodo} na Segurança Social Direta.`);
+        return;
+      }
+      reload();
+    } catch (e) {
+      setErroRNT(e.message);
+    }
+    setObtendoRNT(false);
+  };
+
   return (
     <div className="space-y-3">
       <div className="flex justify-end">
@@ -311,6 +341,16 @@ export default function CompanyDocumentsAdmin() {
                 {JSON.stringify(erroATCandidatos, null, 2)}
               </pre>
             </details>
+          )}
+        </div>
+      )}
+      {erroRNT && (
+        <div className="text-xs text-red-600 font-bold bg-red-50 rounded-lg p-2 space-y-1">
+          <p>{erroRNT}</p>
+          {erroRNTScreenshot && (
+            <a href={erroRNTScreenshot} target="_blank" rel="noreferrer" className="underline">
+              Ver screenshot do momento da falha
+            </a>
           )}
         </div>
       )}
@@ -353,6 +393,11 @@ export default function CompanyDocumentsAdmin() {
                     {tipo === TIPO_AT_AUTOMATIZAVEL && (
                       <button onClick={handleObterAT} disabled={obtendoAT} title="RPA sobre o Portal das Finanças — sem API oficial, pode demorar ~30s" className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--surface)] transition-all disabled:opacity-50">
                         {obtendoAT ? <Loader2 size={12} className="animate-spin" /> : <ShieldCheck size={12} />} <span className={SCALE.text.meta}>Obter da AT</span>
+                      </button>
+                    )}
+                    {tipo === TIPO_RNT_AUTOMATIZAVEL && (
+                      <button onClick={handleObterRNT} disabled={obtendoRNT} title="RPA sobre a Segurança Social Direta — obtém RNT + TC2 do mês anterior, sem API oficial" className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--surface)] transition-all disabled:opacity-50">
+                        {obtendoRNT ? <Loader2 size={12} className="animate-spin" /> : <ShieldCheck size={12} />} <span className={SCALE.text.meta}>Obter da SS (RNT+TC2)</span>
                       </button>
                     )}
                     <button onClick={() => setUploadTipo(tipo)} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--surface)] transition-all">

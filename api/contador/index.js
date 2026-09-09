@@ -1394,6 +1394,81 @@ async function handleObterCertidaoFiscal(req, res) {
 }
 
 // ---------------------------------------------------------------------------
+// tipo=obter-declaracoes-remuneracoes — RPA sobre a Segurança Social Direta
+// (ver api/_obterDeclaracoesRemuneracoesSSD.js), botão "Obter da SS" na
+// linha RNT em CompanyDocumentsAdmin.jsx. Obtém RNT + TC2 de uma vez (mesma
+// declaração), mensal — grava com o período do mês pedido (ou o anterior ao
+// atual, por omissão), não substitui documentos de meses anteriores.
+// ---------------------------------------------------------------------------
+
+async function handleObterDeclaracoesRemuneracoes(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (!requireAuth(req, res, ['admin'])) return;
+
+  let resultado;
+  try {
+    const { obterDeclaracoesRemuneracoesSSD } = await import('../_obterDeclaracoesRemuneracoesSSD.js');
+    resultado = await obterDeclaracoesRemuneracoesSSD({ anoMes: req.body?.anoMes || undefined });
+  } catch (e) {
+    console.error('obter-declaracoes-remuneracoes error:', e);
+    let debugScreenshotUrl = null;
+    if (e.debugScreenshot) {
+      try {
+        const supabase = supabaseAdmin();
+        const debugPath = `declaracoes-remuneracoes-debug/${Date.now()}.jpg`;
+        await supabase.storage.from('documentos-empresa').upload(debugPath, Buffer.from(e.debugScreenshot, 'base64'), { contentType: 'image/jpeg' });
+        const { data } = supabase.storage.from('documentos-empresa').getPublicUrl(debugPath);
+        debugScreenshotUrl = data.publicUrl;
+      } catch (upErr) {
+        console.error('Falha ao gravar screenshot de debug:', upErr);
+      }
+    }
+    return res.status(502).json({
+      error: `Falha ao obter declaração da Segurança Social Direta: ${e.message}`,
+      debug_screenshot_url: debugScreenshotUrl,
+      debug_url: e.debugUrl || null,
+    });
+  }
+
+  if (!resultado.disponivel) {
+    return res.status(200).json({ sucesso: true, disponivel: false, periodo: resultado.periodo });
+  }
+
+  const supabase = supabaseAdmin();
+  const { periodo, rntBuffer, tc2Buffer } = resultado;
+
+  const rntPath = `rnt/${periodo}_${Date.now()}.pdf`;
+  const { error: rntUpErr } = await supabase.storage.from('documentos-empresa').upload(rntPath, rntBuffer, { contentType: 'application/pdf' });
+  if (rntUpErr) return res.status(500).json({ error: `Falha ao gravar o PDF do RNT: ${rntUpErr.message}` });
+  const { data: rntUrlData } = supabase.storage.from('documentos-empresa').getPublicUrl(rntPath);
+
+  const tc2Path = `tc2/${periodo}_${Date.now()}.pdf`;
+  const { error: tc2UpErr } = await supabase.storage.from('documentos-empresa').upload(tc2Path, tc2Buffer, { contentType: 'application/pdf' });
+  if (tc2UpErr) return res.status(500).json({ error: `Falha ao gravar o PDF do TC2: ${tc2UpErr.message}` });
+  const { data: tc2UrlData } = supabase.storage.from('documentos-empresa').getPublicUrl(tc2Path);
+
+  const { error: dbErr } = await supabase.from('company_documents').insert([
+    {
+      id: `cdoc_${Date.now()}_rnt`,
+      tipo: 'RNT — Relação Nominal de Trabalhadores',
+      periodo,
+      nome_ficheiro: `rnt-${periodo}.pdf`,
+      url: rntUrlData.publicUrl,
+    },
+    {
+      id: `cdoc_${Date.now()}_tc2`,
+      tipo: 'TC2',
+      periodo,
+      nome_ficheiro: `tc2-${periodo}.pdf`,
+      url: tc2UrlData.publicUrl,
+    },
+  ]);
+  if (dbErr) return res.status(500).json({ error: `PDFs obtidos, mas falhou gravar os registos: ${dbErr.message}` });
+
+  return res.status(200).json({ sucesso: true, disponivel: true, periodo });
+}
+
+// ---------------------------------------------------------------------------
 
 export default async function handler(req, res) {
   try {
@@ -1408,6 +1483,7 @@ export default async function handler(req, res) {
       case 'documentos-cliente-enviar': return await handleDocumentosClienteEnviar(req, res);
       case 'documentos-empresa-enviar': return await handleDocumentosEmpresaEnviar(req, res);
       case 'obter-certidao-fiscal': return await handleObterCertidaoFiscal(req, res);
+      case 'obter-declaracoes-remuneracoes': return await handleObterDeclaracoesRemuneracoes(req, res);
       default:                return res.status(400).json({ error: `tipo desconhecido: ${tipo || '(não definido)'}` });
     }
   } catch (e) {
