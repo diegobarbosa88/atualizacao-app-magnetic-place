@@ -3,6 +3,16 @@ import webpush from 'web-push';
 import { requireAuth } from '../_authUtils.js';
 import { getGateStatus } from '../_gateUtils.js';
 import { calculateDuration } from '../../src/utils/formatUtils.js';
+import { isWithinGeofence } from '../../src/utils/geoUtils.js';
+import {
+  assinarTokenQr,
+  verificarTokenQr,
+  decodificarClientIdSemVerificar,
+  transicoesValidas,
+  construirPatchLog,
+  getEffectiveClientId,
+  horaAtualNoCliente,
+} from '../ponto/_pontoUtils.js';
 
 // Todos os endpoints de Formação Interna vivem numa única função serverless
 // — o plano Hobby da Vercel limita a 12 funções por deployment; ter um
@@ -739,11 +749,24 @@ async function handleAutoAtribuir(req, res) {
 
     // Data de conclusão retroativa, escolhida pelo admin no modal de
     // sincronização (trabalhador antigo que já fez a formação antes de o
-    // sistema existir) — quando presente, o registo já entra concluído em
-    // vez de "não iniciado", sem passar pelo fluxo normal de assinatura.
+    // sistema existir) — quando presente, o registo já entra concluído,
+    // sem passar pelo fluxo normal de assinatura. Grava também
+    // `assinado_em` (achado de auditoria, 2026-09-09): é esse campo, não
+    // `estado_conclusao`, que o resto do sistema lê como "formação
+    // realmente feita" — horas anuais do art. 131.º CT
+    // (RegistoIndividualTab.jsx), emissão de certificado
+    // (exportCertificadoPDF, que recusa sem assinado_em), e o dashboard do
+    // trabalhador. Sem isto, o admin via "Concluída" no modal mas a
+    // formação continuava a aparecer como pendente em todo o resto da app.
+    // `assinatura_signed_url` fica null (sem assinatura real) — já tratado
+    // graciosamente onde é lido (imagem omitida, resto do documento segue).
     const dataConclusaoEscolhida = datas_conclusao?.[requisito.formacao_id];
     const camposConclusao = dataConclusaoEscolhida
-      ? { estado_conclusao: 'concluido', concluido_em: new Date(dataConclusaoEscolhida).toISOString() }
+      ? {
+        estado_conclusao: 'concluido',
+        concluido_em: new Date(dataConclusaoEscolhida).toISOString(),
+        assinado_em: new Date(dataConclusaoEscolhida).toISOString(),
+      }
       : {};
 
     const { error } = await supabase
@@ -1053,6 +1076,141 @@ async function handleLembreteValidacao(req, res) {
   return res.status(200).json({ ok: true, mes: mesStr, clientesNotificados: clientesAlvo.length });
 }
 
+// Registo de ponto via QR dinâmico (kiosk) — hospedado aqui pela mesma
+// razão do resto do ficheiro (limite de 12 funções serverless do plano
+// Hobby). Duas actions: `ponto-token` é PÚBLICA (o kiosk não tem sessão,
+// requireAuth NÃO corre aqui — auth condicional, diferente do padrão
+// uniforme do resto do módulo); `ponto-registar` exige sessão de worker.
+const PONTO_QR_TTL_SEGUNDOS = Number(process.env.PONTO_QR_TOKEN_TTL_SECONDS) || 20;
+const PONTO_QR_GEO_ENABLED = process.env.PONTO_QR_GEO_ENABLED === 'true';
+
+async function handlePontoToken(req, res) {
+  const clientId = req.query?.clientId;
+  if (!clientId) return res.status(400).json({ error: 'clientId em falta.' });
+
+  const supabase = getSupabase();
+  const { data: client, error } = await supabase
+    .from('clients')
+    .select('id, name, qr_secret_key')
+    .eq('id', clientId)
+    .maybeSingle();
+
+  if (error) return res.status(500).json({ error: error.message });
+  if (!client || !client.qr_secret_key) {
+    return res.status(404).json({ error: 'Kiosk não configurado para este cliente.' });
+  }
+
+  const iat = Date.now();
+  const payload = { clientId: client.id, iat, exp: iat + PONTO_QR_TTL_SEGUNDOS * 1000 };
+  const token = assinarTokenQr(payload, client.qr_secret_key);
+
+  return res.status(200).json({ token, ttlSeconds: PONTO_QR_TTL_SEGUNDOS, clientName: client.name });
+}
+
+async function handlePontoRegistar(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  const sessao = requireAuth(req, res, ['worker']);
+  if (!sessao) return;
+
+  const { token, tipo, lat, lng } = req.body || {};
+  if (!token || !tipo) return res.status(400).json({ error: 'token/tipo em falta.' });
+
+  const clientId = decodificarClientIdSemVerificar(token);
+  if (!clientId) return res.status(400).json({ error: 'QR inválido.' });
+
+  const supabase = getSupabase();
+
+  const { data: client, error: clientErr } = await supabase
+    .from('clients')
+    .select('id, name, timezone, lat, lng, geo_radius_m, qr_secret_key')
+    .eq('id', clientId)
+    .maybeSingle();
+  if (clientErr) return res.status(500).json({ error: clientErr.message });
+  if (!client || !client.qr_secret_key) {
+    return res.status(404).json({ error: 'Kiosk não configurado para este cliente.' });
+  }
+
+  const payload = verificarTokenQr(token, client.qr_secret_key);
+  if (!payload) {
+    return res.status(400).json({ error: 'QR expirado — aponta a câmara outra vez.' });
+  }
+
+  const { data: worker, error: workerErr } = await supabase
+    .from('workers')
+    .select('id, defaultClientId, assignedClientDates')
+    .eq('id', sessao.id)
+    .maybeSingle();
+  if (workerErr) return res.status(500).json({ error: workerErr.message });
+  if (!worker) return res.status(404).json({ error: 'Trabalhador não encontrado.' });
+
+  const hojeInfo = horaAtualNoCliente(client);
+  const dateStr = hojeInfo.data;
+  const horaHHMM = hojeInfo.hora;
+
+  const clienteEfetivo = getEffectiveClientId(worker, dateStr);
+  if (clienteEfetivo !== client.id) {
+    return res.status(403).json({ error: 'Não estás afeto a este cliente hoje.' });
+  }
+
+  const { data: logDeHoje, error: logErr } = await supabase
+    .from('logs')
+    .select('*')
+    .eq('workerId', worker.id)
+    .eq('clientId', client.id)
+    .eq('date', dateStr)
+    .maybeSingle();
+  if (logErr) return res.status(500).json({ error: logErr.message });
+
+  const validas = transicoesValidas(logDeHoje);
+  if (!validas.includes(tipo)) {
+    return res.status(409).json({
+      error: validas.length
+        ? `Ação inválida — próximo passo esperado: ${validas.join(' ou ')}.`
+        : 'Já concluíste o registo de hoje neste cliente.',
+    });
+  }
+
+  let geo = null;
+  if (PONTO_QR_GEO_ENABLED && typeof lat === 'number' && typeof lng === 'number') {
+    const dentro = isWithinGeofence(lat, lng, client.lat, client.lng, client.geo_radius_m ?? 200);
+    geo = { lat, lng, verified: dentro };
+  }
+
+  const { action, patch } = construirPatchLog({
+    tipo,
+    logDeHoje,
+    horaHHMM,
+    dateStr,
+    workerId: worker.id,
+    clientId: client.id,
+    geo,
+  });
+
+  // Regista o nonce PRIMEIRO — se falhar por violação de unicidade (replay),
+  // não chegamos a escrever em `logs`, evitando ter de reverter nada.
+  const { error: usoErr } = await supabase.from('qr_ponto_usos').insert({
+    client_id: client.id,
+    worker_id: worker.id,
+    seq: payload.iat,
+    tipo,
+    log_id: action === 'insert' ? patch.id : logDeHoje.id,
+  });
+  if (usoErr) {
+    if (usoErr.code === '23505') {
+      return res.status(409).json({ error: 'Este QR já foi usado.' });
+    }
+    return res.status(500).json({ error: usoErr.message });
+  }
+
+  const logQuery = action === 'insert'
+    ? supabase.from('logs').insert(patch)
+    : supabase.from('logs').update(patch).eq('id', patch.id);
+  const { error: patchErr } = await logQuery;
+  if (patchErr) return res.status(500).json({ error: patchErr.message });
+
+  return res.status(200).json({ ok: true, tipo, hora: horaHHMM, data: dateStr, logId: patch.id });
+}
+
 const ACTIONS = {
   'list': handleList,
   'create': handleCreate,
@@ -1074,10 +1232,17 @@ const ACTIONS = {
   'horas-por-trabalhador': handleHorasPorTrabalhador,
   'push-send': handlePushSend,
   'lembrete-validacao': handleLembreteValidacao,
+  'ponto-token': handlePontoToken,
+  'ponto-registar': handlePontoRegistar,
 };
 
 export default async function handler(req, res) {
-  const fn = ACTIONS[req.query.action];
+  // action normalmente vem da query (rewrites amigáveis já a incluem), mas
+  // ponto-registar é chamado com o body inteiro em JSON — aceitar também
+  // req.body.action evita ter de meter a action na querystring manualmente
+  // no frontend quando o body já é JSON de qualquer forma.
+  const action = req.query.action || req.body?.action;
+  const fn = ACTIONS[action];
   if (!fn) return res.status(404).json({ error: 'Ação inválida.' });
   return fn(req, res);
 }

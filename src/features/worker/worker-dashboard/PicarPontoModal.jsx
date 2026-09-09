@@ -80,10 +80,10 @@ export default function PicarPontoModal({ isOpen, onClose }) {
       // Sem geolocalização — segue sem, o registo não depende disto.
     }
     try {
-      const resp = await authFetch('/api/ponto', {
+      const resp = await authFetch('/api/ponto/registar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'registar', token: qrToken, tipo, lat: geo?.lat, lng: geo?.lng }),
+        body: JSON.stringify({ token: qrToken, tipo, lat: geo?.lat, lng: geo?.lng }),
       });
       const data = await resp.json();
       if (!resp.ok) {

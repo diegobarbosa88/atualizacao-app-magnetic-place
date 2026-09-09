@@ -22,7 +22,7 @@ export default function KioskView({ clientId }) {
 
     async function buscarToken() {
       try {
-        const resp = await fetch(`/api/ponto?action=token&clientId=${encodeURIComponent(clientId)}`);
+        const resp = await fetch(`/api/ponto/token?clientId=${encodeURIComponent(clientId)}`);
         const data = await resp.json();
         if (cancelado) return;
         if (!resp.ok) {
