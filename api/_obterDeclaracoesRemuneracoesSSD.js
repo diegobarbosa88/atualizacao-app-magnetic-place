@@ -123,24 +123,52 @@ async function clickByText(page, cssSelector, text, { timeout = 10000 } = {}) {
 // vivem os campos NISS/senha) pode estar colapsada por omissão, atrás de um
 // accordion — achado real, 2026-09-09: o robô só via a opção "Cartão de
 // Cidadão/Chave Móvel Digital" no screenshot de debug, sem os campos de
-// login. Procura um elemento clicável cujo texto contenha "utilizador da
-// Segurança Social" mas NÃO comece por "Fechar" (esse é o mesmo cabeçalho,
-// já aberto — clicar de novo fecharia a secção). Não lança erro se não
-// encontrar nada — pode já estar aberta.
+// login. Procura o texto "utilizador da Segurança Social" que NÃO comece
+// por "Fechar" (esse é o mesmo cabeçalho, já aberto — clicar de novo
+// fecharia a secção), sobe até 5 níveis à procura de um ancestral
+// realmente clicável (BUTTON/A/role=button/onclick/cursor:pointer — o
+// texto pode estar num <span> interno sem handler nenhum), e clica-o com
+// um clique REAL do Puppeteer via CDP (ElementHandle.click()), não
+// sintético — mesma correção já validada em api/_obterCertidaoFiscalAT.js
+// (2ª tentativa daquele robô: el.click() sintético não dispara handlers
+// React/Radix, isTrusted:false). A 1ª tentativa deste RPA usava só
+// el.click() sintético e não teve efeito nenhum (confirmado pelo Diego:
+// screenshot de debug seguinte ainda mostrava a secção colapsada). Não
+// lança erro se não encontrar nada — pode já estar aberta.
 async function garantirSeccaoLoginAberta(page) {
+  const marcador = 'data-ssd-rpa-toggle';
   for (const frame of page.frames()) {
-    const clicou = await frame.evaluate(() => {
+    const marcou = await frame.evaluate((marc) => {
       /* eslint-disable no-undef -- corre no contexto da página (browser), não no Node */
       const candidatos = Array.from(document.querySelectorAll('a, button, div, span, h2, h3, h4, strong, b'));
-      const alvo = candidatos.find(el => {
+      const textoAlvo = candidatos.find(el => {
         const t = el.textContent && el.textContent.trim().toLowerCase();
         return t && t.includes('utilizador da segurança social') && !t.startsWith('fechar');
       });
-      if (alvo) { alvo.click(); return true; }
-      return false;
+      if (!textoAlvo) return false;
+      let target = textoAlvo;
+      for (let i = 0; i < 5 && target; i++) {
+        const tag = target.tagName;
+        const role = target.getAttribute?.('role');
+        const clicavel = tag === 'BUTTON' || tag === 'A' || role === 'button' ||
+          target.onclick != null || window.getComputedStyle(target).cursor === 'pointer';
+        if (clicavel) break;
+        target = target.parentElement;
+      }
+      (target || textoAlvo).setAttribute(marc, '1');
+      return true;
       /* eslint-enable no-undef */
-    }).catch(() => false);
-    if (clicou) { await new Promise(r => setTimeout(r, 500)); return; }
+    }, marcador).catch(() => false);
+
+    if (marcou) {
+      const handle = await frame.$(`[${marcador}]`).catch(() => null);
+      if (handle) {
+        await handle.click().catch(() => {});
+        await handle.dispose().catch(() => {});
+        await new Promise(r => setTimeout(r, 500));
+        return;
+      }
+    }
   }
 }
 
