@@ -119,6 +119,31 @@ async function clickByText(page, cssSelector, text, { timeout = 10000 } = {}) {
   throw new Error(`Elemento "${cssSelector}" com texto "${text}" não encontrado (a SS pode ter mudado o layout).`);
 }
 
+// A secção "Autenticação com o seu utilizador da Segurança Social" (onde
+// vivem os campos NISS/senha) pode estar colapsada por omissão, atrás de um
+// accordion — achado real, 2026-09-09: o robô só via a opção "Cartão de
+// Cidadão/Chave Móvel Digital" no screenshot de debug, sem os campos de
+// login. Procura um elemento clicável cujo texto contenha "utilizador da
+// Segurança Social" mas NÃO comece por "Fechar" (esse é o mesmo cabeçalho,
+// já aberto — clicar de novo fecharia a secção). Não lança erro se não
+// encontrar nada — pode já estar aberta.
+async function garantirSeccaoLoginAberta(page) {
+  for (const frame of page.frames()) {
+    const clicou = await frame.evaluate(() => {
+      /* eslint-disable no-undef -- corre no contexto da página (browser), não no Node */
+      const candidatos = Array.from(document.querySelectorAll('a, button, div, span, h2, h3, h4, strong, b'));
+      const alvo = candidatos.find(el => {
+        const t = el.textContent && el.textContent.trim().toLowerCase();
+        return t && t.includes('utilizador da segurança social') && !t.startsWith('fechar');
+      });
+      if (alvo) { alvo.click(); return true; }
+      return false;
+      /* eslint-enable no-undef */
+    }).catch(() => false);
+    if (clicou) { await new Promise(r => setTimeout(r, 500)); return; }
+  }
+}
+
 // Preenche um <input> localizado pelo texto do <label>/rótulo mais próximo
 // (procurado entre label/div/span/p com texto EXACTO igual ao dado) — mais
 // resiliente do que adivinhar um id/name, que o portal pode gerar
@@ -399,6 +424,11 @@ export async function obterDeclaracoesRemuneracoesSSD({ anoMes } = {}) {
     });
     page = await browser.newPage();
     page.setDefaultTimeout(15000);
+    // Viewport largo o suficiente para a secção "Autenticação com o seu
+    // utilizador da Segurança Social" (NISS/senha) ficar dentro da área
+    // capturada — o viewport pequeno por omissão (800x600) do Puppeteer
+    // deixava-a fora do screenshot de debug, achado real, 2026-09-09.
+    await page.setViewport({ width: 1280, height: 1600 });
 
     // Login CAS — URL confirmada pelo Diego, 2026-09-09.
     await page.goto(
@@ -406,6 +436,7 @@ export async function obterDeclaracoesRemuneracoesSSD({ anoMes } = {}) {
       { waitUntil: 'networkidle2' },
     );
 
+    await garantirSeccaoLoginAberta(page);
     const preencheuUtilizador = await preencherCampoPorLabel(page, 'Utilizador', utilizador);
     const preencheuSenha = preencheuUtilizador ? await preencherCampoPorLabel(page, 'Palavra-passe', senha) : false;
     if (!preencheuUtilizador || !preencheuSenha) {
