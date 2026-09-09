@@ -431,6 +431,15 @@ async function obterLinhasValidas(page, { timeout = 15000 } = {}) {
 // Clica o link "Ações" da linha `indiceLinha` (0-based) da tabela de
 // resultados, espera o menu suspenso abrir, e clica no item com o texto
 // dado ("Extrato Declaração"/"Extrato Resumo").
+// Sufixo do id PrimeFaces para cada item do menu "Ações" — confirmado pelo
+// Diego via inspeção do HTML real, 2026-09-09: o id completo segue o
+// padrão previsível "formListaDeclaracoes:tabelaDeclaracoes:{índice da
+// linha}:{sufixo}" (ex. "...tabelaDeclaracoes:0:imprimirExtrato").
+const SUFIXO_ID_ITEM_MENU = {
+  'Extrato Declaração': 'imprimirExtrato',
+  'Extrato Resumo': 'imprimirExtratoResumo',
+};
+
 async function clicarAcaoEExtrato(frame, indiceLinha, textoItem) {
   const handleAcao = await frame.evaluateHandle((idx) => {
     /* eslint-disable no-undef -- corre no contexto da página (browser), não no Node */
@@ -454,6 +463,25 @@ async function clicarAcaoEExtrato(frame, indiceLinha, textoItem) {
   await elAcao.click();
   await new Promise(r => setTimeout(r, 500));
 
+  // Id directo primeiro (muito mais fiável do que procurar texto num menu
+  // popup que pode ainda estar a animar/posicionar-se) — a busca anterior
+  // por texto/visibilidade falhava mesmo com o menu já aberto (achado
+  // real, 2026-09-09). waitForSelector espera o item aparecer, em vez de
+  // uma pausa fixa.
+  const sufixo = SUFIXO_ID_ITEM_MENU[textoItem];
+  if (sufixo) {
+    const idItem = `formListaDeclaracoes:tabelaDeclaracoes:${indiceLinha}:${sufixo}`;
+    const seletorItem = `#${idItem.replace(/:/g, '\\:')}`;
+    const handleDireto = await frame.waitForSelector(seletorItem, { timeout: 5000 }).catch(() => null);
+    if (handleDireto) {
+      await handleDireto.click();
+      await handleDireto.dispose().catch(() => {});
+      return;
+    }
+  }
+
+  // Fallback por texto/visibilidade, só se o id não bater (ex. a SS mudou
+  // o padrão de ids).
   const handleItem = await frame.evaluateHandle((txt) => {
     /* eslint-disable no-undef -- corre no contexto da página (browser), não no Node */
     function visivel(el) {
