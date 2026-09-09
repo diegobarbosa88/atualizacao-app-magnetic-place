@@ -141,6 +141,33 @@ async function clickByText(page, cssSelector, text, { timeout = 10000 } = {}) {
   throw new Error(`Elemento "${cssSelector}" com texto "${text}" não encontrado (a SS pode ter mudado o layout).`);
 }
 
+// O banner de cookies ("Este serviço usa cookies... Compreendi") fica fixo
+// no fundo da página em toda a sessão nova (sem cookies persistentes entre
+// execuções do robô) — achado real, 2026-09-09: cobre o menu popup "Ações"
+// quando este abre perto do fim da página, impedindo o clique no item
+// (mesmo já visível segundo o Puppeteer). Dispensa-o assim que aparecer,
+// sem lançar erro se não encontrar (algumas páginas podem já não o
+// mostrar).
+async function dispensarBannerCookies(page) {
+  for (const frame of page.frames()) {
+    const handle = await frame.evaluateHandle(() => {
+      // eslint-disable-next-line no-undef -- corre no contexto da página (browser), não no Node
+      const candidatos = Array.from(document.querySelectorAll('button, a'));
+      return candidatos.find(el => {
+        const t = el.textContent && el.textContent.trim();
+        return t === 'Compreendi' || t === 'Aceitar' || t === 'Concordo';
+      }) || null;
+    }).catch(() => null);
+    const el = handle?.asElement();
+    if (el) {
+      await el.click().catch(() => {});
+      await el.dispose().catch(() => {});
+      await new Promise(r => setTimeout(r, 300));
+      return;
+    }
+  }
+}
+
 // A secção "Autenticação com o seu utilizador da Segurança Social" (onde
 // vivem os campos NISS/senha) pode estar colapsada por omissão, atrás de um
 // accordion — achado real, 2026-09-09: o robô só via a opção "Cartão de
@@ -654,6 +681,7 @@ export async function obterDeclaracoesRemuneracoesSSD({ anoMes } = {}) {
     // pelo Diego ao navegar manualmente, 2026-09-09 (sem o parâmetro
     // `dswid`, que parece ser um id de janela gerado por sessão).
     await page.goto('https://www.seg-social.pt/ptss/gr/pesquisa/consultarDR', { waitUntil: 'networkidle2' });
+    await dispensarBannerCookies(page);
 
     const preencheuPeriodo = await preencherPeriodo(page, periodoDe, periodoEntregaDe);
     if (!preencheuPeriodo) {
