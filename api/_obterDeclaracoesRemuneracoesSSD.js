@@ -67,7 +67,12 @@ function extrairTextoMensagem(payload) {
 // mais recente que `desdeMs` — evita reaproveitar por engano o código de
 // uma tentativa de login anterior (ex. se o RPA falhar e for corrido de
 // novo pouco depois).
-async function obterCodigoVerificacaoEmail(desdeMs, { timeout = 60000, intervalo = 3000 } = {}) {
+// Timeout reduzido de propósito (era 60s) — a função inteira só tem 60s de
+// orçamento no plano Vercel Hobby (maxDuration, ver vercel.json), e esperar
+// 60s só pelo e-mail não deixaria tempo nenhum para o resto do fluxo
+// (login, navegação, preenchimento, 2 downloads). O e-mail chegou sempre em
+// poucos segundos nos testes reais — 20s já dá boa margem.
+async function obterCodigoVerificacaoEmail(desdeMs, { timeout = 20000, intervalo = 2000 } = {}) {
   const gmail = gmailClient();
   const deadline = Date.now() + timeout;
   while (Date.now() < deadline) {
@@ -222,17 +227,28 @@ async function preencherCampoPorSeletor(page, seletor, value, { timeout = 10000 
     for (const frame of page.frames()) {
       const el = await frame.$(seletor).catch(() => null);
       if (el) {
-        await el.click({ clickCount: 3 }).catch(() => {});
+        // Um único clique já foca o campo — em campos "hasDatepicker"
+        // (jQuery UI) isso também abre o popup do calendário. Fechar esse
+        // popup ANTES de editar é seguro (nada foi escrito ainda, não há
+        // valor novo para reverter); é só DEPOIS de escrever que Escape se
+        // torna arriscado (achado real, 2026-09-09 — ver mais abaixo).
+        // Seleção e escrita seguem só por teclado (Ctrl+A, Backspace,
+        // type), sem cliques adicionais que pudessem reabrir o popup a meio
+        // da edição — um triplo-clique chegou a deixar o valor mal escrito
+        // (achado real, 2026-09-09: o robô mostrava "2026-08" em vez do
+        // valor pedido, e a Segurança Social rejeitava o campo como
+        // inválido apesar do texto visível).
+        await el.click().catch(() => {});
+        await page.keyboard.press('Escape').catch(() => {});
+        await page.keyboard.down('Control');
+        await page.keyboard.press('KeyA');
+        await page.keyboard.up('Control');
+        await page.keyboard.press('Backspace');
         await el.type(String(value), { delay: 20 });
         await el.dispose().catch(() => {});
-        // Fecha um eventual popup de datepicker (jQuery UI, campos
-        // "hasDatepicker") que a digitação possa ter aberto, sem arriscar
-        // reverter o valor digitado — Escape tem semântica de "cancelar"
-        // no jQuery UI Datepicker e chegou a reverter o campo para o valor
-        // anterior num teste real (achado, 2026-09-09: pesquisa com
-        // intervalo alargado não encontrou nem a declaração de julho, já
-        // confirmada existir). Tab move o foco e confirma o valor, sem
-        // esse risco. Sem efeito em campos sem datepicker (login).
+        // Tab confirma o valor ao mudar o foco — Escape aqui reverteria o
+        // que acabou de ser escrito (semântica de "cancelar" no jQuery UI
+        // Datepicker, já confirmado num teste real anterior).
         await page.keyboard.press('Tab').catch(() => {});
         return true;
       }
