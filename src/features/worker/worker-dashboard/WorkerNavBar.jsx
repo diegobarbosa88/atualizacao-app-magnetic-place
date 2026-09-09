@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LogOut, Timer, Users, UserCircle, Bell, Home, CalendarX, FileText, GraduationCap, Smartphone, CheckCircle2, HardHat } from 'lucide-react';
+import { LogOut, Timer, Users, UserCircle, Bell, Home, CalendarX, FileText, GraduationCap, Smartphone, CheckCircle2, HardHat, QrCode } from 'lucide-react';
 import { FT, FONT_TITLE, FONT_MONO, SCALE } from './formacaoDesignTokens';
 import { usePushSubscription } from '../../../hooks/usePushSubscription';
 
@@ -43,7 +43,7 @@ const TabButton = ({ active, onClick, icon, label, badge, tourTag }) => (
   </button>
 );
 
-export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, activeWorkerSchedule, workerChangeRequests, onLogin, onLogout, alertCount, onOpenAlerts, onOpenAbsenceModal, onOpenScheduleModal, onOpenProfileModal, onOpenDocumentsModal, onOpenFormacaoModal, onOpenEpiModal, epiEnabled, isCurrentMonth, absencePendingCount, documentsPendingCount, formacaoPendingCount, notifCount, onOpenNotifs, supabase }) {
+export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, activeWorkerSchedule, workerChangeRequests, onLogin, onLogout, alertCount, onOpenAlerts, onOpenAbsenceModal, onOpenScheduleModal, onOpenProfileModal, onOpenDocumentsModal, onOpenFormacaoModal, onOpenEpiModal, epiEnabled, onOpenPicarPontoModal, pontoQrEnabled, isCurrentMonth, absencePendingCount, documentsPendingCount, formacaoPendingCount, notifCount, onOpenNotifs, supabase }) {
   const pendingRequests = (workerChangeRequests || []).filter(r => r.worker_id === currentUser?.id && r.status === 'pending').length;
   const totalBellCount = (alertCount || 0) + (notifCount || 0);
   const handleBellClick = () => { if (alertCount > 0) onOpenAlerts(); else if (notifCount > 0) onOpenNotifs?.(); };
@@ -175,6 +175,18 @@ export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, act
               </button>
             )}
 
+            {pontoQrEnabled && (
+              <button
+                onClick={onOpenPicarPontoModal}
+                className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-black shadow-sm transition-all bg-slate-50 text-slate-600 hover:bg-slate-100"
+                title="Picar Ponto"
+                data-tour="tab-picar-ponto"
+              >
+                <QrCode size={15} className="shrink-0" />
+                <span>Picar Ponto</span>
+              </button>
+            )}
+
             <button
               onClick={onOpenDocumentsModal}
               className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-black shadow-sm transition-all bg-slate-50 text-slate-600 hover:bg-slate-100 relative"
@@ -274,6 +286,15 @@ export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, act
             icon={<HardHat size={20} />}
             label="EPI"
             tourTag="tab-epi"
+          />
+        )}
+        {pontoQrEnabled && (
+          <TabButton
+            active={false}
+            onClick={onOpenPicarPontoModal}
+            icon={<QrCode size={20} />}
+            label="Ponto"
+            tourTag="tab-picar-ponto"
           />
         )}
         <TabButton

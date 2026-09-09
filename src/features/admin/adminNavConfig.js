@@ -4,7 +4,7 @@ import {
   AlertTriangle, Send, FolderOpen, Mail, ReceiptText, Coins, Receipt,
   FileSignature, BarChart2, BookOpen, ArrowRightLeft, Landmark, ListChecks,
   Truck, Shield, Table2, ShieldAlert, MessageSquareText, GraduationCap, Bell,
-  HardHat,
+  HardHat, QrCode,
 } from 'lucide-react';
 
 export const ADMIN_SECTIONS = [
@@ -37,6 +37,7 @@ export const ADMIN_SECTIONS = [
   },
   { id: 'schedules', label: 'Horários', icon: Clock, badgeType: null },
   { id: 'epi', label: 'EPI', icon: HardHat, badgeType: null },
+  { id: 'ponto', label: 'Ponto QR', icon: QrCode, badgeType: null },
   {
     id: 'documentos', label: 'Documentos', icon: FolderOpen, badgeType: null,
     subtabs: [

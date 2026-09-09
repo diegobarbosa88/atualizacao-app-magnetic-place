@@ -25,6 +25,7 @@ import TimeEntryModal from './worker-dashboard/TimeEntryModal';
 import PendingAlertsModal from './worker-dashboard/PendingAlertsModal';
 import AbsenceRequestModal from './worker-dashboard/AbsenceRequestModal';
 import EpiRequestModal from './worker-dashboard/EpiRequestModal';
+import PicarPontoModal from './worker-dashboard/PicarPontoModal';
 import WorkerNavBar from './worker-dashboard/WorkerNavBar';
 import WorkerHeroStats from './worker-dashboard/WorkerHeroStats';
 import InServiceCard from './worker-dashboard/InServiceCard';
@@ -141,6 +142,8 @@ const WorkerDashboardContent = ({ onLogout, onLogin, autoStartTour }) => {
     setEpiRequests(reqData || []);
   }, [supabase, currentUser?.epi_enabled, currentUser?.id]);
   useEffect(() => { loadEpiData(); }, [loadEpiData]);
+
+  const [picarPontoModalOpen, setPicarPontoModalOpen] = useState(false);
 
   const handleEpiSubmit = async ({ typeId, typeLabel, qty, size, motivo, notes }) => {
     await createEpiRequest(supabase, { worker: currentUser, typeId, typeLabel, qty, size, motivo, notes });
@@ -347,6 +350,8 @@ const WorkerDashboardContent = ({ onLogout, onLogin, autoStartTour }) => {
         onOpenFormacaoModal={() => setFormacaoModalOpen(true)}
         onOpenEpiModal={() => setEpiModalOpen(true)}
         epiEnabled={!!currentUser?.epi_enabled}
+        onOpenPicarPontoModal={() => setPicarPontoModalOpen(true)}
+        pontoQrEnabled={!!currentUser?.ponto_qr_enabled}
         isCurrentMonth={isCurrentMonth}
         absencePendingCount={(absenceRequests || []).filter(r => r.worker_id === currentUser?.id && (r.status === 'pending' || r.status === 'seen')).length}
         documentsPendingCount={pendingSignaturesCount}
@@ -554,6 +559,13 @@ const WorkerDashboardContent = ({ onLogout, onLogin, autoStartTour }) => {
               types={epiTypes}
               requests={epiRequests}
               onSubmit={handleEpiSubmit}
+            />
+          )}
+
+          {currentUser?.ponto_qr_enabled && (
+            <PicarPontoModal
+              isOpen={picarPontoModalOpen}
+              onClose={() => setPicarPontoModalOpen(false)}
             />
           )}
         </>)}

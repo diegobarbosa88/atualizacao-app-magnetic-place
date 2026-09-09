@@ -13,6 +13,7 @@ import './index.css'
 // BrowserRouter/AppProvider.
 const isResumoPublico = window.location.pathname === '/partilha/resumo';
 const isOnboardingPublico = window.location.pathname.startsWith('/onboarding/');
+const isKiosk = window.location.pathname.startsWith('/kiosk/');
 
 async function bootstrap() {
   if (isResumoPublico) {
@@ -29,6 +30,17 @@ async function bootstrap() {
     createRoot(document.getElementById('root')).render(
       <StrictMode>
         <OnboardingForm token={onbToken} />
+      </StrictMode>,
+    );
+  } else if (isKiosk) {
+    // Kiosk do registo de ponto por QR (/kiosk/:clientId) — tablet fixo no
+    // estaleiro, sem login e sem AppProvider (fica ligado 24/7, não deve
+    // pagar o custo do fetch de dados da app inteira).
+    const clientId = window.location.pathname.split('/')[2];
+    const { default: KioskView } = await import('./features/public/KioskView.jsx');
+    createRoot(document.getElementById('root')).render(
+      <StrictMode>
+        <KioskView clientId={clientId} />
       </StrictMode>,
     );
   } else {

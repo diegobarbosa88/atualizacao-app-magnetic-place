@@ -45,6 +45,7 @@ import ClientManager from './ClientManager';
 import FornecedorManager from './FornecedorManager';
 import ScheduleManager from './ScheduleManager';
 import EpiAdmin from './epi/EpiAdmin';
+import PontoAdmin from './ponto/PontoAdmin';
 import CostReports from './CostReports';
 import DocumentsAdmin from './DocumentsAdmin';
 import FaturacaoAdmin from './FaturacaoAdmin';
@@ -541,6 +542,7 @@ function AdminDashboard(props) {
       {!auditWorkerId && activeTab === 'schedules' && <ScheduleManager />}
 
       {!auditWorkerId && activeTab === 'epi' && <EpiAdmin />}
+      {!auditWorkerId && activeTab === 'ponto' && <PontoAdmin />}
 
       {!auditWorkerId && activeTab === 'costs' && <CostReports />}
 
