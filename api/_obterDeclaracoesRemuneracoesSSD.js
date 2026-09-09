@@ -202,6 +202,29 @@ async function garantirSeccaoLoginAberta(page) {
   }
 }
 
+// Preenche um <input> localizado por CSS selector directo (ex. "#username")
+// em qualquer frame — mais fiável do que procurar por label quando se
+// conhece o id real do campo (confirmado pelo Diego via inspeção do HTML
+// real: os campos de login são exactamente #username/#password, o par
+// clássico do CAS/Apereo). Triple-click antes de escrever, para substituir
+// qualquer valor pré-preenchido em vez de o concatenar.
+async function preencherCampoPorSeletor(page, seletor, value, { timeout = 10000 } = {}) {
+  const deadline = Date.now() + timeout;
+  while (Date.now() < deadline) {
+    for (const frame of page.frames()) {
+      const el = await frame.$(seletor).catch(() => null);
+      if (el) {
+        await el.click({ clickCount: 3 }).catch(() => {});
+        await el.type(String(value), { delay: 20 });
+        await el.dispose().catch(() => {});
+        return true;
+      }
+    }
+    await new Promise(r => setTimeout(r, 300));
+  }
+  return false;
+}
+
 // Preenche um <input> localizado pelo texto do <label>/rótulo mais próximo
 // (procurado entre label/div/span/p com texto EXACTO igual ao dado) — mais
 // resiliente do que adivinhar um id/name, que o portal pode gerar
@@ -495,8 +518,8 @@ export async function obterDeclaracoesRemuneracoesSSD({ anoMes } = {}) {
     );
 
     await garantirSeccaoLoginAberta(page);
-    const preencheuUtilizador = await preencherCampoPorLabel(page, 'Utilizador', utilizador);
-    const preencheuSenha = preencheuUtilizador ? await preencherCampoPorLabel(page, 'Palavra-passe', senha) : false;
+    const preencheuUtilizador = await preencherCampoPorSeletor(page, '#username', utilizador);
+    const preencheuSenha = preencheuUtilizador ? await preencherCampoPorSeletor(page, '#password', senha) : false;
     if (!preencheuUtilizador || !preencheuSenha) {
       const debug = await screenshotDebug(page);
       const err = new Error('Campos de login (Utilizador/Palavra-passe) não encontrados — a SS pode ter mudado o layout.');
