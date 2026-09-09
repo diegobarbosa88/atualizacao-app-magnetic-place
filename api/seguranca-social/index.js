@@ -26,6 +26,9 @@ import {
   parsePesquisaTrabalhadoresResponse,
   buildGetDadosTrabalhadoresSoap,
   parseGetDadosTrabalhadoresResponse,
+  GESTAO_FICHEIRO_URL,
+  buildConsultarFicheiroSoap,
+  parseConsultarFicheiroResponse,
 } from './_soapUtils.js';
 import { requireAuth } from '../_authUtils.js';
 
@@ -338,6 +341,31 @@ export default async function handler(req, res) {
         return res.status(422).json({ estado: resultado.estado, erro: resultado.erro });
       }
       return res.status(200).json({ estado: resultado.estado, contratos: resultado.contratos || [], ambiente: getAmbiente() });
+    } catch (e) { return res.status(502).json({ erro: e.message }); }
+  }
+
+  // Consultar Ficheiro (Declarações de Remunerações) — leitura, 1 passo. Só
+  // devolve o ESTADO de um ficheiro já submetido (Aceite/Rejeitado/etc.),
+  // não o documento em si — idFicheiro tem de vir do admin (normalmente o
+  // "Identificador DR" visível no extrato da declaração, na SSD). O serviço
+  // de escrita (registarFicheiro/substituirFicheiro) fica deliberadamente
+  // por implementar — decisão do Diego, 2026-09-09.
+  if (action === 'consultar-ficheiro-declaracao') {
+    if (!credenciaisConfiguradas()) return res.status(400).json({ erro: 'Token PSI não configurado.' });
+    const { idFicheiro } = req.body || {};
+    if (!idFicheiro) return res.status(400).json({ erro: 'Campo "idFicheiro" obrigatório.' });
+    const soapBody = buildConsultarFicheiroSoap({ idFicheiro });
+    try {
+      const { xmlResposta } = await callSSSoapUrl(
+        GESTAO_FICHEIRO_URL(),
+        soapBody,
+        // Inferido a partir do targetNamespace do WSDL (xmlns:ges) — não
+        // consta explicitamente no PDF um valor de SOAPAction próprio.
+        'http://app.seg-social.pt/ws/gr/gestaoficheiro#consultarFicheiro',
+      );
+      const resultado = parseConsultarFicheiroResponse(xmlResposta);
+      if (resultado.estado === 'erro') return res.status(422).json({ erro: resultado.erro });
+      return res.status(200).json({ ...resultado, ambiente: getAmbiente() });
     } catch (e) { return res.status(502).json({ erro: e.message }); }
   }
 

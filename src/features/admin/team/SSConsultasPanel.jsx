@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, Fragment } from 'react';
-import { Search, FileText, TrendingUp, AlertCircle, CheckCircle, Info, ShieldCheck, Bell, FileSignature, Users, Ban, Send, History } from 'lucide-react';
+import { Search, FileText, TrendingUp, AlertCircle, CheckCircle, Info, ShieldCheck, Bell, FileSignature, Users, Ban, Send, History, FileSearch } from 'lucide-react';
 import { authFetch } from '../../../utils/authFetch';
 import SubTabBar from '../../../components/common/SubTabBar';
 import { FT } from '../../../styles/designTokens';
@@ -325,6 +325,114 @@ function SituacaoContributivaSection() {
             >
               {aAbrirPdf ? 'A abrir…' : 'Ver declaração (PDF)'}
             </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Consultar Ficheiro (Declarações de Remunerações) ────────────────────────
+// Só devolve o ESTADO de um ficheiro já submetido — não o documento (RNT/TC2)
+// em si. idFicheiro vem de quem consulta (normalmente o "Identificador DR"
+// visível no extrato da declaração, na Segurança Social Direta).
+
+const ESTADO_FICHEIRO_BADGE_STYLE = {
+  Aceite:      { background: 'var(--ok-bg)',   color: 'var(--ok)' },
+  Rejeitado:   { background: 'var(--bad-bg)',  color: 'var(--bad)' },
+  'Não Aceite': { background: 'var(--bad-bg)', color: 'var(--bad)' },
+};
+
+function FicheiroDeclaracaoSection() {
+  const [idFicheiro, setIdFicheiro] = useState('');
+  const [estado, setEstado] = useState(null); // null | { loading } | { ...resultado, ambiente } | { erro }
+
+  async function consultar() {
+    if (!idFicheiro.trim()) { setEstado({ erro: 'Indique o "Identificador DR" (idFicheiro) a consultar.' }); return; }
+    setEstado({ loading: true });
+    try {
+      const r = await authFetch('/api/seguranca-social', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'consultar-ficheiro-declaracao', idFicheiro: idFicheiro.trim() }),
+      });
+      const json = await r.json();
+      if (!r.ok) { setEstado({ erro: json.erro || `HTTP ${r.status}` }); return; }
+      setEstado(json);
+    } catch (e) { setEstado({ erro: e.message }); }
+  }
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-gray-500 max-w-2xl">
+        Só devolve o estado de uma declaração de remunerações já submetida (Aceite/Rejeitado/etc.),
+        não o documento RNT/TC2 em si.
+      </p>
+      <div className="flex items-end gap-3">
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">Identificador DR (idFicheiro)</label>
+          <input
+            type="text"
+            placeholder="ex: 177598409"
+            value={idFicheiro}
+            onChange={e => setIdFicheiro(e.target.value)}
+            className="border border-gray-300 rounded px-2 py-1.5 text-sm w-52 focus:outline-none focus:ring-1 focus:ring-[var(--navy)]"
+          />
+        </div>
+        <button
+          onClick={consultar}
+          disabled={estado?.loading}
+          className="flex items-center gap-1.5 px-3 py-1.5 border rounded text-sm disabled:opacity-50 hover:bg-[var(--surface)] transition-colors"
+          style={{ borderColor: FT.slate, color: 'var(--ink-soft)' }}
+        >
+          <Search size={13} />
+          {estado?.loading ? 'A consultar…' : 'Consultar'}
+        </button>
+        {estado?.ambiente && <AmbienteBadge ambiente={estado.ambiente} />}
+      </div>
+
+      {estado?.erro && <ErroMsg erro={estado.erro} />}
+
+      {estado && !estado.loading && !estado.erro && estado.estadoLabel && (
+        <div className="border border-gray-200 rounded p-3 space-y-1.5 max-w-md">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-500">Estado:</span>
+            <span className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>{estado.estadoLabel}</span>
+          </div>
+          {estado.estadoFicheiro && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500">Estado do ficheiro:</span>
+              <span
+                className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold"
+                style={ESTADO_FICHEIRO_BADGE_STYLE[estado.estadoFicheiro] || {}}
+              >
+                {estado.estadoFicheiro}
+              </span>
+            </div>
+          )}
+          {estado.nomeFicheiro && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500">Nome do ficheiro:</span>
+              <span className="text-sm font-mono">{estado.nomeFicheiro}</span>
+            </div>
+          )}
+          {estado.dataEntrega && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500">Data de entrega:</span>
+              <span className="text-sm">{estado.dataEntrega}</span>
+            </div>
+          )}
+          {estado.dataLimiteSubstituicao && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500">Data limite substituição:</span>
+              <span className="text-sm">{estado.dataLimiteSubstituicao}</span>
+            </div>
+          )}
+          {estado.mensagem && (
+            <div className="text-sm text-gray-600 pt-1">{estado.mensagem}</div>
+          )}
+          {estado.temErrosAlertas && (
+            <div className="text-xs pt-1" style={{ color: 'var(--warn)' }}>Ficheiro com erros/alertas assinalados pela Segurança Social.</div>
           )}
         </div>
       )}
@@ -759,6 +867,7 @@ export default function SSConsultasPanel() {
     { id: 'comprovativos',        label: 'Comprovativos de Pagamento',   icon: CheckCircle    },
     { id: 'documentos-pagamento', label: 'Documentos de Pagamento',      icon: FileText       },
     { id: 'situacao-contributiva', label: 'Situação Contributiva',       icon: ShieldCheck    },
+    { id: 'ficheiro-declaracao',   label: 'Consultar Ficheiro (DR)',     icon: FileSearch     },
     { id: 'avisos',                label: 'Avisos',                     icon: Bell           },
     { id: 'contratos',             label: 'Contratos',                  icon: FileSignature  },
     { id: 'trabalhadores',         label: 'Trabalhadores',              icon: Users          },
@@ -773,6 +882,7 @@ export default function SSConsultasPanel() {
         {aba === 'comprovativos'         && <ComprovativosSection />}
         {aba === 'documentos-pagamento'  && <DocumentosPagamentoSection ssAmbiente={ssAmbiente} />}
         {aba === 'situacao-contributiva' && <SituacaoContributivaSection />}
+        {aba === 'ficheiro-declaracao'   && <FicheiroDeclaracaoSection />}
         {aba === 'avisos'                && <AvisosSection />}
         {aba === 'contratos'             && <ContratosSection />}
         {aba === 'trabalhadores'         && <TrabalhadoresSection />}

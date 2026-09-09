@@ -66,6 +66,16 @@ const TRABALHADORES_SS_URL = () => isProd()
   ? 'https://app.seg-social.pt/ws/idq/WsIdqQualificacoesTrabalhadoresVinculadosEE_Request'
   : 'https://extservices.seg-social.pt/ws/idq/WsIdqQualificacoesTrabalhadoresVinculadosEE_Request';
 
+// Gestão de Ficheiro (Declarações de Remunerações) — SOAP. Só se usa
+// consultarFicheiro (leitura, estado de um ficheiro já submetido, por
+// idFicheiro conhecido) — registarFicheiro/substituirFicheiro (escrita,
+// submete/substitui a declaração real) ficam deliberadamente por
+// implementar, decisão do Diego, 2026-09-09. Marcado como "descontinuado em
+// breve" no índice oficial da PSI — não investir mais do que o necessário.
+const GESTAO_FICHEIRO_URL = () => isProd()
+  ? 'https://app.seg-social.pt/ws/gr/v1/gestaoFicheiro'
+  : 'https://extservices.seg-social.pt/ws/gr/v1/gestaoFicheiro';
+
 // ── Consulta CI — GET genérico ───────────────────────────────────────────────
 
 /**
@@ -175,7 +185,7 @@ export async function callSSRestPutUrl(url, body) {
   return { httpStatus: res.status, ok: res.ok, json };
 }
 
-export { CI_BASE, SITUACAO_CONTRIBUTIVA_URL, EEAOC_BASE, CONTRATOS_URL, TRABALHADORES_SS_URL, LOCAIS_TRABALHO_URL };
+export { CI_BASE, SITUACAO_CONTRIBUTIVA_URL, EEAOC_BASE, CONTRATOS_URL, TRABALHADORES_SS_URL, LOCAIS_TRABALHO_URL, GESTAO_FICHEIRO_URL };
 
 // ── Mapeamentos ──────────────────────────────────────────────────────────────
 
@@ -728,6 +738,68 @@ export function parseGetDadosContratosResponse(xmlStr) {
   }
 
   return { estado: 'sucesso', contratos };
+}
+
+// ── Consultar Ficheiro (Declarações de Remunerações) — SOAP, 1 passo ─────────
+//
+// Só a operação de leitura consultarFicheiro (ver GESTAO_FICHEIRO_URL acima)
+// — devolve o ESTADO de um ficheiro de declaração de remunerações já
+// submetido (Aceite/Rejeitado/etc.), não o documento em si. idFicheiro tem
+// de ser fornecido manualmente (não existe nenhum método "listar os meus
+// ficheiros" nesta spec da PSI) — normalmente corresponde ao "Identificador
+// DR" visível no extrato da declaração, na Segurança Social Direta.
+// Namespace confirmado no PDF: xmlns:ges="http://app.seg-social.pt/ws/gr/gestaoficheiro".
+// registarFicheiro/substituirFicheiro (escrita) ficam deliberadamente por
+// implementar — decisão do Diego, 2026-09-09.
+
+export function buildConsultarFicheiroSoap({ idFicheiro }) {
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+  xmlns:ges="http://app.seg-social.pt/ws/gr/gestaoficheiro">
+  <soapenv:Header/>
+  <soapenv:Body>
+    <ges:consultarFicheiro>
+      <Idficheiro>${escapeXml(String(idFicheiro))}</Idficheiro>
+    </ges:consultarFicheiro>
+  </soapenv:Body>
+</soapenv:Envelope>`;
+}
+
+// estado (código numérico): 0=FICHEIRO_EXISTE, 1=FICHEIRO_EM_PROCESSAMENTO,
+// 2=FICHEIRO_SUBSTITUIDO, 3=FICHEIRO_INACESSIVEL_UTILIZADOR, 4=FICHEIRO_NAO_EXISTE.
+const ESTADO_FICHEIRO_LABEL = {
+  '0': 'Existe',
+  '1': 'Em processamento',
+  '2': 'Substituído',
+  '3': 'Inacessível para este utilizador',
+  '4': 'Não existe',
+};
+
+export function parseConsultarFicheiroResponse(xmlStr) {
+  if (!xmlStr) return { estado: 'erro', erro: 'Resposta vazia da Segurança Social.' };
+
+  const faultMatch = xmlStr.match(/<faultstring[^>]*>([^<]+)<\/faultstring>/i);
+  if (faultMatch) return { estado: 'erro', erro: faultMatch[1].trim() };
+
+  const campo = (nome) => {
+    const m = xmlStr.match(new RegExp(`<(?:[^:>]+:)?${nome}[^>]*>([^<]*)<\\/(?:[^:>]+:)?${nome}>`, 'i'));
+    return m ? m[1].trim() : null;
+  };
+
+  const codigoEstado = campo('estado');
+  if (codigoEstado == null) return { estado: 'erro', erro: 'Resposta sem o campo "estado" — a Segurança Social pode ter mudado o formato.' };
+
+  return {
+    estado: 'sucesso',
+    codigoEstado,
+    estadoLabel: ESTADO_FICHEIRO_LABEL[codigoEstado] || `Código desconhecido: ${codigoEstado}`,
+    mensagem: campo('mensagem'),
+    nomeFicheiro: campo('nomeFicheiro'),
+    dataEntrega: campo('dataEntrega'),
+    dataLimiteSubstituicao: campo('dataLimiteSubstituicao'),
+    estadoFicheiro: campo('estadoFicheiro'), // "Aceite"/"Rejeitado"/"Não Aceite" — só quando codigoEstado === '0'
+    temErrosAlertas: /<(?:[^:>]+:)?lstErrosAlertasZip[^>]*>/i.test(xmlStr),
+  };
 }
 
 // ── Consultar Trabalhadores — SOAP, dois passos (getQualificacoesTrabalhadoresVinculadosEE + getDados) ──
