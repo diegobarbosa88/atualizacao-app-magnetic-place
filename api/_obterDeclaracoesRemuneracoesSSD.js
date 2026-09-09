@@ -362,7 +362,14 @@ async function contarLinhasResultado(page, { timeout = 15000 } = {}) {
         const anoMesTh = ths.find(el => el.textContent && el.textContent.trim().startsWith('Ano/Mês'));
         const table = anoMesTh?.closest('table');
         if (!table) return null;
-        return table.querySelectorAll('tbody tr').length;
+        // Sem resultados, o PrimeFaces normalmente devolve uma única linha
+        // com uma mensagem tipo "Não existem resultados..." em vez de
+        // dados reais — só conta linhas que tenham de facto o link "Ações"
+        // dentro, para não confundir isso com uma declaração real (achado
+        // real, 2026-09-09).
+        const linhas = Array.from(table.querySelectorAll('tbody tr'));
+        return linhas.filter(row => Array.from(row.querySelectorAll('a, button'))
+          .some(el => el.textContent && el.textContent.trim() === 'Ações')).length;
         /* eslint-enable no-undef */
       }).catch(() => null);
       if (n != null) return { frame, count: n };
@@ -382,7 +389,11 @@ async function clicarAcaoEExtrato(frame, indiceLinha, textoItem) {
     const anoMesTh = ths.find(el => el.textContent && el.textContent.trim().startsWith('Ano/Mês'));
     const table = anoMesTh?.closest('table');
     if (!table) return null;
-    const rows = Array.from(table.querySelectorAll('tbody tr'));
+    // Mesma filtragem de contarLinhasResultado — só linhas com o link
+    // "Ações" de facto contam como resultado real, não a linha de
+    // "Não existem resultados..." que o PrimeFaces devolve sem dados.
+    const rows = Array.from(table.querySelectorAll('tbody tr')).filter(row =>
+      Array.from(row.querySelectorAll('a, button')).some(el => el.textContent && el.textContent.trim() === 'Ações'));
     const row = rows[idx];
     if (!row) return null;
     const links = Array.from(row.querySelectorAll('a, button'));
