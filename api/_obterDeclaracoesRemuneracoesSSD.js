@@ -123,52 +123,69 @@ async function clickByText(page, cssSelector, text, { timeout = 10000 } = {}) {
 // vivem os campos NISS/senha) pode estar colapsada por omissão, atrás de um
 // accordion — achado real, 2026-09-09: o robô só via a opção "Cartão de
 // Cidadão/Chave Móvel Digital" no screenshot de debug, sem os campos de
-// login. Procura o texto "utilizador da Segurança Social" que NÃO comece
-// por "Fechar" (esse é o mesmo cabeçalho, já aberto — clicar de novo
-// fecharia a secção), sobe até 5 níveis à procura de um ancestral
-// realmente clicável (BUTTON/A/role=button/onclick/cursor:pointer — o
-// texto pode estar num <span> interno sem handler nenhum), e clica-o com
-// um clique REAL do Puppeteer via CDP (ElementHandle.click()), não
-// sintético — mesma correção já validada em api/_obterCertidaoFiscalAT.js
-// (2ª tentativa daquele robô: el.click() sintético não dispara handlers
-// React/Radix, isTrusted:false). A 1ª tentativa deste RPA usava só
-// el.click() sintético e não teve efeito nenhum (confirmado pelo Diego:
-// screenshot de debug seguinte ainda mostrava a secção colapsada). Não
-// lança erro se não encontrar nada — pode já estar aberta.
+// login.
+//
+// Duas tentativas anteriores falharam: (1) el.click() sintético dentro de
+// frame.evaluate não teve efeito nenhum; (2) subir a árvore até um
+// ancestral "clicável" (BUTTON/A/role=button/onclick/cursor:pointer) e
+// clicá-lo via ElementHandle.click() real (CDP) TAMBÉM não teve efeito —
+// confirmado pelo Diego, screenshot de debug seguinte ainda mostrava a
+// secção colapsada. Causa provável: React não atribui `onclick` como
+// propriedade direta do elemento (usa delegação de eventos), por isso o
+// critério de deteção de "elemento clicável" nunca acertava o nível certo.
+//
+// Corrigido para não tentar adivinhar QUAL nível tem o handler: clica em
+// cada nível ascendente, um de cada vez (do texto até 5 níveis acima, com
+// clique real via CDP), verificando depois de CADA tentativa se o campo
+// "Utilizador" já apareceu — pára assim que um clique funcionar. Não lança
+// erro se não encontrar o texto-alvo nenhures — pode já estar aberta.
 async function garantirSeccaoLoginAberta(page) {
-  const marcador = 'data-ssd-rpa-toggle';
   for (const frame of page.frames()) {
-    const marcou = await frame.evaluate((marc) => {
+    const existeAlvo = await frame.evaluate(() => {
       /* eslint-disable no-undef -- corre no contexto da página (browser), não no Node */
-      const candidatos = Array.from(document.querySelectorAll('a, button, div, span, h2, h3, h4, strong, b'));
-      const textoAlvo = candidatos.find(el => {
+      return Array.from(document.querySelectorAll('a, button, div, span, h2, h3, h4, strong, b')).some(el => {
         const t = el.textContent && el.textContent.trim().toLowerCase();
         return t && t.includes('utilizador da segurança social') && !t.startsWith('fechar');
       });
-      if (!textoAlvo) return false;
-      let target = textoAlvo;
-      for (let i = 0; i < 5 && target; i++) {
-        const tag = target.tagName;
-        const role = target.getAttribute?.('role');
-        const clicavel = tag === 'BUTTON' || tag === 'A' || role === 'button' ||
-          target.onclick != null || window.getComputedStyle(target).cursor === 'pointer';
-        if (clicavel) break;
-        target = target.parentElement;
-      }
-      (target || textoAlvo).setAttribute(marc, '1');
-      return true;
       /* eslint-enable no-undef */
-    }, marcador).catch(() => false);
+    }).catch(() => false);
+    if (!existeAlvo) continue;
 
-    if (marcou) {
+    const marcador = 'data-ssd-rpa-toggle';
+    for (let nivel = 0; nivel < 6; nivel++) {
+      const marcou = await frame.evaluate((marc, n) => {
+        /* eslint-disable no-undef -- corre no contexto da página (browser), não no Node */
+        const candidatos = Array.from(document.querySelectorAll('a, button, div, span, h2, h3, h4, strong, b'));
+        const textoAlvo = candidatos.find(el => {
+          const t = el.textContent && el.textContent.trim().toLowerCase();
+          return t && t.includes('utilizador da segurança social') && !t.startsWith('fechar');
+        });
+        if (!textoAlvo) return false;
+        let target = textoAlvo;
+        for (let i = 0; i < n && target.parentElement; i++) target = target.parentElement;
+        document.querySelectorAll(`[${marc}]`).forEach(el => el.removeAttribute(marc));
+        target.setAttribute(marc, '1');
+        return true;
+        /* eslint-enable no-undef */
+      }, marcador, nivel).catch(() => false);
+      if (!marcou) break;
+
       const handle = await frame.$(`[${marcador}]`).catch(() => null);
       if (handle) {
         await handle.click().catch(() => {});
         await handle.dispose().catch(() => {});
-        await new Promise(r => setTimeout(r, 500));
-        return;
       }
+      await new Promise(r => setTimeout(r, 400));
+
+      const abriu = await frame.evaluate(() => {
+        /* eslint-disable no-undef -- corre no contexto da página (browser), não no Node */
+        return Array.from(document.querySelectorAll('label, div, span, p, strong, b'))
+          .some(el => el.textContent && el.textContent.trim() === 'Utilizador');
+        /* eslint-enable no-undef */
+      }).catch(() => false);
+      if (abriu) return;
     }
+    return;
   }
 }
 
