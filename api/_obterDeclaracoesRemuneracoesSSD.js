@@ -226,10 +226,14 @@ async function preencherCampoPorSeletor(page, seletor, value, { timeout = 10000 
         await el.type(String(value), { delay: 20 });
         await el.dispose().catch(() => {});
         // Fecha um eventual popup de datepicker (jQuery UI, campos
-        // "hasDatepicker") que a digitação possa ter aberto — sem isto,
-        // o popup podia intercetar o clique seguinte em "Pesquisar".
-        // Sem efeito em campos sem datepicker (Utilizador/Palavra-passe).
-        await page.keyboard.press('Escape').catch(() => {});
+        // "hasDatepicker") que a digitação possa ter aberto, sem arriscar
+        // reverter o valor digitado — Escape tem semântica de "cancelar"
+        // no jQuery UI Datepicker e chegou a reverter o campo para o valor
+        // anterior num teste real (achado, 2026-09-09: pesquisa com
+        // intervalo alargado não encontrou nem a declaração de julho, já
+        // confirmada existir). Tab move o foco e confirma o valor, sem
+        // esse risco. Sem efeito em campos sem datepicker (login).
+        await page.keyboard.press('Tab').catch(() => {});
         return true;
       }
     }
@@ -320,12 +324,17 @@ const SELETOR_PERIODO_REF_A = '#dadosPesquisaDeclaracoes\\:dataReferenciaFimMont
 // (confirmado ao vivo: pesquisando só "2026-08" dava "sem resultados",
 // mas alargando para "De 2026-07 a 2026-09" já aparecia a declaração real
 // de julho). O robô escolhe depois a linha mais recente entre os
-// resultados (ver obterLinhaDeclaracaoEscolhida), em vez de assumir que o
-// mês pedido tem sempre dados. Pelos IDs reais; fallback para a heurística
+// resultados (ver obterDeclaracoesRemuneracoesSSD), em vez de assumir que
+// o mês pedido tem sempre dados. Pelos IDs reais; fallback para a heurística
 // antiga (heading + inputs no mesmo contentor, preenchendo os dois com
-// `periodoDe`) só se os IDs tiverem mudado.
+// `periodoDe`) só se os IDs tiverem mudado. Pequena espera entre os dois
+// campos — mudar "De" pode disparar um postback AJAX do PrimeFaces (comum
+// nestes formulários JSF) que precisa de tempo para assentar antes de
+// mexer no campo "a", evitando uma corrida entre o preenchimento e esse
+// callback.
 async function preencherPeriodoReferencia(page, periodoDe, periodoA) {
   const preencheuDe = await preencherCampoPorSeletor(page, SELETOR_PERIODO_REF_DE, periodoDe);
+  if (preencheuDe) await new Promise(r => setTimeout(r, 500));
   const preencheuA = preencheuDe ? await preencherCampoPorSeletor(page, SELETOR_PERIODO_REF_A, periodoA) : false;
   if (preencheuDe && preencheuA) return true;
 
