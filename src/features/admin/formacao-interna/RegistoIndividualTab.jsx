@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Loader2, FileDown, User, Clock, CheckCircle2, AlertTriangle, Hourglass, Award } from 'lucide-react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import { Loader2, FileDown, User, Clock, CheckCircle2, AlertTriangle, Hourglass, Award, X } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
-import { listFormacoes } from './formacaoApi';
+import { listFormacoes, removerParticipante } from './formacaoApi';
 import { exportRegistoIndividualPDF, exportCertificadoPDF } from './formacaoExport';
 import { CATEGORIAS } from './formacaoTemplates';
 import { SCALE } from '../../../styles/designTokens';
@@ -54,13 +54,15 @@ export default function RegistoIndividualTab() {
   const [error, setError] = useState('');
   const [exportando, setExportando] = useState(false);
   const [emitindoCertId, setEmitindoCertId] = useState(null);
+  const [confirmRemoverId, setConfirmRemoverId] = useState(null); // participante_id
+  const [removendoId, setRemovendoId] = useState(null);
 
   useEffect(() => {
     if (!supabase) return;
     supabase.from('workers').select('id, name').order('name').then(({ data }) => setWorkers(data || []));
   }, [supabase]);
 
-  useEffect(() => {
+  const carregar = useCallback(() => {
     if (!workerId || !supabase) { setWorker(null); setFormacoes([]); return; }
     setLoading(true);
     setError('');
@@ -79,6 +81,26 @@ export default function RegistoIndividualTab() {
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
   }, [workerId, ano, supabase]);
+
+  useEffect(() => { carregar(); }, [carregar]);
+
+  // Remove o registo de participante (formacao_participantes) — a mesma
+  // operação já usada em SincronizarFormacoesModal.jsx, "liberta" a
+  // formação para poder ser reatribuída depois; não apaga a ação de
+  // formação em si (outros trabalhadores podem continuar inscritos nela).
+  const handleRemover = async (participanteId) => {
+    setRemovendoId(participanteId);
+    setError('');
+    try {
+      const r = await removerParticipante(participanteId);
+      if (r.error) throw new Error(r.error);
+      setConfirmRemoverId(null);
+      carregar();
+    } catch (e) {
+      setError(e.message);
+    }
+    setRemovendoId(null);
+  };
 
   const formacoesDoTrabalhador = useMemo(() => {
     return formacoes.map(f => {
@@ -233,6 +255,7 @@ export default function RegistoIndividualTab() {
                     <th className="py-2 pr-4">Formato</th>
                     <th className="py-2 pr-4">Duração</th>
                     <th className="py-2 pr-4">Assinado</th>
+                    <th className="py-2 pr-4">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -262,6 +285,31 @@ export default function RegistoIndividualTab() {
                           <span className={`${SCALE.text.badge} text-[var(--ink-soft)] bg-[var(--surface-dim)] px-2 py-1 rounded-lg`}>
                             Por assinar
                           </span>
+                        )}
+                      </td>
+                      <td className="py-3 pr-4 whitespace-nowrap">
+                        {confirmRemoverId === p.id ? (
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => handleRemover(p.id)}
+                              disabled={removendoId === p.id}
+                              className="px-2 py-1 bg-rose-600 text-white rounded-lg hover:bg-rose-700 disabled:opacity-50"
+                              style={{ fontSize: '10px', fontWeight: 700 }}
+                            >
+                              {removendoId === p.id ? <Loader2 size={11} className="animate-spin" /> : 'Sim'}
+                            </button>
+                            <button onClick={() => setConfirmRemoverId(null)} className="px-2 py-1 bg-slate-100 text-slate-600 rounded-lg" style={{ fontSize: '10px', fontWeight: 700 }}>
+                              Não
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setConfirmRemoverId(p.id)}
+                            title="Remover — liberta esta formação para poder ser reatribuída"
+                            className="p-1.5 rounded-lg text-[var(--bad)] hover:bg-[var(--bad-bg)] transition-colors"
+                          >
+                            <X size={14} />
+                          </button>
                         )}
                       </td>
                     </tr>
