@@ -125,21 +125,34 @@ async function clickByText(page, cssSelector, text, { timeout = 10000 } = {}) {
 // Cidadão/Chave Móvel Digital" no screenshot de debug, sem os campos de
 // login.
 //
-// Duas tentativas anteriores falharam: (1) el.click() sintético dentro de
-// frame.evaluate não teve efeito nenhum; (2) subir a árvore até um
-// ancestral "clicável" (BUTTON/A/role=button/onclick/cursor:pointer) e
-// clicá-lo via ElementHandle.click() real (CDP) TAMBÉM não teve efeito —
-// confirmado pelo Diego, screenshot de debug seguinte ainda mostrava a
-// secção colapsada. Causa provável: React não atribui `onclick` como
-// propriedade direta do elemento (usa delegação de eventos), por isso o
-// critério de deteção de "elemento clicável" nunca acertava o nível certo.
-//
-// Corrigido para não tentar adivinhar QUAL nível tem o handler: clica em
-// cada nível ascendente, um de cada vez (do texto até 5 níveis acima, com
-// clique real via CDP), verificando depois de CADA tentativa se o campo
-// "Utilizador" já apareceu — pára assim que um clique funcionar. Não lança
-// erro se não encontrar o texto-alvo nenhures — pode já estar aberta.
+// Duas tentativas anteriores, baseadas em heurística de texto, falharam:
+// (1) el.click() sintético dentro de frame.evaluate não teve efeito
+// nenhum; (2) subir a árvore até um ancestral "clicável" e clicá-lo via
+// ElementHandle.click() real (CDP) TAMBÉM não teve efeito. O Diego
+// resolveu a dúvida inspecionando o HTML real do portal: o toggle é
+// `<a id="toogleAuth" onclick="abrirSlideAutenticacao()">` — um handler
+// inline clássico (jQuery/JSF), não um componente React (o que explica por
+// que a heurística baseada em "onclick"/"cursor:pointer" nunca acertava —
+// essas tentativas corriam antes de se saber o ID real). Com o ID exacto
+// confirmado, `frame.click('#toogleAuth')` (clique real do Puppeteer via
+// CDP) é muito mais direto e fiável do que qualquer heurística — usado
+// primeiro; a lógica anterior (clicar em cada nível ascendente a partir do
+// texto) fica como rede de segurança, só para o caso de a SS mudar o ID.
 async function garantirSeccaoLoginAberta(page) {
+  for (const frame of page.frames()) {
+    const toggle = await frame.$('#toogleAuth').catch(() => null);
+    if (toggle) {
+      await toggle.dispose().catch(() => {});
+      try {
+        await frame.click('#toogleAuth');
+        await new Promise(r => setTimeout(r, 500));
+        return;
+      } catch {
+        // segue para o fallback por texto abaixo, neste mesmo frame
+      }
+    }
+  }
+
   for (const frame of page.frames()) {
     const existeAlvo = await frame.evaluate(() => {
       /* eslint-disable no-undef -- corre no contexto da página (browser), não no Node */
