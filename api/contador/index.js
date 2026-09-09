@@ -1401,6 +1401,20 @@ async function handleObterCertidaoFiscal(req, res) {
 // atual, por omissão), não substitui documentos de meses anteriores.
 // ---------------------------------------------------------------------------
 
+async function gravarScreenshotDebugDeclaracoes(base64) {
+  if (!base64) return null;
+  try {
+    const supabase = supabaseAdmin();
+    const debugPath = `declaracoes-remuneracoes-debug/${Date.now()}.jpg`;
+    await supabase.storage.from('documentos-empresa').upload(debugPath, Buffer.from(base64, 'base64'), { contentType: 'image/jpeg' });
+    const { data } = supabase.storage.from('documentos-empresa').getPublicUrl(debugPath);
+    return data.publicUrl;
+  } catch (upErr) {
+    console.error('Falha ao gravar screenshot de debug:', upErr);
+    return null;
+  }
+}
+
 async function handleObterDeclaracoesRemuneracoes(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   if (!requireAuth(req, res, ['admin'])) return;
@@ -1411,18 +1425,7 @@ async function handleObterDeclaracoesRemuneracoes(req, res) {
     resultado = await obterDeclaracoesRemuneracoesSSD({ anoMes: req.body?.anoMes || undefined });
   } catch (e) {
     console.error('obter-declaracoes-remuneracoes error:', e);
-    let debugScreenshotUrl = null;
-    if (e.debugScreenshot) {
-      try {
-        const supabase = supabaseAdmin();
-        const debugPath = `declaracoes-remuneracoes-debug/${Date.now()}.jpg`;
-        await supabase.storage.from('documentos-empresa').upload(debugPath, Buffer.from(e.debugScreenshot, 'base64'), { contentType: 'image/jpeg' });
-        const { data } = supabase.storage.from('documentos-empresa').getPublicUrl(debugPath);
-        debugScreenshotUrl = data.publicUrl;
-      } catch (upErr) {
-        console.error('Falha ao gravar screenshot de debug:', upErr);
-      }
-    }
+    const debugScreenshotUrl = await gravarScreenshotDebugDeclaracoes(e.debugScreenshot);
     return res.status(502).json({
       error: `Falha ao obter declaração da Segurança Social Direta: ${e.message}`,
       debug_screenshot_url: debugScreenshotUrl,
@@ -1431,7 +1434,11 @@ async function handleObterDeclaracoesRemuneracoes(req, res) {
   }
 
   if (!resultado.disponivel) {
-    return res.status(200).json({ sucesso: true, disponivel: false, periodo: resultado.periodo });
+    const debugScreenshotUrl = await gravarScreenshotDebugDeclaracoes(resultado.debugScreenshot);
+    return res.status(200).json({
+      sucesso: true, disponivel: false, periodo: resultado.periodo,
+      debug_screenshot_url: debugScreenshotUrl, debug_url: resultado.debugUrl || null,
+    });
   }
 
   const supabase = supabaseAdmin();

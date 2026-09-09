@@ -306,6 +306,7 @@ export default function CompanyDocumentsAdmin() {
         throw new Error(body.error || `Erro ${res.status}`);
       }
       if (!body.disponivel) {
+        setErroRNTScreenshot(body.debug_screenshot_url || null);
         setErroRNT(`Sem declaração encontrada para o período ${body.periodo} na Segurança Social Direta.`);
         return;
       }

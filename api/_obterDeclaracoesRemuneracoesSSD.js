@@ -612,7 +612,12 @@ export async function obterDeclaracoesRemuneracoesSSD({ anoMes } = {}) {
 
     const { frame, linhas } = await obterLinhasValidas(page);
     if (!frame || linhas.length === 0) {
-      return { periodo: anoMes || periodoA, disponivel: false };
+      // Screenshot de debug também aqui — "sem resultados" nunca lançou
+      // exceção, por isso nunca dava a ver o estado real da página nesse
+      // caso (achado, 2026-09-09: precisei disto para diagnosticar se o
+      // período preenchido pelo robô batia com o que se via manualmente).
+      const debug = await screenshotDebug(page);
+      return { periodo: anoMes || periodoA, disponivel: false, debugScreenshot: debug, debugUrl: page.url() };
     }
 
     // anoMes pedido explicitamente (reprocessar um mês específico): exige
@@ -624,7 +629,8 @@ export async function obterDeclaracoesRemuneracoesSSD({ anoMes } = {}) {
       ? linhas.find(l => l.anoMes === anoMes) || null
       : linhas.reduce((maisRecente, l) => (!maisRecente || l.anoMes > maisRecente.anoMes ? l : maisRecente), null);
     if (!linhaEscolhida) {
-      return { periodo: anoMes || periodoA, disponivel: false };
+      const debug = await screenshotDebug(page);
+      return { periodo: anoMes || periodoA, disponivel: false, debugScreenshot: debug, debugUrl: page.url() };
     }
 
     // Assume um único estabelecimento (confirmado pelo Diego — Magnetic
