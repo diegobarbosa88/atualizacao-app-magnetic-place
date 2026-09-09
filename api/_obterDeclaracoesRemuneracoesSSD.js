@@ -107,6 +107,15 @@ function subtrairMeses(anoMesBase, meses) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
+// Primeiro dia do mês, N meses atrás do atual — formato "aaaa-mm-dd", usado
+// pelo campo "Período de Entrega" (formato diferente do "Período de
+// Referência", que é só "aaaa-mm").
+function primeiroDiaMesesAtras(meses) {
+  const hoje = new Date();
+  const d = new Date(hoje.getFullYear(), hoje.getMonth() - meses, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+}
+
 // Clica no primeiro elemento que bate com o seletor CSS E contém o texto
 // dado (comparação exacta, trim), em qualquer frame da página.
 async function clickByText(page, cssSelector, text, { timeout = 10000 } = {}) {
@@ -326,32 +335,36 @@ async function preencher2FASeNecessario(page, desdeMs) {
   ]);
 }
 
-// ID real do campo "Período de Referência" — "De" — confirmado pelo Diego
-// via inspeção do HTML real, 2026-09-09: PrimeFaces (JSF), formato
-// "aaaa-mm". Os ":" fazem parte do id do PrimeFaces e têm de ser escapados
-// em CSS.
+// IDs reais dos campos "De" de "Período de Referência" (formato "aaaa-mm")
+// e "Período de Entrega" (formato "aaaa-mm-dd") — confirmados pelo Diego
+// via inspeção do HTML real, 2026-09-09: PrimeFaces (JSF). Os ":" fazem
+// parte do id do PrimeFaces e têm de ser escapados em CSS.
 const SELETOR_PERIODO_REF_DE = '#dadosPesquisaDeclaracoes\\:dataReferenciaInicioMonthPicker\\:calendar_input';
+const SELETOR_PERIODO_ENTREGA_DE = '#dadosPesquisaDeclaracoes\\:dataEntregaInicio\\:calendar_input';
 
-// Preenche só o campo "De" do "Período de Referência", alargando o
-// intervalo de pesquisa (não um único mês) — decisão do Diego, 2026-09-09:
-// a declaração do mês mais recente pode ainda não estar aceite na SS
-// quando o RPA corre (confirmado ao vivo: pesquisando só "2026-08" dava
-// "sem resultados", mas alargando para "De 2026-07 a 2026-09" já aparecia
-// a declaração real de julho). O robô escolhe depois a linha mais recente
-// entre os resultados (ver obterDeclaracoesRemuneracoesSSD).
-//
-// O campo "a" NUNCA é tocado, de propósito — já vem pré-preenchido com o
-// mês atual ao carregar a página, que é exatamente o limite superior
-// pretendido. Uma tentativa anterior de o preencher programaticamente
-// (com o mesmo mecanismo do "De") deixava-o VAZIO em vez do valor esperado
-// (achado real, 2026-09-09, confirmado pelo screenshot de debug: campo
-// "a" a mostrar só o placeholder "aaaa-mm") — provavelmente um postback
-// AJAX do PrimeFaces, disparado ao editar "De", a interferir com a edição
-// do campo "a" logo a seguir. Mexer só num campo evita esse risco.
-async function preencherPeriodoReferencia(page, periodoDe) {
-  const preencheuDe = await preencherCampoPorSeletor(page, SELETOR_PERIODO_REF_DE, periodoDe);
-  if (preencheuDe) return true;
+// Preenche os campos "De" de "Período de Referência" (2 meses atrás) e
+// "Período de Entrega" (1 mês atrás) — decisão do Diego, 2026-09-09,
+// depois de confirmar ao vivo que os valores por omissão de ambos não
+// cobriam com folga suficiente o período onde a declaração já aceite
+// (julho) se encontrava. Cada campo "a" NUNCA é tocado, de propósito — já
+// vem pré-preenchido com o mês/data atual ao carregar a página, que é
+// exatamente o limite superior pretendido; uma tentativa anterior de o
+// preencher programaticamente deixava-o VAZIO em vez do valor esperado
+// (achado real, 2026-09-09), provavelmente por um postback AJAX do
+// PrimeFaces a interferir com a edição logo a seguir.
+async function preencherPeriodo(page, periodoRefDe, periodoEntregaDe) {
+  const preencheuRef = await preencherCampoPorSeletor(page, SELETOR_PERIODO_REF_DE, periodoRefDe);
+  if (!preencheuRef) return preencherPeriodoReferenciaFallback(page, periodoRefDe);
+  // Não bloqueia o resto do fluxo se este segundo campo falhar — o
+  // "Período de Entrega" é uma segunda rede de segurança, o essencial
+  // (Período de Referência) já ficou preenchido.
+  await preencherCampoPorSeletor(page, SELETOR_PERIODO_ENTREGA_DE, periodoEntregaDe).catch(() => false);
+  return true;
+}
 
+// Fallback para a heurística antiga (heading + primeiro input no mesmo
+// contentor) só se o id do "Período de Referência" tiver mudado.
+async function preencherPeriodoReferenciaFallback(page, periodoDe) {
   const deadline = Date.now() + 10000;
   while (Date.now() < deadline) {
     for (const frame of page.frames()) {
@@ -552,13 +565,15 @@ export async function obterDeclaracoesRemuneracoesSSD({ anoMes } = {}) {
   if (!utilizador || !senha) {
     throw new Error('SS_DIRETA_UTILIZADOR/SS_DIRETA_SENHA não configurados nas variáveis de ambiente.');
   }
-  // "De": intervalo alargado (3 meses atrás) quando anoMes não é pedido
+  // "De": intervalo alargado (2 meses atrás) quando anoMes não é pedido
   // explicitamente — a declaração mais recente pode ainda não estar aceite
-  // na SS no momento em que o RPA corre (ver preencherPeriodoReferencia
-  // para o achado real que motivou isto). Quando anoMes É pedido
-  // (reprocessar um mês específico), pesquisa só esse mês exato.
-  const periodoDe = anoMes || subtrairMeses(anoMesAtual(), 3);
+  // na SS no momento em que o RPA corre (ver preencherPeriodo para o
+  // achado real que motivou isto). Quando anoMes É pedido (reprocessar um
+  // mês específico), pesquisa só esse mês exato. "Período de Entrega: De"
+  // (1 mês atrás) é preenchido à parte, mesma razão.
+  const periodoDe = anoMes || subtrairMeses(anoMesAtual(), 2);
   const periodoA = anoMes || anoMesAtual();
+  const periodoEntregaDe = primeiroDiaMesesAtras(1);
 
   let browser;
   let page;
@@ -607,7 +622,7 @@ export async function obterDeclaracoesRemuneracoesSSD({ anoMes } = {}) {
     // `dswid`, que parece ser um id de janela gerado por sessão).
     await page.goto('https://www.seg-social.pt/ptss/gr/pesquisa/consultarDR', { waitUntil: 'networkidle2' });
 
-    const preencheuPeriodo = await preencherPeriodoReferencia(page, periodoDe);
+    const preencheuPeriodo = await preencherPeriodo(page, periodoDe, periodoEntregaDe);
     if (!preencheuPeriodo) {
       const debug = await screenshotDebug(page);
       const err = new Error('Campo "Período de Referência" não encontrado na página de pesquisa.');
