@@ -14,7 +14,7 @@
 // API: se a SS mudar o layout/fluxo, isto pode parar de funcionar sem aviso.
 // Login via CAS (`seg-social.pt/sso/login`), utilizador = NISS + senha.
 //
-// Por omissão pesquisa um intervalo alargado (últimos 3 meses até o mês
+// Por omissão pesquisa um intervalo alargado (últimos 2 meses até o mês
 // atual) e escolhe a declaração MAIS RECENTE encontrada — não um mês fixo
 // (decisão do Diego, 2026-09-09, depois de confirmar ao vivo que o mês
 // mais recente pode ainda não estar aceite na SS quando o RPA corre).
@@ -472,7 +472,12 @@ async function clicarAcaoEExtrato(frame, indiceLinha, textoItem) {
   if (sufixo) {
     const idItem = `formListaDeclaracoes:tabelaDeclaracoes:${indiceLinha}:${sufixo}`;
     const seletorItem = `#${idItem.replace(/:/g, '\\:')}`;
-    const handleDireto = await frame.waitForSelector(seletorItem, { timeout: 5000 }).catch(() => null);
+    // visible:true é essencial aqui — sem isso, waitForSelector resolve
+    // assim que o item aparece no DOM, mesmo que o menu popup do
+    // PrimeFaces ainda esteja a meio da animação/posicionamento (sem
+    // boundingBox válida ainda), e o .click() a seguir falha com "Node is
+    // either not clickable or not an Element" (achado real, 2026-09-09).
+    const handleDireto = await frame.waitForSelector(seletorItem, { timeout: 5000, visible: true }).catch(() => null);
     if (handleDireto) {
       await handleDireto.click();
       await handleDireto.dispose().catch(() => {});
