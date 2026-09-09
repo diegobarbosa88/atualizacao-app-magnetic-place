@@ -709,6 +709,12 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
       supabase={supabase}
       onChange={reloadEpi}
     />
+    {sincronizarFormacoesWorker && (
+      <SincronizarFormacoesModal
+        worker={sincronizarFormacoesWorker}
+        onClose={() => setSincronizarFormacoesWorker(null)}
+      />
+    )}
     </>
   );
 };
