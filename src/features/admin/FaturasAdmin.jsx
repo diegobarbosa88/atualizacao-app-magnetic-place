@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { FileText, Download, Loader2, RefreshCw, ExternalLink, Trash2, Search, ChevronDown, ChevronUp, X, ArrowUpDown, ArrowUp, ArrowDown, Sparkles, CheckCircle, Printer, Eye, Receipt, Repeat, CreditCard } from 'lucide-react';
+import { FileText, Download, Loader2, RefreshCw, ExternalLink, Trash2, Search, ChevronDown, ChevronUp, X, ArrowUpDown, ArrowUp, ArrowDown, Sparkles, CheckCircle, Printer, Eye, Receipt, Repeat, CreditCard, Camera } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import * as pdfjsLib from 'pdfjs-dist';
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
@@ -8,6 +8,7 @@ import { FT, SCALE } from '../../styles/designTokens';
 import GmailConfigPanel from './faturas/GmailConfigPanel';
 import TOConlinePanel from './faturas/TOConlinePanel';
 import FaturaConfigPanel from './faturas/FaturaConfigPanel';
+import UploadFaturaModal from './faturas/UploadFaturaModal';
 import CelEditTd from './faturas/CelEditTd';
 import { authFetch } from '../../utils/authFetch';
 import { gerarRelatorioFaturasPDF } from './faturas/faturasExport';
@@ -151,6 +152,7 @@ export default function FaturasAdmin() {
   const [ordem, setOrdem] = useState({ campo: 'importado_em', dir: 'desc' });
   const [gerandoPdf, setGerandoPdf] = useState(false);
   const [faturaDetalhe, setFaturaDetalhe] = useState(null);
+  const [uploadFaturaOpen, setUploadFaturaOpen] = useState(false);
 
   useEffect(() => {
     if (gmailQueryConfig) setCfg(gmailQueryConfig);
@@ -476,6 +478,28 @@ export default function FaturasAdmin() {
 
       <FaturaConfigPanel />
 
+      {/* Fatura manual (foto ou upload) */}
+      <div className="bg-white rounded-[1.5rem] border border-[var(--border-soft)] shadow-sm p-5 space-y-3">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-2xl flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(235,141,0,0.15)' }}>
+              <Camera size={18} style={{ color: FT.orange }} />
+            </div>
+            <div>
+              <p className="text-sm font-black text-[var(--ink-mid)]">Fatura Manual</p>
+              <p className={`text-[var(--slate-dim)] ${SCALE.text.body}`}>Tira uma foto da fatura na hora ou sobe uma imagem/PDF — a IA lê os campos automaticamente</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setUploadFaturaOpen(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-widest shadow-lg transition-all hover:opacity-90"
+            style={{ backgroundColor: FT.orange, color: FT.navy }}
+          >
+            <Camera size={14} /> Subir Fatura
+          </button>
+        </div>
+      </div>
+
       <GmailConfigPanel
         cfg={cfg}
         onCfgChange={setCfg}
@@ -759,6 +783,8 @@ export default function FaturasAdmin() {
       )}
 
       <ModalDetalhe fatura={faturaDetalhe} onClose={() => setFaturaDetalhe(null)} />
+
+      <UploadFaturaModal open={uploadFaturaOpen} onClose={() => setUploadFaturaOpen(false)} onSaved={carregar} />
 
       {ibanModal && (
         <ModalShell
