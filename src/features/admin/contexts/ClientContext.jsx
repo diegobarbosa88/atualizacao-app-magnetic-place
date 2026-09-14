@@ -60,6 +60,17 @@ export const ClientProvider = ({ children }) => {
               .from('client_valorhora_history')
               .update({ data_alteracao: new Date(clientForm.dataAlteracao).toISOString() })
               .eq('id', last.id);
+          } else if (existingClient) {
+            // Cliente sem nenhum histórico ainda — não há "último registo"
+            // para atualizar, por isso a correção de data ficava sem efeito
+            // nenhum (silenciosamente). Cria o primeiro registo do histórico
+            // com o valor actual, datado com a data escolhida.
+            await saveToDb('client_valorhora_history', crypto.randomUUID(), {
+              client_id: clientForm.id,
+              valor_anterior: null,
+              valor_novo: existingClient.valorHora,
+              data_alteracao: new Date(clientForm.dataAlteracao).toISOString()
+            });
           }
         }
       }

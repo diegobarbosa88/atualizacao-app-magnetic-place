@@ -104,6 +104,17 @@ export const TeamProvider = ({ children }) => {
               .from('worker_valorhora_history')
               .update({ data_alteracao: new Date(workerForm.dataAlteracao).toISOString() })
               .eq('id', last.id);
+          } else if (existingWorker) {
+            // Trabalhador sem nenhum histórico ainda — não há "último registo"
+            // para atualizar, por isso a correção de data ficava sem efeito
+            // nenhum (silenciosamente). Cria o primeiro registo do histórico
+            // com o valor actual, datado com a data escolhida.
+            await saveToDb('worker_valorhora_history', crypto.randomUUID(), {
+              worker_id: workerForm.id,
+              valor_anterior: null,
+              valor_novo: existingWorker.valorHora,
+              data_alteracao: new Date(workerForm.dataAlteracao).toISOString()
+            });
           }
         }
       }
