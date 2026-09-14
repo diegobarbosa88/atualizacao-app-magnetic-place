@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import {
   CheckCircle, UserCheck, RotateCcw, Search,
   Calendar, ChevronLeft, ChevronRight, LayoutList, LayoutGrid,
-  ClipboardList, Pencil, MapPin, Trash2, ShieldCheck
+  ClipboardList, Pencil, MapPin, Trash2, ShieldCheck, MessageSquare
 } from 'lucide-react';
 import ModalShell from '../../../components/common/ModalShell';
 import { useApp } from '../../../context/AppContext';
@@ -21,6 +21,16 @@ const SOURCE_CFG = {
   correction:   { label: 'Correcção',  bg: 'bg-orange-100',  text: 'text-orange-700' },
   client_portal:{ label: 'Portal',     bg: 'bg-teal-100',    text: 'text-teal-700' },
 };
+
+const fmtEditedAt = (iso) => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' })
+    + ' ' + d.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
+};
+
+const mapsUrl = (lat, lng) => `https://www.google.com/maps?q=${lat},${lng}`;
 
 const getInitials = (name) => {
   if (!name) return '?';
@@ -89,7 +99,8 @@ function WorkerLogsModal({ worker, logs, month, onClose }) {
                       const srcCfg = SOURCE_CFG[log.source];
                       const hours = log.hours ?? calculateDuration(log.startTime, log.endTime, log.breakStart, log.breakEnd);
                       return (
-                        <div key={log.id} className="flex items-center justify-between bg-[var(--surface)] rounded-2xl px-4 py-3 gap-3">
+                        <div key={log.id} className="bg-[var(--surface)] rounded-2xl px-4 py-3">
+                        <div className="flex items-center justify-between gap-3">
                           <div className="flex items-center gap-2 flex-wrap min-w-0">
                             {client && (
                               <span className={`${SCALE.text.badge} bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-lg border border-indigo-100 shrink-0`}>
@@ -115,7 +126,7 @@ function WorkerLogsModal({ worker, logs, month, onClose }) {
                             {log.edited_at && (
                               <span className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-lg shrink-0 bg-[var(--surface-dim)] text-[var(--ink-soft)] ${SCALE.text.badge}`}>
                                 <Pencil size={8} />
-                                Editado
+                                Editado {fmtEditedAt(log.edited_at)}
                                 {SOURCE_CFG[log.edited_source] && (
                                   <span className="ml-0.5 normal-case font-normal">
                                     ({SOURCE_CFG[log.edited_source].label})
@@ -128,6 +139,32 @@ function WorkerLogsModal({ worker, logs, month, onClose }) {
                               <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-lg shrink-0 bg-emerald-50 text-emerald-600 ${SCALE.text.badge}`}>
                                 <MapPin size={7} /> Verificado
                               </span>
+                            )}
+                            {/* Localização GPS — links directos para o mapa, independentes
+                                do badge "Verificado" acima (esse reflecte se bateu com o
+                                raio do cliente; aqui mostra-se a localização sempre que
+                                foi guardada, verificada ou não). */}
+                            {log.check_in_lat != null && log.check_in_lng != null && (
+                              <a
+                                href={mapsUrl(log.check_in_lat, log.check_in_lng)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={e => e.stopPropagation()}
+                                className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-lg shrink-0 bg-sky-50 text-sky-600 hover:bg-sky-100 ${SCALE.text.badge}`}
+                              >
+                                <MapPin size={7} /> Mapa (entrada)
+                              </a>
+                            )}
+                            {log.check_out_lat != null && log.check_out_lng != null && (
+                              <a
+                                href={mapsUrl(log.check_out_lat, log.check_out_lng)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={e => e.stopPropagation()}
+                                className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-lg shrink-0 bg-sky-50 text-sky-600 hover:bg-sky-100 ${SCALE.text.badge}`}
+                              >
+                                <MapPin size={7} /> Mapa (saída)
+                              </a>
                             )}
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
@@ -157,6 +194,13 @@ function WorkerLogsModal({ worker, logs, month, onClose }) {
                               </button>
                             )}
                           </div>
+                        </div>
+                        {log.description && (
+                          <p className={`flex items-start gap-1 mt-1.5 pl-0.5 text-[var(--slate-dim)] italic ${SCALE.text.meta}`}>
+                            <MessageSquare size={10} className="mt-0.5 shrink-0" />
+                            {log.description}
+                          </p>
+                        )}
                         </div>
                       );
                     })}
