@@ -129,15 +129,6 @@ export function parseReciboTOConline(text, brutoPlataforma, tolerancias = {}) {
   const abonosExtraidos = parseMoeda(totaisMatch[1]); // 1º valor = Total Abonos
   const liquidoExtraido = parseMoeda(totaisMatch[3]); // 3º valor = Total a Receber
 
-  // eslint-disable-next-line no-console -- DIAGNÓSTICO TEMPORÁRIO, remover depois de investigar o caso do Rafael
-  console.log('[DIAGNÓSTICO SS/IRS] texto completo (2000 primeiros caracteres):', JSON.stringify(text.slice(0, 2000)));
-  // eslint-disable-next-line no-console -- DIAGNÓSTICO TEMPORÁRIO, remover depois de investigar o caso do Rafael
-  console.log('[DIAGNÓSTICO SS/IRS] linhas relevantes:');
-  text.split('\n')
-    .filter(l => /Segurança Social|IRS|148,17|86,00/.test(l))
-    // eslint-disable-next-line no-console -- DIAGNÓSTICO TEMPORÁRIO, remover depois de investigar o caso do Rafael
-    .forEach(l => console.log(JSON.stringify(l)));
-
   // SS: encontra a linha com "Segurança Social" e extrai o último € (= coluna Desconto).
   // Fallback: se a linha não tiver nenhum €, tenta a linha seguinte do texto —
   // cobre o caso de a linha da tabela ficar partida entre página 1 e 2 (rótulo
@@ -161,7 +152,16 @@ export function parseReciboTOConline(text, brutoPlataforma, tolerancias = {}) {
   // legítima de 0%.
   // O pdfjs coloca o valor da coluna Abono antes do Desconto, por isso
   // o último € é sempre o desconto de IRS e não a base tributável.
-  const irsLinha = text.match(/^.*\bIRS\b.*$/m)?.[0] ?? '';
+  // O TOConline às vezes imprime uma nota informativa sobre a taxa efetiva
+  // aplicada aos subsídios ("IRS - Taxa efetiva (Subsídio de Férias):
+  // 0.17%."), que nunca tem valor em € e não é a linha de desconto de IRS
+  // da tabela — trabalhador sem desconto de IRS não tem rubrica "T00X -
+  // IRS..." nenhuma, só essa nota. Confirmado com um recibo real (Jean dos
+  // Santos del Piero, IRS efetivo 0€): sem filtrar esta nota, o código caía
+  // no fallback de "linha seguinte", que por vezes é a linha de Totais, e
+  // lia o TOTAL DE DESCONTOS (SS + faltas) como se fosse o IRS.
+  const linhasIRS = text.split('\n').filter(l => /\bIRS\b/.test(l) && !/taxa\s+efetiva/i.test(l));
+  const irsLinha = linhasIRS[0] ?? '';
   let irsExtraido = ultimoEuroDaLinha(irsLinha);
   if (irsExtraido === 0 && irsLinha && !/\b0([.,]0+)?\s*%/.test(irsLinha)) {
     const posIRS = text.indexOf(irsLinha);
