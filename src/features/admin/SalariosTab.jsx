@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { AlertCircle, CheckCircle, ChevronDown, ChevronRight, Coins, Download, FileText, Landmark, Loader2, Scissors, X, Zap } from 'lucide-react';
+import { AlertCircle, CheckCircle, ChevronDown, ChevronRight, Coins, Download, FileText, History, Landmark, Loader2, Scissors, X, Zap } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { authFetch } from '../../utils/authFetch';
 import { FT, SCALE } from '../../styles/designTokens';
@@ -54,6 +54,10 @@ export default function SalariosTab({ month }) {
   const [sepaAjustes, setSepaAjustes] = useState({}); // employee_name → { base, adicionar, abater }
   const [sepaExpandido, setSepaExpandido] = useState(null); // employee_name com ajustes abertos
   const [sepaCarregando, setSepaCarregando] = useState(false);
+  const [sepaHistorico, setSepaHistorico] = useState([]); // sepa_exports + items, todos (ativos e cancelados)
+  const [confirmedExportIds, setConfirmedExportIds] = useState(new Set()); // exports já confirmados contra transferência bancária real (sepa_batch_links)
+  const [historicoModal, setHistoricoModal] = useState(false);
+  const [cancelandoExport, setCancelandoExport] = useState(null);
   const [justText, setJustText] = useState('');
   const [justSaving, setJustSaving] = useState(false);
 
@@ -136,13 +140,16 @@ export default function SalariosTab({ month }) {
 
     const { data: sepaExportsRaw } = await supabase
       .from('sepa_exports')
-      .select('id, created_at, mes_referencia, tipo, valor_total, sepa_export_items(worker_id, worker_name, iban, valor, receipt_validation_id)')
+      .select('id, created_at, mes_referencia, tipo, valor_total, worker_count, cancelled_at, cancelled_reason, sepa_export_items(worker_id, worker_name, iban, valor, receipt_validation_id)')
       .order('created_at', { ascending: false });
-    const sepaExports = (sepaExportsRaw || []).map(e => ({ ...e, items: e.sepa_export_items || [] }));
+    const sepaExportsFull = (sepaExportsRaw || []).map(e => ({ ...e, items: e.sepa_export_items || [] }));
+    const sepaExportsAtivos = sepaExportsFull.filter(e => !e.cancelled_at);
+    setSepaHistorico(sepaExportsFull);
 
     const { data: batchLinks } = runIds.length
       ? await supabase.from('sepa_batch_links').select('*').in('run_id', runIds)
       : { data: [] };
+    setConfirmedExportIds(new Set((batchLinks || []).map(l => l.sepa_export_id).filter(Boolean)));
 
     const txKey = (tx) => `${tx.data}|${tx.descricao}|${tx.valor}`;
     const txMap = {};
@@ -188,7 +195,7 @@ export default function SalariosTab({ month }) {
 
     const aliases = aliasesOverride ?? salarioAliases;
     const tol = tolOverride !== undefined ? tolOverride : tolerancia;
-    const res = runReconciliacaoSalarial({ recibos: recibos || [], transacoes: txs, ano: year, aliases, tolerancia: tol, paymentsMap, sepaExports, batchLinks: batchLinks || [] });
+    const res = runReconciliacaoSalarial({ recibos: recibos || [], transacoes: txs, ano: year, aliases, tolerancia: tol, paymentsMap, sepaExports: sepaExportsAtivos, batchLinks: batchLinks || [] });
     setSalarioResultado(res);
     setLoadingSalarios(false);
   }, [supabase, year, salarioAliases, tolerancia]);
@@ -355,6 +362,19 @@ export default function SalariosTab({ month }) {
   const norm = s => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
   const MESES_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
+  // Export SEPA ativo (não cancelado) mais recente que já cobre este
+  // trabalhador+mês — usado para sinalizar "já exportado" na fila de
+  // seleção, em vez de assumir silenciosamente que ninguém foi processado
+  // ainda. sepaHistorico já vem ordenado por created_at desc.
+  const getExportoAtivo = (employeeName, mes) => {
+    for (const exp of sepaHistorico) {
+      if (exp.cancelled_at || exp.mes_referencia !== mes) continue;
+      const item = exp.items.find(it => norm(it.worker_name) === norm(employeeName));
+      if (item) return { export: exp, item };
+    }
+    return null;
+  };
+
   const abrirSepaModal = (modo = 'normal') => {
     const mesAlvo = selectedMonth || (monthsAvailable.length === 1 ? monthsAvailable[0] : null);
     if (!mesAlvo) {
@@ -377,7 +397,13 @@ export default function SalariosTab({ month }) {
         abater: totalDesconto > 0 ? String(totalDesconto) : '',
       };
     });
-    setSepaSelecao(new Set(elegíveis.map(e => e.employee_name)));
+    // Por omissão só pré-seleciona quem ainda não tem export ativo para este
+    // mês — quem já foi exportado fica visível na lista (com o selo "já
+    // exportado") mas por escolher, para não duplicar o pagamento sem
+    // decisão explícita do admin.
+    setSepaSelecao(new Set(
+      elegíveis.filter(e => !getExportoAtivo(e.employee_name, mesAlvo)).map(e => e.employee_name)
+    ));
     setSepaAjustes(ajustesIniciais);
     setSepaModo(modo);
     setSepaModal(true);
@@ -480,6 +506,35 @@ export default function SalariosTab({ month }) {
     setSepaModal(false);
   };
 
+  // Cancela (soft) um export SEPA gerado por engano — não apaga o registo
+  // (mantém rasto de auditoria), só marca cancelled_at/cancelled_reason.
+  // Os trabalhadores desse lote voltam a contar como "por exportar" e o
+  // export deixa de ser candidato a lote SEPA para transações bancárias
+  // não identificadas (encontrarLoteCandidato). Nunca cancela um export já
+  // confirmado contra uma transferência bancária real (sepa_batch_links) —
+  // nesse ponto já deixou de ser "gerado errado", é um pagamento real.
+  const handleCancelarExport = async (exp) => {
+    if (confirmedExportIds.has(exp.id)) {
+      alert('Este export já foi confirmado contra uma transferência bancária real — não pode ser cancelado.');
+      return;
+    }
+    if (!confirm(`Cancelar este export de ${fmtMes(exp.mes_referencia)} (${fmtEur(exp.valor_total)}, ${exp.worker_count} trabalhador${exp.worker_count !== 1 ? 'es' : ''})? Os trabalhadores voltam a aparecer como por exportar.`)) return;
+    const motivo = prompt('Motivo do cancelamento (opcional):');
+    setCancelandoExport(exp.id);
+    try {
+      const { error } = await supabase
+        .from('sepa_exports')
+        .update({ cancelled_at: new Date().toISOString(), cancelled_reason: motivo?.trim() || null })
+        .eq('id', exp.id);
+      if (error) throw error;
+      await analisarSalarios();
+    } catch (e) {
+      alert(`Erro ao cancelar: ${e.message}`);
+    } finally {
+      setCancelandoExport(null);
+    }
+  };
+
   const handleRemoverJustificacao = async ({ employee_name, month }) => {
     await supabase.from('salary_justifications').delete().eq('employee_name', employee_name).eq('month', month);
     setJustificacoes(prev => prev.filter(j => !(j.employee_name === employee_name && j.month === month)));
@@ -573,6 +628,14 @@ export default function SalariosTab({ month }) {
                 style={{ color: 'var(--slate-dim)' }}
               >
                 <Landmark size={13} /> SEPA XML
+              </button>
+              {/* Histórico de exports SEPA (sinalização + cancelamento) */}
+              <button
+                onClick={() => setHistoricoModal(true)}
+                className="flex items-center gap-1.5 px-3 py-2 bg-[var(--surface-dim)] hover:bg-[var(--border)] rounded-2xl text-xs font-black uppercase tracking-widest transition-all justify-center"
+                style={{ color: 'var(--slate-dim)' }}
+              >
+                <History size={13} /> Histórico SEPA
               </button>
               {/* Transferência Imediata (SCT Inst) */}
               <button
@@ -885,6 +948,7 @@ export default function SalariosTab({ month }) {
                   const valorFinal = calcFinal(emp.employee_name);
                   const temAjuste = (parseFloat(aj.adicionar) || 0) !== 0 || (parseFloat(aj.abater) || 0) !== 0;
                   const expandido = sepaExpandido === emp.employee_name;
+                  const exportoAtivo = getExportoAtivo(emp.employee_name, mesAlvo);
 
                   return (
                     <div key={emp.employee_name} className={semIban ? 'opacity-50' : ''}>
@@ -918,6 +982,11 @@ export default function SalariosTab({ month }) {
                               ? <p className={`${SCALE.text.meta} text-amber-600`}>{nDesc} desconto{nDesc > 1 ? 's' : ''} aplicado{nDesc > 1 ? 's' : ''}</p>
                               : null;
                           })()}
+                          {exportoAtivo && (
+                            <p className={`${SCALE.text.meta} text-sky-600 flex items-center gap-1`}>
+                              <History size={10} /> Já exportado {new Date(exportoAtivo.export.created_at).toLocaleDateString('pt-PT')} · {exportoAtivo.export.tipo === 'instant' ? 'Imediata' : 'SEPA'} · {fmtEur(exportoAtivo.item.valor)}
+                            </p>
+                          )}
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
                           {temAjuste && (
@@ -979,6 +1048,67 @@ export default function SalariosTab({ month }) {
           </ModalShell>
         );
       })()}
+
+    {historicoModal && (
+      <ModalShell
+        isOpen
+        onClose={() => setHistoricoModal(false)}
+        title="Histórico de Exportações SEPA"
+        icon={<History size={18} />}
+        size="md"
+      >
+        {sepaHistorico.length === 0 ? (
+          <p className="text-center text-[var(--slate-dim)] text-xs py-10">Nenhum export gerado ainda.</p>
+        ) : (
+          <div className="divide-y divide-[var(--border-soft)]">
+            {sepaHistorico.map(exp => {
+              const cancelado = !!exp.cancelled_at;
+              const confirmado = confirmedExportIds.has(exp.id);
+              return (
+                <div key={exp.id} className={`px-5 py-3.5 flex items-center justify-between gap-3 ${cancelado ? 'opacity-50' : ''}`}>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-[var(--ink-mid)]">
+                      {fmtMes(exp.mes_referencia)} · {exp.tipo === 'instant' ? 'Transf. Imediata' : 'SEPA XML'}
+                    </p>
+                    <p className={`${SCALE.text.meta} text-[var(--slate-dim)]`}>
+                      Gerado em {new Date(exp.created_at).toLocaleDateString('pt-PT')} · {exp.worker_count} trabalhador{exp.worker_count !== 1 ? 'es' : ''}
+                    </p>
+                    {cancelado && (
+                      <p className={`${SCALE.text.meta} text-rose-500 mt-0.5`}>
+                        Cancelado em {new Date(exp.cancelled_at).toLocaleDateString('pt-PT')}{exp.cancelled_reason ? ` — "${exp.cancelled_reason}"` : ''}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className="text-sm font-black text-[var(--ink-mid)]">{fmtEur(exp.valor_total)}</span>
+                    {!cancelado && (
+                      confirmado ? (
+                        <span
+                          className={`${SCALE.text.badge} text-[var(--slate-dim)] bg-[var(--surface-dim)] rounded-full px-2 py-0.5`}
+                          title="Já confirmado contra uma transferência bancária real — não pode ser cancelado."
+                        >
+                          Confirmado
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => handleCancelarExport(exp)}
+                          disabled={cancelandoExport === exp.id}
+                          className="p-1.5 rounded-lg text-[var(--slate)] hover:text-rose-500 hover:bg-rose-50 transition-colors"
+                          title="Cancelar este export"
+                        >
+                          {cancelandoExport === exp.id ? <Loader2 size={13} className="animate-spin" /> : <X size={13} />}
+                        </button>
+                      )
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </ModalShell>
+    )}
+
     {importarIBANsModal && (
       <ImportarIBANsModal
         workers={workers}
