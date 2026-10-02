@@ -22,6 +22,13 @@ const FONT = "'Barlow Condensed', 'Arial Narrow', sans-serif";
 const MONO = "'IBM Plex Mono', monospace";
 const TOKEN_KEY = 'ponto_terminal_token';
 
+// TEMPORÁRIO (piloto): com ?teste=1 no URL, qualquer leitura NFC conta como o
+// mesmo cartão fixo. Serve para testar com um telemóvel Android, que gera um
+// UID aleatório a cada toque. Remover quando chegarem os cartões NTAG213.
+const UID_TESTE = new URLSearchParams(window.location?.search || '').get('teste') === '1'
+  ? '7E57000000000001'
+  : null;
+
 const TIPOS = {
   entrada: { label: 'Entrada', icon: LogIn },
   inicio_pausa: { label: 'Início de pausa', icon: Coffee },
@@ -180,7 +187,7 @@ export default function TerminalPontoView() {
     try {
       const reader = new window.NDEFReader();
       await reader.scan();
-      reader.onreading = (ev) => aoLerRef.current(ev.serialNumber);
+      reader.onreading = (ev) => aoLerRef.current(UID_TESTE || ev.serialNumber);
       reader.onreadingerror = () => aoLerRef.current(null);
       setNfc('ativo');
     } catch {
@@ -202,7 +209,10 @@ export default function TerminalPontoView() {
   return (
     <div style={{ position: 'fixed', inset: 0, background: NAVY, color: '#fff', fontFamily: FONT, display: 'flex', flexDirection: 'column', padding: 20, overflow: 'hidden' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: MUTED, fontFamily: MONO, fontSize: 13 }}>
-        <span>{estado?.client?.name || '—'} · {estado?.terminal?.nome || ''}</span>
+        <span>
+          {estado?.client?.name || '—'} · {estado?.terminal?.nome || ''}
+          {UID_TESTE && <span style={{ color: ORANGE, fontWeight: 700 }}> · MODO TESTE (cartão fixo)</span>}
+        </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {!online && <WifiOff size={16} color="#e08872" />}
           {hora}
