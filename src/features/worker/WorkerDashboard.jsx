@@ -412,7 +412,8 @@ const WorkerDashboardContent = ({ onLogout, onLogin, autoStartTour }) => {
             myApproval={myApproval} showProgress={showProgress} setShowProgress={setShowProgress}
           />
 
-          {(currentUser?.gps_enabled || isLimitedWorker) && currentMonth.getFullYear() === new Date().getFullYear() && currentMonth.getMonth() === new Date().getMonth() && (
+          {/* source==='nfc': picagem feita no terminal da obra — mostra o cartão "Em serviço" mesmo a quem não tem GPS/modo limitado. */}
+          {(currentUser?.gps_enabled || isLimitedWorker || todayOpenLog?.source === 'nfc') && currentMonth.getFullYear() === new Date().getFullYear() && currentMonth.getMonth() === new Date().getMonth() && (
             <InServiceCard
               todayOpenLog={todayOpenLog} clients={clients}
               handleRegistarPausa={handleRegistarPausa} handleRegistarSaida={handleRegistarSaida}

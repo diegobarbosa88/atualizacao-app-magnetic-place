@@ -4,6 +4,7 @@ import { useApp } from '../../../context/AppContext';
 import SectionHeaderShell from '../../../components/common/SectionHeaderShell';
 import { toISODateLocal } from '../../../utils/dateUtils';
 import { authFetch } from '../../../utils/authFetch';
+import TerminaisNfcPanel from './TerminaisNfcPanel';
 
 // Painel mínimo v1: atribuir/revogar o registo de ponto por QR a um cliente
 // (ativa o kiosk para esse cliente — todos os trabalhadores afetos a ele
@@ -17,7 +18,7 @@ export default function PontoAdmin() {
   const [processando, setProcessando] = useState(null);
 
   const hoje = toISODateLocal(new Date());
-  const logsHoje = (logs || []).filter((l) => l.date === hoje && l.source === 'qr');
+  const logsHoje = (logs || []).filter((l) => l.date === hoje && (l.source === 'qr' || l.source === 'nfc'));
 
   const workerName = (id) => workers.find((w) => String(w.id) === String(id))?.name || id;
   const kioskUrl = (clientId) => `${window.location.origin}/kiosk/${clientId}`;
@@ -82,12 +83,14 @@ export default function PontoAdmin() {
         </div>
       </div>
 
+      <TerminaisNfcPanel />
+
       <div className="bg-white border border-slate-100 rounded-2xl overflow-hidden">
         <div className="px-4 py-3 border-b border-slate-50">
           <p className="text-xs font-black uppercase tracking-wide text-slate-500">Ponto de hoje ({hoje})</p>
         </div>
         {logsHoje.length === 0 ? (
-          <p className="px-4 py-6 text-sm text-slate-400 text-center">Sem picagens por QR hoje.</p>
+          <p className="px-4 py-6 text-sm text-slate-400 text-center">Sem picagens por QR ou terminal hoje.</p>
         ) : (
           <table className="w-full text-xs">
             <thead>
@@ -98,6 +101,7 @@ export default function PontoAdmin() {
                 <th className="px-4 py-2">Pausa</th>
                 <th className="px-4 py-2">Saída</th>
                 <th className="px-4 py-2">Geo</th>
+                <th className="px-4 py-2">Origem</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -113,6 +117,7 @@ export default function PontoAdmin() {
                     {l.geo_verified === false && <span className="inline-flex items-center gap-1 text-amber-600"><MapPin size={11} /> fora</span>}
                     {l.geo_verified == null && <span className="text-slate-300">—</span>}
                   </td>
+                  <td className="px-4 py-2 text-slate-500">{l.source === 'nfc' ? 'Terminal NFC' : 'QR'}</td>
                 </tr>
               ))}
             </tbody>

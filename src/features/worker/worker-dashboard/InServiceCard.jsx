@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LogOut, Coffee, Loader2, Timer } from 'lucide-react';
+import { LogOut, Coffee, Loader2, Timer, Nfc } from 'lucide-react';
 import { SCALE } from '../../../styles/designTokens';
 
 export default function InServiceCard({ todayOpenLog, clients, handleRegistarPausa, handleRegistarSaida, geoActionLoading }) {
@@ -43,6 +43,11 @@ export default function InServiceCard({ todayOpenLog, clients, handleRegistarPau
             <p className="text-indigo-200 text-sm font-bold mt-0.5 truncate">
               {clientName || 'Unidade'}
             </p>
+            {todayOpenLog.source === 'nfc' && (
+              <p className={`${SCALE.text.meta} text-indigo-200 mt-1 flex items-center gap-1`}>
+                <Nfc size={12} /> Registado no terminal da obra
+              </p>
+            )}
           </div>
           <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)] animate-pulse flex-shrink-0" />
         </div>

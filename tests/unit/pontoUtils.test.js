@@ -7,6 +7,13 @@ import {
   construirPatchLog,
   getEffectiveClientId,
   horaAtualNoCliente,
+  normalizarUid,
+  hashSha256,
+  gerarCodigoAtivacao,
+  normalizarCodigoAtivacao,
+  gerarTokenTerminal,
+  eRepeticao,
+  JANELA_REPETICAO_MS,
 } from '../../api/ponto/_pontoUtils.js';
 
 // Testa só as funções puras de api/ponto/_pontoUtils.js — o handler
@@ -170,5 +177,66 @@ describe('horaAtualNoCliente', () => {
     const semTz = horaAtualNoCliente({});
     const comTz = horaAtualNoCliente({ timezone: 'Europe/Lisbon' });
     expect(semTz.data).toBe(comTz.data);
+  });
+});
+
+describe('construirPatchLog — origem da picagem', () => {
+  const base = { horaHHMM: '08:00', dateStr: '2026-10-02', workerId: 'w1', clientId: 'c1', geo: null };
+
+  it('mantém source=qr por omissão (fluxo QR existente)', () => {
+    const { patch } = construirPatchLog({ ...base, tipo: 'entrada', logDeHoje: null });
+    expect(patch.source).toBe('qr');
+  });
+
+  it('usa a origem pedida em todas as transições', () => {
+    const log = { id: 'l1', startTime: '08:00', breakStart: '12:00', breakEnd: null, endTime: null };
+    expect(construirPatchLog({ ...base, tipo: 'entrada', logDeHoje: null, source: 'nfc' }).patch.source).toBe('nfc');
+    expect(construirPatchLog({ ...base, tipo: 'fim_pausa', logDeHoje: log, source: 'nfc' }).patch.source).toBe('nfc');
+    expect(construirPatchLog({ ...base, tipo: 'saida', logDeHoje: { ...log, breakEnd: '13:00' }, horaHHMM: '17:00', source: 'nfc' }).patch.source).toBe('nfc');
+  });
+});
+
+describe('terminal NFC — utilitários', () => {
+  it('normalizarUid aceita o formato do Web NFC e rejeita lixo', () => {
+    expect(normalizarUid('04:a2:3f:1b:c4:5d:80')).toBe('04A23F1BC45D80');
+    expect(normalizarUid('04A23F1BC45D80')).toBe('04A23F1BC45D80');
+    expect(normalizarUid('04:a2')).toBeNull();
+    expect(normalizarUid('')).toBeNull();
+    expect(normalizarUid(null)).toBeNull();
+    expect(normalizarUid(12345)).toBeNull();
+  });
+
+  it('gerarCodigoAtivacao devolve XXXX-XXXX sem caracteres ambíguos', () => {
+    for (let i = 0; i < 200; i++) {
+      const c = gerarCodigoAtivacao();
+      expect(c).toMatch(/^[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}$/);
+    }
+  });
+
+  it('normalizarCodigoAtivacao tolera minúsculas, espaços e hífen em falta', () => {
+    expect(normalizarCodigoAtivacao('abcd efgh')).toBe('ABCD-EFGH');
+    expect(normalizarCodigoAtivacao('ABCDEFGH')).toBe('ABCD-EFGH');
+    expect(normalizarCodigoAtivacao('ABCD-EFG')).toBeNull();
+    expect(normalizarCodigoAtivacao(undefined)).toBeNull();
+  });
+
+  it('o hash do código normalizado é igual ao do código gerado', () => {
+    const c = gerarCodigoAtivacao();
+    expect(hashSha256(normalizarCodigoAtivacao(c.toLowerCase().replace('-', ' ')))).toBe(hashSha256(c));
+  });
+
+  it('gerarTokenTerminal é longo e único', () => {
+    const a = gerarTokenTerminal();
+    const b = gerarTokenTerminal();
+    expect(a).toHaveLength(64);
+    expect(a).not.toBe(b);
+  });
+
+  it('eRepeticao só bloqueia dentro da janela', () => {
+    const agora = Date.parse('2026-10-02T08:00:00Z');
+    expect(eRepeticao(null, agora)).toBe(false);
+    expect(eRepeticao(new Date(agora - 10_000).toISOString(), agora)).toBe(true);
+    expect(eRepeticao(new Date(agora - JANELA_REPETICAO_MS - 1).toISOString(), agora)).toBe(false);
+    expect(eRepeticao('data-invalida', agora)).toBe(false);
   });
 });

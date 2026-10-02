@@ -13,6 +13,12 @@ import {
   construirPatchLog,
   getEffectiveClientId,
   horaAtualNoCliente,
+  normalizarUid,
+  hashSha256,
+  gerarCodigoAtivacao,
+  normalizarCodigoAtivacao,
+  gerarTokenTerminal,
+  eRepeticao,
 } from '../ponto/_pontoUtils.js';
 
 // Todos os endpoints de Formação Interna vivem numa única função serverless
@@ -1286,6 +1292,385 @@ async function handlePontoKioskDesativar(req, res) {
   return res.status(200).json({ ok: true, ponto_qr_ativo: false });
 }
 
+// ---------------------------------------------------------------------------
+// Terminal NFC (piloto) — dispositivo Android fixo na obra, associado a UM
+// cliente, que lê o cartão NFC pessoal de cada trabalhador (Web NFC) e
+// regista a picagem em nome dele. Diferente do kiosk QR: aqui é o TERMINAL
+// que escreve em `logs`, por isso o terminal tem credencial própria — um
+// token longo trocado uma única vez por um código de ativação gerado no
+// admin. Só o sha256 do token fica na BD (ponto_terminais.token_hash).
+// Tabelas: supabase/migrations/20261002_ponto_terminal_nfc.sql.
+// ---------------------------------------------------------------------------
+const TERMINAL_CODIGO_TTL_MS = 10 * 60 * 1000;
+const TERMINAL_ASSOCIAR_TTL_MS = 2 * 60 * 1000;
+
+const ROTULO_TIPO = {
+  entrada: 'Entrada',
+  inicio_pausa: 'Início de pausa',
+  fim_pausa: 'Fim de pausa',
+  saida: 'Saída',
+};
+
+async function autenticarTerminal(req, res, supabase) {
+  const token = req.headers['x-terminal-token'];
+  if (typeof token !== 'string' || token.length < 32) {
+    res.status(401).json({ error: 'Terminal não ativado.', code: 'terminal_nao_ativado' });
+    return null;
+  }
+  const { data: terminal, error } = await supabase
+    .from('ponto_terminais')
+    .select('*')
+    .eq('token_hash', hashSha256(token))
+    .maybeSingle();
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return null;
+  }
+  if (!terminal || !terminal.ativo) {
+    res.status(401).json({ error: 'Terminal desativado ou revogado — ativa-o de novo.', code: 'terminal_revogado' });
+    return null;
+  }
+  await supabase.from('ponto_terminais').update({ ultimo_contacto: new Date().toISOString() }).eq('id', terminal.id);
+  return terminal;
+}
+
+async function auditarPicagemTerminal(supabase, row) {
+  const { error } = await supabase.from('ponto_terminal_picagens').insert(row);
+  if (error) console.error('[ponto-terminal] falha a gravar auditoria:', error.message);
+}
+
+// Push ao próprio trabalhador a cada picagem no terminal — confirmação para
+// ele e, sobretudo, alerta imediato se alguém usar o cartão dele. Nunca
+// bloqueia nem falha a picagem: qualquer erro fica só no log do servidor.
+async function enviarPushTrabalhador(supabase, workerId, title, body) {
+  try {
+    const vapidPublic = process.env.VAPID_PUBLIC_KEY;
+    const vapidPrivate = process.env.VAPID_PRIVATE_KEY;
+    if (!vapidPublic || !vapidPrivate) return;
+    webpush.setVapidDetails('mailto:geral@magneticplace.pt', vapidPublic, vapidPrivate);
+    const { data: subs } = await supabase
+      .from('push_subscriptions')
+      .select('*')
+      .eq('role', 'worker')
+      .eq('user_id', String(workerId));
+    if (!subs?.length) return;
+    const payload = JSON.stringify({ title, body, url: '/', tag: 'ponto-terminal', type: 'ponto' });
+    const results = await Promise.allSettled(
+      subs.map((s) => webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload))
+    );
+    const deadIds = results
+      .map((r, i) => ({ r, sub: subs[i] }))
+      .filter(({ r }) => r.status === 'rejected' && [404, 410].includes(r.reason?.statusCode))
+      .map(({ sub }) => sub.id);
+    if (deadIds.length) await supabase.from('push_subscriptions').delete().in('id', deadIds);
+  } catch (e) {
+    console.error('[ponto-terminal] push falhou:', e.message);
+  }
+}
+
+// Resolve cartão → trabalhador → log de hoje, com as mesmas regras do QR
+// (afetação ao cliente nesse dia, máquina de estados). Devolve { erro } com
+// status/código/resultado de auditoria, ou o contexto completo.
+async function resolverContextoCartao(supabase, terminal, uid) {
+  const { data: cartao, error: cartaoErr } = await supabase
+    .from('cartoes_ponto')
+    .select('uid, worker_id, ativo')
+    .eq('uid', uid)
+    .maybeSingle();
+  if (cartaoErr) return { erro: { status: 500, error: cartaoErr.message } };
+  if (!cartao) return { erro: { status: 404, code: 'cartao_desconhecido', resultado: 'cartao_desconhecido', error: 'Cartão não reconhecido. Fala com o responsável.' } };
+  if (!cartao.ativo) return { erro: { status: 403, code: 'cartao_bloqueado', resultado: 'cartao_bloqueado', workerId: cartao.worker_id, error: 'Este cartão está bloqueado.' } };
+
+  const [{ data: worker, error: workerErr }, { data: client, error: clientErr }] = await Promise.all([
+    supabase.from('workers').select('id, name, defaultClientId, assignedClientDates').eq('id', cartao.worker_id).maybeSingle(),
+    supabase.from('clients').select('id, name, timezone').eq('id', terminal.client_id).maybeSingle(),
+  ]);
+  if (workerErr || clientErr) return { erro: { status: 500, error: (workerErr || clientErr).message } };
+  if (!worker || !client) return { erro: { status: 404, error: 'Trabalhador ou cliente não encontrado.' } };
+
+  const hojeInfo = horaAtualNoCliente(client);
+  if (getEffectiveClientId(worker, hojeInfo.data) !== client.id) {
+    return { erro: { status: 403, code: 'nao_afeto', resultado: 'nao_afeto', workerId: worker.id, workerName: worker.name, error: `${worker.name} não está afeto a ${client.name} hoje.` } };
+  }
+
+  const { data: logDeHoje, error: logErr } = await supabase
+    .from('logs')
+    .select('*')
+    .eq('workerId', worker.id)
+    .eq('clientId', client.id)
+    .eq('date', hojeInfo.data)
+    .maybeSingle();
+  if (logErr) return { erro: { status: 500, error: logErr.message } };
+
+  return { cartao, worker, client, hojeInfo, logDeHoje, validas: transicoesValidas(logDeHoje) };
+}
+
+// --- Endpoints do dispositivo (autenticados pelo header x-terminal-token) ---
+
+async function handlePontoTerminalAtivar(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  const codigo = normalizarCodigoAtivacao(req.body?.codigo);
+  if (!codigo) return res.status(400).json({ error: 'Código inválido — são 8 caracteres.' });
+
+  const supabase = getSupabase();
+  const { data: terminal, error } = await supabase
+    .from('ponto_terminais')
+    .select('id, nome, client_id, ativo, codigo_expira_em')
+    .eq('codigo_hash', hashSha256(codigo))
+    .maybeSingle();
+  if (error) return res.status(500).json({ error: error.message });
+  if (!terminal || !terminal.ativo || !terminal.codigo_expira_em || new Date(terminal.codigo_expira_em) < new Date()) {
+    return res.status(404).json({ error: 'Código inválido ou expirado. Gera um novo no admin.' });
+  }
+
+  const token = gerarTokenTerminal();
+  const agora = new Date().toISOString();
+  const { error: updErr } = await supabase
+    .from('ponto_terminais')
+    .update({ token_hash: hashSha256(token), codigo_hash: null, codigo_expira_em: null, ativado_em: agora, ultimo_contacto: agora })
+    .eq('id', terminal.id);
+  if (updErr) return res.status(500).json({ error: updErr.message });
+
+  return res.status(200).json({ token, terminalId: terminal.id });
+}
+
+async function handlePontoTerminalEstado(req, res) {
+  const supabase = getSupabase();
+  const terminal = await autenticarTerminal(req, res, supabase);
+  if (!terminal) return;
+
+  const { data: client } = await supabase
+    .from('clients')
+    .select('id, name, ponto_qr_ativo')
+    .eq('id', terminal.client_id)
+    .maybeSingle();
+
+  let associacao = null;
+  if (terminal.associar_worker_id && terminal.associar_expira_em && new Date(terminal.associar_expira_em) > new Date()) {
+    const { data: w } = await supabase.from('workers').select('name').eq('id', terminal.associar_worker_id).maybeSingle();
+    associacao = { workerName: w?.name || terminal.associar_worker_id, expiraEm: terminal.associar_expira_em };
+  }
+
+  return res.status(200).json({
+    terminal: { id: terminal.id, nome: terminal.nome },
+    client: { id: client?.id, name: client?.name || '', pontoQrAtivo: !!client?.ponto_qr_ativo },
+    associacao,
+  });
+}
+
+async function handlePontoTerminalIdentificar(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  const supabase = getSupabase();
+  const terminal = await autenticarTerminal(req, res, supabase);
+  if (!terminal) return;
+
+  const uid = normalizarUid(req.body?.uid);
+  if (!uid) return res.status(400).json({ error: 'Leitura do cartão inválida — tenta outra vez.' });
+
+  // Associação pendente pedida no admin: o próximo cartão DESCONHECIDO lido
+  // aqui fica do trabalhador escolhido. Cartões já conhecidos seguem o fluxo
+  // normal de picagem (não se rouba o cartão de ninguém por engano).
+  const { data: existente } = await supabase.from('cartoes_ponto').select('uid').eq('uid', uid).maybeSingle();
+  const associacaoAtiva = terminal.associar_worker_id && terminal.associar_expira_em && new Date(terminal.associar_expira_em) > new Date();
+  if (!existente && associacaoAtiva) {
+    const { error: insErr } = await supabase.from('cartoes_ponto').insert({ uid, worker_id: terminal.associar_worker_id });
+    if (insErr) return res.status(500).json({ error: insErr.message });
+    await supabase.from('ponto_terminais').update({ associar_worker_id: null, associar_expira_em: null }).eq('id', terminal.id);
+    const { data: w } = await supabase.from('workers').select('name').eq('id', terminal.associar_worker_id).maybeSingle();
+    await auditarPicagemTerminal(supabase, { terminal_id: terminal.id, uid, worker_id: terminal.associar_worker_id, resultado: 'associado' });
+    return res.status(200).json({ resultado: 'associado', worker: { name: w?.name || '' } });
+  }
+
+  const ctx = await resolverContextoCartao(supabase, terminal, uid);
+  if (ctx.erro) {
+    if (ctx.erro.resultado) {
+      await auditarPicagemTerminal(supabase, { terminal_id: terminal.id, uid, worker_id: ctx.erro.workerId || null, resultado: ctx.erro.resultado });
+    }
+    return res.status(ctx.erro.status).json({ error: ctx.erro.error, code: ctx.erro.code, workerName: ctx.erro.workerName });
+  }
+
+  const { worker, logDeHoje, validas, hojeInfo } = ctx;
+  return res.status(200).json({
+    resultado: validas.length ? 'identificado' : 'concluido',
+    worker: { name: worker.name },
+    validas,
+    hora: hojeInfo.hora,
+    hoje: logDeHoje
+      ? { startTime: logDeHoje.startTime, breakStart: logDeHoje.breakStart, breakEnd: logDeHoje.breakEnd, endTime: logDeHoje.endTime }
+      : null,
+  });
+}
+
+async function handlePontoTerminalRegistar(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  const supabase = getSupabase();
+  const terminal = await autenticarTerminal(req, res, supabase);
+  if (!terminal) return;
+
+  const uid = normalizarUid(req.body?.uid);
+  const tipo = req.body?.tipo;
+  if (!uid || !ROTULO_TIPO[tipo]) return res.status(400).json({ error: 'uid/tipo inválidos.' });
+
+  const ctx = await resolverContextoCartao(supabase, terminal, uid);
+  if (ctx.erro) return res.status(ctx.erro.status).json({ error: ctx.erro.error, code: ctx.erro.code });
+  const { worker, client, hojeInfo, logDeHoje, validas } = ctx;
+
+  const { data: ultimaOk } = await supabase
+    .from('ponto_terminal_picagens')
+    .select('criado_em')
+    .eq('uid', uid)
+    .eq('resultado', 'ok')
+    .order('criado_em', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (eRepeticao(ultimaOk?.criado_em)) {
+    await auditarPicagemTerminal(supabase, { terminal_id: terminal.id, uid, worker_id: worker.id, tipo, resultado: 'repetido' });
+    return res.status(409).json({ error: 'Picagem já registada há instantes.', code: 'repetido' });
+  }
+
+  if (!validas.includes(tipo)) {
+    await auditarPicagemTerminal(supabase, { terminal_id: terminal.id, uid, worker_id: worker.id, tipo, resultado: 'transicao_invalida' });
+    return res.status(409).json({
+      error: validas.length ? `Próximo passo esperado: ${validas.map((v) => ROTULO_TIPO[v]).join(' ou ')}.` : 'O registo de hoje já está concluído.',
+      code: 'transicao_invalida',
+    });
+  }
+
+  const { action, patch } = construirPatchLog({
+    tipo,
+    logDeHoje,
+    horaHHMM: hojeInfo.hora,
+    dateStr: hojeInfo.data,
+    workerId: worker.id,
+    clientId: client.id,
+    geo: null,
+    source: 'nfc',
+  });
+  const logQuery = action === 'insert'
+    ? supabase.from('logs').insert(patch)
+    : supabase.from('logs').update(patch).eq('id', patch.id);
+  const { error: patchErr } = await logQuery;
+  if (patchErr) return res.status(500).json({ error: patchErr.message });
+
+  await auditarPicagemTerminal(supabase, { terminal_id: terminal.id, uid, worker_id: worker.id, tipo, resultado: 'ok', log_id: patch.id });
+  await enviarPushTrabalhador(
+    supabase,
+    worker.id,
+    `${ROTULO_TIPO[tipo]} registada às ${hojeInfo.hora}`,
+    `Terminal ${terminal.nome} · ${client.name}. Não foste tu? Avisa o responsável.`,
+  );
+
+  return res.status(200).json({ ok: true, tipo, hora: hojeInfo.hora, worker: { name: worker.name } });
+}
+
+// --- Endpoints de administração (sessão admin) ---
+
+async function handlePontoTerminaisListar(req, res) {
+  if (!requireAuth(req, res, ['admin'])) return;
+  const supabase = getSupabase();
+  const [t, c, p] = await Promise.all([
+    supabase.from('ponto_terminais').select('*').order('criado_em', { ascending: false }),
+    supabase.from('cartoes_ponto').select('*').order('criado_em', { ascending: false }),
+    supabase.from('ponto_terminal_picagens').select('*').order('criado_em', { ascending: false }).limit(50),
+  ]);
+  const erro = t.error || c.error || p.error;
+  if (erro) return res.status(500).json({ error: erro.message });
+
+  // Nunca devolver hashes ao browser — só o estado derivado.
+  const terminais = (t.data || []).map(({ token_hash, codigo_hash, ...resto }) => ({
+    ...resto,
+    ativado: !!token_hash,
+    codigoPendente: !!codigo_hash && !!resto.codigo_expira_em && new Date(resto.codigo_expira_em) > new Date(),
+  }));
+  return res.status(200).json({ terminais, cartoes: c.data || [], picagens: p.data || [] });
+}
+
+// Cria um código novo para o terminal (8 caracteres, 10 min). Ao gerar um
+// código para um terminal já ativado, o token antigo é revogado — o
+// dispositivo antigo deixa de conseguir picar até ser ativado de novo.
+async function emitirCodigoTerminal(supabase, terminalId) {
+  const codigo = gerarCodigoAtivacao();
+  const { error } = await supabase
+    .from('ponto_terminais')
+    .update({
+      codigo_hash: hashSha256(codigo),
+      codigo_expira_em: new Date(Date.now() + TERMINAL_CODIGO_TTL_MS).toISOString(),
+      token_hash: null,
+      ativado_em: null,
+    })
+    .eq('id', terminalId);
+  return error ? { error } : { codigo };
+}
+
+async function handlePontoTerminalCriar(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (!requireAuth(req, res, ['admin'])) return;
+  const { clientId, nome } = req.body || {};
+  if (!clientId || !nome?.trim()) return res.status(400).json({ error: 'clientId/nome em falta.' });
+
+  const supabase = getSupabase();
+  const { data: terminal, error } = await supabase
+    .from('ponto_terminais')
+    .insert({ client_id: clientId, nome: nome.trim() })
+    .select('id')
+    .single();
+  if (error) return res.status(500).json({ error: error.message });
+
+  const { codigo, error: codErr } = await emitirCodigoTerminal(supabase, terminal.id);
+  if (codErr) return res.status(500).json({ error: codErr.message });
+  return res.status(200).json({ terminalId: terminal.id, codigo });
+}
+
+async function handlePontoTerminalCodigo(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (!requireAuth(req, res, ['admin'])) return;
+  const { terminalId } = req.body || {};
+  if (!terminalId) return res.status(400).json({ error: 'terminalId em falta.' });
+  const { codigo, error } = await emitirCodigoTerminal(getSupabase(), terminalId);
+  if (error) return res.status(500).json({ error: error.message });
+  return res.status(200).json({ codigo });
+}
+
+async function handlePontoTerminalAtivo(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (!requireAuth(req, res, ['admin'])) return;
+  const { terminalId, ativo } = req.body || {};
+  if (!terminalId || typeof ativo !== 'boolean') return res.status(400).json({ error: 'terminalId/ativo em falta.' });
+  const { error } = await getSupabase().from('ponto_terminais').update({ ativo }).eq('id', terminalId);
+  if (error) return res.status(500).json({ error: error.message });
+  return res.status(200).json({ ok: true });
+}
+
+// workerId null cancela a associação pendente.
+async function handlePontoCartaoAssociar(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (!requireAuth(req, res, ['admin'])) return;
+  const { terminalId, workerId } = req.body || {};
+  if (!terminalId) return res.status(400).json({ error: 'terminalId em falta.' });
+  const { error } = await getSupabase()
+    .from('ponto_terminais')
+    .update({
+      associar_worker_id: workerId || null,
+      associar_expira_em: workerId ? new Date(Date.now() + TERMINAL_ASSOCIAR_TTL_MS).toISOString() : null,
+    })
+    .eq('id', terminalId);
+  if (error) return res.status(500).json({ error: error.message });
+  return res.status(200).json({ ok: true });
+}
+
+async function handlePontoCartaoAtualizar(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (!requireAuth(req, res, ['admin'])) return;
+  const { uid, ativo, remover } = req.body || {};
+  if (!uid) return res.status(400).json({ error: 'uid em falta.' });
+  const supabase = getSupabase();
+  const { error } = remover
+    ? await supabase.from('cartoes_ponto').delete().eq('uid', uid)
+    : await supabase.from('cartoes_ponto').update({ ativo: !!ativo }).eq('uid', uid);
+  if (error) return res.status(500).json({ error: error.message });
+  return res.status(200).json({ ok: true });
+}
+
 const ACTIONS = {
   'list': handleList,
   'create': handleCreate,
@@ -1311,6 +1696,16 @@ const ACTIONS = {
   'ponto-registar': handlePontoRegistar,
   'ponto-kiosk-ativar': handlePontoKioskAtivar,
   'ponto-kiosk-desativar': handlePontoKioskDesativar,
+  'ponto-terminal-ativar': handlePontoTerminalAtivar,
+  'ponto-terminal-estado': handlePontoTerminalEstado,
+  'ponto-terminal-identificar': handlePontoTerminalIdentificar,
+  'ponto-terminal-registar': handlePontoTerminalRegistar,
+  'ponto-terminais-listar': handlePontoTerminaisListar,
+  'ponto-terminal-criar': handlePontoTerminalCriar,
+  'ponto-terminal-codigo': handlePontoTerminalCodigo,
+  'ponto-terminal-ativo': handlePontoTerminalAtivo,
+  'ponto-cartao-associar': handlePontoCartaoAssociar,
+  'ponto-cartao-atualizar': handlePontoCartaoAtualizar,
 };
 
 export default async function handler(req, res) {

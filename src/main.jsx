@@ -13,6 +13,7 @@ import './index.css'
 // BrowserRouter/AppProvider.
 const isResumoPublico = window.location.pathname === '/partilha/resumo';
 const isOnboardingPublico = window.location.pathname.startsWith('/onboarding/');
+const isTerminal = window.location.pathname === '/kiosk/terminal';
 const isKiosk = window.location.pathname.startsWith('/kiosk/');
 
 async function bootstrap() {
@@ -30,6 +31,15 @@ async function bootstrap() {
     createRoot(document.getElementById('root')).render(
       <StrictMode>
         <OnboardingForm token={onbToken} />
+      </StrictMode>,
+    );
+  } else if (isTerminal) {
+    // Terminal de picagem NFC (/kiosk/terminal) — dispositivo Android fixo
+    // na obra, lê o cartão de cada trabalhador. Mesmo isolamento do kiosk QR.
+    const { default: TerminalPontoView } = await import('./features/public/TerminalPontoView.jsx');
+    createRoot(document.getElementById('root')).render(
+      <StrictMode>
+        <TerminalPontoView />
       </StrictMode>,
     );
   } else if (isKiosk) {

@@ -93,6 +93,16 @@
     { "source": "/api/ponto/registar", "destination": "/api/formacao?action=ponto-registar" },
     { "source": "/api/ponto/kiosk-ativar", "destination": "/api/formacao?action=ponto-kiosk-ativar" },
     { "source": "/api/ponto/kiosk-desativar", "destination": "/api/formacao?action=ponto-kiosk-desativar" },
+    { "source": "/api/ponto/terminal-ativar", "destination": "/api/formacao?action=ponto-terminal-ativar" },
+    { "source": "/api/ponto/terminal-estado", "destination": "/api/formacao?action=ponto-terminal-estado" },
+    { "source": "/api/ponto/terminal-identificar", "destination": "/api/formacao?action=ponto-terminal-identificar" },
+    { "source": "/api/ponto/terminal-registar", "destination": "/api/formacao?action=ponto-terminal-registar" },
+    { "source": "/api/ponto/terminais-listar", "destination": "/api/formacao?action=ponto-terminais-listar" },
+    { "source": "/api/ponto/terminal-criar", "destination": "/api/formacao?action=ponto-terminal-criar" },
+    { "source": "/api/ponto/terminal-codigo", "destination": "/api/formacao?action=ponto-terminal-codigo" },
+    { "source": "/api/ponto/terminal-ativo", "destination": "/api/formacao?action=ponto-terminal-ativo" },
+    { "source": "/api/ponto/cartao-associar", "destination": "/api/formacao?action=ponto-cartao-associar" },
+    { "source": "/api/ponto/cartao-atualizar", "destination": "/api/formacao?action=ponto-cartao-atualizar" },
     { "source": "/api/whatsapp", "destination": "/api/salarios/exportar-sepa" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]

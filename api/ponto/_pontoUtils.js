@@ -74,7 +74,9 @@ export function transicoesValidas(logDeHoje) {
 
 // Monta o insert/update a aplicar em `logs` para o tipo de picagem escolhido.
 // horaHHMM é sempre calculada no servidor (nunca confiar no dispositivo).
-export function construirPatchLog({ tipo, logDeHoje, horaHHMM, dateStr, workerId, clientId, geo }) {
+// `source` identifica a origem da picagem ('qr' kiosk, 'nfc' terminal) —
+// default 'qr' preserva o comportamento do fluxo QR existente.
+export function construirPatchLog({ tipo, logDeHoje, horaHHMM, dateStr, workerId, clientId, geo, source = 'qr' }) {
   const geoCols = (prefix) => ({
     [`${prefix}_lat`]: geo?.lat ?? null,
     [`${prefix}_lng`]: geo?.lng ?? null,
@@ -94,7 +96,7 @@ export function construirPatchLog({ tipo, logDeHoje, horaHHMM, dateStr, workerId
         breakEnd: null,
         hours: 0,
         description: '',
-        source: 'qr',
+        source,
         geo_verified: geo?.verified ?? null,
         ...geoCols('check_in'),
       },
@@ -104,14 +106,14 @@ export function construirPatchLog({ tipo, logDeHoje, horaHHMM, dateStr, workerId
   if (tipo === 'inicio_pausa') {
     return {
       action: 'update',
-      patch: { ...logDeHoje, breakStart: horaHHMM, source: 'qr', ...geoCols('break_start') },
+      patch: { ...logDeHoje, breakStart: horaHHMM, source, ...geoCols('break_start') },
     };
   }
 
   if (tipo === 'fim_pausa') {
     return {
       action: 'update',
-      patch: { ...logDeHoje, breakEnd: horaHHMM, source: 'qr', ...geoCols('break_end') },
+      patch: { ...logDeHoje, breakEnd: horaHHMM, source, ...geoCols('break_end') },
     };
   }
 
@@ -124,7 +126,7 @@ export function construirPatchLog({ tipo, logDeHoje, horaHHMM, dateStr, workerId
     );
     return {
       action: 'update',
-      patch: { ...logDeHoje, endTime: horaHHMM, hours, source: 'qr', ...geoCols('check_out') },
+      patch: { ...logDeHoje, endTime: horaHHMM, hours, source, ...geoCols('check_out') },
     };
   }
 
@@ -164,4 +166,54 @@ export function horaAtualNoCliente(client) {
     data: `${parts.year}-${parts.month}-${parts.day}`,
     hora: `${hora}:${parts.minute}`,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Terminal NFC (piloto) — cartão por trabalhador lido num dispositivo fixo.
+// ---------------------------------------------------------------------------
+
+// Serial NFC tal como o Web NFC o devolve ("04:a2:3f:...") → forma canónica
+// guardada em cartoes_ponto.uid ("04A23F..."). null se não for hex válido.
+export function normalizarUid(raw) {
+  if (!raw || typeof raw !== 'string') return null;
+  const limpo = raw.replace(/[^0-9a-fA-F]/g, '').toUpperCase();
+  if (limpo.length < 8 || limpo.length > 32) return null;
+  return limpo;
+}
+
+export function hashSha256(valor) {
+  return crypto.createHash('sha256').update(String(valor)).digest('hex');
+}
+
+// Código de ativação de uso único, introduzido à mão no terminal. 8
+// caracteres de um alfabeto sem ambíguos (sem 0/O/1/I) → 32^8 ≈ 10^12
+// combinações; com expiração de 10 min, força bruta não é viável.
+const ALFABETO_CODIGO = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+export function gerarCodigoAtivacao() {
+  const bytes = crypto.randomBytes(8);
+  let c = '';
+  for (let i = 0; i < 8; i++) c += ALFABETO_CODIGO[bytes[i] % ALFABETO_CODIGO.length];
+  return `${c.slice(0, 4)}-${c.slice(4)}`;
+}
+
+// Normaliza o que o utilizador escreveu no terminal ("abcd efgh", "ABCD-EFGH").
+export function normalizarCodigoAtivacao(raw) {
+  if (!raw || typeof raw !== 'string') return null;
+  const limpo = raw.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (limpo.length !== 8) return null;
+  return `${limpo.slice(0, 4)}-${limpo.slice(4)}`;
+}
+
+export function gerarTokenTerminal() {
+  return crypto.randomBytes(32).toString('hex');
+}
+
+// Janela anti-duplo-toque: o mesmo cartão passado de novo dentro de N
+// segundos após uma picagem bem sucedida é ignorado (não regista 2x).
+export const JANELA_REPETICAO_MS = 60 * 1000;
+export function eRepeticao(ultimaPicagemOkEm, agoraMs = Date.now()) {
+  if (!ultimaPicagemOkEm) return false;
+  const t = new Date(ultimaPicagemOkEm).getTime();
+  if (Number.isNaN(t)) return false;
+  return agoraMs - t < JANELA_REPETICAO_MS;
 }
