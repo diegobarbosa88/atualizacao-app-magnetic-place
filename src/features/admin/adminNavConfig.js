@@ -4,7 +4,7 @@ import {
   AlertTriangle, Send, FolderOpen, Mail, ReceiptText, Coins, Receipt,
   FileSignature, BarChart2, BookOpen, ArrowRightLeft, Landmark, ListChecks,
   Truck, Shield, Table2, ShieldAlert, MessageSquareText, GraduationCap, Bell,
-  HardHat, QrCode,
+  HardHat, QrCode, ClipboardCheck,
 } from 'lucide-react';
 
 export const ADMIN_SECTIONS = [
@@ -18,6 +18,7 @@ export const ADMIN_SECTIONS = [
       { id: 'validacao', label: 'Validação',     icon: ShieldCheck,  path: '/admin/team?subtab=validacao' },
       { id: 'correcoes', label: 'Correções',     icon: AlertTriangle, path: '/admin/team?subtab=correcoes',  badgeType: 'workerCorrections' },
       { id: 'onboarding', label: 'Pendentes',    icon: Clock,        path: '/admin/team?subtab=onboarding' },
+      { id: 'avaliacoes', label: 'Avaliações',   icon: ClipboardCheck, path: '/admin/team?subtab=avaliacoes' },
     ],
   },
   {

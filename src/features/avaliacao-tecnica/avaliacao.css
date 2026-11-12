@@ -1,0 +1,82 @@
+/* Avaliação técnica de caldeireiro (src/features/avaliacao-tecnica).
+   Importado por src/index.css para que o Tailwind gere as classes do módulo
+   (bg-safety-400, text-tech-600, animate-pop…). Os nomes `safety`/`tech` não
+   existem no resto da app; a fonte não é redefinida aqui de propósito. */
+@theme {
+  --color-safety-50: #fffae8;
+  --color-safety-100: #fff1c2;
+  --color-safety-200: #ffe38a;
+  --color-safety-300: #ffd54f;
+  --color-safety-400: #ffc20e;
+  --color-safety-500: #f0ad00;
+  --color-safety-600: #c98f00;
+  --color-safety-700: #9a6d00;
+
+  --color-tech-50: #eef5ff;
+  --color-tech-100: #d9e8ff;
+  --color-tech-200: #b5d1ff;
+  --color-tech-300: #84b2fb;
+  --color-tech-400: #4f8ef0;
+  --color-tech-500: #1f6feb;
+  --color-tech-600: #1859c4;
+  --color-tech-700: #144aa3;
+  --color-tech-800: #123d82;
+  --color-tech-900: #0f2f63;
+
+  --animate-pop: pop-in 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.3) both;
+  --animate-shake: shake 0.38s ease-in-out;
+
+  @keyframes pop-in {
+    from {
+      transform: scale(0.7);
+      opacity: 0;
+    }
+    to {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+  @keyframes shake {
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+    20%,
+    60% {
+      transform: translateX(-6px);
+    }
+    40%,
+    80% {
+      transform: translateX(6px);
+    }
+  }
+}
+
+/* O index.css dá aos h1–h3 cor navy e Barlow Condensed diretamente no elemento,
+   o que deixava títulos navy sobre os painéis escuros da prova. Dentro da prova
+   e do relatório, os títulos herdam do contentor (os utilitários continuam a
+   ganhar, por estarem numa camada acima de `base`). */
+@layer base {
+  .avaliacao-scope :is(h1, h2, h3) {
+    color: inherit;
+    font-family: inherit;
+  }
+  .avaliacao-scope button,
+  .avaliacao-scope a,
+  .avaliacao-scope [role='button'] {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@utility hazard-stripe {
+  background-image: repeating-linear-gradient(-45deg, #ffc20e 0 14px, #0f172a 14px 28px);
+}
+
+@utility blueprint-grid {
+  background-color: #ffffff;
+  background-image:
+    linear-gradient(#eef2f7 1px, transparent 1px),
+    linear-gradient(90deg, #eef2f7 1px, transparent 1px);
+  background-size: 16px 16px;
+}

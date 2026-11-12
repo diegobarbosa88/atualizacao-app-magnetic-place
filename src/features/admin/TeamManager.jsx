@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { useTeam, TeamProvider } from './contexts/TeamContext';
-import { Users, LayoutGrid, List, CalendarX, ShieldCheck, AlertTriangle, Search, ScanSearch, UserPlus, Copy, Mail, Check, Clock, Loader2, MessageCircle } from 'lucide-react';
+import { Users, LayoutGrid, List, CalendarX, ShieldCheck, AlertTriangle, Search, ScanSearch, UserPlus, Copy, Mail, Check, Clock, Loader2, MessageCircle, ClipboardCheck } from 'lucide-react';
 import WorkerForm from './team/WorkerForm';
 import WorkerList from './team/WorkerList';
 import ModalShell from '../../components/common/ModalShell';
@@ -17,6 +17,7 @@ import CorrectionsInbox from './corrections/CorrectionsInbox';
 import DocumentScannerModal from './team/DocumentScannerModal';
 import WorkerFolderModal from './documents/WorkerFolderModal';
 import OnboardingPendentes from './team/OnboardingPendentes';
+import AvaliacoesTecnicasPanel from '../avaliacao-tecnica/admin/AvaliacoesTecnicasPanel';
 import { sendOnboardingInviteEmail } from '../../utils/emailUtils';
 import { authFetch } from '../../utils/authFetch';
 
@@ -256,6 +257,7 @@ const TeamManagerContent = ({ onLogin }) => {
           { id: 'validacao',  label: 'Validação',     icon: ShieldCheck },
           { id: 'correcoes',  label: 'Correções',     icon: AlertTriangle, badge: pendingWorkerCorrections || null },
           { id: 'onboarding', label: 'Pendentes',     icon: Clock,        badge: pendingOnboardingCount || null },
+          { id: 'avaliacoes', label: 'Avaliações',    icon: ClipboardCheck },
         ]}
         activeTab={teamSubTab}
         onTabChange={setTeamSubTab}
@@ -289,6 +291,10 @@ const TeamManagerContent = ({ onLogin }) => {
 
       {teamSubTab === 'onboarding' && (
         <OnboardingPendentes />
+      )}
+
+      {teamSubTab === 'avaliacoes' && (
+        <AvaliacoesTecnicasPanel />
       )}
 
       {teamSubTab === 'workers' && (<>
