@@ -9,13 +9,15 @@
  *   pergunta e a resposta ficam à direita, numa coluna só com a largura que o
  *   plano não precisa.
  * - Ecrã em pé (tablet): pergunta em cima, plano no meio, resposta em baixo.
- * - Celular: o plano ocupa tudo e a pergunta flutua por cima, recolhendo-se depois
- *   do tempo de leitura (components/PerguntaFlutuante.jsx).
+ * - Celular (`.ecra-celular`): a pergunta recolhida e a resposta são barras finas,
+ *   cada uma na sua faixa, e o plano fica no espaço livre entre elas. A pergunta
+ *   abre por cima do plano só durante o tempo de leitura ou quando o candidato
+ *   toca em "Ver" (components/PerguntaFlutuante.jsx).
  *
  * Em ecrãs baixos (`baixo:`, ver avaliacao.css) os cartões e textos compactam-se.
  */
 export const GRELHA = 'ecra-prova';
-/** No celular (useCelular): plano no ecrã todo, pergunta flutuante por cima */
+/** No celular (useCelular): barras da pergunta e da resposta, e o plano entre elas */
 export const ECRA_CELULAR = 'ecra-celular';
 export const CELULA_PERGUNTA = 'celula-pergunta';
 export const CELULA_PLANO = 'celula-plano';

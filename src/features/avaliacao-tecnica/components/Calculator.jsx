@@ -32,8 +32,12 @@ const KEYS = [
 
 const fmt = (v) => v.toLocaleString('pt-BR', { maximumFractionDigits: 4, useGrouping: false });
 
-/** Calculadora da prova — evita que o candidato saia da aplicação para fazer contas */
-export function Calculator({ onUse }) {
+/**
+ * Calculadora da prova — evita que o candidato saia da aplicação para fazer contas.
+ * `compacta` (celular): teclas mais baixas e "Usar" ao lado do visor, para caber por
+ * cima do plano mesmo com o celular deitado.
+ */
+export function Calculator({ onUse, compacta = false }) {
   const [expr, setExpr] = useState('');
   const [result, setResult] = useState(null);
   const [error, setError] = useState(false);
@@ -61,25 +65,45 @@ export function Calculator({ onUse }) {
   };
 
   const usable = result ?? preview;
+  const usar = (
+    <button
+      type="button"
+      disabled={usable === null}
+      onClick={() => usable !== null && onUse(fmt(Math.round(usable * 100) / 100))}
+      className={cn(
+        'rounded-lg bg-white/10 font-semibold transition hover:bg-white/20 disabled:opacity-40',
+        compacta ? 'w-24 shrink-0 px-2 text-xs leading-tight' : 'mt-2 h-11 w-full text-sm',
+      )}
+    >
+      Usar resultado na resposta
+    </button>
+  );
 
   return (
-    <div className="rounded-2xl bg-mp-navy-800 p-3 text-white">
-      <div className="mb-3 rounded-xl bg-mp-navy-900 px-3 py-2 text-right">
-        <div className="min-h-6 break-all font-mono text-lg leading-6 text-white/85" aria-live="polite">
-          {expr || <span className="text-slate-500">0</span>}
+    <div className={cn('rounded-2xl bg-mp-navy-800 text-white', compacta ? 'p-2' : 'p-3')}>
+      <div className={cn('flex gap-2', compacta ? 'mb-2' : 'mb-3')}>
+        <div className={cn('min-w-0 flex-1 rounded-xl bg-mp-navy-900 px-3 text-right', compacta ? 'py-1.5' : 'py-2')}>
+          <div
+            className={cn('break-all font-mono text-white/85', compacta ? 'min-h-5 text-base leading-5' : 'min-h-6 text-lg leading-6')}
+            aria-live="polite"
+          >
+            {expr || <span className="text-slate-500">0</span>}
+          </div>
+          <div className={cn('font-mono', compacta ? 'min-h-4 text-xs' : 'min-h-5 text-sm', error ? 'text-red-400' : 'text-mp-orange-300')}>
+            {error ? 'Expressão inválida' : preview !== null && result === null ? `= ${fmt(preview)}` : ' '}
+          </div>
         </div>
-        <div className={cn('min-h-5 font-mono text-sm', error ? 'text-red-400' : 'text-mp-orange-300')}>
-          {error ? 'Expressão inválida' : preview !== null && result === null ? `= ${fmt(preview)}` : ' '}
-        </div>
+        {compacta && usar}
       </div>
-      <div className="grid grid-cols-5 gap-1.5">
+      <div className={cn('grid grid-cols-5', compacta ? 'gap-1' : 'gap-1.5')}>
         {KEYS.map((k) => (
           <button
             key={k.label}
             type="button"
             onClick={() => press(k)}
             className={cn(
-              'grid h-11 place-items-center rounded-lg font-mono text-lg font-bold transition active:scale-95',
+              'grid place-items-center rounded-lg font-mono text-lg font-bold transition active:scale-95',
+              compacta ? 'h-10 baixo:h-8' : 'h-11',
               k.wide && 'col-span-2',
               !k.tone && 'bg-mp-navy-600 hover:bg-mp-navy-500',
               k.tone === 'op' && 'bg-mp-navy-700 hover:bg-mp-navy-600',
@@ -93,14 +117,7 @@ export function Calculator({ onUse }) {
           </button>
         ))}
       </div>
-      <button
-        type="button"
-        disabled={usable === null}
-        onClick={() => usable !== null && onUse(fmt(Math.round(usable * 100) / 100))}
-        className="mt-2 h-11 w-full rounded-lg bg-white/10 text-sm font-semibold transition hover:bg-white/20 disabled:opacity-40"
-      >
-        Usar resultado na resposta
-      </button>
+      {!compacta && usar}
     </div>
   );
 }

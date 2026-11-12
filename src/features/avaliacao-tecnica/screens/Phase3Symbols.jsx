@@ -166,16 +166,34 @@ function SymbolPanel({ question, index, total, onDone, celular }) {
       );
     });
 
-  // Celular: o plano ocupa o ecrã todo; a pergunta e as opções flutuam em cima e
-  // recolhem depois do tempo de leitura (toque na barra para responder).
+  // Celular: a pergunta é uma barra fina em cima, com o plano por baixo dela; abre
+  // com as opções durante o tempo de leitura e recolhe (toque em "Responder").
   if (celular) {
     return (
       <PerguntaFlutuante
         tempoLeituraMs={tempoLeitura(question.prompt + options.map((o) => o.label).join(' '), 10000)}
         etiqueta={`Fase 3 · Pergunta ${index + 1}/${total}`}
+        contador={`${index + 1}/${total}`}
         resumo={question.prompt}
+        rotuloVer="Responder"
+        aviso={
+          feedback && (
+            <span
+              className={cn(
+                'flex items-center gap-1.5 text-sm font-bold',
+                feedback === 'correct' && 'text-emerald-700',
+                feedback === 'wrong' && 'text-red-700',
+                feedback === 'timeout' && 'text-mp-orange-700',
+              )}
+            >
+              {feedback === 'correct' && <CircleCheck className="size-4 shrink-0" />}
+              {feedback === 'wrong' && <CircleX className="size-4 shrink-0" />}
+              {feedback === 'timeout' && <Hourglass className="size-4 shrink-0" />}
+              {feedback === 'correct' ? 'Resposta correta' : feedback === 'wrong' ? 'Resposta incorreta' : 'Tempo esgotado'}
+            </span>
+          )
+        }
         timer={cronometro}
-        aviso={resultado || <p className="text-xs text-slate-500">Toque em “Ver” para escolher a resposta.</p>}
       >
         <p className="truncate text-sm font-semibold text-slate-500">
           {question.topic} <span className="font-mono text-xs text-slate-400">· {question.norm}</span>

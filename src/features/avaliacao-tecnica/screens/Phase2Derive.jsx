@@ -119,16 +119,20 @@ function DerivePanel({ question, index, total, calcOpen, onToggleCalc, onDone, c
     inputRef.current?.focus({ preventScroll: true });
   };
 
-  // Celular: o plano ocupa o ecrã todo; a pergunta flutua em cima (recolhe depois
-  // do tempo de leitura) e a resposta fica numa barra fixa em baixo.
+  // Celular: a pergunta é uma barra fina em cima (abre o tempo de leitura e recolhe)
+  // e a resposta outra em baixo; o plano fica entre as duas, sem nada por cima.
+  // A calculadora abre por cima do plano, a partir da barra da resposta.
   if (celular) {
+    const invalido = Boolean(raw) && parsed === null;
     return (
       <>
         <PerguntaFlutuante
           tempoLeituraMs={tempoLeitura(question.prompt)}
           etiqueta={`Fase 2 · Pergunta ${index + 1}/${total}`}
+          contador={`${index + 1}/${total}`}
           resumo={question.prompt}
           timer={cronometro}
+          comResposta
         >
           <p className="text-sm font-semibold text-slate-500">{question.topic}</p>
           <p className="text-lg font-bold leading-snug text-mp-navy-800">{question.prompt}</p>
@@ -143,15 +147,17 @@ function DerivePanel({ question, index, total, calcOpen, onToggleCalc, onDone, c
           </p>
         </PerguntaFlutuante>
 
-        <div className="absolute inset-x-2 bottom-2 z-20 max-h-[70%] overflow-y-auto overscroll-contain rounded-2xl bg-white/95 p-2.5 shadow-xl ring-1 ring-mp-borda backdrop-blur">
+        {/* Por cima da pergunta só enquanto a calculadora está aberta (no celular deitado
+            a coluna é baixa e a calculadora precisa da altura toda) */}
+        <div className={cn(CELULA_RESPOSTA, calcOpen && 'z-30')}>
           {calcOpen && (
-            <div className="mb-2">
-              <Calculator onUse={usarCalculadora} />
+            <div className="absolute inset-x-0 bottom-full mb-1.5 max-h-[calc(100dvh-var(--cab,4rem)-5rem)] overflow-y-auto overscroll-contain rounded-2xl shadow-xl">
+              <Calculator compacta onUse={usarCalculadora} />
             </div>
           )}
-          {answering ? (
-            <>
-              <form onSubmit={handleSubmit} className="flex items-center gap-2">
+          <div className="rounded-xl bg-white p-1.5 shadow-sm ring-1 ring-mp-borda">
+            {answering ? (
+              <form onSubmit={handleSubmit} className="flex items-center gap-1.5">
                 <div className="relative min-w-0 flex-1">
                   <label htmlFor="derive-input" className="sr-only">
                     Resposta em milímetros
@@ -163,42 +169,48 @@ function DerivePanel({ question, index, total, calcOpen, onToggleCalc, onDone, c
                     autoComplete="off"
                     spellCheck={false}
                     value={raw}
+                    aria-invalid={invalido}
+                    title={invalido ? 'Só números e vírgula' : undefined}
                     onChange={(e) => setRaw(e.target.value.replace(/[^\d.,\s]/g, ''))}
                     placeholder="Resposta"
                     className={cn(
-                      'h-12 w-full rounded-xl border-2 bg-white pl-3 pr-11 font-mono text-2xl font-bold tabular-nums outline-none transition',
+                      'h-11 w-full rounded-lg border-2 bg-white pl-2.5 pr-9 font-mono text-xl font-bold tabular-nums outline-none transition',
                       'placeholder:font-sans placeholder:text-base placeholder:font-semibold placeholder:text-slate-300 focus:border-mp-navy-500 focus:ring-4 focus:ring-mp-navy-100',
-                      raw && parsed === null ? 'border-red-400' : 'border-slate-300',
+                      invalido ? 'border-red-400' : 'border-slate-300',
                     )}
                   />
-                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 font-bold text-slate-400">mm</span>
+                  <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">
+                    mm
+                  </span>
                 </div>
-                <Button type="submit" size="sm" className="h-12 px-4" disabled={parsed === null} icon={<Check className="size-5" />}>
+                <Button type="submit" size="sm" className="h-11" disabled={parsed === null} icon={<Check className="size-5" />}>
                   OK
                 </Button>
-              </form>
-              <div className="mt-1.5 flex items-center justify-between gap-2 text-sm">
                 <button
                   type="button"
                   onClick={onToggleCalc}
                   aria-expanded={calcOpen}
-                  className="flex min-h-9 items-center gap-1.5 rounded-lg px-2 font-semibold text-mp-navy-700 active:bg-mp-creme"
+                  aria-label={calcOpen ? 'Fechar calculadora' : 'Calculadora'}
+                  title={calcOpen ? 'Fechar calculadora' : 'Calculadora'}
+                  className={cn(
+                    'grid size-11 shrink-0 place-items-center rounded-lg transition',
+                    calcOpen ? 'bg-mp-navy-800 text-mp-orange-400' : 'bg-mp-navy-50 text-mp-navy-700 active:bg-mp-navy-100',
+                  )}
                 >
-                  <CalculatorIcon className="size-4" /> {calcOpen ? 'Fechar calculadora' : 'Calculadora'}
+                  <CalculatorIcon className="size-5" />
                 </button>
-                {raw && parsed === null && <span className="truncate text-xs font-semibold text-red-600">Só números e vírgula</span>}
                 <button
                   type="button"
                   onClick={() => submit('skip')}
-                  className="flex min-h-9 items-center gap-1.5 rounded-lg px-2 font-semibold text-slate-600 active:bg-mp-creme"
+                  className="flex h-11 shrink-0 items-center gap-1 rounded-lg px-2 text-sm font-semibold text-slate-600 active:bg-mp-creme"
                 >
                   <SkipForward className="size-4" /> Pular
                 </button>
-              </div>
-            </>
-          ) : (
-            <Feedback status={status} />
-          )}
+              </form>
+            ) : (
+              <Feedback status={status} compacto />
+            )}
+          </div>
         </div>
       </>
     );
@@ -315,7 +327,7 @@ function DerivePanel({ question, index, total, calcOpen, onToggleCalc, onDone, c
   );
 }
 
-function Feedback({ status }) {
+function Feedback({ status, compacto = false }) {
   const map = {
     correct: { cls: 'bg-emerald-100 text-emerald-800', Icon: CircleCheck, text: 'Resposta correta' },
     wrong: { cls: 'bg-red-100 text-red-800', Icon: CircleX, text: 'Resposta incorreta' },
@@ -326,7 +338,10 @@ function Feedback({ status }) {
   if (!map) return null;
   const { cls, Icon, text } = map;
   return (
-    <div aria-live="polite" className={cn('flex h-14 animate-pop items-center gap-2 rounded-xl px-4 font-bold', cls)}>
+    <div
+      aria-live="polite"
+      className={cn('flex animate-pop items-center gap-2 rounded-xl font-bold', compacto ? 'h-11 px-3 text-sm' : 'h-14 px-4', cls)}
+    >
       <Icon className="size-5" /> {text}
       <span className="ml-auto text-sm font-medium opacity-70">Próxima…</span>
     </div>

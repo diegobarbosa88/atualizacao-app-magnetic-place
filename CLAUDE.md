@@ -3750,13 +3750,19 @@ TS à parte, convertido para JSX sem mudar a lógica; `zustand` acrescentado só
   resposta. Variante `baixo:` (altura ≤ 520 px) compacta cartões. Em 1× a folha inteira cabe no
   quadro (`PlanViewer`); só ecrãs de toque com folha < 700 px abrem em 1,5×. Verificado em
   1280×800, 1920×1080, 1180×820, 820×1180, 390×844 e 844×390.
-- **Celular** (`useCelular`: largura < 640 px ou altura ≤ 520 px): o plano ocupa o ecrã todo
-  (`.ecra-celular`); a pergunta flutua por cima (`PerguntaFlutuante`), fica aberta o tempo de
-  leitura (`tempoLeitura`, 3–8 s; 10 s na fase 3 com as opções) e recolhe numa barra com o
-  cronómetro — tocar em "Ver" reabre. Fase 2: resposta numa barra fixa em baixo; fase 3: opções
-  dentro da pergunta. O cronómetro guarda o tempo por pergunta (`persistKey` em `useCountdown`),
-  por isso não volta ao início quando a pergunta abre/recolhe nem quando o ecrã muda de modo ao
-  rodar o aparelho.
+- **Celular** (`useCelular`: largura < 640 px ou altura ≤ 520 px), grelha `.ecra-celular`: a
+  pergunta recolhida (`PerguntaFlutuante`) e a resposta da fase 2 são barras finas, **cada uma na
+  sua faixa** — o plano fica no espaço entre elas e nada fica por cima dele de forma permanente
+  (pedido do Diego: as barras flutuantes tapavam cotas). Em pé: barra da pergunta em cima, resposta
+  em baixo; deitado: plano com a altura toda à esquerda e as barras numa coluna à direita. A
+  pergunta abre por cima do plano o tempo de leitura (`tempoLeitura`, 3–8 s; 10 s na fase 3 com as
+  opções) e recolhe; tocar na barra ("Ver"/"Responder") reabre. Na fase 2 a pergunta aberta pára
+  acima da barra da resposta (`comResposta`). Na fase 1 o resultado de cada toque aparece na barra
+  no lugar do resumo (3,5 s depois de um erro; até à cota seguinte no resultado final). A
+  calculadora (`Calculator compacta`) abre por cima do plano a partir da barra da resposta. O
+  cronómetro guarda o tempo por pergunta (`persistKey` em `useCountdown`), por isso não volta ao
+  início quando a pergunta abre/recolhe nem quando o ecrã muda de modo ao rodar o aparelho.
+  Verificado em 412×780, 360×640, 844×390 e 667×375.
 - Testes: `tests/unit/avaliacaoTecnica.test.js` (gabarito das variantes, níveis, pontuação,
   correção no servidor) e `tests/unit/backend/avaliacoes.handler.test.js` (fluxo da API com um
   Supabase falso em memória, `fakeSupabase.js`).
