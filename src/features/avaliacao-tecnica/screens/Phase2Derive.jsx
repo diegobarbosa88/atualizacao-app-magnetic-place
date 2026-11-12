@@ -107,20 +107,9 @@ function DerivePanel({ question, index, total, calcOpen, onToggleCalc, onDone })
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.06em] text-mp-navy-600">
-              Fase 2 de 3 · Pergunta {index + 1} de {total}
+              Fase 2 · Pergunta {index + 1}/{total}
             </p>
             <p className="truncate text-sm font-semibold text-slate-500">{question.topic}</p>
-          </div>
-          <div className="flex gap-1" aria-hidden>
-            {Array.from({ length: total }, (_, i) => (
-              <span
-                key={i}
-                className={cn(
-                  'h-2 rounded-full',
-                  i < index ? 'w-2 bg-mp-navy-300' : i === index ? 'w-6 bg-mp-orange-400' : 'w-2 bg-slate-200',
-                )}
-              />
-            ))}
           </div>
         </div>
 
@@ -173,12 +162,18 @@ function DerivePanel({ question, index, total, calcOpen, onToggleCalc, onDone })
 
             {answering ? (
               <div className="grid grid-cols-[1fr_auto] gap-2">
-                <Button type="submit" size="lg" className="baixo:min-h-11" disabled={parsed === null} icon={<Check className="size-5" />}>
+                <Button
+                  type="submit"
+                  size="lgEstreito"
+                  className="baixo:min-h-11"
+                  disabled={parsed === null}
+                  icon={<Check className="size-5" />}
+                >
                   Confirmar
                 </Button>
                 <Button
                   variant="outline"
-                  size="lg"
+                  size="lgEstreito"
                   className="baixo:min-h-11"
                   icon={<SkipForward className="size-5" />}
                   onClick={() => submit('skip')}

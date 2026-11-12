@@ -162,7 +162,7 @@ export function Phase1Find() {
               </div>
               <div className="min-w-0">
                 <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.06em] text-mp-navy-600">
-                  Fase 1 de 3 · Leitura do plano
+                  Fase 1 · Leitura do plano
                 </p>
                 <h2 className="text-xl font-bold text-mp-navy-800 sm:text-2xl">Estude o plano {DRAWING.number}</h2>
                 <p className="mt-1 text-sm text-slate-600 sm:text-base baixo:hidden">
@@ -189,19 +189,8 @@ export function Phase1Find() {
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                 <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.06em] text-mp-navy-600">
-                  Fase 1 de 3 · Cota {index + 1} de {items.length}
+                  Fase 1 · Cota {index + 1}/{items.length}
                 </p>
-                <div className="flex gap-1" aria-hidden>
-                  {items.map((it, i) => (
-                    <span
-                      key={it.id}
-                      className={cn(
-                        'h-2 rounded-full',
-                        i < index ? 'w-2 bg-mp-navy-300' : i === index ? 'w-6 bg-mp-orange-400' : 'w-2 bg-slate-200',
-                      )}
-                    />
-                  ))}
-                </div>
               </div>
               <p className="mt-1 text-lg leading-snug sm:text-xl baixo:text-base">
                 <span className="text-slate-500">Encontre: </span>

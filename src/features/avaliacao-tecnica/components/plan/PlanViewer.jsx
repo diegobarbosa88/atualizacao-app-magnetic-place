@@ -1,13 +1,15 @@
 import { useLayoutEffect, useRef, useState } from 'react';
-import { Maximize, Minus, Plus } from 'lucide-react';
+import { Maximize, Minus, Plus, RotateCw } from 'lucide-react';
 import { cn } from '../../lib/cn.js';
 
 const ZOOMS = [1, 1.5, 2.2, 3];
 
 /** Proporção da folha (viewBox 1188 × 840 do PlanSheet) */
 const SHEET_ASPECT = 1188 / 840;
-/** Margem interior do quadro (p-2 dos dois lados) */
-const PAD = 16;
+/** Margem interior do quadro (p-1 dos dois lados) */
+const PAD = 8;
+/** Abaixo desta largura (em 1×), ecrãs de toque abrem já ampliados para as cotas serem tocáveis */
+const TOQUE_MIN_LARGURA = 700;
 
 /** Centra um elemento do plano no quadro, sem mexer na página (só se não estiver visível) */
 export function revealInViewer(el) {
@@ -31,10 +33,12 @@ const isCoarsePointer = () => typeof window !== 'undefined' && window.matchMedia
  * (o pai define a altura); em 1× a folha inteira cabe na caixa, na largura ou na
  * altura, conforme o que for mais apertado.
  * Toque: desliza com o dedo (scroll nativo). Mouse: arrastar com o botão esquerdo.
- * Em ecrãs de toque abre com 1,5× para as cotas terem área de toque suficiente.
+ * Em ecrãs de toque pequenos (folha com menos de 700 px em 1×) abre com 1,5×,
+ * para as cotas terem área de toque suficiente; nos tablets abre com a folha inteira.
  */
 export function PlanViewer({ children, className }) {
-  const [zoomIndex, setZoomIndex] = useState(() => (isCoarsePointer() ? 1 : 0));
+  const [zoomIndex, setZoomIndex] = useState(0);
+  const zoomInicialFeito = useRef(false);
   const scrollRef = useRef(null);
   const prevZoom = useRef(ZOOMS[zoomIndex]);
   const drag = useRef(null);
@@ -49,7 +53,13 @@ export function PlanViewer({ children, className }) {
     const medir = () => {
       const w = el.clientWidth - PAD;
       const h = el.clientHeight - PAD;
-      if (w > 0 && h > 0) setFitWidth(Math.max(160, Math.floor(Math.min(w, h * SHEET_ASPECT))));
+      if (w <= 0 || h <= 0) return;
+      const fit = Math.max(160, Math.floor(Math.min(w, h * SHEET_ASPECT)));
+      setFitWidth(fit);
+      if (!zoomInicialFeito.current) {
+        zoomInicialFeito.current = true;
+        if (isCoarsePointer() && fit < TOQUE_MIN_LARGURA) setZoomIndex(1);
+      }
     };
     medir();
     const ro = new ResizeObserver(medir);
@@ -115,10 +125,15 @@ export function PlanViewer({ children, className }) {
       >
         {/* margin:auto centra a folha quando é menor que o quadro e, ao ampliar,
             deixa-a crescer a partir do canto (sem cortar o topo/esquerda) */}
-        <div className="m-auto shrink-0 p-2" style={{ width: fitWidth ? fitWidth * zoom + PAD : '100%' }}>
+        <div className="m-auto shrink-0 p-1" style={{ width: fitWidth ? fitWidth * zoom + PAD : '100%' }}>
           <div className="shadow-md">{children}</div>
         </div>
       </div>
+
+      {/* Telemóvel em pé: com o aparelho deitado o plano fica bem maior */}
+      <p className="pointer-events-none absolute right-2 top-2 hidden animate-sumir items-center gap-1.5 rounded-lg bg-mp-navy-800/90 px-2.5 py-1.5 text-xs font-semibold text-white shadow-lg max-sm:portrait:flex">
+        <RotateCw className="size-3.5" /> Deite o celular para ver o plano maior
+      </p>
 
       <div className="absolute bottom-3 left-3 flex items-center gap-1 rounded-xl bg-mp-navy-800/90 p-1 text-white shadow-lg backdrop-blur">
         <button
