@@ -19,18 +19,20 @@ export function TimerBar({ remainingMs, totalMs, active, label = 'Tempo restante
     ratio > 0.5 ? 'bg-mp-navy-500' : critical ? 'bg-red-500' : 'bg-mp-orange-400',
   );
 
-  // Versão de uma linha, para a barra da pergunta recolhida no celular
+  // Versão mínima, para a barra da pergunta recolhida no celular: o relógio em texto
+  // e a barra do tempo como um filete no rodapé da barra (o contentor posicionado
+  // mais próximo — a barra tem de ser `relative`). Só spans: vive dentro de um botão.
   if (compacto) {
     return (
-      <div className="flex items-center gap-2" role="timer" aria-label={`${label}: ${secondsLeft} segundos`}>
-        <Timer className={cn('size-4 shrink-0', critical ? 'text-red-500' : 'text-slate-400', finalSeconds && 'animate-pulse')} />
-        <div className="h-1.5 min-w-8 flex-1 overflow-hidden rounded-full bg-slate-200">
-          <div className={barra} style={{ width: `${ratio * 100}%` }} />
-        </div>
-        <span className={cn('font-mono text-sm font-bold tabular-nums', critical ? 'text-red-600' : 'text-slate-900')}>
+      <span className="flex items-center gap-1" role="timer" aria-label={`${label}: ${secondsLeft} segundos`}>
+        <Timer className={cn('size-3.5 shrink-0', critical ? 'text-red-500' : 'text-slate-400', finalSeconds && 'animate-pulse')} />
+        <span className={cn('font-mono text-sm font-bold leading-none tabular-nums', critical ? 'text-red-600' : 'text-slate-900')}>
           {formatClock(remainingMs)}
         </span>
-      </div>
+        <span aria-hidden className="absolute inset-x-0 bottom-0 h-[3px] bg-slate-200">
+          <span className={cn('block', barra)} style={{ width: `${ratio * 100}%` }} />
+        </span>
+      </span>
     );
   }
 

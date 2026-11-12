@@ -44,6 +44,10 @@ export function Phase1Find() {
   const lockedRef = useRef(false);
   const elapsedRef = useRef(() => 0);
   const timeoutRef = useRef(null);
+  // Celular: a barra da pergunta mostra o resultado de cada toque no lugar do
+  // resumo — uns segundos depois de um erro, e até à cota seguinte no resultado final
+  const [avisoNaBarra, setAvisoNaBarra] = useState(false);
+  const avisoTimerRef = useRef(null);
 
   const item = items[index];
   const limitMs = spec.phase1.itemSec * 1000;
@@ -53,9 +57,17 @@ export function Phase1Find() {
   useEffect(
     () => () => {
       if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current);
+      window.clearTimeout(avisoTimerRef.current);
     },
     [],
   );
+
+  /** Mostra o resultado na barra recolhida; `ms` = 0 deixa-o até à cota seguinte */
+  const mostrarAviso = (ms) => {
+    window.clearTimeout(avisoTimerRef.current);
+    setAvisoNaBarra(true);
+    if (ms) avisoTimerRef.current = window.setTimeout(() => setAvisoNaBarra(false), ms);
+  };
 
   // Mostra a cota certa quando o candidato não a encontra
   useEffect(() => {
@@ -76,6 +88,8 @@ export function Phase1Find() {
     }
     wrongRef.current = [];
     lockedRef.current = false;
+    window.clearTimeout(avisoTimerRef.current);
+    setAvisoNaBarra(false);
     setWrong([]);
     setFoundId(null);
     setStatus('searching');
@@ -95,6 +109,7 @@ export function Phase1Find() {
       lockedRef.current = true;
       setFoundId(id);
       setStatus('found');
+      mostrarAviso(0);
       sfx.correct();
       recordFind({
         itemId: item.id,
@@ -114,6 +129,7 @@ export function Phase1Find() {
     setWrong(next);
     setShake((n) => n + 1);
     sfx.wrong();
+    mostrarAviso(next.length >= maxAttempts ? 0 : 3500);
     if (next.length >= maxAttempts) {
       lockedRef.current = true;
       setStatus('missed');
@@ -134,6 +150,7 @@ export function Phase1Find() {
     if (lockedRef.current) return;
     lockedRef.current = true;
     setStatus('timeout');
+    mostrarAviso(0);
     sfx.wrong();
     recordFind({
       itemId: item.id,
@@ -210,6 +227,7 @@ export function Phase1Find() {
             key="leitura"
             tempoLeituraMs={6000}
             etiqueta="Fase 1 · Leitura do plano"
+            contador={<BookOpenCheck className="size-4" />}
             resumo={`Estude o plano ${DRAWING.number}`}
             timer={cronoLeitura}
             acao={
@@ -231,23 +249,26 @@ export function Phase1Find() {
             key={item.id}
             tempoLeituraMs={tempoLeitura(item.prompt)}
             etiqueta={`Fase 1 · Cota ${index + 1}/${items.length}`}
-            resumo={`Encontre: ${item.prompt}`}
-            timer={cronoCota}
-            aviso={
-              <div
-                key={shake}
-                aria-live="polite"
-                className={cn('flex flex-wrap items-center gap-2 empty:hidden', shake > 0 && status === 'searching' && 'animate-shake')}
-              >
-                {(wrong.length > 0 || status !== 'searching') && (
-                  <>
-                    {tentativas}
-                    <StatusLine status={status} wrongCount={wrong.length} remaining={remainingAttempts} compacto />
-                  </>
-                )}
-                {dica}
-              </div>
+            contador={`${index + 1}/${items.length}`}
+            marcas={
+              (wrong.length > 0 || status !== 'searching') && (
+                <span className="flex gap-0.5" aria-label={`${remainingAttempts} tentativas restantes`}>
+                  {Array.from({ length: maxAttempts }, (_, i) => (
+                    <span key={i} className={cn('size-1.5 rounded-full', i < remainingAttempts ? 'bg-mp-navy-500' : 'bg-red-400')} />
+                  ))}
+                </span>
+              )
             }
+            resumo={`Encontre: ${item.prompt}`}
+            detalhe={hint && `Dica: procure ${hint}`}
+            aviso={
+              avisoNaBarra && (
+                <span key={shake} aria-live="polite" className={cn('block', status === 'searching' && 'animate-shake')}>
+                  <StatusLine status={status} wrongCount={wrong.length} remaining={remainingAttempts} compacto />
+                </span>
+              )
+            }
+            timer={cronoCota}
           >
             <p className="text-lg leading-snug">
               <span className="text-slate-500">Encontre: </span>
@@ -323,24 +344,30 @@ export function Phase1Find() {
 }
 
 function StatusLine({ status, wrongCount, remaining, compacto = false }) {
+  // Compacto: cabe na barra da pergunta recolhida (até duas linhas)
+  const chip = cn(
+    'inline-flex items-center rounded-lg font-bold',
+    compacto ? 'gap-1 px-2 py-1 text-[13px] leading-tight' : 'gap-1.5 px-2.5 py-1',
+  );
+  const icone = cn('shrink-0', compacto ? 'size-3.5' : 'size-4');
   if (status === 'found')
     return (
-      <span className="inline-flex animate-pop items-center gap-1.5 rounded-lg bg-emerald-100 px-2.5 py-1 font-bold text-emerald-800">
-        <CircleCheck className="size-4" /> Encontrada
+      <span className={cn(chip, 'animate-pop bg-emerald-100 text-emerald-800')}>
+        <CircleCheck className={icone} /> Encontrada
       </span>
     );
   if (status === 'missed' || status === 'timeout')
     return (
-      <span className="inline-flex animate-pop items-center gap-1.5 rounded-lg bg-mp-orange-100 px-2.5 py-1 font-bold text-mp-orange-700">
-        <Hourglass className="size-4" />
+      <span className={cn(chip, 'animate-pop bg-mp-orange-100 text-mp-orange-700')}>
+        <Hourglass className={icone} />
         {status === 'missed' ? 'Tentativas esgotadas' : 'Tempo esgotado'}
         {compacto ? ' — veja a cota em laranja' : ' — a cota certa está destacada em laranja'}
       </span>
     );
   if (wrongCount > 0)
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-lg bg-red-100 px-2.5 py-1 font-bold text-red-800">
-        <TriangleAlert className="size-4" /> Não é essa.{' '}
+      <span className={cn(chip, 'bg-red-100 text-red-800')}>
+        <TriangleAlert className={icone} /> Não é essa.{' '}
         {remaining === 1
           ? compacto
             ? 'Resta 1'
