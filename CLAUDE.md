@@ -3742,11 +3742,14 @@ TS à parte, convertido para JSX sem mudar a lógica; `zustand` acrescentado só
   FT.orange = 400; texto laranja sobre branco só em `mp-orange-700`) e `mp-creme`/`mp-borda` em
   `avaliacao.css`; fontes da app (`--sans`, `--heading`, `--mono`) dentro de `.avaliacao-scope`;
   logótipo `LOGO_SRC` (`config.js`) no cabeçalho, no relatório e na legenda do plano.
-- **Ecrã das fases sem rolar a página** (`components/ecraProva.js`): grelha com a altura exata que
-  sobra por baixo do cabeçalho (`--cab`, medido em `AvaliacaoProva.jsx`). Deitado (≥ 768 px):
-  plano à esquerda, pergunta e resposta à direita; em pé: pergunta, plano, resposta. Variante
-  `baixo:` (altura ≤ 520 px) compacta cabeçalho e cartões. Em 1× a folha inteira cabe no quadro
-  (`PlanViewer`). Verificado em 1280×800, 1920×1080, 1180×820, 820×1180, 390×844 e 844×390.
+- **Ecrã das fases sem rolar a página e com o plano o maior possível** (`.ecra-prova` em
+  `avaliacao.css`, nomes em `components/ecraProva.js`): grelha com a altura exata que sobra por baixo
+  do cabeçalho (`--cab`, medido em `AvaliacaoProva.jsx`; durante as fases o cabeçalho é uma linha
+  só). Deitado (≥ 768 px): plano à esquerda; a coluna da pergunta fica só com a largura que o plano
+  não precisa para a folha √2:1 ocupar toda a altura (entre 17rem e 26rem). Em pé: pergunta, plano,
+  resposta. Variante `baixo:` (altura ≤ 520 px) compacta cartões. Em 1× a folha inteira cabe no
+  quadro (`PlanViewer`); só ecrãs de toque com folha < 700 px abrem em 1,5×. Verificado em
+  1280×800, 1920×1080, 1180×820, 820×1180, 390×844 e 844×390.
 - Testes: `tests/unit/avaliacaoTecnica.test.js` (gabarito das variantes, níveis, pontuação,
   correção no servidor) e `tests/unit/backend/avaliacoes.handler.test.js` (fluxo da API com um
   Supabase falso em memória, `fakeSupabase.js`).

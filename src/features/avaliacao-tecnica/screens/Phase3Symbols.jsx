@@ -103,22 +103,11 @@ function SymbolPanel({ question, index, total, onDone }) {
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.06em] text-mp-navy-600">
-              Fase 3 de 3 · Pergunta {index + 1} de {total}
+              Fase 3 · Pergunta {index + 1}/{total}
             </p>
             <p className="truncate text-sm font-semibold leading-snug text-slate-500">
               {question.topic} <span className="font-mono text-xs text-slate-400">· {question.norm}</span>
             </p>
-          </div>
-          <div className="flex gap-1" aria-hidden>
-            {Array.from({ length: total }, (_, i) => (
-              <span
-                key={i}
-                className={cn(
-                  'h-2 rounded-full',
-                  i < index ? 'w-2 bg-mp-navy-300' : i === index ? 'w-6 bg-mp-orange-400' : 'w-2 bg-slate-200',
-                )}
-              />
-            ))}
           </div>
         </div>
 

@@ -9,8 +9,11 @@ const VARIANTS = {
 };
 
 const SIZES = {
+  sm: 'min-h-10 gap-2 px-3 text-sm',
   md: 'min-h-11 gap-2 px-4 text-sm',
   lg: 'min-h-14 gap-2.5 px-6 text-base',
+  /** Mesma altura do lg, para colunas estreitas (ex.: Confirmar/Pular na coluna da pergunta) */
+  lgEstreito: 'min-h-14 gap-2 px-3 text-base',
   xl: 'min-h-16 gap-3 px-8 text-lg',
 };
 

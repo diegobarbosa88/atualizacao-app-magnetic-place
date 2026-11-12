@@ -59,8 +59,8 @@ export default function AvaliacaoProva({ level, inicial, onStart, onSubmit }) {
         <AppHeader onExit={requestExit} />
       </div>
 
-      {/* py-2 (1rem no total) entra na conta da altura de GRELHA */}
-      <main className="mx-auto w-full max-w-[96rem] px-2 py-2 sm:px-4">
+      {/* px-2/py-2 entram na conta da grelha das fases (.ecra-prova em avaliacao.css) */}
+      <main className="w-full px-2 py-2">
         {stage === 'start' && <StartScreen level={level} inicial={inicial} onStart={onStart} />}
         {stage === 'phase1' && <Phase1Find />}
         {stage === 'phase2' && (

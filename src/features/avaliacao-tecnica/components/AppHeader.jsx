@@ -12,9 +12,10 @@ const STEPS = [
   { stage: 'results', label: 'Envio' },
 ];
 
-// Em ecrãs baixos (`baixo:`, telemóvel deitado) o cabeçalho encolhe e a barra
-// de fases esconde-se, para sobrar altura para o plano e a pergunta.
-
+/**
+ * Cabeçalho da prova. Durante as fases fica numa linha só (logótipo, fases e
+ * botões), para o plano ficar com o máximo de altura.
+ */
 export function AppHeader({ onExit }) {
   const stage = useAssessmentStore((s) => s.stage);
   const candidate = useAssessmentStore((s) => s.candidate);
@@ -25,14 +26,46 @@ export function AppHeader({ onExit }) {
 
   return (
     <header className="shrink-0 bg-mp-navy-800 text-white shadow-lg print:hidden">
-      <div className={'mx-auto flex max-w-[96rem] items-center gap-3 px-4 py-2.5 sm:px-6 baixo:py-1'}>
+      <div className={cn('flex items-center gap-3 px-3 sm:px-4', inProgress ? 'py-1' : 'py-2.5 baixo:py-1')}>
         <div className="min-w-0 flex-1">
-          <Marca />
+          <Marca compacto={inProgress} />
         </div>
 
+        {stage !== 'start' && (
+          <ol aria-label="Progresso da avaliação" className="hidden shrink-0 items-center gap-1 md:flex">
+            {STEPS.map((step, i) => {
+              const done = i < currentIndex;
+              const current = i === currentIndex;
+              return (
+                <li
+                  key={step.stage}
+                  aria-current={current ? 'step' : undefined}
+                  title={step.label}
+                  className={cn(
+                    'flex h-7 items-center gap-1.5 rounded-full font-mono text-xs font-bold',
+                    current && 'bg-mp-orange-400 pl-0.5 pr-3 text-mp-navy-800',
+                  )}
+                >
+                  <span
+                    className={cn(
+                      'grid size-6 shrink-0 place-items-center rounded-full',
+                      done && 'bg-emerald-500 text-white',
+                      current && 'bg-mp-navy-800 text-mp-orange-400',
+                      !done && !current && 'bg-white/10 text-white/60',
+                    )}
+                  >
+                    {done ? <Check className="size-3.5" /> : i + 1}
+                  </span>
+                  {current && <span className="font-sans text-sm">{step.label}</span>}
+                </li>
+              );
+            })}
+          </ol>
+        )}
+
         {candidate && stage !== 'start' && (
-          <div className="hidden text-right md:block">
-            <p className="max-w-56 truncate text-sm font-semibold">{candidate.fullName}</p>
+          <div className="hidden min-w-0 text-right xl:block">
+            <p className="max-w-56 truncate text-sm font-semibold leading-tight">{candidate.fullName}</p>
             <p className="font-mono text-xs text-mp-navy-200">
               {candidate.internalId} · {LEVEL_LABELS[candidate.level]}
             </p>
@@ -42,7 +75,10 @@ export function AppHeader({ onExit }) {
         <button
           type="button"
           onClick={toggleSound}
-          className="grid size-11 place-items-center rounded-xl text-mp-navy-100 transition hover:bg-white/10"
+          className={cn(
+            'grid place-items-center rounded-xl text-mp-navy-100 transition hover:bg-white/10',
+            inProgress ? 'size-10' : 'size-11',
+          )}
           aria-label={soundEnabled ? 'Desativar som' : 'Ativar som'}
           aria-pressed={soundEnabled}
         >
@@ -50,39 +86,11 @@ export function AppHeader({ onExit }) {
         </button>
 
         {inProgress && (
-          <Button variant="ghost" size="md" onClick={onExit} icon={<LogOut className="size-4" />} aria-label="Encerrar prova">
+          <Button variant="ghost" size="sm" onClick={onExit} icon={<LogOut className="size-4" />} aria-label="Encerrar prova">
             <span className="hidden sm:inline">Encerrar</span>
           </Button>
         )}
       </div>
-
-      {stage !== 'start' && (
-        <nav aria-label="Progresso da avaliação" className={'border-t border-white/10 bg-mp-navy-700 baixo:hidden'}>
-          <ol className="mx-auto grid max-w-[96rem] grid-cols-4 gap-2 px-4 py-1.5 sm:px-6">
-            {STEPS.map((step, i) => {
-              const done = i < currentIndex;
-              const current = i === currentIndex;
-              return (
-                <li key={step.stage} className="flex min-w-0 items-center gap-2" aria-current={current ? 'step' : undefined}>
-                  <span
-                    className={cn(
-                      'grid size-6 shrink-0 place-items-center rounded-full font-mono text-xs font-bold',
-                      done && 'bg-emerald-500 text-white',
-                      current && 'bg-mp-orange-400 text-mp-navy-800',
-                      !done && !current && 'bg-white/10 text-white/60',
-                    )}
-                  >
-                    {done ? <Check className="size-3.5" /> : i + 1}
-                  </span>
-                  <span className={cn('truncate text-xs font-semibold sm:text-sm', current ? 'text-white' : 'text-white/60')}>
-                    {step.label}
-                  </span>
-                </li>
-              );
-            })}
-          </ol>
-        </nav>
-      )}
       <div className="faixa-marca h-[3px]" aria-hidden />
     </header>
   );
