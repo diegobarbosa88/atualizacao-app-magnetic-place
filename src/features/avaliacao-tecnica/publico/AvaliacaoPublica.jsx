@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
-import { CircleCheck, CircleX, Clock, HardHat, LoaderCircle, RotateCcw, TriangleAlert } from 'lucide-react';
+import { CircleCheck, CircleX, Clock, LoaderCircle, RotateCcw, TriangleAlert } from 'lucide-react';
 import AvaliacaoProva from '../AvaliacaoProva.jsx';
 import { Button } from '../components/ui/Button.jsx';
 import { Card } from '../components/ui/Card.jsx';
-import { ORG_NAME, TEST_TITLE } from '../config.js';
+import { ORG_NAME } from '../config.js';
+import { Marca } from '../components/Marca.jsx';
 import { iniciarProva, obterConvite, submeterProva } from '../api.js';
 
 // Respostas guardadas no aparelho até o servidor confirmar a receção — se a rede
@@ -97,24 +98,18 @@ export default function AvaliacaoPublica({ token }) {
   }
 
   return (
-    <div className="avaliacao-scope min-h-dvh bg-slate-100 text-slate-900">
-      <header className="bg-slate-900 text-white">
-        <div className="mx-auto flex max-w-3xl items-center gap-3 px-4 py-3">
-          <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-safety-400 text-slate-900">
-            <HardHat className="size-6" />
-          </div>
-          <div className="min-w-0">
-            <p className="truncate text-[11px] font-bold uppercase tracking-[0.2em] text-safety-400">{ORG_NAME}</p>
-            <p className="truncate text-base font-bold sm:text-lg">{TEST_TITLE}</p>
-          </div>
+    <div className="avaliacao-scope min-h-dvh bg-mp-creme text-slate-900">
+      <header className="bg-mp-navy-800 text-white">
+        <div className="mx-auto max-w-3xl px-4 py-2.5">
+          <Marca />
         </div>
-        <div className="hazard-stripe h-1.5" aria-hidden />
+        <div className="faixa-marca h-[3px]" aria-hidden />
       </header>
 
       <main className="mx-auto max-w-xl px-4 pt-10">
         {estado === 'loading' && (
           <div className="flex justify-center pt-10">
-            <LoaderCircle className="size-10 animate-spin text-tech-600" aria-label="Carregando" />
+            <LoaderCircle className="size-10 animate-spin text-mp-navy-600" aria-label="Carregando" />
           </div>
         )}
         {estado === 'reenvio' && <Reenvio token={token} onDone={() => setEstado('completed')} />}

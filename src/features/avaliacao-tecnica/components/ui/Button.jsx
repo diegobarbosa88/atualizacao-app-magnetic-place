@@ -1,10 +1,10 @@
 import { cn } from '../../lib/cn.js';
 
 const VARIANTS = {
-  primary: 'bg-safety-400 text-slate-900 shadow-sm ring-1 ring-inset ring-safety-600/40 hover:bg-safety-300 active:bg-safety-500',
-  secondary: 'bg-slate-900 text-white hover:bg-slate-800 active:bg-slate-950',
-  outline: 'bg-white text-slate-800 ring-2 ring-inset ring-slate-300 hover:text-tech-700 hover:ring-tech-500',
-  ghost: 'bg-transparent text-slate-200 hover:bg-white/10',
+  primary: 'bg-mp-orange-400 text-mp-navy-800 font-bold shadow-sm hover:bg-mp-orange-300 active:bg-mp-orange-500',
+  secondary: 'bg-mp-navy-600 text-white hover:bg-mp-navy-500 active:bg-mp-navy-700',
+  outline: 'bg-white text-slate-800 ring-2 ring-inset ring-slate-300 hover:text-mp-navy-700 hover:ring-mp-navy-500',
+  ghost: 'bg-transparent text-white/85 hover:bg-white/10',
   danger: 'bg-red-600 text-white hover:bg-red-500 active:bg-red-700',
 };
 
@@ -20,7 +20,7 @@ export function Button({ variant = 'primary', size = 'lg', icon, iconRight, bloc
       type={type}
       className={cn(
         'inline-flex select-none items-center justify-center rounded-xl font-semibold transition',
-        'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-tech-300',
+        'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-mp-navy-300',
         'disabled:cursor-not-allowed disabled:opacity-45',
         VARIANTS[variant],
         SIZES[size],

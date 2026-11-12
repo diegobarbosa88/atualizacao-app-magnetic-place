@@ -4,6 +4,7 @@ import { Button } from '../components/ui/Button.jsx';
 import {
   CLASSIFICATION_LABELS,
   LEVEL_LABELS,
+  LOGO_SRC,
   MIN_CORE_PILLAR_FOR_APTO,
   ORG_NAME,
   PILLAR_LABELS,
@@ -30,7 +31,7 @@ const CLASS_STYLE = {
 
 const PILLAR_ORDER = ['localizacao', 'calculo', 'simbologia', 'agilidade'];
 
-const barColor = (v) => (v >= 70 ? 'bg-emerald-500' : v >= 40 ? 'bg-safety-400' : 'bg-red-500');
+const barColor = (v) => (v >= 70 ? 'bg-emerald-500' : v >= 40 ? 'bg-mp-orange-400' : 'bg-red-500');
 
 const fmtMm = (v) => formatMm(v, Number.isInteger(v) ? 0 : 1);
 
@@ -61,13 +62,16 @@ export function RelatorioView({ snapshot, summary, contacto = [] }) {
       </div>
 
       <article className="space-y-6 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200 sm:p-8 print:space-y-4 print:rounded-none print:p-0 print:shadow-none print:ring-0">
-        <header className="flex items-start justify-between gap-4 border-b-4 border-slate-900 pb-4">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-safety-600">{ORG_NAME}</p>
-            <h2 className="text-xl font-bold sm:text-2xl">{TEST_TITLE}</h2>
-            <p className="text-sm text-slate-500">
-              {TEST_SUBTITLE} · Plano {DRAWING.number} rev. {DRAWING.rev}, variante {plan.code} — uso interno do RH
-            </p>
+        <header className="flex items-start justify-between gap-4 border-b-4 border-mp-navy-800 pb-4">
+          <div className="flex min-w-0 items-start gap-3 sm:gap-4">
+            <img src={LOGO_SRC} alt="" className="size-14 shrink-0 object-contain sm:size-16" />
+            <div className="min-w-0">
+              <p className="font-mono text-xs font-semibold uppercase tracking-[0.2em] text-mp-orange-700">{ORG_NAME}</p>
+              <h2 className="text-xl font-bold text-mp-navy-800 sm:text-2xl">{TEST_TITLE}</h2>
+              <p className="text-sm text-slate-500">
+                {TEST_SUBTITLE} · Plano {DRAWING.number} rev. {DRAWING.rev}, variante {plan.code} — uso interno do RH
+              </p>
+            </div>
           </div>
           <div className="text-right text-sm">
             <p className="font-semibold">{formatDateTime(snapshot.finishedAt)}</p>
@@ -373,7 +377,7 @@ function ScoreRing({ value, color }) {
         strokeDashoffset={circumference * (1 - value / 100)}
         transform="rotate(-90 64 64)"
       />
-      <text x="64" y="66" textAnchor="middle" fontSize="36" fontWeight="800" fill="#0f172a" fontFamily="ui-monospace, monospace">
+      <text x="64" y="66" textAnchor="middle" fontSize="36" fontWeight="800" fill="#122741" fontFamily="var(--mono)">
         {value}
       </text>
       <text x="64" y="86" textAnchor="middle" fontSize="11" fill="#64748b">

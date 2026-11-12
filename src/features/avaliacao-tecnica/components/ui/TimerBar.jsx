@@ -16,11 +16,13 @@ export function TimerBar({ remainingMs, totalMs, active, label = 'Tempo restante
 
   return (
     <div className="flex items-center gap-3" role="timer" aria-label={`${label}: ${secondsLeft} segundos`}>
-      <Timer className={cn('size-7 shrink-0', critical ? 'text-red-500' : 'text-slate-400', finalSeconds && 'animate-pulse')} />
+      <Timer
+        className={cn('size-7 shrink-0 baixo:size-5', critical ? 'text-red-500' : 'text-slate-400', finalSeconds && 'animate-pulse')}
+      />
       <div className="min-w-0 flex-1">
         <div className="mb-1 flex items-baseline justify-between gap-2">
           <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">{label}</span>
-          <span className={cn('font-mono text-2xl font-bold tabular-nums', critical ? 'text-red-600' : 'text-slate-900')}>
+          <span className={cn('font-mono text-2xl font-bold tabular-nums baixo:text-lg', critical ? 'text-red-600' : 'text-slate-900')}>
             {formatClock(remainingMs)}
           </span>
         </div>
@@ -28,7 +30,7 @@ export function TimerBar({ remainingMs, totalMs, active, label = 'Tempo restante
           <div
             className={cn(
               'h-full rounded-full transition-[width] duration-100 ease-linear',
-              ratio > 0.5 ? 'bg-tech-500' : critical ? 'bg-red-500' : 'bg-safety-400',
+              ratio > 0.5 ? 'bg-mp-navy-500' : critical ? 'bg-red-500' : 'bg-mp-orange-400',
             )}
             style={{ width: `${ratio * 100}%` }}
           />

@@ -15,7 +15,7 @@ const inputClass = (invalid, withIcon = true) =>
   cn(
     'h-14 w-full rounded-xl border-2 bg-white pr-4 text-lg outline-none transition',
     withIcon ? 'pl-12' : 'pl-4',
-    'placeholder:text-slate-400 focus:border-tech-500 focus:ring-4 focus:ring-tech-100',
+    'placeholder:text-slate-400 focus:border-mp-navy-500 focus:ring-4 focus:ring-mp-navy-100',
     invalid ? 'border-red-400' : 'border-slate-300',
   );
 
@@ -83,17 +83,17 @@ export function StartScreen({ level, inicial, onStart }) {
   };
 
   return (
-    <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-5">
+    <div className="mx-auto grid max-w-7xl gap-6 pb-6 pt-2 lg:grid-cols-5">
       <Card className="overflow-hidden lg:col-span-3">
-        <div className="bg-slate-900 px-6 py-7 text-white sm:px-8">
-          <p className="text-xs font-bold uppercase tracking-[0.25em] text-safety-400">Seus dados</p>
+        <div className="bg-mp-navy-800 px-6 py-7 text-white sm:px-8">
+          <p className="text-xs font-bold uppercase tracking-[0.25em] text-mp-orange-400">Seus dados</p>
           <h1 className="mt-1 text-2xl font-bold sm:text-3xl">Interpretação de plano</h1>
-          <p className="mt-2 text-slate-300">
+          <p className="mt-2 text-mp-navy-100">
             Plano {DRAWING.number} — {DRAWING.title.toLowerCase()}, normas EN ISO. Preencha os dados abaixo: a prova começa logo em seguida
             e não pode ser pausada.
           </p>
         </div>
-        <div className="hazard-stripe h-2" />
+        <div className="faixa-marca h-[3px]" />
 
         <form onSubmit={handleSubmit} noValidate className="space-y-5 p-6 sm:p-8">
           <Field id="nome" label="Nome completo" error={showError('nome')}>
@@ -172,7 +172,7 @@ export function StartScreen({ level, inicial, onStart }) {
 
           <div>
             <label className="flex cursor-pointer items-start gap-3 rounded-xl border-2 border-slate-200 p-4 text-sm leading-snug text-slate-700">
-              <input type="checkbox" checked={form.rgpd} onChange={set('rgpd')} className="mt-0.5 size-5 shrink-0 accent-tech-600" />
+              <input type="checkbox" checked={form.rgpd} onChange={set('rgpd')} className="mt-0.5 size-5 shrink-0 accent-mp-navy-600" />
               <span>
                 Autorizo a Magnetic Place a tratar os meus dados e o resultado desta prova para fins de recrutamento, nos termos do RGPD.
                 Posso pedir a eliminação dos dados a qualquer momento.
@@ -203,7 +203,7 @@ export function StartScreen({ level, inicial, onStart }) {
                 {LEVEL_LABELS[level]} · prova {spec.difficulty.toLowerCase()}
               </p>
             </div>
-            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-700">
+            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-mp-creme px-3 py-1 text-sm font-semibold text-slate-700">
               <Clock className="size-4" /> até ~{Math.ceil(maxDurationSec(level) / 60)} min
             </span>
           </div>
@@ -214,7 +214,7 @@ export function StartScreen({ level, inicial, onStart }) {
               const Icon = meta.icon;
               return (
                 <li key={n} className="flex gap-3 rounded-xl border border-slate-200 p-3">
-                  <div className="grid size-11 shrink-0 place-items-center rounded-lg bg-slate-900 text-safety-400">
+                  <div className="grid size-11 shrink-0 place-items-center rounded-lg bg-mp-navy-800 text-mp-orange-400">
                     <Icon className="size-5" />
                   </div>
                   <div className="min-w-0 flex-1">
@@ -232,9 +232,9 @@ export function StartScreen({ level, inicial, onStart }) {
           </ol>
         </Card>
 
-        <Card className="border-l-4 border-safety-400 p-5 sm:p-6">
+        <Card className="border-l-4 border-mp-orange-400 p-5 sm:p-6">
           <h2 className="mb-3 flex items-center gap-2 font-bold">
-            <ShieldCheck className="size-5 text-tech-600" /> Regras da prova
+            <ShieldCheck className="size-5 text-mp-navy-600" /> Regras da prova
           </h2>
           <ul className="space-y-2 text-sm text-slate-700">
             <li>• Faça a prova num tablet ou computador. No celular, deite o aparelho (tela na horizontal).</li>

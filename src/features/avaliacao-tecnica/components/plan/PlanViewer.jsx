@@ -4,6 +4,11 @@ import { cn } from '../../lib/cn.js';
 
 const ZOOMS = [1, 1.5, 2.2, 3];
 
+/** Proporção da folha (viewBox 1188 × 840 do PlanSheet) */
+const SHEET_ASPECT = 1188 / 840;
+/** Margem interior do quadro (p-2 dos dois lados) */
+const PAD = 16;
+
 /** Centra um elemento do plano no quadro, sem mexer na página (só se não estiver visível) */
 export function revealInViewer(el) {
   const scroller = el?.closest('[data-plan-scroll]');
@@ -22,17 +27,35 @@ export function revealInViewer(el) {
 const isCoarsePointer = () => typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches;
 
 /**
- * Quadro com zoom e deslocamento para o plano.
+ * Quadro com zoom e deslocamento para o plano. Ocupa toda a caixa onde é posto
+ * (o pai define a altura); em 1× a folha inteira cabe na caixa, na largura ou na
+ * altura, conforme o que for mais apertado.
  * Toque: desliza com o dedo (scroll nativo). Mouse: arrastar com o botão esquerdo.
  * Em ecrãs de toque abre com 1,5× para as cotas terem área de toque suficiente.
  */
-export function PlanViewer({ children, className, heightClass = 'h-[70vh]' }) {
+export function PlanViewer({ children, className }) {
   const [zoomIndex, setZoomIndex] = useState(() => (isCoarsePointer() ? 1 : 0));
   const scrollRef = useRef(null);
   const prevZoom = useRef(ZOOMS[zoomIndex]);
   const drag = useRef(null);
   const suppressClick = useRef(false);
   const zoom = ZOOMS[zoomIndex];
+  // Largura da folha em 1× — a maior que cabe inteira no quadro
+  const [fitWidth, setFitWidth] = useState(null);
+
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return undefined;
+    const medir = () => {
+      const w = el.clientWidth - PAD;
+      const h = el.clientHeight - PAD;
+      if (w > 0 && h > 0) setFitWidth(Math.max(160, Math.floor(Math.min(w, h * SHEET_ASPECT))));
+    };
+    medir();
+    const ro = new ResizeObserver(medir);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   // Mantém o centro visível ao mudar o zoom
   useLayoutEffect(() => {
@@ -79,23 +102,25 @@ export function PlanViewer({ children, className, heightClass = 'h-[70vh]' }) {
   };
 
   return (
-    <div className={cn('relative overflow-hidden rounded-2xl bg-slate-300 ring-1 ring-slate-300', className)}>
+    <div className={cn('relative h-full overflow-hidden rounded-2xl bg-mp-navy-100 ring-1 ring-mp-borda', className)}>
       <div
         ref={scrollRef}
         data-plan-scroll
-        className={cn('overflow-auto overscroll-contain', heightClass, zoom > 1 && 'cursor-grab active:cursor-grabbing')}
+        className={cn('flex h-full overflow-auto overscroll-contain', zoom > 1 && 'cursor-grab active:cursor-grabbing')}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={endDrag}
         onPointerLeave={endDrag}
         onClickCapture={onClickCapture}
       >
-        <div className="p-2 sm:p-3" style={{ width: `${zoom * 100}%` }}>
+        {/* margin:auto centra a folha quando é menor que o quadro e, ao ampliar,
+            deixa-a crescer a partir do canto (sem cortar o topo/esquerda) */}
+        <div className="m-auto shrink-0 p-2" style={{ width: fitWidth ? fitWidth * zoom + PAD : '100%' }}>
           <div className="shadow-md">{children}</div>
         </div>
       </div>
 
-      <div className="absolute bottom-3 left-3 flex items-center gap-1 rounded-xl bg-slate-900/90 p-1 text-white shadow-lg backdrop-blur">
+      <div className="absolute bottom-3 left-3 flex items-center gap-1 rounded-xl bg-mp-navy-800/90 p-1 text-white shadow-lg backdrop-blur">
         <button
           type="button"
           onClick={() => setZoomIndex((z) => Math.max(0, z - 1))}

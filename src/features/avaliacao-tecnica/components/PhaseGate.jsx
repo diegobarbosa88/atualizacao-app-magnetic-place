@@ -15,17 +15,17 @@ export function PhaseGate({ meta, children }) {
   const Icon = meta.icon;
   return (
     <>
-      <div className="mx-auto max-w-2xl">
+      <div className="mx-auto max-w-2xl pb-6 pt-2">
         <div className="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-slate-200">
-          <div className="bg-slate-900 px-6 py-8 text-center text-white sm:px-10">
-            <div className="mx-auto grid size-20 place-items-center rounded-2xl bg-safety-400 text-slate-900">
+          <div className="bg-mp-navy-800 px-6 py-8 text-center text-white sm:px-10">
+            <div className="mx-auto grid size-20 place-items-center rounded-2xl bg-mp-orange-400 text-mp-navy-800">
               <Icon className="size-10" />
             </div>
-            <p className="mt-5 text-sm font-bold uppercase tracking-[0.25em] text-safety-400">Fase {meta.number} de 3</p>
+            <p className="mt-5 text-sm font-bold uppercase tracking-[0.25em] text-mp-orange-400">Fase {meta.number} de 3</p>
             <h2 className="mt-1 text-3xl font-bold">{meta.title}</h2>
-            <p className="mt-1 text-slate-300">{meta.subtitle}</p>
+            <p className="mt-1 text-mp-navy-100">{meta.subtitle}</p>
           </div>
-          <div className="hazard-stripe h-2" />
+          <div className="faixa-marca h-[3px]" />
           <div className="space-y-5 p-6 sm:p-8">
             <p className="text-lg font-semibold">{meta.objective}</p>
             <ul className="space-y-3">
@@ -38,8 +38,8 @@ export function PhaseGate({ meta, children }) {
                 </li>
               ))}
             </ul>
-            <div className="flex items-center gap-2 rounded-xl bg-slate-100 px-4 py-3 text-slate-700">
-              <Clock className="size-5 text-tech-600" />
+            <div className="flex items-center gap-2 rounded-xl bg-mp-creme px-4 py-3 text-slate-700">
+              <Clock className="size-5 text-mp-navy-600" />
               Tempo da fase: <strong className="font-mono">{meta.durationLabel}</strong>
             </div>
             <Button

@@ -3738,6 +3738,15 @@ TS à parte, convertido para JSX sem mudar a lógica; `zustand` acrescentado só
   link ("Interrompida" na lista) e o admin pode **Reabrir** (variante nova). Se a rede falhar no
   envio, as respostas ficam em `localStorage` e reabrir o link reenvia-as.
 - Ao concluir, cria `app_notifications` para o admin (`payload.kind = 'avaliacao_tecnica'`).
+- **Identidade visual:** paleta `mp-navy-*` / `mp-orange-*` (FT.navy = 600, FT.navyDeep = 800,
+  FT.orange = 400; texto laranja sobre branco só em `mp-orange-700`) e `mp-creme`/`mp-borda` em
+  `avaliacao.css`; fontes da app (`--sans`, `--heading`, `--mono`) dentro de `.avaliacao-scope`;
+  logótipo `LOGO_SRC` (`config.js`) no cabeçalho, no relatório e na legenda do plano.
+- **Ecrã das fases sem rolar a página** (`components/ecraProva.js`): grelha com a altura exata que
+  sobra por baixo do cabeçalho (`--cab`, medido em `AvaliacaoProva.jsx`). Deitado (≥ 768 px):
+  plano à esquerda, pergunta e resposta à direita; em pé: pergunta, plano, resposta. Variante
+  `baixo:` (altura ≤ 520 px) compacta cabeçalho e cartões. Em 1× a folha inteira cabe no quadro
+  (`PlanViewer`). Verificado em 1280×800, 1920×1080, 1180×820, 820×1180, 390×844 e 844×390.
 - Testes: `tests/unit/avaliacaoTecnica.test.js` (gabarito das variantes, níveis, pontuação,
   correção no servidor) e `tests/unit/backend/avaliacoes.handler.test.js` (fluxo da API com um
   Supabase falso em memória, `fakeSupabase.js`).

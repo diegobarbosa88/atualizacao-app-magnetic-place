@@ -28,10 +28,10 @@ export default function RelatorioAvaliacao({ id }) {
   const relatorio = useMemo(() => (avaliacao?.resultado ? reportFromRecord(avaliacao.resultado) : null), [avaliacao]);
 
   return (
-    <div className="min-h-dvh bg-slate-100 px-3 py-5 text-slate-900 sm:px-6 print:bg-white print:p-0">
+    <div className="min-h-dvh bg-mp-creme px-3 py-5 text-slate-900 sm:px-6 print:bg-white print:p-0">
       {!avaliacao && !erro && (
         <div className="flex justify-center pt-16">
-          <LoaderCircle className="size-10 animate-spin text-tech-600" aria-label="A carregar" />
+          <LoaderCircle className="size-10 animate-spin text-mp-navy-600" aria-label="A carregar" />
         </div>
       )}
       {(erro || (avaliacao && !relatorio)) && (

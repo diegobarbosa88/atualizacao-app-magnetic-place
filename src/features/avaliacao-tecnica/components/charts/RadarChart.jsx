@@ -33,15 +33,15 @@ export function RadarChart({ data, className }) {
 
       <polygon
         points={toPoints(data.map((d) => d.value))}
-        fill="#1f6feb"
+        fill="#1b3a57"
         fillOpacity={0.2}
-        stroke="#1859c4"
+        stroke="#1b3a57"
         strokeWidth={2.5}
         strokeLinejoin="round"
       />
       {data.map((d, i) => {
         const [x, y] = point(i, d.value);
-        return <circle key={d.label} cx={x} cy={y} r={4.5} fill="#ffffff" stroke="#1859c4" strokeWidth={2.5} />;
+        return <circle key={d.label} cx={x} cy={y} r={4.5} fill="#ffffff" stroke="#1b3a57" strokeWidth={2.5} />;
       })}
 
       {data.map((d, i) => {
@@ -55,7 +55,7 @@ export function RadarChart({ data, className }) {
             <text x={x} y={labelY} fontSize={13} fontWeight={700} fill="#0f172a">
               {d.label}
             </text>
-            <text x={x} y={labelY + 15} fontSize={13} fontWeight={700} fill="#1859c4" fontFamily="ui-monospace, monospace">
+            <text x={x} y={labelY + 15} fontSize={13} fontWeight={700} fill="#1b3a57" fontFamily="var(--mono)">
               {d.value}
             </text>
           </g>

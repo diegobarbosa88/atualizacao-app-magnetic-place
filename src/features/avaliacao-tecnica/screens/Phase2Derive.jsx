@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Calculator as CalculatorIcon, Check, CircleCheck, CircleX, Hourglass, SkipForward } from 'lucide-react';
 import { Calculator } from '../components/Calculator.jsx';
+import { CARTAO, CELULA_PERGUNTA, CELULA_PLANO, CELULA_RESPOSTA, GRELHA } from '../components/ecraProva.js';
 import { ItemTimer } from '../components/ItemTimer.jsx';
 import { PlanSheet } from '../components/plan/PlanSheet.jsx';
 import { PlanViewer, revealInViewer } from '../components/plan/PlanViewer.jsx';
@@ -36,21 +37,21 @@ export function Phase2Derive() {
   };
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_25rem]">
-      <PlanViewer heightClass="h-[42vh] lg:h-[max(440px,calc(100dvh-11rem))]">
-        <PlanSheet plan={plan} query={question.query} className="block h-auto w-full" />
-      </PlanViewer>
-      <div className="lg:sticky lg:top-[8.25rem] lg:max-h-[calc(100dvh-9rem)] lg:self-start lg:overflow-y-auto lg:rounded-2xl">
-        <DerivePanel
-          key={question.id}
-          question={question}
-          index={index}
-          total={questions.length}
-          calcOpen={calcOpen}
-          onToggleCalc={() => setCalcOpen((v) => !v)}
-          onDone={next}
-        />
+    <div className={GRELHA}>
+      <div className={CELULA_PLANO}>
+        <PlanViewer>
+          <PlanSheet plan={plan} query={question.query} className="block h-auto w-full" />
+        </PlanViewer>
       </div>
+      <DerivePanel
+        key={question.id}
+        question={question}
+        index={index}
+        total={questions.length}
+        calcOpen={calcOpen}
+        onToggleCalc={() => setCalcOpen((v) => !v)}
+        onDone={next}
+      />
     </div>
   );
 }
@@ -98,105 +99,125 @@ function DerivePanel({ question, index, total, calcOpen, onToggleCalc, onDone })
     if (parsed !== null) submit('answer');
   };
 
+  // Duas células da grelha: a pergunta (sempre à vista, com o cronómetro) e a
+  // resposta (com deslocamento próprio quando a calculadora está aberta)
   return (
-    <section className="space-y-4 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 sm:p-5">
-      <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-tech-600">
-            Fase 2 de 3 · Pergunta {index + 1} de {total}
-          </p>
-          <p className="truncate font-semibold text-slate-500">{question.topic}</p>
-        </div>
-        <div className="flex gap-1" aria-hidden>
-          {Array.from({ length: total }, (_, i) => (
-            <span
-              key={i}
-              className={cn('h-2 rounded-full', i < index ? 'w-2 bg-slate-400' : i === index ? 'w-6 bg-safety-400' : 'w-2 bg-slate-200')}
-            />
-          ))}
-        </div>
-      </div>
-
-      <ItemTimer durationMs={limitMs} running={answering} onExpire={() => submit('timeout')} elapsedRef={elapsedRef} />
-
-      <p className="text-lg font-bold leading-snug sm:text-xl">{question.prompt}</p>
-      <p className="-mt-2 flex items-center gap-2 text-sm text-slate-600">
-        <span className="grid size-5 shrink-0 place-items-center rounded-full bg-orange-600 text-xs font-extrabold text-white" aria-hidden>
-          ?
-        </span>
-        A medida pedida está marcada em laranja no plano.
-      </p>
-
-      <form onSubmit={handleSubmit} className="space-y-3">
-        <div className="relative">
-          <label htmlFor="derive-input" className="sr-only">
-            Resposta em milímetros
-          </label>
-          <input
-            ref={inputRef}
-            id="derive-input"
-            inputMode="decimal"
-            autoComplete="off"
-            spellCheck={false}
-            value={raw}
-            disabled={!answering}
-            onChange={(e) => setRaw(e.target.value.replace(/[^\d.,\s]/g, ''))}
-            placeholder="0"
-            className={cn(
-              'h-18 w-full rounded-2xl border-2 bg-white pl-5 pr-16 font-mono text-4xl font-bold tabular-nums outline-none transition',
-              'placeholder:text-slate-300 focus:border-tech-500 focus:ring-4 focus:ring-tech-100 disabled:bg-slate-50',
-              raw && parsed === null ? 'border-red-400' : 'border-slate-300',
-            )}
-          />
-          <span className="pointer-events-none absolute right-5 top-1/2 -translate-y-1/2 text-xl font-bold text-slate-400">mm</span>
-        </div>
-        <p className={cn('min-h-5 text-sm', raw && parsed === null ? 'font-semibold text-red-600' : 'text-slate-500')}>
-          {raw
-            ? parsed === null
-              ? 'Formato inválido — use só números e vírgula'
-              : `Valor lido: ${formatMm(parsed, parsed % 1 ? 2 : 0)}`
-            : 'Use vírgula para decimais.'}
-        </p>
-
-        {answering ? (
-          <div className="grid grid-cols-[1fr_auto] gap-2">
-            <Button type="submit" size="lg" disabled={parsed === null} icon={<Check className="size-5" />}>
-              Confirmar
-            </Button>
-            <Button variant="outline" size="lg" icon={<SkipForward className="size-5" />} onClick={() => submit('skip')}>
-              Pular
-            </Button>
+    <>
+      <section className={cn(CELULA_PERGUNTA, CARTAO, 'space-y-2.5 baixo:space-y-1.5')}>
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.06em] text-mp-navy-600">
+              Fase 2 de 3 · Pergunta {index + 1} de {total}
+            </p>
+            <p className="truncate text-sm font-semibold text-slate-500">{question.topic}</p>
           </div>
-        ) : (
-          <Feedback status={status} />
-        )}
-      </form>
+          <div className="flex gap-1" aria-hidden>
+            {Array.from({ length: total }, (_, i) => (
+              <span
+                key={i}
+                className={cn(
+                  'h-2 rounded-full',
+                  i < index ? 'w-2 bg-mp-navy-300' : i === index ? 'w-6 bg-mp-orange-400' : 'w-2 bg-slate-200',
+                )}
+              />
+            ))}
+          </div>
+        </div>
 
-      <div className="border-t border-slate-200 pt-3">
-        <button
-          type="button"
-          onClick={onToggleCalc}
-          aria-expanded={calcOpen}
-          className="flex min-h-11 w-full items-center justify-between rounded-xl px-2 font-semibold text-slate-700 transition hover:bg-slate-100"
-        >
-          <span className="flex items-center gap-2">
-            <CalculatorIcon className="size-5 text-tech-600" /> Calculadora
+        <ItemTimer durationMs={limitMs} running={answering} onExpire={() => submit('timeout')} elapsedRef={elapsedRef} />
+
+        <p className="text-base font-bold leading-snug text-mp-navy-800 sm:text-lg baixo:text-base">{question.prompt}</p>
+        <p className="hidden items-center gap-2 text-sm text-slate-600 sm:flex baixo:hidden">
+          <span
+            className="grid size-5 shrink-0 place-items-center rounded-full bg-mp-orange-400 text-xs font-extrabold text-mp-navy-800"
+            aria-hidden
+          >
+            ?
           </span>
-          <span className="text-sm text-slate-500">{calcOpen ? 'Esconder' : 'Mostrar'}</span>
-        </button>
-        {calcOpen && (
-          <div className="mt-2">
-            <Calculator
-              onUse={(value) => {
-                if (!answering) return;
-                setRaw(value);
-                inputRef.current?.focus({ preventScroll: true });
-              }}
-            />
+          A medida pedida está marcada em laranja no plano.
+        </p>
+      </section>
+
+      <div className={CELULA_RESPOSTA}>
+        <section className={cn(CARTAO, 'space-y-3')}>
+          <form onSubmit={handleSubmit} className="space-y-2">
+            <div className="relative">
+              <label htmlFor="derive-input" className="sr-only">
+                Resposta em milímetros
+              </label>
+              <input
+                ref={inputRef}
+                id="derive-input"
+                inputMode="decimal"
+                autoComplete="off"
+                spellCheck={false}
+                value={raw}
+                disabled={!answering}
+                onChange={(e) => setRaw(e.target.value.replace(/[^\d.,\s]/g, ''))}
+                placeholder="0"
+                className={cn(
+                  'h-16 w-full rounded-2xl border-2 bg-white pl-5 pr-16 font-mono text-3xl font-bold tabular-nums outline-none transition baixo:h-12 baixo:text-2xl',
+                  'placeholder:text-slate-300 focus:border-mp-navy-500 focus:ring-4 focus:ring-mp-navy-100 disabled:bg-slate-50',
+                  raw && parsed === null ? 'border-red-400' : 'border-slate-300',
+                )}
+              />
+              <span className="pointer-events-none absolute right-5 top-1/2 -translate-y-1/2 text-xl font-bold text-slate-400">mm</span>
+            </div>
+            <p className={cn('min-h-5 text-sm baixo:hidden', raw && parsed === null ? 'font-semibold text-red-600' : 'text-slate-500')}>
+              {raw
+                ? parsed === null
+                  ? 'Formato inválido — use só números e vírgula'
+                  : `Valor lido: ${formatMm(parsed, parsed % 1 ? 2 : 0)}`
+                : 'Use vírgula para decimais.'}
+            </p>
+
+            {answering ? (
+              <div className="grid grid-cols-[1fr_auto] gap-2">
+                <Button type="submit" size="lg" className="baixo:min-h-11" disabled={parsed === null} icon={<Check className="size-5" />}>
+                  Confirmar
+                </Button>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="baixo:min-h-11"
+                  icon={<SkipForward className="size-5" />}
+                  onClick={() => submit('skip')}
+                >
+                  Pular
+                </Button>
+              </div>
+            ) : (
+              <Feedback status={status} />
+            )}
+          </form>
+
+          <div className="border-t border-slate-200 pt-2">
+            <button
+              type="button"
+              onClick={onToggleCalc}
+              aria-expanded={calcOpen}
+              className="flex min-h-11 w-full items-center justify-between rounded-xl px-2 font-semibold text-slate-700 transition hover:bg-mp-creme"
+            >
+              <span className="flex items-center gap-2">
+                <CalculatorIcon className="size-5 text-mp-navy-600" /> Calculadora
+              </span>
+              <span className="text-sm text-slate-500">{calcOpen ? 'Esconder' : 'Mostrar'}</span>
+            </button>
+            {calcOpen && (
+              <div className="mt-2">
+                <Calculator
+                  onUse={(value) => {
+                    if (!answering) return;
+                    setRaw(value);
+                    inputRef.current?.focus({ preventScroll: true });
+                  }}
+                />
+              </div>
+            )}
           </div>
-        )}
+        </section>
       </div>
-    </section>
+    </>
   );
 }
 
@@ -205,7 +226,7 @@ function Feedback({ status }) {
     correct: { cls: 'bg-emerald-100 text-emerald-800', Icon: CircleCheck, text: 'Resposta correta' },
     wrong: { cls: 'bg-red-100 text-red-800', Icon: CircleX, text: 'Resposta incorreta' },
     skipped: { cls: 'bg-slate-100 text-slate-700', Icon: SkipForward, text: 'Pergunta pulada' },
-    timeout: { cls: 'bg-safety-100 text-safety-700', Icon: Hourglass, text: 'Tempo esgotado' },
+    timeout: { cls: 'bg-mp-orange-100 text-mp-orange-700', Icon: Hourglass, text: 'Tempo esgotado' },
     answering: null,
   }[status];
   if (!map) return null;

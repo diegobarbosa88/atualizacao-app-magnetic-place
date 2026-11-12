@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, CircleCheck, CircleX, Hourglass, X } from 'lucide-react';
+import { CARTAO, CELULA_PERGUNTA, CELULA_PLANO, CELULA_RESPOSTA, GRELHA } from '../components/ecraProva.js';
 import { ItemTimer } from '../components/ItemTimer.jsx';
 import { PlanSheet } from '../components/plan/PlanSheet.jsx';
 import { PlanViewer, revealInViewer } from '../components/plan/PlanViewer.jsx';
@@ -31,13 +32,13 @@ export function Phase3Symbols() {
   };
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_25rem]">
-      <PlanViewer heightClass="h-[42vh] lg:h-[max(440px,calc(100dvh-11rem))]">
-        <PlanSheet plan={plan} focus={question.focus} className="block h-auto w-full" />
-      </PlanViewer>
-      <div className="lg:sticky lg:top-[8.25rem] lg:max-h-[calc(100dvh-9rem)] lg:self-start lg:overflow-y-auto lg:rounded-2xl">
-        <SymbolPanel key={question.id} question={question} index={index} total={questions.length} onDone={next} />
+    <div className={GRELHA}>
+      <div className={CELULA_PLANO}>
+        <PlanViewer>
+          <PlanSheet plan={plan} focus={question.focus} className="block h-auto w-full" />
+        </PlanViewer>
       </div>
+      <SymbolPanel key={question.id} question={question} index={index} total={questions.length} onDone={next} />
     </div>
   );
 }
@@ -94,90 +95,100 @@ function SymbolPanel({ question, index, total, onDone }) {
     [],
   );
 
+  // Duas células da grelha: a pergunta (sempre à vista, com o cronómetro e o
+  // resultado da resposta) e as opções
   return (
-    <section className="space-y-4 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 sm:p-5">
-      <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-tech-600">
-            Fase 3 de 3 · Pergunta {index + 1} de {total}
-          </p>
-          <p className="font-semibold leading-snug text-slate-500">
-            {question.topic} <span className="font-mono text-xs text-slate-400">· {question.norm}</span>
-          </p>
+    <>
+      <section className={cn(CELULA_PERGUNTA, CARTAO, 'space-y-2.5 baixo:space-y-1.5')}>
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.06em] text-mp-navy-600">
+              Fase 3 de 3 · Pergunta {index + 1} de {total}
+            </p>
+            <p className="truncate text-sm font-semibold leading-snug text-slate-500">
+              {question.topic} <span className="font-mono text-xs text-slate-400">· {question.norm}</span>
+            </p>
+          </div>
+          <div className="flex gap-1" aria-hidden>
+            {Array.from({ length: total }, (_, i) => (
+              <span
+                key={i}
+                className={cn(
+                  'h-2 rounded-full',
+                  i < index ? 'w-2 bg-mp-navy-300' : i === index ? 'w-6 bg-mp-orange-400' : 'w-2 bg-slate-200',
+                )}
+              />
+            ))}
+          </div>
         </div>
-        <div className="flex gap-1" aria-hidden>
-          {Array.from({ length: total }, (_, i) => (
-            <span
-              key={i}
-              className={cn('h-2 rounded-full', i < index ? 'w-2 bg-slate-400' : i === index ? 'w-6 bg-safety-400' : 'w-2 bg-slate-200')}
-            />
-          ))}
-        </div>
-      </div>
 
-      <ItemTimer durationMs={limitMs} running={feedback === null} onExpire={() => answer(null, true)} elapsedRef={elapsedRef} />
+        <ItemTimer durationMs={limitMs} running={feedback === null} onExpire={() => answer(null, true)} elapsedRef={elapsedRef} />
 
-      <p className="text-lg font-bold leading-snug">{question.prompt}</p>
-      <p className="-mt-2 text-sm text-slate-500">O elemento está destacado com tracejado amarelo no plano.</p>
-
-      <div className="space-y-2.5">
-        {options.map((opt, i) => {
-          const isSelected = selected === opt.id;
-          const state = feedback && isSelected ? (feedback === 'correct' ? 'correct' : 'wrong') : null;
-          return (
-            <button
-              key={opt.id}
-              type="button"
-              disabled={feedback !== null}
-              onClick={() => answer(opt.id, false)}
+        <p className="text-base font-bold leading-snug text-mp-navy-800 sm:text-lg baixo:text-base">{question.prompt}</p>
+        {/* Mesma altura com e sem resultado, para o plano não saltar */}
+        <div aria-live="polite" className="flex items-center empty:hidden sm:min-h-10 baixo:min-h-0">
+          {feedback ? (
+            <div
               className={cn(
-                'flex min-h-16 w-full items-center gap-3 rounded-2xl border-2 bg-white p-2.5 text-left transition active:scale-[0.99]',
-                !feedback && 'border-slate-200 hover:border-tech-400 hover:bg-tech-50',
-                state === 'correct' && 'animate-pop border-emerald-500 bg-emerald-50',
-                state === 'wrong' && 'animate-shake border-red-500 bg-red-50',
-                feedback && !isSelected && 'border-slate-200 opacity-45',
+                'flex w-full animate-pop items-center gap-2 rounded-xl px-3 py-2 font-bold',
+                feedback === 'correct' && 'bg-emerald-100 text-emerald-800',
+                feedback === 'wrong' && 'bg-red-100 text-red-800',
+                feedback === 'timeout' && 'bg-mp-orange-100 text-mp-orange-700',
               )}
             >
-              <span
+              {feedback === 'correct' && <CircleCheck className="size-5" />}
+              {feedback === 'wrong' && <CircleX className="size-5" />}
+              {feedback === 'timeout' && <Hourglass className="size-5" />}
+              {feedback === 'correct' ? 'Resposta correta' : feedback === 'wrong' ? 'Resposta incorreta' : 'Tempo esgotado'}
+              <span className="ml-auto text-sm font-medium opacity-70">{index + 1 < total ? 'Próxima…' : 'Finalizando…'}</span>
+            </div>
+          ) : (
+            <p className="hidden text-sm text-slate-500 sm:block baixo:hidden">O elemento está destacado com tracejado laranja no plano.</p>
+          )}
+        </div>
+      </section>
+
+      <div className={CELULA_RESPOSTA}>
+        <section className={cn(CARTAO, 'space-y-2')}>
+          {options.map((opt, i) => {
+            const isSelected = selected === opt.id;
+            const state = feedback && isSelected ? (feedback === 'correct' ? 'correct' : 'wrong') : null;
+            return (
+              <button
+                key={opt.id}
+                type="button"
+                disabled={feedback !== null}
+                onClick={() => answer(opt.id, false)}
                 className={cn(
-                  'grid size-10 shrink-0 place-items-center rounded-xl font-mono text-lg font-bold',
-                  state === 'correct' && 'bg-emerald-500 text-white',
-                  state === 'wrong' && 'bg-red-500 text-white',
-                  !state && 'bg-slate-900 text-safety-400',
+                  'flex min-h-14 w-full items-center gap-3 rounded-2xl border-2 bg-white p-2 text-left transition active:scale-[0.99]',
+                  !feedback && 'border-slate-200 hover:border-mp-navy-400 hover:bg-mp-navy-50',
+                  state === 'correct' && 'animate-pop border-emerald-500 bg-emerald-50',
+                  state === 'wrong' && 'animate-shake border-red-500 bg-red-50',
+                  feedback && !isSelected && 'border-slate-200 opacity-45',
                 )}
               >
-                {state === 'correct' ? (
-                  <Check className="size-5" />
-                ) : state === 'wrong' ? (
-                  <X className="size-5" />
-                ) : (
-                  String.fromCharCode(65 + i)
-                )}
-              </span>
-              <span className="text-base font-semibold leading-snug">{opt.label}</span>
-            </button>
-          );
-        })}
+                <span
+                  className={cn(
+                    'grid size-9 shrink-0 place-items-center rounded-xl font-mono text-base font-bold',
+                    state === 'correct' && 'bg-emerald-500 text-white',
+                    state === 'wrong' && 'bg-red-500 text-white',
+                    !state && 'bg-mp-navy-800 text-mp-orange-400',
+                  )}
+                >
+                  {state === 'correct' ? (
+                    <Check className="size-5" />
+                  ) : state === 'wrong' ? (
+                    <X className="size-5" />
+                  ) : (
+                    String.fromCharCode(65 + i)
+                  )}
+                </span>
+                <span className="text-[15px] font-semibold leading-snug">{opt.label}</span>
+              </button>
+            );
+          })}
+        </section>
       </div>
-
-      <div aria-live="polite" className="min-h-12">
-        {feedback && (
-          <div
-            className={cn(
-              'flex animate-pop items-center gap-2 rounded-xl px-4 py-3 font-bold',
-              feedback === 'correct' && 'bg-emerald-100 text-emerald-800',
-              feedback === 'wrong' && 'bg-red-100 text-red-800',
-              feedback === 'timeout' && 'bg-safety-100 text-safety-700',
-            )}
-          >
-            {feedback === 'correct' && <CircleCheck className="size-5" />}
-            {feedback === 'wrong' && <CircleX className="size-5" />}
-            {feedback === 'timeout' && <Hourglass className="size-5" />}
-            {feedback === 'correct' ? 'Resposta correta' : feedback === 'wrong' ? 'Resposta incorreta' : 'Tempo esgotado'}
-            <span className="ml-auto text-sm font-medium opacity-70">{index + 1 < total ? 'Próxima…' : 'Gerando relatório…'}</span>
-          </div>
-        )}
-      </div>
-    </section>
+    </>
   );
 }

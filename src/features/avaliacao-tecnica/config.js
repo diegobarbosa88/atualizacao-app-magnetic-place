@@ -1,5 +1,7 @@
 /** Identificação exibida no cabeçalho e no relatório impresso */
 export const ORG_NAME = 'Magnetic Place';
+/** Logótipo — o mesmo ficheiro de public/ usado no resto da app (CompanyLogo, onboarding) */
+export const LOGO_SRC = '/MAGNETIC (3).png';
 export const TEST_TITLE = 'Avaliação Técnica · Caldeireiro Industrial';
 export const TEST_SUBTITLE = 'Interpretação de plano — normas EN ISO';
 export const TEST_VERSION = 'CALD-PLANO-2.0';
