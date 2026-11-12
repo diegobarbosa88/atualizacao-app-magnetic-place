@@ -48,7 +48,7 @@ export function FinishScreen({ onSubmit }) {
       <Card className="p-8 text-center sm:p-10">
         {state === 'sending' && (
           <>
-            <LoaderCircle className="mx-auto size-14 animate-spin text-tech-600" />
+            <LoaderCircle className="mx-auto size-14 animate-spin text-mp-navy-600" />
             <h1 className="mt-5 text-2xl font-bold">Enviando suas respostas…</h1>
             <p className="mt-2 text-slate-600">Não feche esta página.</p>
           </>
@@ -65,7 +65,7 @@ export function FinishScreen({ onSubmit }) {
         )}
         {state === 'error' && (
           <>
-            <TriangleAlert className="mx-auto size-14 text-safety-500" />
+            <TriangleAlert className="mx-auto size-14 text-mp-orange-500" />
             <h1 className="mt-5 text-2xl font-bold">Não foi possível enviar</h1>
             <p className="mt-3 text-slate-700">
               Verifique a internet e tente de novo. As respostas ficaram salvas neste aparelho: se fechar a página, abra o mesmo link mais

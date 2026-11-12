@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { AppHeader } from './components/AppHeader.jsx';
 import { PhaseGate } from './components/PhaseGate.jsx';
 import { ConfirmDialog } from './components/ui/ConfirmDialog.jsx';
@@ -38,11 +38,29 @@ export default function AvaliacaoProva({ level, inicial, onStart, onSubmit }) {
 
   const closeExit = useCallback(() => setExitOpen(false), []);
 
-  return (
-    <div className="avaliacao-scope min-h-dvh bg-slate-100 text-slate-900">
-      <AppHeader onExit={requestExit} />
+  // Altura do cabeçalho em --cab: o ecrã das fases ocupa exatamente o resto da
+  // janela (components/ecraProva.js), para o plano e a pergunta não saírem do ecrã.
+  const raizRef = useRef(null);
+  const cabRef = useRef(null);
+  useLayoutEffect(() => {
+    const cab = cabRef.current;
+    const raiz = raizRef.current;
+    if (!cab || !raiz) return undefined;
+    const medir = () => raiz.style.setProperty('--cab', `${cab.offsetHeight}px`);
+    medir();
+    const ro = new ResizeObserver(medir);
+    ro.observe(cab);
+    return () => ro.disconnect();
+  }, []);
 
-      <main className="mx-auto w-full max-w-[96rem] px-3 pb-8 pt-4 sm:px-5">
+  return (
+    <div ref={raizRef} className="avaliacao-scope min-h-dvh bg-mp-creme text-slate-900">
+      <div ref={cabRef} className="sticky top-0 z-30">
+        <AppHeader onExit={requestExit} />
+      </div>
+
+      {/* py-2 (1rem no total) entra na conta da altura de GRELHA */}
+      <main className="mx-auto w-full max-w-[96rem] px-2 py-2 sm:px-4">
         {stage === 'start' && <StartScreen level={level} inicial={inicial} onStart={onStart} />}
         {stage === 'phase1' && <Phase1Find />}
         {stage === 'phase2' && (

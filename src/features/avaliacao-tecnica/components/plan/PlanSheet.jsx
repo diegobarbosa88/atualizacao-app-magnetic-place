@@ -12,6 +12,7 @@
  */
 import { createContext, useContext, useId, useMemo } from 'react';
 import { DRAWING, ISO13920_B, dimText, planMasses } from '../../data/plan.js';
+import { LOGO_SRC } from '../../config.js';
 
 const INK = '#111827';
 const PAPER = '#ffffff';
@@ -120,7 +121,7 @@ const PlanCtx = createContext({ interactive: false, marks: {} });
 const MARK_STYLE = {
   correct: { fill: 'rgba(16,185,129,0.22)', stroke: '#059669' },
   wrong: { fill: 'rgba(239,68,68,0.18)', stroke: '#dc2626' },
-  reveal: { fill: 'rgba(255,194,14,0.38)', stroke: '#b47e00' },
+  reveal: { fill: 'rgba(235,141,0,0.32)', stroke: '#b86e00' },
 };
 
 function Target({ id, box, label, children }) {
@@ -154,7 +155,7 @@ function Target({ id, box, label, children }) {
           fill="transparent"
           pointerEvents="all"
           strokeWidth={1.5}
-          className="cursor-pointer outline-none hover:fill-sky-500/15 focus-visible:stroke-sky-600"
+          className="cursor-pointer outline-none hover:fill-mp-navy-500/15 focus-visible:stroke-mp-navy-600"
           role="button"
           tabIndex={0}
           aria-label={`Cota ${label}`}
@@ -335,7 +336,10 @@ function FirstAngleSymbol({ x, y }) {
 }
 
 // ── Cota pedida (Fase 2): cota em laranja com "?" no lugar do valor ───────────
-const QUERY = '#ea580c';
+// Destaques do plano na cor da marca (laranja Magnetic Place)
+const QUERY = '#d47f00';
+const MARCA_LARANJA = '#eb8d00';
+const MARCA_NAVY = '#122741';
 
 function querySpec(id, g) {
   const { p, fx, fz, sx, ty } = g;
@@ -522,7 +526,7 @@ function QueryOverlay({ id, g }) {
         width={maxX - minX}
         height={maxY - minY}
         rx={9}
-        fill="rgba(234,88,12,0.10)"
+        fill="rgba(235,141,0,0.10)"
         stroke={QUERY}
         strokeWidth={1.4}
         strokeDasharray="6 4"
@@ -535,7 +539,7 @@ function QueryOverlay({ id, g }) {
           width={q.box.w}
           height={q.box.h}
           rx={6}
-          fill="rgba(234,88,12,0.16)"
+          fill="rgba(235,141,0,0.18)"
           stroke={QUERY}
           strokeWidth={2.2}
         />
@@ -546,8 +550,8 @@ function QueryOverlay({ id, g }) {
       {dimLine}
       {badge && (
         <g>
-          <circle cx={badge[0]} cy={badge[1]} r={10.5} fill={QUERY} stroke={PAPER} strokeWidth={2} />
-          <text x={badge[0]} y={badge[1] + 5.2} textAnchor="middle" fontSize={15} fontWeight={800} fill={PAPER}>
+          <circle cx={badge[0]} cy={badge[1]} r={10.5} fill={MARCA_LARANJA} stroke={PAPER} strokeWidth={2} />
+          <text x={badge[0]} y={badge[1] + 5.2} textAnchor="middle" fontSize={15} fontWeight={800} fill={MARCA_NAVY}>
             ?
           </text>
         </g>
@@ -1183,8 +1187,12 @@ export function PlanSheet({ plan: p, interactive = false, marks = {}, onDimTap, 
             </text>
           </Cell>
           <Cell x={1058} y={744} w={110} h={36} label="PROPRIETÁRIO">
-            <text x={1062} y={769} fontSize={10.5} fontWeight={800} letterSpacing={0.4}>
-              MAGNETIC PLACE
+            <image href={LOGO_SRC} x={1061} y={753} width={25} height={25} />
+            <text x={1090} y={766} fontSize={10} fontWeight={800} letterSpacing={0.4}>
+              MAGNETIC
+            </text>
+            <text x={1090} y={776} fontSize={8} fontWeight={600} letterSpacing={1.2}>
+              PLACE
             </text>
           </Cell>
           <Cell x={808} y={780} w={48} h={40} label="ESCALA">
@@ -1232,8 +1240,8 @@ export function PlanSheet({ plan: p, interactive = false, marks = {}, onDimTap, 
             width={focusRect.w}
             height={focusRect.h}
             rx={8}
-            fill="rgba(255,194,14,0.14)"
-            stroke="#d99a00"
+            fill="rgba(235,141,0,0.12)"
+            stroke="#b86e00"
             strokeWidth={2.6}
             strokeDasharray="7 4"
             className="animate-pulse"

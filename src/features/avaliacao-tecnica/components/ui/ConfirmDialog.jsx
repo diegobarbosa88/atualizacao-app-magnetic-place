@@ -17,7 +17,7 @@ export function ConfirmDialog({ open, title, description, confirmLabel, cancelLa
 
   return (
     <div
-      className="fixed inset-0 z-50 grid place-items-center bg-slate-950/70 p-4 print:hidden"
+      className="fixed inset-0 z-50 grid place-items-center bg-mp-navy-900/70 p-4 print:hidden"
       role="dialog"
       aria-modal="true"
       aria-labelledby="confirm-title"
@@ -27,7 +27,7 @@ export function ConfirmDialog({ open, title, description, confirmLabel, cancelLa
           <div
             className={cn(
               'grid size-12 shrink-0 place-items-center rounded-full',
-              tone === 'danger' ? 'bg-red-100 text-red-600' : 'bg-safety-100 text-safety-700',
+              tone === 'danger' ? 'bg-red-100 text-red-600' : 'bg-mp-orange-100 text-mp-orange-700',
             )}
           >
             <TriangleAlert className="size-6" />

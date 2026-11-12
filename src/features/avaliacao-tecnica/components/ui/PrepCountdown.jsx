@@ -24,24 +24,24 @@ export function PrepCountdown({ seconds, title, eyebrow = 'Prepare-se', onDone }
 
   return (
     <div
-      className="fixed inset-0 z-40 grid place-items-center bg-slate-950/95 p-6 text-center text-white"
+      className="fixed inset-0 z-40 grid place-items-center bg-mp-navy-900/95 p-6 text-center text-white"
       role="alertdialog"
       aria-live="assertive"
       aria-label={`${title}: começa em ${n}`}
     >
       <div>
-        <p className="text-sm font-bold uppercase tracking-[0.3em] text-safety-400">{eyebrow}</p>
+        <p className="text-sm font-bold uppercase tracking-[0.3em] text-mp-orange-400">{eyebrow}</p>
         <h2 className="mt-2 text-2xl font-bold sm:text-3xl">{title}</h2>
         <div
           key={n}
           className={cn(
             'mx-auto mt-10 grid size-44 animate-pop place-items-center rounded-full border-8 font-mono font-black tabular-nums',
-            n > 0 ? 'border-safety-400 text-8xl' : 'border-emerald-400 text-6xl text-emerald-300',
+            n > 0 ? 'border-mp-orange-400 text-8xl' : 'border-emerald-400 text-6xl text-emerald-300',
           )}
         >
           {n > 0 ? n : 'JÁ!'}
         </div>
-        <div className="hazard-stripe mx-auto mt-10 h-2 w-48 rounded-full" />
+        <div className="faixa-marca mx-auto mt-10 h-1.5 w-48 rounded-full" />
       </div>
     </div>
   );

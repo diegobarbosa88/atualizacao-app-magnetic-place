@@ -1,27 +1,34 @@
 /* Avaliação técnica de caldeireiro (src/features/avaliacao-tecnica).
    Importado por src/index.css para que o Tailwind gere as classes do módulo
-   (bg-safety-400, text-tech-600, animate-pop…). Os nomes `safety`/`tech` não
-   existem no resto da app; a fonte não é redefinida aqui de propósito. */
+   (bg-mp-orange-400, text-mp-navy-600, animate-pop…). Os nomes `mp-*` só existem
+   neste módulo; as fontes vêm das variáveis da app (--sans, --heading, --mono). */
 @theme {
-  --color-safety-50: #fffae8;
-  --color-safety-100: #fff1c2;
-  --color-safety-200: #ffe38a;
-  --color-safety-300: #ffd54f;
-  --color-safety-400: #ffc20e;
-  --color-safety-500: #f0ad00;
-  --color-safety-600: #c98f00;
-  --color-safety-700: #9a6d00;
+  /* Identidade Magnetic Place: laranja da marca (FT.orange = 400) e azul-marinho
+     (FT.navy = 600, FT.navyDeep = 800). Os degraus intermédios são interpolados;
+     texto laranja sobre branco usa o 700 (#8a4a00, o mesmo tom AA do admin). */
+  --color-mp-orange-50: #fff7eb;
+  --color-mp-orange-100: #fdeacc;
+  --color-mp-orange-200: #fbd597;
+  --color-mp-orange-300: #f6b652;
+  --color-mp-orange-400: #eb8d00;
+  --color-mp-orange-500: #d47f00;
+  --color-mp-orange-600: #b86e00;
+  --color-mp-orange-700: #8a4a00;
 
-  --color-tech-50: #eef5ff;
-  --color-tech-100: #d9e8ff;
-  --color-tech-200: #b5d1ff;
-  --color-tech-300: #84b2fb;
-  --color-tech-400: #4f8ef0;
-  --color-tech-500: #1f6feb;
-  --color-tech-600: #1859c4;
-  --color-tech-700: #144aa3;
-  --color-tech-800: #123d82;
-  --color-tech-900: #0f2f63;
+  --color-mp-navy-50: #eef2f6;
+  --color-mp-navy-100: #dce4ed;
+  --color-mp-navy-200: #b6c6d8;
+  --color-mp-navy-300: #8aa3be;
+  --color-mp-navy-400: #5b7a9c;
+  --color-mp-navy-500: #2e5479;
+  --color-mp-navy-600: #1b3a57;
+  --color-mp-navy-700: #163049;
+  --color-mp-navy-800: #122741;
+  --color-mp-navy-900: #0c1b2e;
+
+  /* Neutros quentes da app (FT.bg e FT.border) */
+  --color-mp-creme: #efede7;
+  --color-mp-borda: #e2ded4;
 
   --animate-pop: pop-in 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.3) both;
   --animate-shake: shake 0.38s ease-in-out;
@@ -52,14 +59,20 @@
   }
 }
 
-/* O index.css dá aos h1–h3 cor navy e Barlow Condensed diretamente no elemento,
-   o que deixava títulos navy sobre os painéis escuros da prova. Dentro da prova
-   e do relatório, os títulos herdam do contentor (os utilitários continuam a
-   ganhar, por estarem numa camada acima de `base`). */
+/* O index.css dá aos h1–h3 cor navy diretamente no elemento, o que deixava títulos
+   navy sobre os painéis escuros da prova. Dentro da prova e do relatório, os
+   títulos herdam a cor do contentor (os utilitários continuam a ganhar, por estarem
+   numa camada acima de `base`). Envolver com `.avaliacao-scope`. */
 @layer base {
+  /* Fontes da app: Inter no texto, Barlow Condensed nos títulos, IBM Plex Mono nos números */
+  .avaliacao-scope {
+    font-family: var(--sans);
+    --font-mono: var(--mono);
+  }
   .avaliacao-scope :is(h1, h2, h3) {
     color: inherit;
-    font-family: inherit;
+    font-family: var(--heading);
+    letter-spacing: 0.01em;
   }
   .avaliacao-scope button,
   .avaliacao-scope a,
@@ -69,8 +82,13 @@
   }
 }
 
-@utility hazard-stripe {
-  background-image: repeating-linear-gradient(-45deg, #ffc20e 0 14px, #0f172a 14px 28px);
+/* Ecrãs baixos (telemóvel deitado): a prova compacta-se para o plano e a
+   pergunta caberem sem rolar. Usado como `baixo:` nas classes do módulo. */
+@custom-variant baixo (@media (max-height: 32.5rem));
+
+/* Filete laranja da marca (o mesmo dos modais de ação principal do admin) */
+@utility faixa-marca {
+  background-image: linear-gradient(90deg, #eb8d00, #ffb444);
 }
 
 @utility blueprint-grid {

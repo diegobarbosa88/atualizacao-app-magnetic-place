@@ -8,7 +8,7 @@ export function CardHeader({ icon: Icon, title, subtitle, right }) {
   return (
     <header className="flex items-center gap-3 border-b border-slate-200 px-4 py-3 sm:px-5">
       {Icon && (
-        <div className="grid size-10 shrink-0 place-items-center rounded-lg bg-tech-50 text-tech-700">
+        <div className="grid size-10 shrink-0 place-items-center rounded-lg bg-mp-navy-50 text-mp-navy-700">
           <Icon className="size-5" />
         </div>
       )}

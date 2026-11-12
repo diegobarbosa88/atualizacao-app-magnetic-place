@@ -63,12 +63,12 @@ export function Calculator({ onUse }) {
   const usable = result ?? preview;
 
   return (
-    <div className="rounded-2xl bg-slate-900 p-3 text-white">
-      <div className="mb-3 rounded-xl bg-slate-800 px-3 py-2 text-right">
-        <div className="min-h-6 break-all font-mono text-lg leading-6 text-slate-200" aria-live="polite">
+    <div className="rounded-2xl bg-mp-navy-800 p-3 text-white">
+      <div className="mb-3 rounded-xl bg-mp-navy-900 px-3 py-2 text-right">
+        <div className="min-h-6 break-all font-mono text-lg leading-6 text-white/85" aria-live="polite">
           {expr || <span className="text-slate-500">0</span>}
         </div>
-        <div className={cn('min-h-5 font-mono text-sm', error ? 'text-red-400' : 'text-safety-300')}>
+        <div className={cn('min-h-5 font-mono text-sm', error ? 'text-red-400' : 'text-mp-orange-300')}>
           {error ? 'Expressão inválida' : preview !== null && result === null ? `= ${fmt(preview)}` : ' '}
         </div>
       </div>
@@ -81,11 +81,11 @@ export function Calculator({ onUse }) {
             className={cn(
               'grid h-11 place-items-center rounded-lg font-mono text-lg font-bold transition active:scale-95',
               k.wide && 'col-span-2',
-              !k.tone && 'bg-slate-700 hover:bg-slate-600',
-              k.tone === 'op' && 'bg-tech-700 hover:bg-tech-600',
-              k.tone === 'fn' && 'bg-slate-800 text-safety-300 hover:bg-slate-700',
-              k.tone === 'eq' && 'bg-safety-400 text-slate-900 hover:bg-safety-300',
-              k.tone === 'danger' && 'bg-slate-800 text-red-300 hover:bg-slate-700',
+              !k.tone && 'bg-mp-navy-600 hover:bg-mp-navy-500',
+              k.tone === 'op' && 'bg-mp-navy-700 hover:bg-mp-navy-600',
+              k.tone === 'fn' && 'bg-mp-navy-700 text-mp-orange-300 hover:bg-mp-navy-600',
+              k.tone === 'eq' && 'bg-mp-orange-400 text-slate-900 hover:bg-mp-orange-300',
+              k.tone === 'danger' && 'bg-mp-navy-700 text-red-300 hover:bg-mp-navy-600',
             )}
             aria-label={k.action === 'back' ? 'Apagar' : k.label}
           >

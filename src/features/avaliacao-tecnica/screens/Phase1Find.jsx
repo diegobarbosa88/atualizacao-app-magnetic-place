@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { BookOpenCheck, CircleCheck, Hourglass, Lightbulb, ScanSearch, TriangleAlert } from 'lucide-react';
+import { CARTAO, CELULA_PERGUNTA, CELULA_PLANO, GRELHA } from '../components/ecraProva.js';
 import { ItemTimer } from '../components/ItemTimer.jsx';
 import { PlanSheet } from '../components/plan/PlanSheet.jsx';
 import { PlanViewer, revealInViewer } from '../components/plan/PlanViewer.jsx';
@@ -11,8 +12,6 @@ import { DIM_WHERE, DRAWING } from '../data/plan.js';
 import { cn } from '../lib/cn.js';
 import { sfx } from '../lib/sound.js';
 import { useAssessmentStore } from '../store/useAssessmentStore.js';
-
-const VIEWER_HEIGHT = 'h-[max(380px,calc(100dvh-19rem))]';
 
 const WHERE_PHRASE = {
   'Vista frontal': 'na vista frontal',
@@ -153,18 +152,20 @@ export function Phase1Find() {
   }
 
   return (
-    <div className="space-y-3">
-      <section className="rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200 sm:p-4">
+    <div className={GRELHA}>
+      <section className={cn(CELULA_PERGUNTA, CARTAO, '@container')}>
         {mode === 'study' ? (
-          <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,21rem)] md:items-center">
+          <div className="grid gap-3 @2xl:grid-cols-[minmax(0,1fr)_minmax(0,20rem)] @2xl:items-center">
             <div className="flex min-w-0 items-start gap-3">
-              <div className="grid size-12 shrink-0 place-items-center rounded-xl bg-slate-900 text-safety-400">
+              <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-mp-navy-800 text-mp-orange-400">
                 <BookOpenCheck className="size-6" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-bold uppercase tracking-[0.16em] text-tech-600">Fase 1 de 3 · Leitura do plano</p>
-                <h2 className="text-xl font-bold sm:text-2xl">Estude o plano {DRAWING.number}</h2>
-                <p className="mt-1 text-slate-600">
+                <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.06em] text-mp-navy-600">
+                  Fase 1 de 3 · Leitura do plano
+                </p>
+                <h2 className="text-xl font-bold text-mp-navy-800 sm:text-2xl">Estude o plano {DRAWING.number}</h2>
+                <p className="mt-1 text-sm text-slate-600 sm:text-base baixo:hidden">
                   Veja as vistas, o corte A–A, o detalhe B, a lista de peças e as notas. Depois vai procurar {items.length} cotas.
                 </p>
               </div>
@@ -184,10 +185,10 @@ export function Phase1Find() {
             </div>
           </div>
         ) : (
-          <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,19rem)] md:items-center">
+          <div className="grid gap-2 @2xl:grid-cols-[minmax(0,1fr)_minmax(0,18rem)] @2xl:items-center @2xl:gap-4">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <p className="text-xs font-bold uppercase tracking-[0.16em] text-tech-600">
+                <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.06em] text-mp-navy-600">
                   Fase 1 de 3 · Cota {index + 1} de {items.length}
                 </p>
                 <div className="flex gap-1" aria-hidden>
@@ -196,20 +197,24 @@ export function Phase1Find() {
                       key={it.id}
                       className={cn(
                         'h-2 rounded-full',
-                        i < index ? 'w-2 bg-slate-400' : i === index ? 'w-6 bg-safety-400' : 'w-2 bg-slate-200',
+                        i < index ? 'w-2 bg-mp-navy-300' : i === index ? 'w-6 bg-mp-orange-400' : 'w-2 bg-slate-200',
                       )}
                     />
                   ))}
                 </div>
               </div>
-              <p className="mt-1 text-lg leading-snug sm:text-xl">
+              <p className="mt-1 text-lg leading-snug sm:text-xl baixo:text-base">
                 <span className="text-slate-500">Encontre: </span>
-                <strong className="font-bold">{item.prompt}</strong>
+                <strong className="font-bold text-mp-navy-800">{item.prompt}</strong>
               </p>
+              {/* Altura reservada: a mensagem muda a cada toque e não deve empurrar o plano */}
               <div
                 key={shake}
                 aria-live="polite"
-                className={cn('mt-2 flex min-h-8 flex-wrap items-center gap-3', shake > 0 && status === 'searching' && 'animate-shake')}
+                className={cn(
+                  'mt-2 flex min-h-[4.25rem] flex-wrap content-start items-center gap-x-3 gap-y-1.5 @2xl:min-h-8',
+                  shake > 0 && status === 'searching' && 'animate-shake',
+                )}
               >
                 <div className="flex items-center gap-1.5" aria-label={`${remainingAttempts} tentativas restantes`}>
                   {Array.from({ length: maxAttempts }, (_, i) => (
@@ -217,14 +222,14 @@ export function Phase1Find() {
                       key={i}
                       className={cn(
                         'size-3 rounded-full ring-2',
-                        i < remainingAttempts ? 'bg-tech-500 ring-tech-200' : 'bg-red-200 ring-red-100',
+                        i < remainingAttempts ? 'bg-mp-navy-500 ring-mp-navy-200' : 'bg-red-200 ring-red-100',
                       )}
                     />
                   ))}
                 </div>
                 <StatusLine status={status} wrongCount={wrong.length} remaining={remainingAttempts} />
                 {hint && (
-                  <span className="inline-flex animate-pop items-center gap-1.5 rounded-lg bg-tech-50 px-2.5 py-1 font-semibold text-tech-800 ring-1 ring-tech-200">
+                  <span className="inline-flex animate-pop items-center gap-1.5 rounded-lg bg-mp-navy-50 px-2.5 py-1 font-semibold text-mp-navy-800 ring-1 ring-mp-navy-200">
                     <Lightbulb className="size-4" /> Dica: procure {hint}
                   </span>
                 )}
@@ -241,9 +246,11 @@ export function Phase1Find() {
         )}
       </section>
 
-      <PlanViewer heightClass={VIEWER_HEIGHT}>
-        <PlanSheet plan={plan} interactive={mode === 'find'} marks={marks} onDimTap={handleTap} className="block h-auto w-full" />
-      </PlanViewer>
+      <div className={CELULA_PLANO}>
+        <PlanViewer>
+          <PlanSheet plan={plan} interactive={mode === 'find'} marks={marks} onDimTap={handleTap} className="block h-auto w-full" />
+        </PlanViewer>
+      </div>
     </div>
   );
 }
@@ -257,9 +264,9 @@ function StatusLine({ status, wrongCount, remaining }) {
     );
   if (status === 'missed' || status === 'timeout')
     return (
-      <span className="inline-flex animate-pop items-center gap-1.5 rounded-lg bg-safety-100 px-2.5 py-1 font-bold text-safety-700">
+      <span className="inline-flex animate-pop items-center gap-1.5 rounded-lg bg-mp-orange-100 px-2.5 py-1 font-bold text-mp-orange-700">
         <Hourglass className="size-4" />
-        {status === 'missed' ? 'Tentativas esgotadas' : 'Tempo esgotado'} — a cota certa está destacada em amarelo
+        {status === 'missed' ? 'Tentativas esgotadas' : 'Tempo esgotado'} — a cota certa está destacada em laranja
       </span>
     );
   if (wrongCount > 0)
