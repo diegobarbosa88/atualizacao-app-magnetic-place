@@ -3741,5 +3741,6 @@ TS à parte, convertido para JSX sem mudar a lógica; `zustand` acrescentado só
 - Testes: `tests/unit/avaliacaoTecnica.test.js` (gabarito das variantes, níveis, pontuação,
   correção no servidor) e `tests/unit/backend/avaliacoes.handler.test.js` (fluxo da API com um
   Supabase falso em memória, `fakeSupabase.js`).
-- **Migração `20261111_avaliacoes_tecnicas.sql` por aplicar** quando isto foi escrito — aplicar com
-  `supabase db query --linked -f`, nunca `db push`.
+- **Migração `20261111_avaliacoes_tecnicas.sql` aplicada em produção a 2026-11-12** (projeto
+  `ccvxnrnlbipsojbbrzaw`); confirmado que `anon` não vê nenhuma linha. O advisor de segurança só a
+  lista como "RLS enabled, no policy" (INFO) — é o pretendido.
