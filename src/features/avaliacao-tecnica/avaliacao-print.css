@@ -1,0 +1,20 @@
+/* Impressão do relatório. Só é importado pela página /avaliacao-relatorio/:id
+   (aberta num iframe dentro do admin), para não mexer na impressão do resto da app. */
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+  html,
+  body {
+    background: #fff !important;
+  }
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  tr,
+  thead {
+    break-inside: avoid;
+  }
+}

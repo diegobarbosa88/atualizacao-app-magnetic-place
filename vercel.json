@@ -94,6 +94,15 @@
     { "source": "/api/ponto/kiosk-ativar", "destination": "/api/formacao?action=ponto-kiosk-ativar" },
     { "source": "/api/ponto/kiosk-desativar", "destination": "/api/formacao?action=ponto-kiosk-desativar" },
     { "source": "/api/whatsapp", "destination": "/api/salarios/exportar-sepa" },
+    { "source": "/api/avaliacoes/listar", "destination": "/api/formacao?action=avaliacao-listar" },
+    { "source": "/api/avaliacoes/obter", "destination": "/api/formacao?action=avaliacao-obter" },
+    { "source": "/api/avaliacoes/criar", "destination": "/api/formacao?action=avaliacao-criar" },
+    { "source": "/api/avaliacoes/reabrir", "destination": "/api/formacao?action=avaliacao-reabrir" },
+    { "source": "/api/avaliacoes/cancelar", "destination": "/api/formacao?action=avaliacao-cancelar" },
+    { "source": "/api/avaliacoes/apagar", "destination": "/api/formacao?action=avaliacao-apagar" },
+    { "source": "/api/avaliacoes/publica", "destination": "/api/formacao?action=avaliacao-publica" },
+    { "source": "/api/avaliacoes/iniciar", "destination": "/api/formacao?action=avaliacao-iniciar" },
+    { "source": "/api/avaliacoes/submeter", "destination": "/api/formacao?action=avaliacao-submeter" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import webpush from 'web-push';
 import { requireAuth } from '../_authUtils.js';
 import { getGateStatus } from '../_gateUtils.js';
+import { AVALIACAO_ACTIONS } from '../_avaliacoes.js';
 import { calculateDuration } from '../../src/utils/formatUtils.js';
 import { isWithinGeofence } from '../../src/utils/geoUtils.js';
 import {
@@ -1319,7 +1320,8 @@ export default async function handler(req, res) {
   // req.body.action evita ter de meter a action na querystring manualmente
   // no frontend quando o body já é JSON de qualquer forma.
   const action = req.query.action || req.body?.action;
-  const fn = ACTIONS[action];
+  // Avaliação técnica de candidatos — ver api/_avaliacoes.js
+  const fn = ACTIONS[action] ?? AVALIACAO_ACTIONS[action];
   if (!fn) return res.status(404).json({ error: 'Ação inválida.' });
   return fn(req, res);
 }

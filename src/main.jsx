@@ -14,6 +14,12 @@ import './index.css'
 const isResumoPublico = window.location.pathname === '/partilha/resumo';
 const isOnboardingPublico = window.location.pathname.startsWith('/onboarding/');
 const isKiosk = window.location.pathname.startsWith('/kiosk/');
+// Avaliação técnica de candidatos: /avaliacao/:token é o link que o candidato
+// recebe (sem login); /avaliacao-relatorio/:id é o relatório que o admin abre
+// num iframe em Equipa › Avaliações (usa o token de sessão do admin). Ver
+// src/features/avaliacao-tecnica/.
+const isAvaliacaoPublica = window.location.pathname.startsWith('/avaliacao/');
+const isAvaliacaoRelatorio = window.location.pathname.startsWith('/avaliacao-relatorio/');
 
 async function bootstrap() {
   if (isResumoPublico) {
@@ -41,6 +47,22 @@ async function bootstrap() {
     createRoot(document.getElementById('root')).render(
       <StrictMode>
         <KioskView clientId={clientId} />
+      </StrictMode>,
+    );
+  } else if (isAvaliacaoPublica) {
+    const token = window.location.pathname.split('/')[2];
+    const { default: AvaliacaoPublica } = await import('./features/avaliacao-tecnica/publico/AvaliacaoPublica.jsx');
+    createRoot(document.getElementById('root')).render(
+      <StrictMode>
+        <AvaliacaoPublica token={token} />
+      </StrictMode>,
+    );
+  } else if (isAvaliacaoRelatorio) {
+    const avaliacaoId = window.location.pathname.split('/')[2];
+    const { default: RelatorioAvaliacao } = await import('./features/avaliacao-tecnica/publico/RelatorioAvaliacao.jsx');
+    createRoot(document.getElementById('root')).render(
+      <StrictMode>
+        <RelatorioAvaliacao id={avaliacaoId} />
       </StrictMode>,
     );
   } else {

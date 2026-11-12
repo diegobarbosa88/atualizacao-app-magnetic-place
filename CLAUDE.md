@@ -3714,3 +3714,32 @@ imagem devolvida por `getTrimmedDataURL` saiu a 187×67px (recortada ao traço +
 tamanho da caixa de desenho. Não gravado no Supabase (não cliquei em "Guardar", só em "Confirmar" —
 a assinatura real da empresa não foi tocada); página recarregada a seguir para descartar o estado
 local de teste. `npx eslint` limpo no ficheiro.
+## Avaliação técnica de candidatos — Caldeireiro Industrial (2026-11-11)
+
+Prova de interpretação de plano (EN ISO) enviada por link único. O admin cria o link em **Equipa ›
+Avaliações** e escolhe o nível (Meio-Oficial / Pleno / Especialista — provas diferentes, ver
+`data/levels.js`); o candidato abre `/avaliacao/:token`, preenche nome, telefone, e-mail,
+experiência, localidade e consentimento RGPD, e faz as 3 fases; o resultado e os dados aparecem na
+lista, com relatório imprimível. Código em `src/features/avaliacao-tecnica/` (vindo de um projeto
+TS à parte, convertido para JSX sem mudar a lógica; `zustand` acrescentado só para este módulo).
+
+- **Rotas públicas decididas em `main.jsx`** (fora do AppProvider): `/avaliacao/:token`
+  (candidato) e `/avaliacao-relatorio/:id` (relatório, aberto num iframe pelo admin — fica imune às
+  regras-ponte do modo escuro do `App.css` e "Imprimir" imprime só o relatório; usa o
+  `magnetic_session_token` do mesmo browser).
+- **API dentro de `api/formacao/index.js`** (`...AVALIACAO_ACTIONS` de `api/_avaliacoes.js`) — o
+  plano Hobby já está nas 12 funções. Rewrites `/api/avaliacoes/<ação>` em `vercel.json`.
+- **Tabela `avaliacoes_tecnicas` com RLS ativa e sem policies** — só a service role lhe toca (mesmo
+  padrão de `clients_qr_secrets`). Não repete o problema das 24 tabelas com RLS desligada.
+- **Correção no servidor:** o navegador só envia respostas em bruto; `lib/grading.js` recorrige
+  fases 2 e 3 contra a variante gravada no convite (`seed`, sorteada no servidor e só revelada ao
+  iniciar). A fase 1 confia no "encontrou/tentativas" enviado (limitado aos valores possíveis).
+- **Uso único:** `pending → in_progress` é uma atualização condicional; recarregar a meio bloqueia o
+  link ("Interrompida" na lista) e o admin pode **Reabrir** (variante nova). Se a rede falhar no
+  envio, as respostas ficam em `localStorage` e reabrir o link reenvia-as.
+- Ao concluir, cria `app_notifications` para o admin (`payload.kind = 'avaliacao_tecnica'`).
+- Testes: `tests/unit/avaliacaoTecnica.test.js` (gabarito das variantes, níveis, pontuação,
+  correção no servidor) e `tests/unit/backend/avaliacoes.handler.test.js` (fluxo da API com um
+  Supabase falso em memória, `fakeSupabase.js`).
+- **Migração `20261111_avaliacoes_tecnicas.sql` por aplicar** quando isto foi escrito — aplicar com
+  `supabase db query --linked -f`, nunca `db push`.

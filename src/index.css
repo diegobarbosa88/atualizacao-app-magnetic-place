@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./features/avaliacao-tecnica/avaliacao.css";
 
 @keyframes pulse-slow {
   0%, 100% { opacity: 1; }
