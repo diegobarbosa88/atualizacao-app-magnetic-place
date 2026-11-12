@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { BookOpenCheck, CircleCheck, Hourglass, Lightbulb, ScanSearch, TriangleAlert } from 'lucide-react';
-import { CARTAO, CELULA_PERGUNTA, CELULA_PLANO, GRELHA } from '../components/ecraProva.js';
+import { CARTAO, CELULA_PERGUNTA, CELULA_PLANO, ECRA_CELULAR, GRELHA } from '../components/ecraProva.js';
+import { PerguntaFlutuante } from '../components/PerguntaFlutuante.jsx';
 import { ItemTimer } from '../components/ItemTimer.jsx';
 import { PlanSheet } from '../components/plan/PlanSheet.jsx';
 import { PlanViewer, revealInViewer } from '../components/plan/PlanViewer.jsx';
@@ -11,6 +12,7 @@ import { getPhase1Items } from '../data/phase1.js';
 import { DIM_WHERE, DRAWING } from '../data/plan.js';
 import { cn } from '../lib/cn.js';
 import { sfx } from '../lib/sound.js';
+import { tempoLeitura, useCelular } from '../hooks/useCelular.js';
 import { useAssessmentStore } from '../store/useAssessmentStore.js';
 
 const WHERE_PHRASE = {
@@ -36,6 +38,7 @@ export function Phase1Find() {
   const [foundId, setFoundId] = useState(null);
   const [status, setStatus] = useState('searching');
   const [shake, setShake] = useState(0);
+  const celular = useCelular();
 
   const wrongRef = useRef([]);
   const lockedRef = useRef(false);
@@ -151,100 +154,175 @@ export function Phase1Find() {
     if (status === 'missed' || status === 'timeout') for (const t of item.targets) marks[t] = 'reveal';
   }
 
-  return (
-    <div className={GRELHA}>
-      <section className={cn(CELULA_PERGUNTA, CARTAO, '@container')}>
-        {mode === 'study' ? (
-          <div className="grid gap-3 @2xl:grid-cols-[minmax(0,1fr)_minmax(0,20rem)] @2xl:items-center">
-            <div className="flex min-w-0 items-start gap-3">
-              <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-mp-navy-800 text-mp-orange-400">
-                <BookOpenCheck className="size-6" />
-              </div>
-              <div className="min-w-0">
-                <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.06em] text-mp-navy-600">
-                  Fase 1 · Leitura do plano
-                </p>
-                <h2 className="text-xl font-bold text-mp-navy-800 sm:text-2xl">Estude o plano {DRAWING.number}</h2>
-                <p className="mt-1 text-sm text-slate-600 sm:text-base baixo:hidden">
-                  Veja as vistas, o corte A–A, o detalhe B, a lista de peças e as notas. Depois vai procurar {items.length} cotas.
-                </p>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <ItemTimer
-                key="study"
-                durationMs={spec.studySec * 1000}
-                running
-                onExpire={startFinding}
-                elapsedRef={elapsedRef}
-                label="Leitura do plano"
-              />
-              <Button block size="lg" icon={<ScanSearch className="size-5" />} onClick={startFinding}>
-                Começar a procurar cotas
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div className="grid gap-2 @2xl:grid-cols-[minmax(0,1fr)_minmax(0,18rem)] @2xl:items-center @2xl:gap-4">
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.06em] text-mp-navy-600">
-                  Fase 1 · Cota {index + 1}/{items.length}
-                </p>
-              </div>
-              <p className="mt-1 text-lg leading-snug sm:text-xl baixo:text-base">
-                <span className="text-slate-500">Encontre: </span>
-                <strong className="font-bold text-mp-navy-800">{item.prompt}</strong>
-              </p>
-              {/* Altura reservada: a mensagem muda a cada toque e não deve empurrar o plano */}
-              <div
-                key={shake}
-                aria-live="polite"
-                className={cn(
-                  'mt-2 flex min-h-[4.25rem] flex-wrap content-start items-center gap-x-3 gap-y-1.5 @2xl:min-h-8',
-                  shake > 0 && status === 'searching' && 'animate-shake',
-                )}
-              >
-                <div className="flex items-center gap-1.5" aria-label={`${remainingAttempts} tentativas restantes`}>
-                  {Array.from({ length: maxAttempts }, (_, i) => (
-                    <span
-                      key={i}
-                      className={cn(
-                        'size-3 rounded-full ring-2',
-                        i < remainingAttempts ? 'bg-mp-navy-500 ring-mp-navy-200' : 'bg-red-200 ring-red-100',
-                      )}
-                    />
-                  ))}
-                </div>
-                <StatusLine status={status} wrongCount={wrong.length} remaining={remainingAttempts} />
-                {hint && (
-                  <span className="inline-flex animate-pop items-center gap-1.5 rounded-lg bg-mp-navy-50 px-2.5 py-1 font-semibold text-mp-navy-800 ring-1 ring-mp-navy-200">
-                    <Lightbulb className="size-4" /> Dica: procure {hint}
-                  </span>
-                )}
-              </div>
-            </div>
-            <ItemTimer
-              key={item.id}
-              durationMs={limitMs}
-              running={status === 'searching'}
-              onExpire={handleExpire}
-              elapsedRef={elapsedRef}
-            />
-          </div>
-        )}
-      </section>
+  const tentativas = (
+    <div className="flex items-center gap-1.5" aria-label={`${remainingAttempts} tentativas restantes`}>
+      {Array.from({ length: maxAttempts }, (_, i) => (
+        <span
+          key={i}
+          className={cn(
+            'size-3 rounded-full ring-2',
+            i < remainingAttempts ? 'bg-mp-navy-500 ring-mp-navy-200' : 'bg-red-200 ring-red-100',
+          )}
+        />
+      ))}
+    </div>
+  );
+  const dica = hint && (
+    <span className="inline-flex animate-pop items-center gap-1.5 rounded-lg bg-mp-navy-50 px-2.5 py-1 text-sm font-semibold text-mp-navy-800 ring-1 ring-mp-navy-200">
+      <Lightbulb className="size-4" /> Dica: procure {hint}
+    </span>
+  );
+  const cronoLeitura = (compacto) => (
+    <ItemTimer
+      key="study"
+      persistKey="f1-leitura"
+      durationMs={spec.studySec * 1000}
+      running
+      onExpire={startFinding}
+      elapsedRef={elapsedRef}
+      label="Leitura do plano"
+      compacto={compacto}
+    />
+  );
+  const cronoCota = (compacto) => (
+    <ItemTimer
+      key={item.id}
+      persistKey={`f1-${item.id}`}
+      durationMs={limitMs}
+      running={status === 'searching'}
+      onExpire={handleExpire}
+      elapsedRef={elapsedRef}
+      compacto={compacto}
+    />
+  );
 
+  return (
+    <div className={celular ? ECRA_CELULAR : GRELHA}>
       <div className={CELULA_PLANO}>
-        <PlanViewer>
+        <PlanViewer controlosVerticais={celular}>
           <PlanSheet plan={plan} interactive={mode === 'find'} marks={marks} onDimTap={handleTap} className="block h-auto w-full" />
         </PlanViewer>
       </div>
+
+      {celular ? (
+        mode === 'study' ? (
+          <PerguntaFlutuante
+            key="leitura"
+            tempoLeituraMs={6000}
+            etiqueta="Fase 1 · Leitura do plano"
+            resumo={`Estude o plano ${DRAWING.number}`}
+            timer={cronoLeitura}
+            acao={
+              <Button size="sm" icon={<ScanSearch className="size-4" />} onClick={startFinding}>
+                Começar
+              </Button>
+            }
+          >
+            <h2 className="text-xl font-bold text-mp-navy-800">Estude o plano {DRAWING.number}</h2>
+            <p className="text-sm text-slate-600">
+              Veja as vistas, o corte A–A, o detalhe B, a lista de peças e as notas. Depois vai procurar {items.length} cotas.
+            </p>
+            <Button block size="lg" icon={<ScanSearch className="size-5" />} onClick={startFinding}>
+              Começar a procurar cotas
+            </Button>
+          </PerguntaFlutuante>
+        ) : (
+          <PerguntaFlutuante
+            key={item.id}
+            tempoLeituraMs={tempoLeitura(item.prompt)}
+            etiqueta={`Fase 1 · Cota ${index + 1}/${items.length}`}
+            resumo={`Encontre: ${item.prompt}`}
+            timer={cronoCota}
+            aviso={
+              <div
+                key={shake}
+                aria-live="polite"
+                className={cn('flex flex-wrap items-center gap-2 empty:hidden', shake > 0 && status === 'searching' && 'animate-shake')}
+              >
+                {(wrong.length > 0 || status !== 'searching') && (
+                  <>
+                    {tentativas}
+                    <StatusLine status={status} wrongCount={wrong.length} remaining={remainingAttempts} compacto />
+                  </>
+                )}
+                {dica}
+              </div>
+            }
+          >
+            <p className="text-lg leading-snug">
+              <span className="text-slate-500">Encontre: </span>
+              <strong className="font-bold text-mp-navy-800">{item.prompt}</strong>
+            </p>
+            <div
+              key={shake}
+              aria-live="polite"
+              className={cn('flex flex-wrap items-center gap-x-3 gap-y-1.5', shake > 0 && status === 'searching' && 'animate-shake')}
+            >
+              {tentativas}
+              <StatusLine status={status} wrongCount={wrong.length} remaining={remainingAttempts} />
+              {dica}
+            </div>
+          </PerguntaFlutuante>
+        )
+      ) : (
+        <section className={cn(CELULA_PERGUNTA, CARTAO, '@container')}>
+          {mode === 'study' ? (
+            <div className="grid gap-3 @2xl:grid-cols-[minmax(0,1fr)_minmax(0,20rem)] @2xl:items-center">
+              <div className="flex min-w-0 items-start gap-3">
+                <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-mp-navy-800 text-mp-orange-400">
+                  <BookOpenCheck className="size-6" />
+                </div>
+                <div className="min-w-0">
+                  <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.06em] text-mp-navy-600">
+                    Fase 1 · Leitura do plano
+                  </p>
+                  <h2 className="text-xl font-bold text-mp-navy-800 sm:text-2xl">Estude o plano {DRAWING.number}</h2>
+                  <p className="mt-1 text-sm text-slate-600 sm:text-base baixo:hidden">
+                    Veja as vistas, o corte A–A, o detalhe B, a lista de peças e as notas. Depois vai procurar {items.length} cotas.
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                {cronoLeitura(false)}
+                <Button block size="lg" icon={<ScanSearch className="size-5" />} onClick={startFinding}>
+                  Começar a procurar cotas
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="grid gap-2 @2xl:grid-cols-[minmax(0,1fr)_minmax(0,18rem)] @2xl:items-center @2xl:gap-4">
+              <div className="min-w-0">
+                <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.06em] text-mp-navy-600">
+                  Fase 1 · Cota {index + 1}/{items.length}
+                </p>
+                <p className="mt-1 text-lg leading-snug sm:text-xl baixo:text-base">
+                  <span className="text-slate-500">Encontre: </span>
+                  <strong className="font-bold text-mp-navy-800">{item.prompt}</strong>
+                </p>
+                {/* Altura reservada: a mensagem muda a cada toque e não deve empurrar o plano */}
+                <div
+                  key={shake}
+                  aria-live="polite"
+                  className={cn(
+                    'mt-2 flex min-h-[4.25rem] flex-wrap content-start items-center gap-x-3 gap-y-1.5 @2xl:min-h-8',
+                    shake > 0 && status === 'searching' && 'animate-shake',
+                  )}
+                >
+                  {tentativas}
+                  <StatusLine status={status} wrongCount={wrong.length} remaining={remainingAttempts} />
+                  {dica}
+                </div>
+              </div>
+              {cronoCota(false)}
+            </div>
+          )}
+        </section>
+      )}
     </div>
   );
 }
 
-function StatusLine({ status, wrongCount, remaining }) {
+function StatusLine({ status, wrongCount, remaining, compacto = false }) {
   if (status === 'found')
     return (
       <span className="inline-flex animate-pop items-center gap-1.5 rounded-lg bg-emerald-100 px-2.5 py-1 font-bold text-emerald-800">
@@ -255,13 +333,21 @@ function StatusLine({ status, wrongCount, remaining }) {
     return (
       <span className="inline-flex animate-pop items-center gap-1.5 rounded-lg bg-mp-orange-100 px-2.5 py-1 font-bold text-mp-orange-700">
         <Hourglass className="size-4" />
-        {status === 'missed' ? 'Tentativas esgotadas' : 'Tempo esgotado'} — a cota certa está destacada em laranja
+        {status === 'missed' ? 'Tentativas esgotadas' : 'Tempo esgotado'}
+        {compacto ? ' — veja a cota em laranja' : ' — a cota certa está destacada em laranja'}
       </span>
     );
   if (wrongCount > 0)
     return (
       <span className="inline-flex items-center gap-1.5 rounded-lg bg-red-100 px-2.5 py-1 font-bold text-red-800">
-        <TriangleAlert className="size-4" /> Não é essa. {remaining === 1 ? 'Resta 1 tentativa' : `Restam ${remaining} tentativas`}
+        <TriangleAlert className="size-4" /> Não é essa.{' '}
+        {remaining === 1
+          ? compacto
+            ? 'Resta 1'
+            : 'Resta 1 tentativa'
+          : compacto
+            ? `Restam ${remaining}`
+            : `Restam ${remaining} tentativas`}
       </span>
     );
   return <span className="text-sm text-slate-500">Toque na cota no plano. Use + para ampliar.</span>;

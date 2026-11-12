@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState } from 'react';
-import { Maximize, Minus, Plus, RotateCw } from 'lucide-react';
+import { Maximize, Minus, Plus } from 'lucide-react';
 import { cn } from '../../lib/cn.js';
 
 const ZOOMS = [1, 1.5, 2.2, 3];
@@ -36,7 +36,7 @@ const isCoarsePointer = () => typeof window !== 'undefined' && window.matchMedia
  * Em ecrãs de toque pequenos (folha com menos de 700 px em 1×) abre com 1,5×,
  * para as cotas terem área de toque suficiente; nos tablets abre com a folha inteira.
  */
-export function PlanViewer({ children, className }) {
+export function PlanViewer({ children, className, controlosVerticais = false }) {
   const [zoomIndex, setZoomIndex] = useState(0);
   const zoomInicialFeito = useRef(false);
   const scrollRef = useRef(null);
@@ -130,12 +130,13 @@ export function PlanViewer({ children, className }) {
         </div>
       </div>
 
-      {/* Telemóvel em pé: com o aparelho deitado o plano fica bem maior */}
-      <p className="pointer-events-none absolute right-2 top-2 hidden animate-sumir items-center gap-1.5 rounded-lg bg-mp-navy-800/90 px-2.5 py-1.5 text-xs font-semibold text-white shadow-lg max-sm:portrait:flex">
-        <RotateCw className="size-3.5" /> Deite o celular para ver o plano maior
-      </p>
-
-      <div className="absolute bottom-3 left-3 flex items-center gap-1 rounded-xl bg-mp-navy-800/90 p-1 text-white shadow-lg backdrop-blur">
+      {/* No celular ficam na vertical, à direita: em cima está a pergunta e em baixo a resposta */}
+      <div
+        className={cn(
+          'absolute flex items-center gap-1 rounded-xl bg-mp-navy-800/90 p-1 text-white shadow-lg backdrop-blur',
+          controlosVerticais ? 'right-2 top-1/2 -translate-y-1/2 flex-col' : 'bottom-3 left-3',
+        )}
+      >
         <button
           type="button"
           onClick={() => setZoomIndex((z) => Math.max(0, z - 1))}
@@ -145,7 +146,9 @@ export function PlanViewer({ children, className }) {
         >
           <Minus className="size-5" />
         </button>
-        <span className="w-12 text-center font-mono text-sm font-bold tabular-nums">{zoom.toFixed(1).replace('.', ',')}×</span>
+        <span className={cn('text-center font-mono font-bold tabular-nums', controlosVerticais ? 'w-10 text-xs' : 'w-12 text-sm')}>
+          {zoom.toFixed(1).replace('.', ',')}×
+        </span>
         <button
           type="button"
           onClick={() => setZoomIndex((z) => Math.min(ZOOMS.length - 1, z + 1))}
