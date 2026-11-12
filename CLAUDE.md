@@ -3750,6 +3750,13 @@ TS à parte, convertido para JSX sem mudar a lógica; `zustand` acrescentado só
   resposta. Variante `baixo:` (altura ≤ 520 px) compacta cartões. Em 1× a folha inteira cabe no
   quadro (`PlanViewer`); só ecrãs de toque com folha < 700 px abrem em 1,5×. Verificado em
   1280×800, 1920×1080, 1180×820, 820×1180, 390×844 e 844×390.
+- **Celular** (`useCelular`: largura < 640 px ou altura ≤ 520 px): o plano ocupa o ecrã todo
+  (`.ecra-celular`); a pergunta flutua por cima (`PerguntaFlutuante`), fica aberta o tempo de
+  leitura (`tempoLeitura`, 3–8 s; 10 s na fase 3 com as opções) e recolhe numa barra com o
+  cronómetro — tocar em "Ver" reabre. Fase 2: resposta numa barra fixa em baixo; fase 3: opções
+  dentro da pergunta. O cronómetro guarda o tempo por pergunta (`persistKey` em `useCountdown`),
+  por isso não volta ao início quando a pergunta abre/recolhe nem quando o ecrã muda de modo ao
+  rodar o aparelho.
 - Testes: `tests/unit/avaliacaoTecnica.test.js` (gabarito das variantes, níveis, pontuação,
   correção no servidor) e `tests/unit/backend/avaliacoes.handler.test.js` (fluxo da API com um
   Supabase falso em memória, `fakeSupabase.js`).

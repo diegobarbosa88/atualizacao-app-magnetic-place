@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Calculator as CalculatorIcon, Check, CircleCheck, CircleX, Hourglass, SkipForward } from 'lucide-react';
 import { Calculator } from '../components/Calculator.jsx';
-import { CARTAO, CELULA_PERGUNTA, CELULA_PLANO, CELULA_RESPOSTA, GRELHA } from '../components/ecraProva.js';
+import { CARTAO, CELULA_PERGUNTA, CELULA_PLANO, CELULA_RESPOSTA, ECRA_CELULAR, GRELHA } from '../components/ecraProva.js';
+import { PerguntaFlutuante } from '../components/PerguntaFlutuante.jsx';
 import { ItemTimer } from '../components/ItemTimer.jsx';
 import { PlanSheet } from '../components/plan/PlanSheet.jsx';
 import { PlanViewer, revealInViewer } from '../components/plan/PlanViewer.jsx';
@@ -14,12 +15,14 @@ import { cn } from '../lib/cn.js';
 import { evaluateDerive } from '../lib/evaluators.js';
 import { formatMm } from '../lib/format.js';
 import { sfx } from '../lib/sound.js';
+import { tempoLeitura, useCelular } from '../hooks/useCelular.js';
 import { useAssessmentStore } from '../store/useAssessmentStore.js';
 
 export function Phase2Derive() {
   const completePhase2 = useAssessmentStore((s) => s.completePhase2);
   const [index, setIndex] = useState(0);
   const [calcOpen, setCalcOpen] = useState(false);
+  const celular = useCelular();
   const plan = useAssessmentStore((s) => s.plan);
   const level = useAssessmentStore((s) => s.candidate?.level ?? 'pleno');
   const questions = useMemo(() => buildPhase2(plan, level), [plan, level]);
@@ -37,14 +40,15 @@ export function Phase2Derive() {
   };
 
   return (
-    <div className={GRELHA}>
+    <div className={celular ? ECRA_CELULAR : GRELHA}>
       <div className={CELULA_PLANO}>
-        <PlanViewer>
+        <PlanViewer controlosVerticais={celular}>
           <PlanSheet plan={plan} query={question.query} className="block h-auto w-full" />
         </PlanViewer>
       </div>
       <DerivePanel
         key={question.id}
+        celular={celular}
         question={question}
         index={index}
         total={questions.length}
@@ -56,7 +60,7 @@ export function Phase2Derive() {
   );
 }
 
-function DerivePanel({ question, index, total, calcOpen, onToggleCalc, onDone }) {
+function DerivePanel({ question, index, total, calcOpen, onToggleCalc, onDone, celular }) {
   const recordDerive = useAssessmentStore((s) => s.recordDerive);
   const [raw, setRaw] = useState('');
   const [status, setStatus] = useState('answering');
@@ -99,6 +103,107 @@ function DerivePanel({ question, index, total, calcOpen, onToggleCalc, onDone })
     if (parsed !== null) submit('answer');
   };
 
+  const cronometro = (compacto) => (
+    <ItemTimer
+      persistKey={`f2-${question.id}`}
+      durationMs={limitMs}
+      running={answering}
+      onExpire={() => submit('timeout')}
+      elapsedRef={elapsedRef}
+      compacto={compacto}
+    />
+  );
+  const usarCalculadora = (value) => {
+    if (!answering) return;
+    setRaw(value);
+    inputRef.current?.focus({ preventScroll: true });
+  };
+
+  // Celular: o plano ocupa o ecrã todo; a pergunta flutua em cima (recolhe depois
+  // do tempo de leitura) e a resposta fica numa barra fixa em baixo.
+  if (celular) {
+    return (
+      <>
+        <PerguntaFlutuante
+          tempoLeituraMs={tempoLeitura(question.prompt)}
+          etiqueta={`Fase 2 · Pergunta ${index + 1}/${total}`}
+          resumo={question.prompt}
+          timer={cronometro}
+        >
+          <p className="text-sm font-semibold text-slate-500">{question.topic}</p>
+          <p className="text-lg font-bold leading-snug text-mp-navy-800">{question.prompt}</p>
+          <p className="flex items-center gap-2 text-sm text-slate-600">
+            <span
+              className="grid size-5 shrink-0 place-items-center rounded-full bg-mp-orange-400 text-xs font-extrabold text-mp-navy-800"
+              aria-hidden
+            >
+              ?
+            </span>
+            A medida pedida está marcada em laranja no plano.
+          </p>
+        </PerguntaFlutuante>
+
+        <div className="absolute inset-x-2 bottom-2 z-20 max-h-[70%] overflow-y-auto overscroll-contain rounded-2xl bg-white/95 p-2.5 shadow-xl ring-1 ring-mp-borda backdrop-blur">
+          {calcOpen && (
+            <div className="mb-2">
+              <Calculator onUse={usarCalculadora} />
+            </div>
+          )}
+          {answering ? (
+            <>
+              <form onSubmit={handleSubmit} className="flex items-center gap-2">
+                <div className="relative min-w-0 flex-1">
+                  <label htmlFor="derive-input" className="sr-only">
+                    Resposta em milímetros
+                  </label>
+                  <input
+                    ref={inputRef}
+                    id="derive-input"
+                    inputMode="decimal"
+                    autoComplete="off"
+                    spellCheck={false}
+                    value={raw}
+                    onChange={(e) => setRaw(e.target.value.replace(/[^\d.,\s]/g, ''))}
+                    placeholder="Resposta"
+                    className={cn(
+                      'h-12 w-full rounded-xl border-2 bg-white pl-3 pr-11 font-mono text-2xl font-bold tabular-nums outline-none transition',
+                      'placeholder:font-sans placeholder:text-base placeholder:font-semibold placeholder:text-slate-300 focus:border-mp-navy-500 focus:ring-4 focus:ring-mp-navy-100',
+                      raw && parsed === null ? 'border-red-400' : 'border-slate-300',
+                    )}
+                  />
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 font-bold text-slate-400">mm</span>
+                </div>
+                <Button type="submit" size="sm" className="h-12 px-4" disabled={parsed === null} icon={<Check className="size-5" />}>
+                  OK
+                </Button>
+              </form>
+              <div className="mt-1.5 flex items-center justify-between gap-2 text-sm">
+                <button
+                  type="button"
+                  onClick={onToggleCalc}
+                  aria-expanded={calcOpen}
+                  className="flex min-h-9 items-center gap-1.5 rounded-lg px-2 font-semibold text-mp-navy-700 active:bg-mp-creme"
+                >
+                  <CalculatorIcon className="size-4" /> {calcOpen ? 'Fechar calculadora' : 'Calculadora'}
+                </button>
+                {raw && parsed === null && <span className="truncate text-xs font-semibold text-red-600">Só números e vírgula</span>}
+                <button
+                  type="button"
+                  onClick={() => submit('skip')}
+                  className="flex min-h-9 items-center gap-1.5 rounded-lg px-2 font-semibold text-slate-600 active:bg-mp-creme"
+                >
+                  <SkipForward className="size-4" /> Pular
+                </button>
+              </div>
+            </>
+          ) : (
+            <Feedback status={status} />
+          )}
+        </div>
+      </>
+    );
+  }
+
   // Duas células da grelha: a pergunta (sempre à vista, com o cronómetro) e a
   // resposta (com deslocamento próprio quando a calculadora está aberta)
   return (
@@ -113,7 +218,7 @@ function DerivePanel({ question, index, total, calcOpen, onToggleCalc, onDone })
           </div>
         </div>
 
-        <ItemTimer durationMs={limitMs} running={answering} onExpire={() => submit('timeout')} elapsedRef={elapsedRef} />
+        {cronometro(false)}
 
         <p className="text-base font-bold leading-snug text-mp-navy-800 sm:text-lg baixo:text-base">{question.prompt}</p>
         <p className="hidden items-center gap-2 text-sm text-slate-600 sm:flex baixo:hidden">
@@ -200,13 +305,7 @@ function DerivePanel({ question, index, total, calcOpen, onToggleCalc, onDone })
             </button>
             {calcOpen && (
               <div className="mt-2">
-                <Calculator
-                  onUse={(value) => {
-                    if (!answering) return;
-                    setRaw(value);
-                    inputRef.current?.focus({ preventScroll: true });
-                  }}
-                />
+                <Calculator onUse={usarCalculadora} />
               </div>
             )}
           </div>

@@ -32,7 +32,7 @@
 
   --animate-pop: pop-in 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.3) both;
   --animate-shake: shake 0.38s ease-in-out;
-  --animate-sumir: sumir 7s ease-in forwards;
+  --animate-encolher: encolher 5s linear forwards;
 
   @keyframes pop-in {
     from {
@@ -44,13 +44,12 @@
       opacity: 1;
     }
   }
-  @keyframes sumir {
-    0%,
-    75% {
-      opacity: 1;
+  @keyframes encolher {
+    from {
+      transform: scaleX(1);
     }
-    100% {
-      opacity: 0;
+    to {
+      transform: scaleX(0);
     }
   }
   @keyframes shake {
@@ -129,6 +128,19 @@
     overscroll-behavior: contain;
     border-radius: 1rem;
   }
+  /* Celular: o plano ocupa a área toda; a pergunta e a resposta flutuam por cima
+     (components/PerguntaFlutuante.jsx). Mesma estrutura de elementos que
+     .ecra-prova, para nada ser remontado se o ecrã mudar de modo. */
+  .ecra-celular {
+    position: relative;
+    height: calc(100dvh - var(--cab, 4rem) - 1rem);
+    min-height: 15rem;
+  }
+  .ecra-celular > .celula-plano {
+    position: absolute;
+    inset: 0;
+  }
+
   @media (min-width: 48rem) and (orientation: landscape) {
     .ecra-prova {
       grid-template-columns:

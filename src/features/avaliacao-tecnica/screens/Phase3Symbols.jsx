@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, CircleCheck, CircleX, Hourglass, X } from 'lucide-react';
-import { CARTAO, CELULA_PERGUNTA, CELULA_PLANO, CELULA_RESPOSTA, GRELHA } from '../components/ecraProva.js';
+import { CARTAO, CELULA_PERGUNTA, CELULA_PLANO, CELULA_RESPOSTA, ECRA_CELULAR, GRELHA } from '../components/ecraProva.js';
+import { PerguntaFlutuante } from '../components/PerguntaFlutuante.jsx';
 import { ItemTimer } from '../components/ItemTimer.jsx';
 import { PlanSheet } from '../components/plan/PlanSheet.jsx';
 import { PlanViewer, revealInViewer } from '../components/plan/PlanViewer.jsx';
@@ -10,6 +11,7 @@ import { buildPhase3 } from '../data/phase3.js';
 import { shuffle } from '../lib/calculations.js';
 import { cn } from '../lib/cn.js';
 import { sfx } from '../lib/sound.js';
+import { tempoLeitura, useCelular } from '../hooks/useCelular.js';
 import { useAssessmentStore } from '../store/useAssessmentStore.js';
 
 export function Phase3Symbols() {
@@ -19,6 +21,7 @@ export function Phase3Symbols() {
   const level = useAssessmentStore((s) => s.candidate?.level ?? 'pleno');
   const questions = useMemo(() => buildPhase3(plan, level), [plan, level]);
   const question = questions[index];
+  const celular = useCelular();
 
   // Leva o elemento destacado para dentro do quadro quando o plano está ampliado
   useEffect(() => {
@@ -32,18 +35,18 @@ export function Phase3Symbols() {
   };
 
   return (
-    <div className={GRELHA}>
+    <div className={celular ? ECRA_CELULAR : GRELHA}>
       <div className={CELULA_PLANO}>
-        <PlanViewer>
+        <PlanViewer controlosVerticais={celular}>
           <PlanSheet plan={plan} focus={question.focus} className="block h-auto w-full" />
         </PlanViewer>
       </div>
-      <SymbolPanel key={question.id} question={question} index={index} total={questions.length} onDone={next} />
+      <SymbolPanel key={question.id} celular={celular} question={question} index={index} total={questions.length} onDone={next} />
     </div>
   );
 }
 
-function SymbolPanel({ question, index, total, onDone }) {
+function SymbolPanel({ question, index, total, onDone, celular }) {
   const recordSymbol = useAssessmentStore((s) => s.recordSymbol);
   // Ordem das opções sorteada a cada pergunta (o gabarito não fica sempre na mesma letra)
   const [options] = useState(() => shuffle(question.options));
@@ -95,6 +98,95 @@ function SymbolPanel({ question, index, total, onDone }) {
     [],
   );
 
+  const cronometro = (compacto) => (
+    <ItemTimer
+      persistKey={`f3-${question.id}`}
+      durationMs={limitMs}
+      running={feedback === null}
+      onExpire={() => answer(null, true)}
+      elapsedRef={elapsedRef}
+      compacto={compacto}
+    />
+  );
+
+  const resultado = feedback && (
+    <div
+      className={cn(
+        'flex w-full animate-pop items-center gap-2 rounded-xl px-3 py-2 font-bold',
+        feedback === 'correct' && 'bg-emerald-100 text-emerald-800',
+        feedback === 'wrong' && 'bg-red-100 text-red-800',
+        feedback === 'timeout' && 'bg-mp-orange-100 text-mp-orange-700',
+      )}
+    >
+      {feedback === 'correct' && <CircleCheck className="size-5" />}
+      {feedback === 'wrong' && <CircleX className="size-5" />}
+      {feedback === 'timeout' && <Hourglass className="size-5" />}
+      {feedback === 'correct' ? 'Resposta correta' : feedback === 'wrong' ? 'Resposta incorreta' : 'Tempo esgotado'}
+      <span className="ml-auto text-sm font-medium opacity-70">{index + 1 < total ? 'Próxima…' : 'Finalizando…'}</span>
+    </div>
+  );
+
+  const opcoes = (compactas) =>
+    options.map((opt, i) => {
+      const isSelected = selected === opt.id;
+      const state = feedback && isSelected ? (feedback === 'correct' ? 'correct' : 'wrong') : null;
+      return (
+        <button
+          key={opt.id}
+          type="button"
+          disabled={feedback !== null}
+          onClick={() => answer(opt.id, false)}
+          className={cn(
+            'flex w-full items-center gap-3 rounded-2xl border-2 bg-white p-2 text-left transition active:scale-[0.99]',
+            compactas ? 'min-h-12' : 'min-h-14',
+            !feedback && 'border-slate-200 hover:border-mp-navy-400 hover:bg-mp-navy-50',
+            state === 'correct' && 'animate-pop border-emerald-500 bg-emerald-50',
+            state === 'wrong' && 'animate-shake border-red-500 bg-red-50',
+            feedback && !isSelected && 'border-slate-200 opacity-45',
+          )}
+        >
+          <span
+            className={cn(
+              'grid size-9 shrink-0 place-items-center rounded-xl font-mono text-base font-bold',
+              state === 'correct' && 'bg-emerald-500 text-white',
+              state === 'wrong' && 'bg-red-500 text-white',
+              !state && 'bg-mp-navy-800 text-mp-orange-400',
+            )}
+          >
+            {state === 'correct' ? (
+              <Check className="size-5" />
+            ) : state === 'wrong' ? (
+              <X className="size-5" />
+            ) : (
+              String.fromCharCode(65 + i)
+            )}
+          </span>
+          <span className={cn('font-semibold leading-snug', compactas ? 'text-sm' : 'text-[15px]')}>{opt.label}</span>
+        </button>
+      );
+    });
+
+  // Celular: o plano ocupa o ecrã todo; a pergunta e as opções flutuam em cima e
+  // recolhem depois do tempo de leitura (toque na barra para responder).
+  if (celular) {
+    return (
+      <PerguntaFlutuante
+        tempoLeituraMs={tempoLeitura(question.prompt + options.map((o) => o.label).join(' '), 10000)}
+        etiqueta={`Fase 3 · Pergunta ${index + 1}/${total}`}
+        resumo={question.prompt}
+        timer={cronometro}
+        aviso={resultado || <p className="text-xs text-slate-500">Toque em “Ver” para escolher a resposta.</p>}
+      >
+        <p className="truncate text-sm font-semibold text-slate-500">
+          {question.topic} <span className="font-mono text-xs text-slate-400">· {question.norm}</span>
+        </p>
+        <p className="text-base font-bold leading-snug text-mp-navy-800">{question.prompt}</p>
+        {resultado}
+        <div className="space-y-2">{opcoes(true)}</div>
+      </PerguntaFlutuante>
+    );
+  }
+
   // Duas células da grelha: a pergunta (sempre à vista, com o cronómetro e o
   // resultado da resposta) e as opções
   return (
@@ -111,26 +203,13 @@ function SymbolPanel({ question, index, total, onDone }) {
           </div>
         </div>
 
-        <ItemTimer durationMs={limitMs} running={feedback === null} onExpire={() => answer(null, true)} elapsedRef={elapsedRef} />
+        {cronometro(false)}
 
         <p className="text-base font-bold leading-snug text-mp-navy-800 sm:text-lg baixo:text-base">{question.prompt}</p>
         {/* Mesma altura com e sem resultado, para o plano não saltar */}
         <div aria-live="polite" className="flex items-center empty:hidden sm:min-h-10 baixo:min-h-0">
           {feedback ? (
-            <div
-              className={cn(
-                'flex w-full animate-pop items-center gap-2 rounded-xl px-3 py-2 font-bold',
-                feedback === 'correct' && 'bg-emerald-100 text-emerald-800',
-                feedback === 'wrong' && 'bg-red-100 text-red-800',
-                feedback === 'timeout' && 'bg-mp-orange-100 text-mp-orange-700',
-              )}
-            >
-              {feedback === 'correct' && <CircleCheck className="size-5" />}
-              {feedback === 'wrong' && <CircleX className="size-5" />}
-              {feedback === 'timeout' && <Hourglass className="size-5" />}
-              {feedback === 'correct' ? 'Resposta correta' : feedback === 'wrong' ? 'Resposta incorreta' : 'Tempo esgotado'}
-              <span className="ml-auto text-sm font-medium opacity-70">{index + 1 < total ? 'Próxima…' : 'Finalizando…'}</span>
-            </div>
+            resultado
           ) : (
             <p className="hidden text-sm text-slate-500 sm:block baixo:hidden">O elemento está destacado com tracejado laranja no plano.</p>
           )}
@@ -138,45 +217,7 @@ function SymbolPanel({ question, index, total, onDone }) {
       </section>
 
       <div className={CELULA_RESPOSTA}>
-        <section className={cn(CARTAO, 'space-y-2')}>
-          {options.map((opt, i) => {
-            const isSelected = selected === opt.id;
-            const state = feedback && isSelected ? (feedback === 'correct' ? 'correct' : 'wrong') : null;
-            return (
-              <button
-                key={opt.id}
-                type="button"
-                disabled={feedback !== null}
-                onClick={() => answer(opt.id, false)}
-                className={cn(
-                  'flex min-h-14 w-full items-center gap-3 rounded-2xl border-2 bg-white p-2 text-left transition active:scale-[0.99]',
-                  !feedback && 'border-slate-200 hover:border-mp-navy-400 hover:bg-mp-navy-50',
-                  state === 'correct' && 'animate-pop border-emerald-500 bg-emerald-50',
-                  state === 'wrong' && 'animate-shake border-red-500 bg-red-50',
-                  feedback && !isSelected && 'border-slate-200 opacity-45',
-                )}
-              >
-                <span
-                  className={cn(
-                    'grid size-9 shrink-0 place-items-center rounded-xl font-mono text-base font-bold',
-                    state === 'correct' && 'bg-emerald-500 text-white',
-                    state === 'wrong' && 'bg-red-500 text-white',
-                    !state && 'bg-mp-navy-800 text-mp-orange-400',
-                  )}
-                >
-                  {state === 'correct' ? (
-                    <Check className="size-5" />
-                  ) : state === 'wrong' ? (
-                    <X className="size-5" />
-                  ) : (
-                    String.fromCharCode(65 + i)
-                  )}
-                </span>
-                <span className="text-[15px] font-semibold leading-snug">{opt.label}</span>
-              </button>
-            );
-          })}
-        </section>
+        <section className={cn(CARTAO, 'space-y-2')}>{opcoes(false)}</section>
       </div>
     </>
   );
