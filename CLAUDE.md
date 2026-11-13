@@ -3762,7 +3762,15 @@ TS à parte, convertido para JSX sem mudar a lógica; `zustand` acrescentado só
   calculadora (`Calculator compacta`) abre por cima do plano a partir da barra da resposta. O
   cronómetro guarda o tempo por pergunta (`persistKey` em `useCountdown`), por isso não volta ao
   início quando a pergunta abre/recolhe nem quando o ecrã muda de modo ao rodar o aparelho.
-  Verificado em 412×780, 360×640, 844×390 e 667×375.
+  Verificado em 412×780, 360×640, 844×390 e 667×375. Na fase 3, recolhida, a barra tem um botão
+  laranja "Responder" (o `acao` pode ser uma função que recebe `abrir`), porque o "Ver ▾"
+  pequeno não deixava claro onde tocar para responder.
+- **Zoom com dois dedos** (`PlanViewer`): a pinça amplia só o plano, à volta do ponto entre os
+  dedos (contínuo de 1× a 4×; os botões −/+ saltam entre degraus). Ctrl + roda / pinça do
+  trackpad faz o mesmo no computador. Durante as fases a página não amplia: `touch-pan-x
+  touch-pan-y` na raiz (Chrome/Android) e `touchmove` com 2+ dedos + `gesturestart` bloqueados
+  em `AvaliacaoProva.jsx` (Safari/iOS). Os ouvintes de toque têm de ser nativos e não passivos
+  — os do React são passivos e o `preventDefault` não teria efeito.
 - Testes: `tests/unit/avaliacaoTecnica.test.js` (gabarito das variantes, níveis, pontuação,
   correção no servidor) e `tests/unit/backend/avaliacoes.handler.test.js` (fluxo da API com um
   Supabase falso em memória, `fakeSupabase.js`).

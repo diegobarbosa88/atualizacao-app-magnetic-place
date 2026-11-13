@@ -15,7 +15,9 @@ import { cn } from '../lib/cn.js';
  * - `contador`: "2/6" (ou um ícone); `marcas`: por baixo dele (ex.: tentativas).
  * - `detalhe`: segunda linha curta por baixo do resumo (ex.: a dica da fase 1).
  * - `aviso`: ocupa o lugar do resumo enquanto existir (ex.: "Não é essa. Resta 1").
- * - `acao`: botão à direita da barra, no lugar de "Ver" (ex.: "Começar").
+ * - `acao`: botão à direita da barra, no lugar de "Ver" (ex.: "Começar"). Pode ser uma
+ *   função `(abrir) => …` para o botão abrir a pergunta (ex.: "Responder" na fase 3).
+ *   Dá um pequeno salto quando a pergunta recolhe, para o candidato o ver.
  * - `comResposta`: há uma barra de resposta em baixo (fase 2) — a pergunta aberta
  *   pára acima dela, para se poder responder sem a fechar.
  */
@@ -86,7 +88,11 @@ export function PerguntaFlutuante({
             )}
           </span>
         </button>
-        {acao}
+        {acao && (
+          <span key={aberta ? 'aberta' : 'recolhida'} className={cn('shrink-0', !aberta && 'animate-pop')}>
+            {typeof acao === 'function' ? acao(abrir) : acao}
+          </span>
+        )}
       </div>
 
       {aberta && (
