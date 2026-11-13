@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, CircleCheck, CircleX, Hourglass, X } from 'lucide-react';
+import { Check, CircleCheck, CircleX, Hourglass, ListChecks, X } from 'lucide-react';
 import { CARTAO, CELULA_PERGUNTA, CELULA_PLANO, CELULA_RESPOSTA, ECRA_CELULAR, GRELHA } from '../components/ecraProva.js';
 import { PerguntaFlutuante } from '../components/PerguntaFlutuante.jsx';
 import { ItemTimer } from '../components/ItemTimer.jsx';
@@ -167,7 +167,8 @@ function SymbolPanel({ question, index, total, onDone, celular }) {
     });
 
   // Celular: a pergunta é uma barra fina em cima, com o plano por baixo dela; abre
-  // com as opções durante o tempo de leitura e recolhe (toque em "Responder").
+  // com as opções durante o tempo de leitura e recolhe. Recolhida, o botão laranja
+  // "Responder" (o mesmo destaque do "Começar" da fase 1) volta a mostrar as opções.
   if (celular) {
     return (
       <PerguntaFlutuante
@@ -175,7 +176,18 @@ function SymbolPanel({ question, index, total, onDone, celular }) {
         etiqueta={`Fase 3 · Pergunta ${index + 1}/${total}`}
         contador={`${index + 1}/${total}`}
         resumo={question.prompt}
-        rotuloVer="Responder"
+        acao={
+          !feedback &&
+          ((abrir) => (
+            <button
+              type="button"
+              onClick={abrir}
+              className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-mp-orange-400 px-2.5 text-[13px] font-bold text-mp-navy-800 shadow-sm active:bg-mp-orange-500"
+            >
+              <ListChecks className="size-4" /> Responder
+            </button>
+          ))
+        }
         aviso={
           feedback && (
             <span

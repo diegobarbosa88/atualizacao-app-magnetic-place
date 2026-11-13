@@ -9,6 +9,7 @@ import { Phase1Find } from './screens/Phase1Find.jsx';
 import { Phase2Derive } from './screens/Phase2Derive.jsx';
 import { Phase3Symbols } from './screens/Phase3Symbols.jsx';
 import { StartScreen } from './screens/StartScreen.jsx';
+import { cn } from './lib/cn.js';
 import { isInProgress, useAssessmentStore } from './store/useAssessmentStore.js';
 
 /**
@@ -38,6 +39,25 @@ export default function AvaliacaoProva({ level, inicial, onStart, onSubmit }) {
 
   const closeExit = useCallback(() => setExitOpen(false), []);
 
+  // Durante as fases, dois dedos ampliam só o plano (PlanViewer) e nunca a página: o
+  // layout ocupa a janela exata e, com a página ampliada, o plano e a pergunta saíam
+  // do ecrã. touch-pan-x/y na raiz trata do Chrome; o resto cobre o Safari (iOS).
+  useEffect(() => {
+    if (!inProgress) return undefined;
+    const variosDedos = (e) => {
+      if (e.touches.length > 1 && e.cancelable) e.preventDefault();
+    };
+    const bloquear = (e) => e.preventDefault();
+    document.addEventListener('touchmove', variosDedos, { passive: false });
+    document.addEventListener('gesturestart', bloquear);
+    document.addEventListener('gesturechange', bloquear);
+    return () => {
+      document.removeEventListener('touchmove', variosDedos);
+      document.removeEventListener('gesturestart', bloquear);
+      document.removeEventListener('gesturechange', bloquear);
+    };
+  }, [inProgress]);
+
   // Altura do cabeçalho em --cab: o ecrã das fases ocupa exatamente o resto da
   // janela (components/ecraProva.js), para o plano e a pergunta não saírem do ecrã.
   const raizRef = useRef(null);
@@ -54,7 +74,7 @@ export default function AvaliacaoProva({ level, inicial, onStart, onSubmit }) {
   }, []);
 
   return (
-    <div ref={raizRef} className="avaliacao-scope min-h-dvh bg-mp-creme text-slate-900">
+    <div ref={raizRef} className={cn('avaliacao-scope min-h-dvh bg-mp-creme text-slate-900', inProgress && 'touch-pan-x touch-pan-y')}>
       <div ref={cabRef} className="sticky top-0 z-30">
         <AppHeader onExit={requestExit} />
       </div>
