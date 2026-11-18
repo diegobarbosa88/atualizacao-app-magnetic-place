@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import { callGeminiJSON } from '../parse-fatura.js';
+import { callIAJSON } from '../parse-fatura.js';
 
 // Lógica partilhada da reescrita do fluxo de resposta a emails do contador —
 // classificação de tipo de pedido, parsing do anexo "faturas em falta"
@@ -34,7 +34,7 @@ ${texto.slice(0, 3000)}`;
 // manual, que é o resultado seguro quando não há confiança na classificação.
 export async function classificarTipoPedido(assunto, texto) {
   try {
-    const { data } = await callGeminiJSON(buildClassificacaoPrompt(assunto, texto));
+    const { data } = await callIAJSON(buildClassificacaoPrompt(assunto, texto));
     if (TIPOS_PEDIDO.includes(data?.tipo)) return data.tipo;
   } catch { /* cai no fallback abaixo */ }
   return 'outro';
@@ -195,7 +195,7 @@ export function parseXlsxFaturasEmFalta(buffer) {
   return linhas;
 }
 
-// Extração via Gemini para a versão PDF do mesmo relatório — texto extraído
+// Extração via IA para a versão PDF do mesmo relatório — texto extraído
 // de PDF tabular perde a estrutura de colunas, por isso aqui não há forma
 // determinística fiável; usa-se IA para reconstituir a lista.
 export function buildFaturasEmFaltaPdfPrompt(texto) {
@@ -220,7 +220,7 @@ ${texto.slice(0, 12000)}`;
 export async function extrairLinhasFaturasEmFalta({ kind, buffer, textoPdf }) {
   if (kind === 'xlsx') return parseXlsxFaturasEmFalta(buffer);
   if (kind === 'pdf' && textoPdf) {
-    const { data } = await callGeminiJSON(buildFaturasEmFaltaPdfPrompt(textoPdf));
+    const { data } = await callIAJSON(buildFaturasEmFaltaPdfPrompt(textoPdf));
     return Array.isArray(data) ? data : [];
   }
   return [];
@@ -295,7 +295,7 @@ ${texto.slice(0, 3000)}`;
 
 export async function extrairPedidoExtratosBancarios(texto) {
   try {
-    const { data } = await callGeminiJSON(buildExtratosBancariosPrompt(texto));
+    const { data } = await callIAJSON(buildExtratosBancariosPrompt(texto));
     return { pedidos: Array.isArray(data?.pedidos) ? data.pedidos : [], texto_livre: data?.texto_livre || null };
   } catch {
     return { pedidos: [], texto_livre: null };

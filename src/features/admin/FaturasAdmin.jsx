@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { FileText, Download, Loader2, RefreshCw, ExternalLink, Trash2, Search, ChevronDown, ChevronUp, X, ArrowUpDown, ArrowUp, ArrowDown, Sparkles, CheckCircle, Printer, Eye, Receipt, Repeat, CreditCard, Camera } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import * as pdfjsLib from 'pdfjs-dist';
+import JSZip from 'jszip';
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { DEFAULT_GMAIL_CONFIG, configParaQuery } from './faturas/faturasUtils';
 import { FT, SCALE } from '../../styles/designTokens';
@@ -24,6 +25,17 @@ const MESES = [
   { val: '09', label: 'Setembro' }, { val: '10', label: 'Outubro' },
   { val: '11', label: 'Novembro' }, { val: '12', label: 'Dezembro' },
 ];
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
 
 const FIELD_LABELS = {
   numero_fatura: 'Nº Fatura',
@@ -123,6 +135,7 @@ export default function FaturasAdmin() {
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState(null);
   const [apagando, setApagando] = useState(false);
+  const [descarregando, setDescarregando] = useState(false);
   const [selecionados, setSelecionados] = useState(new Set());
 
   const [cfg, setCfg] = useState(() => gmailQueryConfig || DEFAULT_GMAIL_CONFIG);
@@ -431,6 +444,39 @@ export default function FaturasAdmin() {
     finally { setGerandoPdf(false); }
   };
 
+  // Uma fatura → o próprio ficheiro; várias → um ZIP com os originais.
+  const handleDescarregarSelecionados = async () => {
+    const lista = faturas.filter(f => selecionados.has(f.id) && f.url);
+    if (!lista.length) return;
+    setDescarregando(true);
+    const falhas = [];
+    try {
+      const ficheiros = [];
+      for (const f of lista) {
+        try {
+          const resp = await fetch(f.url);
+          if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+          ficheiros.push({ nome: f.filename || `fatura_${f.id}`, blob: await resp.blob() });
+        } catch (e) { falhas.push(`${f.filename}: ${e.message}`); }
+      }
+      if (ficheiros.length === 1) {
+        downloadBlob(ficheiros[0].blob, ficheiros[0].nome);
+      } else if (ficheiros.length > 1) {
+        const zip = new JSZip();
+        const usados = new Set();
+        for (const { nome, blob } of ficheiros) {
+          let final = nome;
+          for (let n = 2; usados.has(final); n++) final = nome.replace(/(\.[^.]*)?$/, ` (${n})$1`);
+          usados.add(final);
+          zip.file(final, blob);
+        }
+        downloadBlob(await zip.generateAsync({ type: 'blob' }), `faturas_${new Date().toISOString().slice(0, 10)}.zip`);
+      }
+      if (falhas.length) alert(`${falhas.length} ficheiro(s) não descarregado(s):\n${falhas.join('\n')}`);
+    } catch (e) { alert('Erro ao descarregar: ' + e.message); }
+    finally { setDescarregando(false); }
+  };
+
   const handleReextrairSelecionados = async () => {
     const alvos = faturas.filter(f => selecionados.has(f.id));
     await processarFaturas(alvos, true);
@@ -660,6 +706,10 @@ export default function FaturasAdmin() {
           <button onClick={() => handleGerarPDF()} disabled={gerandoPdf}
             className="flex items-center gap-1.5 px-4 py-2 bg-[var(--navy-solid)] text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-[var(--navy-solid)] transition-all disabled:opacity-50">
             {gerandoPdf ? <Loader2 size={13} className="animate-spin" /> : <Printer size={13} />} PDF
+          </button>
+          <button onClick={handleDescarregarSelecionados} disabled={descarregando}
+            className="flex items-center gap-1.5 px-4 py-2 bg-[var(--navy-solid)] text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-[var(--navy-solid)] transition-all disabled:opacity-50">
+            {descarregando ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />} Descarregar
           </button>
           <button onClick={handleReextrairSelecionados} disabled={extraindo}
             className="flex items-center gap-1.5 px-4 py-2 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all disabled:opacity-50 hover:opacity-90"

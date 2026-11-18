@@ -1,7 +1,7 @@
 import { google } from 'googleapis';
 import { createClient } from '@supabase/supabase-js';
 import JSZip from 'jszip';
-import { callGeminiJSON } from '../parse-fatura.js';
+import { callIAJSON } from '../parse-fatura.js';
 import { requireAuth } from '../_authUtils.js';
 
 // Import dinâmico: evita que uma falha de inicialização do pdf-parse
@@ -474,13 +474,13 @@ export async function processarUmEmailContador(gmail, supabase, { userId = 'me',
 
   // A extração antiga (cobrança de valor único) só faz sentido para
   // 'cobranca' — para os outros tipos os campos ficam quase todos null e
-  // desperdiça uma chamada Gemini. 'faturas_em_falta' e
+  // desperdiça uma chamada à IA. 'faturas_em_falta' e
   // 'extratos_bancarios_em_falta' são processados sob pedido em
   // api/contador?tipo=gerar (precisam do anexo completo, não só do texto).
   let dadosExtraidos = null;
   if (tipoPedido === 'cobranca' && textoParaClassificar) {
     try {
-      const { data } = await callGeminiJSON(buildContadorPrompt(textoParaClassificar));
+      const { data } = await callIAJSON(buildContadorPrompt(textoParaClassificar));
       dadosExtraidos = data;
     } catch { /* dadosExtraidos fica null — quem chama decide se regista aviso */ }
   }
@@ -506,7 +506,7 @@ async function importarContador(gmail, supabase, userId, queryOverride, forneced
   const erros = [];
 
   // Orçamento de tempo: a classificação de tipo (Fase A) acrescentou uma
-  // chamada Gemini por email a processar, e maxDuration está limitado a 60s
+  // chamada à IA por email a processar, e maxDuration está limitado a 60s
   // (vercel.json) — com muitos emails a lista inteira pode não caber numa
   // única invocação (confirmado: causava FUNCTION_INVOCATION_TIMEOUT/504,
   // que chegava ao frontend como HTML não-JSON). Em vez de arriscar o
@@ -676,8 +676,8 @@ async function importarApoliceSeguros(gmail, supabase, userId, queryOverride, pa
 
       const textoExtraido = await extractPdfText(buffer);
       console.log(`[apolice] ${msg.id} extractPdfText (${textoExtraido.length} chars): ${Date.now() - t0}ms`);
-      const { data: dadosExtraidos } = await callGeminiJSON(buildApoliceSegurosPrompt(textoExtraido));
-      console.log(`[apolice] ${msg.id} callGeminiJSON: ${Date.now() - t0}ms`);
+      const { data: dadosExtraidos } = await callIAJSON(buildApoliceSegurosPrompt(textoExtraido));
+      console.log(`[apolice] ${msg.id} callIAJSON: ${Date.now() - t0}ms`);
 
       const { data: inserted, error: dbError } = await supabase
         .from('apolice_seguro_importacoes')

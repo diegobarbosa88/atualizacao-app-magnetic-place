@@ -1,3 +1,4 @@
+import Anthropic from '@anthropic-ai/sdk';
 import { requireAuth } from './_authUtils.js';
 import { handleGerarPdfHtml } from './_gerarPdfHtml.js';
 
@@ -24,46 +25,42 @@ Texto da fatura:
 ${texto.slice(0, 6000)}`;
 }
 
-// Modelo configurável por env var (GEMINI_MODEL) para a próxima troca não
-// precisar de commit. Sai do gemini-2.5-flash: a extração deixou de
-// funcionar sem nenhuma mudança de código desde 2026-09-04, e a Google passou
-// a limitar o acesso aos modelos 2.5 a quem os usa ativamente — default passa
-// ao gemini-3.8-flash, o substituto estável recomendado.
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
+// Extração com a API da Claude (Anthropic), mesma chave ANTHROPIC_API_KEY já
+// usada em api/contador. Saiu do Gemini: a conta Google ficou sem créditos
+// pré-pagos (HTTP 402). Modelo configurável por env var (ANTHROPIC_MODEL).
+const IA_MODEL = process.env.ANTHROPIC_MODEL || 'claude-haiku-5-5';
 
-// Chama o Gemini com um prompt já montado e devolve o JSON parseado.
+// Chama a IA com um prompt já montado e devolve o JSON parseado.
 // Reutilizável por qualquer chamador que precise de extrair campos estruturados
-// de texto (faturas normais, emails do contador, etc.) — mesmo parsing
-// de sempre (temperature 0, strip de markdown).
-export async function callGeminiJSON(prompt) {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error('Missing GEMINI_API_KEY');
+// de texto (faturas normais, emails do contador, etc.).
+export async function callIAJSON(prompt) {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error('Missing ANTHROPIC_API_KEY');
 
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0 },
-      }),
-    }
-  );
-
-  if (!response.ok) {
-    const err = await response.text();
-    console.error(`[gemini] ${GEMINI_MODEL} HTTP ${response.status}: ${err.slice(0, 500)}`);
-    throw new Error(`Gemini API error (${response.status}): ${err}`);
+  let response;
+  try {
+    const anthropic = new Anthropic({ apiKey });
+    response = await anthropic.messages.create({
+      model: IA_MODEL,
+      max_tokens: 8192,
+      messages: [{ role: 'user', content: prompt }],
+    });
+  } catch (e) {
+    console.error(`[ia] ${IA_MODEL} HTTP ${e.status ?? '?'}: ${String(e.message).slice(0, 500)}`);
+    throw new Error(`Claude API error${e.status ? ` (${e.status})` : ''}: ${e.message}`);
   }
 
-  const data = await response.json();
-  const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  const raw = response.content.find(b => b.type === 'text')?.text || '';
   const jsonStr = raw.replace(/```json|```/g, '').trim();
 
   try {
     return { data: JSON.parse(jsonStr), raw: null };
   } catch {
+    // Texto à volta do JSON ("Aqui está o JSON: {...}") — tenta só o bloco.
+    const bloco = jsonStr.match(/[[{][\s\S]*[\]}]/);
+    try {
+      if (bloco) return { data: JSON.parse(bloco[0]), raw: null };
+    } catch { /* cai no raw abaixo */ }
     return { data: null, raw };
   }
 }
@@ -78,23 +75,13 @@ export default async function handler(req, res) {
 
   if (!requireAuth(req, res, ['admin'])) return;
 
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return res.status(500).json({ error: 'Missing GEMINI_API_KEY' });
-
-  // GET /api/parse-fatura → lista modelos disponíveis (diagnóstico)
-  if (req.method === 'GET') {
-    const r = await fetch(`https://generativelanguage.googleapis.com/v1/models?key=${apiKey}`);
-    const d = await r.json();
-    return res.status(r.status).json(d);
-  }
-
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const { texto } = req.body || {};
   if (!texto) return res.status(400).json({ error: 'Missing texto' });
 
   try {
-    const { data, raw } = await callGeminiJSON(buildFaturaPrompt(texto));
+    const { data, raw } = await callIAJSON(buildFaturaPrompt(texto));
     return res.status(200).json(data ?? { raw });
   } catch (e) {
     return res.status(502).json({ error: e.message });
