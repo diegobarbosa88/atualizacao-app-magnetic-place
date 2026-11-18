@@ -10,6 +10,7 @@ export function buildFaturaPrompt(texto, nomeFicheiro = '') {
 
 - numero_fatura: número/referência da fatura (ex: "FT 2024/123", "2024-456"). NÃO confundas com número de encomenda, guia ou cliente. 517379740 é o NIF da Magnetic Place (normalmente a cliente) — nunca é o numero_fatura.
 - data_fatura: data de emissão da fatura em formato YYYY-MM-DD. NÃO uses a data de vencimento.
+- prazo_pagamento: data de vencimento / limite de pagamento em formato YYYY-MM-DD (rótulos como "Vencimento", "Data de vencimento", "Fecha de vencimiento", "Vto.", "Due date", "Fällig"). Se o documento só indicar um prazo em dias (ex: "30 dias"), soma-o à data_fatura. Se indicar pagamento a pronto, usa a data_fatura. Se não existir, usa null.
 - nif_fornecedor: identificador fiscal de quem EMITE a fatura, em qualquer formato europeu — português (NIF/NIPC, 9 dígitos numéricos), espanhol (NIF/CIF, uma letra seguida de 8 dígitos, ex: "B64076482"), ou outro. Procura rótulos como "NIF:", "NIPC:", "CIF:", "VAT:", "Tax ID:", "N.I.F.". Extrai tal como aparece no documento (sem espaços). NÃO uses o NIF do cliente/destinatário.
 - fornecedor: nome legal completo da empresa que EMITE a fatura (não o cliente).
 - valor_total: valor total da fatura com IVA incluído (número decimal, ex: 1234.56). É o subtotal dos bens/serviços mais o IVA. NÃO incluas encargos adicionais, imposto de selo, juros de mora, taxas de processamento nem outros acréscimos que apareçam depois do total da fatura.

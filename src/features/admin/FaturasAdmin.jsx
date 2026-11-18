@@ -325,6 +325,7 @@ export default function FaturasAdmin() {
       let va, vb;
       if (ordem.campo === 'fornecedor') { va = a.dados?.fornecedor || ''; vb = b.dados?.fornecedor || ''; }
       else if (ordem.campo === 'data_fatura') { va = a.dados?.data_fatura || ''; vb = b.dados?.data_fatura || ''; }
+      else if (ordem.campo === 'prazo_pagamento') { va = a.dados?.prazo_pagamento || ''; vb = b.dados?.prazo_pagamento || ''; }
       else if (ordem.campo === 'valor_total') { va = a.dados?.valor_total ?? -1; vb = b.dados?.valor_total ?? -1; }
       else if (ordem.campo === 'numero_fatura') { va = a.dados?.numero_fatura || ''; vb = b.dados?.numero_fatura || ''; }
       else { va = a.importado_em || ''; vb = b.importado_em || ''; }
@@ -750,6 +751,7 @@ export default function FaturasAdmin() {
                   <ThSort campo="numero_fatura" label="Nº Fatura" />
                   <ThSort campo="fornecedor" label="Fornecedor" />
                   <ThSort campo="data_fatura" label="Data" />
+                  <ThSort campo="prazo_pagamento" label="Vencimento" />
                   <ThSort campo="valor_total" label="Total" />
                   <th className={`px-4 py-3 text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>IVA</th>
                   <th className={`px-4 py-3 text-[var(--slate-dim)] ${SCALE.text.statLabel}`}>Estado</th>
@@ -779,6 +781,7 @@ export default function FaturasAdmin() {
                       <CelEditTd fatura={f} campo="numero_fatura" valor={d.numero_fatura} className="text-xs font-mono text-[var(--ink-soft)]" {...celEditProps} />
                       <CelEditTd fatura={f} campo="fornecedor" valor={d.fornecedor} className="text-xs text-[var(--ink-soft)] max-w-[160px] truncate" {...celEditProps} />
                       <CelEditTd fatura={f} campo="data_fatura" valor={d.data_fatura} tipo="date" className="text-xs text-[var(--slate-dim)] whitespace-nowrap" {...celEditProps} />
+                      <CelEditTd fatura={f} campo="prazo_pagamento" valor={d.prazo_pagamento} tipo="date" className="text-xs text-[var(--slate-dim)] whitespace-nowrap" {...celEditProps} />
                       <CelEditTd fatura={f} campo="valor_total" valor={d.valor_total != null ? Number(d.valor_total).toFixed(2) : null} tipo="number" className="text-xs font-semibold text-[var(--ink-mid)] whitespace-nowrap" {...celEditProps} />
                       <CelEditTd fatura={f} campo="iva" valor={d.iva != null ? Number(d.iva).toFixed(2) : null} tipo="number" className="text-xs text-[var(--slate-dim)] whitespace-nowrap" {...celEditProps} />
                       <td className="px-4 py-3 whitespace-nowrap" onClick={e => e.stopPropagation()}>
