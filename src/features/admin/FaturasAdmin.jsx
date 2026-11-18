@@ -175,9 +175,11 @@ export default function FaturasAdmin() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ texto }),
     });
-    if (!res.ok) return null;
-    const data = await res.json();
-    if (data.raw) return null;
+    // Falhas da IA lançam em vez de devolver null — antes ficavam mudas
+    // (fatura sem dados, nenhum erro visível).
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `IA indisponível (HTTP ${res.status})`);
+    if (data.raw) throw new Error('A IA respondeu sem JSON válido');
     return data;
   };
 
@@ -775,7 +777,7 @@ export default function FaturasAdmin() {
           <div className="px-4 py-3 text-xs text-[var(--slate-dim)] font-semibold border-t border-[var(--border-soft)] flex items-center gap-2 flex-wrap">
             {extraindo
               ? <><Loader2 size={12} className="animate-spin text-indigo-400" /><span className="text-indigo-500">A extrair dados com IA...</span></>
-              : extraindoErros.length > 0 ? <span className="text-amber-600">{extraindoErros.length} ficheiro(s) não processado(s): {extraindoErros.map(e => e.filename).join(', ')}</span>
+              : extraindoErros.length > 0 ? <span className="text-amber-600">{extraindoErros.length} ficheiro(s) não processado(s): {extraindoErros.map(e => e.filename).join(', ')} · Motivo: {extraindoErros[0].msg}</span>
               : <>{faturasFiltradas.length !== faturas.length ? <>{faturasFiltradas.length} de {faturas.length} fatura(s)</> : <>{faturas.length} fatura(s)</>}{selecionados.size > 0 ? <> · {selecionados.size} selecionada(s)</> : <> · duplo clique para editar</>}</>
             }
           </div>

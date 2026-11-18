@@ -24,16 +24,23 @@ Texto da fatura:
 ${texto.slice(0, 6000)}`;
 }
 
+// Modelo configurável por env var (GEMINI_MODEL) para a próxima troca não
+// precisar de commit. Sai do gemini-2.5-flash: a extração deixou de
+// funcionar sem nenhuma mudança de código desde 2026-09-04, e a Google passou
+// a limitar o acesso aos modelos 2.5 a quem os usa ativamente — default passa
+// ao gemini-3.8-flash, o substituto estável recomendado.
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
+
 // Chama o Gemini com um prompt já montado e devolve o JSON parseado.
 // Reutilizável por qualquer chamador que precise de extrair campos estruturados
-// de texto (faturas normais, emails do contador, etc.) — mesmo modelo/parsing
-// de sempre (gemini-2.5-flash, temperature 0, strip de markdown).
+// de texto (faturas normais, emails do contador, etc.) — mesmo parsing
+// de sempre (temperature 0, strip de markdown).
 export async function callGeminiJSON(prompt) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('Missing GEMINI_API_KEY');
 
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -46,6 +53,7 @@ export async function callGeminiJSON(prompt) {
 
   if (!response.ok) {
     const err = await response.text();
+    console.error(`[gemini] ${GEMINI_MODEL} HTTP ${response.status}: ${err.slice(0, 500)}`);
     throw new Error(`Gemini API error (${response.status}): ${err}`);
   }
 
