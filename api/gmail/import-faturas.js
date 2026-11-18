@@ -1,7 +1,8 @@
 import { google } from 'googleapis';
 import { createClient } from '@supabase/supabase-js';
 import JSZip from 'jszip';
-import { callIAJSON } from '../parse-fatura.js';
+import crypto from 'node:crypto';
+import { callIAJSON, buildFaturaPrompt } from '../parse-fatura.js';
 import { requireAuth } from '../_authUtils.js';
 
 // Import dinâmico: evita que uma falha de inicialização do pdf-parse
@@ -82,8 +83,62 @@ function autorizadoPorSecret(req) {
   return req.headers['authorization'] === `Bearer ${secret}`;
 }
 
+// TEMPORÁRIO (2026-11-18) — reextração em lote das faturas pendentes, para
+// preencher a data de vencimento (prazo_pagamento) que o prompt antigo nunca
+// pedia. Chamado por GET com ?acao=reextrair-lote&token=...&ids=a,b,c e
+// protegido pela env REEXTRAIR_TOKEN. Só preenche campos em falta e o
+// número nas faturas com códigos conhecidos por errados — nunca sobrepõe
+// correções. Remover este bloco e a env var depois de usado.
+const NUMEROS_ERRADOS = ['008026', '517379740'];
+async function reextrairLote(req, res) {
+  const esperado = Buffer.from(process.env.REEXTRAIR_TOKEN || '');
+  const recebido = Buffer.from(String(req.query.token || ''));
+  if (!esperado.length || esperado.length !== recebido.length || !crypto.timingSafeEqual(esperado, recebido)) {
+    return res.status(403).json({ error: 'forbidden' });
+  }
+  const ids = String(req.query.ids || '').split(',').filter(Boolean).slice(0, 8);
+  if (!ids.length) return res.status(400).json({ error: 'ids em falta' });
+
+  const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+  const { data: alvos, error } = await supabase.from('faturas')
+    .select('id, filename, storage_path, mime_type, dados').in('id', ids);
+  if (error) return res.status(500).json({ error: error.message });
+
+  const { extractPdfText } = await getParser();
+  const resultados = [];
+  for (const f of alvos) {
+    const r = { id: f.id, filename: f.filename };
+    try {
+      if (f.mime_type !== 'application/pdf' || !f.storage_path) throw new Error('não é PDF');
+      const { data: blob, error: dlErr } = await supabase.storage.from('faturas').download(f.storage_path);
+      if (dlErr) throw new Error('download: ' + dlErr.message);
+      const texto = await extractPdfText(Buffer.from(await blob.arrayBuffer()));
+      if (!texto?.trim()) throw new Error('PDF sem texto');
+      const { data: novo } = await callIAJSON(buildFaturaPrompt(texto, f.filename));
+      if (!novo) throw new Error('IA sem JSON');
+
+      const antigo = f.dados || {};
+      const final = { ...antigo };
+      for (const [k, v] of Object.entries(novo)) {
+        if ((final[k] === null || final[k] === undefined || final[k] === '') && v !== null && v !== undefined) final[k] = v;
+      }
+      if (NUMEROS_ERRADOS.includes(String(antigo.numero_fatura)) && novo.numero_fatura) final.numero_fatura = novo.numero_fatura;
+      if (!('prazo_pagamento' in final)) final.prazo_pagamento = null;
+
+      const { error: upErr } = await supabase.from('faturas').update({ dados: final }).eq('id', f.id);
+      if (upErr) throw new Error('update: ' + upErr.message);
+      Object.assign(r, { prazo: final.prazo_pagamento, numero: final.numero_fatura, numero_antes: antigo.numero_fatura });
+    } catch (e) {
+      r.erro = e.message;
+    }
+    resultados.push(r);
+  }
+  return res.status(200).json({ resultados });
+}
+
 export default async function handler(req, res) {
   try {
+    if (req.method === 'GET' && req.query?.acao === 'reextrair-lote') return await reextrairLote(req, res);
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
     let body = {};
