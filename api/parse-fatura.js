@@ -2,10 +2,13 @@ import Anthropic from '@anthropic-ai/sdk';
 import { requireAuth } from './_authUtils.js';
 import { handleGerarPdfHtml } from './_gerarPdfHtml.js';
 
-export function buildFaturaPrompt(texto) {
+export function buildFaturaPrompt(texto, nomeFicheiro = '') {
+  const pistaFicheiro = nomeFicheiro
+    ? `\n- O ficheiro chama-se "${nomeFicheiro}". Muitos fornecedores põem o número da fatura no nome do ficheiro (ex: "2026-6332.pdf" → fatura 6332). Se o texto tiver um número de fatura que coincida com o do nome do ficheiro, é esse o numero_fatura; um código que se repete em todas as faturas do mesmo fornecedor é código de cliente, não número de fatura.`
+    : '';
   return `És um especialista em leitura de faturas portuguesas e europeias. Analisa o texto abaixo e extrai os seguintes campos com rigor:
 
-- numero_fatura: número/referência da fatura (ex: "FT 2024/123", "2024-456"). NÃO confundas com número de encomenda, guia ou cliente.
+- numero_fatura: número/referência da fatura (ex: "FT 2024/123", "2024-456"). NÃO confundas com número de encomenda, guia ou cliente. 517379740 é o NIF da Magnetic Place (normalmente a cliente) — nunca é o numero_fatura.
 - data_fatura: data de emissão da fatura em formato YYYY-MM-DD. NÃO uses a data de vencimento.
 - nif_fornecedor: identificador fiscal de quem EMITE a fatura, em qualquer formato europeu — português (NIF/NIPC, 9 dígitos numéricos), espanhol (NIF/CIF, uma letra seguida de 8 dígitos, ex: "B64076482"), ou outro. Procura rótulos como "NIF:", "NIPC:", "CIF:", "VAT:", "Tax ID:", "N.I.F.". Extrai tal como aparece no documento (sem espaços). NÃO uses o NIF do cliente/destinatário.
 - fornecedor: nome legal completo da empresa que EMITE a fatura (não o cliente).
@@ -19,7 +22,7 @@ Regras importantes:
 - iban deve estar em formato limpo sem espaços (ex: "PT50000201231234567890154").
 - Para datas, converte formatos como "15/03/2024" ou "15 março 2024" para "2024-03-15".
 - valor_total deve corresponder à linha "Total", "Total com IVA" ou "Total Fatura" — se existir uma linha separada "Total a Pagar" ou "Total Líquido a Pagar" que inclua encargos, usa o valor anterior sem encargos.
-- Responde APENAS com JSON válido, sem texto antes ou depois, sem markdown.
+- Responde APENAS com JSON válido, sem texto antes ou depois, sem markdown.${pistaFicheiro}
 
 Texto da fatura:
 ${texto.slice(0, 6000)}`;
@@ -77,11 +80,11 @@ export default async function handler(req, res) {
 
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { texto } = req.body || {};
+  const { texto, nomeFicheiro } = req.body || {};
   if (!texto) return res.status(400).json({ error: 'Missing texto' });
 
   try {
-    const { data, raw } = await callIAJSON(buildFaturaPrompt(texto));
+    const { data, raw } = await callIAJSON(buildFaturaPrompt(texto, nomeFicheiro));
     return res.status(200).json(data ?? { raw });
   } catch (e) {
     return res.status(502).json({ error: e.message });

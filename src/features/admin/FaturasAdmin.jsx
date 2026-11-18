@@ -182,11 +182,11 @@ export default function FaturasAdmin() {
     finally { setLoading(false); }
   };
 
-  const parsearComGemini = async (texto) => {
+  const parsearComGemini = async (texto, nomeFicheiro) => {
     const res = await authFetch('/api/parse-fatura', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ texto }),
+      body: JSON.stringify({ texto, nomeFicheiro }),
     });
     // Falhas da IA lançam em vez de devolver null — antes ficavam mudas
     // (fatura sem dados, nenhum erro visível).
@@ -216,7 +216,7 @@ export default function FaturasAdmin() {
           const content = await page.getTextContent();
           texto += content.items.map(it => it.str).join(' ') + '\n';
         }
-        const dados = await parsearComGemini(texto);
+        const dados = await parsearComGemini(texto, f.filename);
         if (dados) {
           const { error: updateError } = await supabase.from('faturas').update({ dados }).eq('id', f.id);
           if (updateError) throw new Error(`DB update: ${updateError.message}`);
