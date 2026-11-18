@@ -250,7 +250,10 @@ export default function FaturasAdmin() {
     finally { setImportando(false); }
   };
 
-  useEffect(() => { carregar(); }, []);
+  // Abrir a app diretamente nesta página monta-a antes de o cliente Supabase
+  // (carregado por CDN no AppContext) existir — espera por ele, como o
+  // AjudasCustoAdmin, em vez de falhar com "reading 'from'" e nunca repetir.
+  useEffect(() => { if (supabase) carregar(); }, [supabase]);
 
   const anosDisponiveis = useMemo(() => {
     const anos = new Set(
